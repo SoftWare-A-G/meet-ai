@@ -9,7 +9,7 @@ directory = "../web/src/public"
 [[d1_databases]]
 binding = "DB"
 database_name = "meet-ai-db"
-database_id = "placeholder-update-after-d1-create"
+database_id = "YOUR_D1_DATABASE_ID"
 migrations_dir = "migrations"
 
 [durable_objects]

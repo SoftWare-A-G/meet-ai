@@ -11,3 +11,4 @@ bun.lock
 .env.*
 .DS_Store
 .claude/settings.json
+wrangler.toml
