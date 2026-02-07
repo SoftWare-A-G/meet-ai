@@ -430,7 +430,7 @@
     <div class="footer-links">
       <a href="/key" data-footer-key>Get a Key</a>
       <span style="color:#333" data-footer-sep>|</span>
-      <a href="/chat">Open Chat</a>
+      <a href="/key" data-chat-link>Open Chat</a>
     </div>
   </section>
 
@@ -446,6 +446,9 @@
       });
       document.querySelectorAll('[data-footer-key], [data-footer-sep]').forEach(function(el) {
         el.style.display = 'none';
+      });
+      document.querySelectorAll('[data-chat-link]').forEach(function(el) {
+        el.href = '/chat';
       });
     }
 
