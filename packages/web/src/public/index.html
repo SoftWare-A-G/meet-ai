@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>meet-ai</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; height: 100vh; display: flex; }
+
+    /* name prompt */
+    .name-prompt {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      display: flex; align-items: center; justify-content: center; z-index: 10;
+    }
+    .name-prompt form {
+      background: #fff; padding: 24px; border-radius: 8px;
+      display: flex; flex-direction: column; gap: 12px; min-width: 280px;
+    }
+    .name-prompt h2 { font-size: 16px; }
+    .name-prompt input {
+      padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;
+    }
+    .name-prompt button {
+      padding: 8px 16px; border: none; border-radius: 6px;
+      background: #2563eb; color: #fff; cursor: pointer; font-size: 14px;
+    }
+
+    /* sidebar */
+    .sidebar {
+      width: 240px; background: #111; color: #fff;
+      display: flex; flex-direction: column; padding: 16px; gap: 8px;
+    }
+    .sidebar h2 { font-size: 14px; opacity: 0.5; text-transform: uppercase; margin-bottom: 4px; }
+    .sidebar form { display: flex; gap: 4px; }
+    .sidebar input {
+      flex: 1; padding: 6px 8px; border: 1px solid #333; border-radius: 4px;
+      background: #222; color: #fff; font-size: 13px;
+    }
+    .sidebar button {
+      padding: 6px 10px; border: none; border-radius: 4px;
+      background: #2563eb; color: #fff; cursor: pointer; font-size: 13px;
+    }
+    .room-list { list-style: none; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; flex: 1; }
+    .room-list li {
+      padding: 8px; border-radius: 4px; cursor: pointer; font-size: 14px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .room-list li:hover { background: #222; }
+    .room-list li.active { background: #2563eb; }
+
+    /* chat */
+    .chat { flex: 1; display: flex; flex-direction: column; }
+    .chat-header { padding: 12px 16px; border-bottom: 1px solid #e5e5e5; font-weight: 600; }
+    .messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 6px; }
+    .messages .msg {
+      padding: 8px 12px; background: #f3f4f6; border-radius: 8px;
+      max-width: 70%; font-size: 14px; word-break: break-word;
+    }
+    .messages .msg .sender { font-weight: 600; font-size: 12px; margin-bottom: 2px; color: #4b5563; }
+    .chat-input {
+      display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid #e5e5e5;
+    }
+    .chat-input input {
+      flex: 1; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;
+    }
+    .chat-input button {
+      padding: 8px 16px; border: none; border-radius: 6px;
+      background: #2563eb; color: #fff; cursor: pointer; font-size: 14px;
+    }
+    .empty { flex: 1; display: flex; align-items: center; justify-content: center; color: #999; }
+  </style>
+</head>
+<body>
+  <div class="name-prompt" id="name-prompt">
+    <form id="name-form">
+      <h2>Enter your name</h2>
+      <input id="name-input" placeholder="Your name" required autofocus>
+      <button type="submit">Join</button>
+    </form>
+  </div>
+
+  <div class="sidebar">
+    <h2>Rooms</h2>
+    <form id="room-form">
+      <input id="room-name" placeholder="New room" required>
+      <button type="submit">+</button>
+    </form>
+    <ul class="room-list" id="room-list"></ul>
+  </div>
+
+  <div class="chat" id="chat">
+    <div class="empty">Select or create a room</div>
+  </div>
+
+  <script>
+    let currentRoom = null;
+    let ws = null;
+    let userName = "";
+    let rooms = [];
+
+    const namePrompt = document.getElementById("name-prompt");
+    const nameForm = document.getElementById("name-form");
+    const nameInput = document.getElementById("name-input");
+    const roomList = document.getElementById("room-list");
+    const roomForm = document.getElementById("room-form");
+    const roomNameInput = document.getElementById("room-name");
+    const chat = document.getElementById("chat");
+
+    // Name prompt
+    nameForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const name = nameInput.value.trim();
+      if (!name) return;
+      userName = name;
+      namePrompt.style.display = "none";
+      loadRooms();
+    });
+
+    // Load existing rooms
+    async function loadRooms() {
+      const res = await fetch("/rooms");
+      rooms = await res.json();
+      renderRooms();
+    }
+
+    // Create room
+    roomForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = roomNameInput.value.trim();
+      if (!name) return;
+      const res = await fetch("/rooms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      const room = await res.json();
+      rooms.push(room);
+      renderRooms();
+      selectRoom(room);
+      roomNameInput.value = "";
+    });
+
+    function renderRooms() {
+      roomList.innerHTML = "";
+      for (const room of rooms) {
+        const li = document.createElement("li");
+        li.textContent = room.name;
+        li.className = currentRoom?.id === room.id ? "active" : "";
+        li.onclick = () => selectRoom(room);
+        roomList.appendChild(li);
+      }
+    }
+
+    async function selectRoom(room) {
+      currentRoom = room;
+      renderRooms();
+
+      chat.innerHTML = `
+        <div class="chat-header">${room.name}</div>
+        <div class="messages" id="messages"></div>
+        <form class="chat-input" id="msg-form">
+          <input id="msg-input" placeholder="Type a message..." required>
+          <button type="submit">Send</button>
+        </form>
+      `;
+
+      // Load message history
+      const res = await fetch(`/messages?roomId=${room.id}`);
+      const history = await res.json();
+      for (const msg of history) {
+        appendMessage(msg.sender, msg.content);
+      }
+
+      document.getElementById("msg-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const input = document.getElementById("msg-input");
+        const content = input.value.trim();
+        if (!content) return;
+        input.value = "";
+        await fetch("/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ roomId: currentRoom.id, sender: userName, content }),
+        });
+      });
+
+      connectWs(room.id);
+    }
+
+    function connectWs(roomId) {
+      if (ws) ws.close();
+      const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+      ws = new WebSocket(`${protocol}//${location.host}/ws?roomId=${roomId}`);
+      ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        appendMessage(msg.sender, msg.content);
+      };
+    }
+
+    function hashColor(name) {
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      const hue = ((hash % 360) + 360) % 360;
+      return `hsl(${hue}, 70%, 35%)`;
+    }
+
+    function appendMessage(sender, text) {
+      const messages = document.getElementById("messages");
+      if (!messages) return;
+      const div = document.createElement("div");
+      div.className = "msg";
+      const senderEl = document.createElement("div");
+      senderEl.className = "sender";
+      senderEl.textContent = sender;
+      senderEl.style.color = hashColor(sender);
+      const contentEl = document.createElement("div");
+      contentEl.textContent = text;
+      div.append(senderEl, contentEl);
+      messages.appendChild(div);
+      messages.scrollTop = messages.scrollHeight;
+    }
+  </script>
+</body>
+</html>

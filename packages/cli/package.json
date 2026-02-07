@@ -1,0 +1,16 @@
+{
+  "name": "@meet-ai/cli",
+  "version": "0.0.1",
+  "private": true,
+  "dependencies": {
+    "@meet-ai/web": "workspace:*"
+  },
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "1.3.8",
+    "typescript": "5.9.3"
+  }
+}

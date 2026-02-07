@@ -1,0 +1,5 @@
+{
+  "name": "meet-ai",
+  "private": true,
+  "workspaces": ["packages/*"]
+}
