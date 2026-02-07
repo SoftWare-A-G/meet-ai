@@ -5,6 +5,20 @@ const client = createClient(API_URL);
 
 const [command, ...args] = process.argv.slice(2);
 
+function parseFlags(args: string[]): { positional: string[]; flags: Record<string, string> } {
+  const positional: string[] = [];
+  const flags: Record<string, string> = {};
+  for (let i = 0; i < args.length; i++) {
+    if (args[i].startsWith("--") && i + 1 < args.length) {
+      flags[args[i].slice(2)] = args[i + 1];
+      i++;
+    } else {
+      positional.push(args[i]);
+    }
+  }
+  return { positional, flags };
+}
+
 switch (command) {
   case "create-room": {
     const name = args[0];
@@ -29,6 +43,32 @@ switch (command) {
     break;
   }
 
+  case "poll": {
+    const { positional, flags } = parseFlags(args);
+    const roomId = positional[0];
+    if (!roomId) {
+      console.error("Usage: cli poll <roomId> [--after <messageId>] [--exclude <sender>]");
+      process.exit(1);
+    }
+    const messages = await client.getMessages(roomId, {
+      after: flags.after,
+      exclude: flags.exclude,
+    });
+    console.log(JSON.stringify(messages));
+    break;
+  }
+
+  case "listen": {
+    const { positional, flags } = parseFlags(args);
+    const roomId = positional[0];
+    if (!roomId) {
+      console.error("Usage: cli listen <roomId> [--exclude <sender>]");
+      process.exit(1);
+    }
+    client.listen(roomId, { exclude: flags.exclude });
+    break;
+  }
+
   default:
-    console.log("Commands: create-room, send-message");
+    console.log("Commands: create-room, send-message, poll, listen");
 }

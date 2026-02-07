@@ -33,3 +33,16 @@ test('hello world', () => {
 ```
 
 For more information, read the Bun API docs in `node_modules/bun-types/docs/**.mdx`.
+
+## Agent Team Communication
+
+When working as part of an agent team, every agent (including the orchestrator) MUST relay all inter-agent messages through the meet-ai CLI and poll for incoming messages. Communication is bidirectional — humans can message agents through the web UI.
+
+**Sending:** Relay every SendMessage/broadcast call through the CLI.
+**Receiving:** Poll for new messages between tasks using `poll`, or run `listen` in the background.
+
+This does NOT apply to:
+- Initial task/context prompts passed when spawning teammates via the Task tool
+- Internal thinking or tool usage that isn't a direct message to another agent
+
+The meet-ai server must be running at localhost:3000 before starting a team. See the `meet-ai-team-chat` skill in `.claude/skills/` for the full procedure.

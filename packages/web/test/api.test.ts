@@ -83,6 +83,48 @@ describe("GET /messages", () => {
     const res = await fetch(`${baseUrl}/messages`);
     expect(res.status).toBe(400);
   });
+
+  test("returns messages after a given ID", async () => {
+    const allRes = await fetch(`${baseUrl}/messages?roomId=${roomId}`);
+    const all = (await allRes.json()) as { id: string; content: string }[];
+    const afterId = all[0].id; // after "one"
+
+    const res = await fetch(`${baseUrl}/messages?roomId=${roomId}&after=${afterId}`);
+    expect(res.status).toBe(200);
+    const msgs = (await res.json()) as { content: string }[];
+    expect(msgs).toHaveLength(2);
+    expect(msgs.map((m) => m.content)).toEqual(["two", "three"]);
+  });
+
+  test("excludes messages from a specific sender", async () => {
+    // Add a message from a different sender
+    await fetch(`${baseUrl}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ roomId, sender: "other", content: "other-msg" }),
+    });
+
+    const res = await fetch(`${baseUrl}/messages?roomId=${roomId}&exclude=tester`);
+    expect(res.status).toBe(200);
+    const msgs = (await res.json()) as { sender: string; content: string }[];
+    expect(msgs.every((m) => m.sender !== "tester")).toBe(true);
+    expect(msgs.some((m) => m.sender === "other")).toBe(true);
+  });
+
+  test("combines after and exclude params", async () => {
+    const allRes = await fetch(`${baseUrl}/messages?roomId=${roomId}`);
+    const all = (await allRes.json()) as { id: string; sender: string }[];
+    const afterId = all[1].id; // after "two"
+
+    const res = await fetch(
+      `${baseUrl}/messages?roomId=${roomId}&after=${afterId}&exclude=other`,
+    );
+    expect(res.status).toBe(200);
+    const msgs = (await res.json()) as { sender: string; content: string }[];
+    expect(msgs.every((m) => m.sender !== "other")).toBe(true);
+    // Should only have "three" (from tester, after "two"), not "other-msg"
+    expect(msgs.some((m) => m.content === "three")).toBe(true);
+  });
 });
 
 describe("POST /messages", () => {
@@ -161,6 +203,98 @@ describe("WebSocket /ws", () => {
     expect(msg.content).toBe("ws test");
     expect(msg.sender).toBe("carol");
     expect(msg.roomId).toBe(room.id);
+
+    ws.close();
+  });
+
+  test("sends message via WebSocket and stores it", async () => {
+    const roomRes = await fetch(`${baseUrl}/rooms`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "ws-send-room" }),
+    });
+    const room = await roomRes.json();
+
+    const ws = new WebSocket(`ws://localhost:${server.port}/ws?roomId=${room.id}`);
+
+    const received = new Promise<any>((resolve, reject) => {
+      ws.onmessage = (event) => resolve(JSON.parse(event.data as string));
+      setTimeout(() => reject(new Error("timeout")), 3000);
+    });
+
+    await new Promise<void>((resolve) => {
+      ws.onopen = () => resolve();
+    });
+
+    // Send message via WebSocket
+    ws.send(JSON.stringify({ sender: "dave", content: "ws-sent message" }));
+
+    const msg = await received;
+    expect(msg.sender).toBe("dave");
+    expect(msg.content).toBe("ws-sent message");
+    expect(msg.roomId).toBe(room.id);
+    expect(msg.id).toBeDefined();
+
+    // Verify it's stored in the database
+    const historyRes = await fetch(`${baseUrl}/messages?roomId=${room.id}`);
+    const history = (await historyRes.json()) as { sender: string; content: string }[];
+    expect(history).toHaveLength(1);
+    expect(history[0].sender).toBe("dave");
+    expect(history[0].content).toBe("ws-sent message");
+
+    ws.close();
+  });
+
+  test("WebSocket send rejects invalid JSON", async () => {
+    const roomRes = await fetch(`${baseUrl}/rooms`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "ws-invalid-room" }),
+    });
+    const room = await roomRes.json();
+
+    const ws = new WebSocket(`ws://localhost:${server.port}/ws?roomId=${room.id}`);
+
+    const received = new Promise<any>((resolve, reject) => {
+      ws.onmessage = (event) => resolve(JSON.parse(event.data as string));
+      setTimeout(() => reject(new Error("timeout")), 3000);
+    });
+
+    await new Promise<void>((resolve) => {
+      ws.onopen = () => resolve();
+    });
+
+    ws.send("not json");
+
+    const msg = await received;
+    expect(msg.error).toBe("invalid JSON");
+
+    ws.close();
+  });
+
+  test("WebSocket send rejects missing fields", async () => {
+    const roomRes = await fetch(`${baseUrl}/rooms`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "ws-missing-room" }),
+    });
+    const room = await roomRes.json();
+
+    const ws = new WebSocket(`ws://localhost:${server.port}/ws?roomId=${room.id}`);
+
+    const received = new Promise<any>((resolve, reject) => {
+      ws.onmessage = (event) => resolve(JSON.parse(event.data as string));
+      setTimeout(() => reject(new Error("timeout")), 3000);
+    });
+
+    await new Promise<void>((resolve) => {
+      ws.onopen = () => resolve();
+    });
+
+    ws.send(JSON.stringify({ content: "no sender" }));
+
+    const msg = await received;
+    expect(msg.error).toBe("sender and content are required");
 
     ws.close();
   });

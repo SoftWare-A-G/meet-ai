@@ -44,17 +44,30 @@ export function createApp(options: { port?: number; dbPath?: string } = {}) {
       return Response.json({ id, name: body.name }, { status: 201 });
     }
 
-    // GET /messages?roomId=... — listMessages
+    // GET /messages?roomId=...&after=...&exclude=... — listMessages
     if (url.pathname === "/messages" && req.method === "GET") {
       const roomId = url.searchParams.get("roomId");
       if (!roomId) {
         return Response.json({ error: "roomId is required" }, { status: 400 });
       }
-      const rows = db
-        .query(
-          "SELECT id, room_id as roomId, sender, content FROM messages WHERE room_id = ? ORDER BY created_at",
-        )
-        .all(roomId);
+      const after = url.searchParams.get("after");
+      const exclude = url.searchParams.get("exclude");
+
+      let sql =
+        "SELECT id, room_id as roomId, sender, content FROM messages WHERE room_id = ?";
+      const params: string[] = [roomId];
+
+      if (after) {
+        sql += " AND rowid > (SELECT rowid FROM messages WHERE id = ?)";
+        params.push(after);
+      }
+      if (exclude) {
+        sql += " AND sender != ?";
+        params.push(exclude);
+      }
+      sql += " ORDER BY created_at";
+
+      const rows = db.query(sql).all(...params);
       return Response.json(rows);
     }
 
@@ -122,8 +135,33 @@ export function createApp(options: { port?: number; dbPath?: string } = {}) {
         }
         roomClients.get(roomId)!.add(ws);
       },
-      message(_ws, _msg) {
-        // All messaging goes through the REST API
+      message(ws, msg) {
+        try {
+          const data = JSON.parse(typeof msg === "string" ? msg : new TextDecoder().decode(msg));
+          const { sender, content } = data as { sender?: string; content?: string };
+          const { roomId } = ws.data;
+          if (!sender || !content) {
+            ws.send(JSON.stringify({ error: "sender and content are required" }));
+            return;
+          }
+          const id = crypto.randomUUID();
+          db.run("INSERT INTO messages (id, room_id, sender, content) VALUES (?, ?, ?, ?)", [
+            id,
+            roomId,
+            sender,
+            content,
+          ]);
+          const message = { id, roomId, sender, content };
+          const payload = JSON.stringify(message);
+          const clients = roomClients.get(roomId);
+          if (clients) {
+            for (const client of clients) {
+              client.send(payload);
+            }
+          }
+        } catch {
+          ws.send(JSON.stringify({ error: "invalid JSON" }));
+        }
       },
       close(ws) {
         const { roomId } = ws.data;
