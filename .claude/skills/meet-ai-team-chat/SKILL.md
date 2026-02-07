@@ -54,6 +54,17 @@ Create a room and share the ID with all teammates:
 bun run packages/cli/src/index.ts create-room "<team-name>"
 ```
 
+**Start the WebSocket listener immediately** after creating the room. Run it in the background so the orchestrator stays connected at all times:
+
+```bash
+bun run packages/cli/src/index.ts listen "<ROOM_ID>" --exclude "orchestrator"
+```
+
+Run this via Bash with `run_in_background: true`. The orchestrator MUST stay connected via WebSocket for the entire session. This allows:
+- Instant delivery of human messages from the web UI
+- Agents to remain idle until the orchestrator wakes them with a SendMessage
+- No manual polling needed — messages stream in automatically
+
 Include in each teammate's spawn prompt:
 
 ```
@@ -106,6 +117,7 @@ bun run packages/cli/src/index.ts listen "<ROOM_ID>" --exclude "<AGENT_NAME>"
 1. **Every outbound message must be relayed** via the CLI. No exceptions.
 2. **Use the agent's own name as sender.**
 3. **The orchestrator creates exactly one room per team session.**
-4. **Poll for incoming messages** between tasks or after major operations.
-5. **Do not skip relay on failure.** If the CLI call fails, still send via SendMessage.
-6. **Pass `--exclude` with your own name** when polling/listening to skip your own messages.
+4. **The orchestrator MUST stay connected via WebSocket** using `listen` in the background for the entire session. Do NOT rely on periodic polling — use the live connection to receive messages instantly and wake idle agents when needed.
+5. **Teammate agents should idle between tasks.** The orchestrator wakes them via SendMessage when new work arrives (e.g., a human message in the chat room).
+6. **Do not skip relay on failure.** If the CLI call fails, still send via SendMessage.
+7. **Pass `--exclude` with your own name** when polling/listening to skip your own messages.

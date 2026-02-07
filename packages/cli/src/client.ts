@@ -61,17 +61,47 @@ export function createClient(baseUrl: string, apiKey?: string) {
     ) {
       const wsUrl = baseUrl.replace(/^http/, "ws");
       const tokenParam = apiKey ? `?token=${apiKey}` : "";
-      const ws = new WebSocket(`${wsUrl}/api/rooms/${roomId}/ws${tokenParam}`);
-      ws.onmessage = (event) => {
-        const msg: Message = JSON.parse(event.data as string);
-        if (options?.exclude && msg.sender === options.exclude) return;
-        if (options?.onMessage) {
-          options.onMessage(msg);
-        } else {
-          console.log(JSON.stringify(msg));
-        }
-      };
-      return ws;
+      let pingInterval: ReturnType<typeof setInterval> | null = null;
+
+      function connect() {
+        const ws = new WebSocket(`${wsUrl}/api/rooms/${roomId}/ws${tokenParam}`);
+
+        ws.onopen = () => {
+          // Send ping every 30s to keep connection alive
+          if (pingInterval) clearInterval(pingInterval);
+          pingInterval = setInterval(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: "ping" }));
+            }
+          }, 30_000);
+        };
+
+        ws.onmessage = (event) => {
+          const data = JSON.parse(event.data as string);
+          if (data.type === "pong") return;
+          const msg: Message = data;
+          if (options?.exclude && msg.sender === options.exclude) return;
+          if (options?.onMessage) {
+            options.onMessage(msg);
+          } else {
+            console.log(JSON.stringify(msg));
+          }
+        };
+
+        ws.onclose = () => {
+          if (pingInterval) clearInterval(pingInterval);
+          // Reconnect after 2s
+          setTimeout(connect, 2_000);
+        };
+
+        ws.onerror = () => {
+          // onclose will fire after this, triggering reconnect
+        };
+
+        return ws;
+      }
+
+      return connect();
     },
 
     async generateKey() {

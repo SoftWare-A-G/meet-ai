@@ -109,6 +109,12 @@ export function createApp(options: { port?: number; dbPath?: string } = {}) {
     if (url.pathname === "/" || url.pathname === "/index.html") {
       return new Response(Bun.file(join(import.meta.dir, "public/index.html")));
     }
+    if (url.pathname === "/chat" || url.pathname === "/chat.html") {
+      return new Response(Bun.file(join(import.meta.dir, "public/chat.html")));
+    }
+    if (url.pathname === "/key" || url.pathname === "/key.html") {
+      return new Response(Bun.file(join(import.meta.dir, "public/key.html")));
+    }
 
     return Response.json({ error: "not found" }, { status: 404 });
   }

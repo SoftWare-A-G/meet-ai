@@ -2,6 +2,12 @@ name = "meet-ai"
 main = "src/index.ts"
 compatibility_date = "2025-09-06"
 compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+preview_urls = false
+
+routes = [
+  { pattern = "your-domain.com", custom_domain = true }
+]
 
 [assets]
 directory = "../web/src/public"
@@ -19,4 +25,4 @@ bindings = [
 
 [[migrations]]
 tag = "v1"
-new_classes = ["ChatRoom"]
+new_sqlite_classes = ["ChatRoom"]

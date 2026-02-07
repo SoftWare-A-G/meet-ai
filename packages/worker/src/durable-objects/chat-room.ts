@@ -28,8 +28,19 @@ export class ChatRoom extends DurableObject {
     return new Response('not found', { status: 404 })
   }
 
-  async webSocketMessage(_ws: WebSocket, _message: string | ArrayBuffer) {
-    // Client-sent messages are ignored — all messages must go through
+  async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer) {
+    // Handle ping/pong to keep connections alive
+    try {
+      const text = typeof message === 'string' ? message : new TextDecoder().decode(message)
+      const data = JSON.parse(text)
+      if (data.type === 'ping') {
+        ws.send(JSON.stringify({ type: 'pong' }))
+        return
+      }
+    } catch {
+      // Not JSON or not a ping — ignore
+    }
+    // All other client messages are ignored — messages must go through
     // the REST API (POST /api/rooms/:id/messages) which persists to D1
     // and then broadcasts via the /broadcast internal endpoint.
   }
