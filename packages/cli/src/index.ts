@@ -1,7 +1,8 @@
 import { createClient } from "./client";
 
-const API_URL = process.env.API_URL || "http://localhost:3000";
-const client = createClient(API_URL);
+const API_URL = process.env.MEET_AI_URL || "http://localhost:3000";
+const API_KEY = process.env.MEET_AI_KEY;
+const client = createClient(API_URL, API_KEY);
 
 const [command, ...args] = process.argv.slice(2);
 
@@ -69,6 +70,24 @@ switch (command) {
     break;
   }
 
+  case "generate-key": {
+    const result = await client.generateKey();
+    console.log(`API Key: ${result.key}`);
+    console.log(`Prefix:  ${result.prefix}`);
+    break;
+  }
+
   default:
-    console.log("Commands: create-room, send-message, poll, listen");
+    console.log(`meet-ai CLI
+
+Environment variables:
+  MEET_AI_URL   Server URL (default: http://localhost:3000)
+  MEET_AI_KEY   API key for authentication (optional for local, required for production)
+
+Commands:
+  create-room <name>                           Create a new chat room
+  send-message <roomId> <sender> <content>     Send a message to a room
+  poll <roomId> [--after <id>] [--exclude <s>] Fetch messages from a room
+  listen <roomId> [--exclude <sender>]         Stream messages via WebSocket
+  generate-key                                 Generate a new API key`);
 }

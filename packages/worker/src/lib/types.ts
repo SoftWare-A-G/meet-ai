@@ -1,0 +1,36 @@
+export type Bindings = {
+  DB: D1Database
+  CHAT_ROOM: DurableObjectNamespace
+}
+
+export type Variables = {
+  keyId: string
+}
+
+export type AppEnv = {
+  Bindings: Bindings
+  Variables: Variables
+}
+
+export type ApiKey = {
+  id: string
+  key_hash: string
+  key_prefix: string
+  created_at: string
+  last_used: string | null
+}
+
+export type Room = {
+  id: string
+  key_id: string
+  name: string
+  created_at: string
+}
+
+export type Message = {
+  id: string
+  room_id: string
+  sender: string
+  content: string
+  created_at: string
+}

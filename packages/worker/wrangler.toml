@@ -1,0 +1,22 @@
+name = "meet-ai"
+main = "src/index.ts"
+compatibility_date = "2025-09-06"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "../web/src/public"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "meet-ai-db"
+database_id = "placeholder-update-after-d1-create"
+migrations_dir = "migrations"
+
+[durable_objects]
+bindings = [
+  { name = "CHAT_ROOM", class_name = "ChatRoom" }
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["ChatRoom"]

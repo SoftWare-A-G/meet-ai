@@ -1,0 +1,26 @@
+import { Hono } from 'hono'
+import { cors } from 'hono/cors'
+import type { AppEnv } from './lib/types'
+import { keysRoute } from './routes/keys'
+import { roomsRoute } from './routes/rooms'
+import { wsRoute } from './routes/ws'
+
+export { ChatRoom } from './durable-objects/chat-room'
+
+const app = new Hono<AppEnv>()
+
+app.onError((err, c) => {
+  if (err instanceof SyntaxError) {
+    return c.json({ error: 'Invalid JSON' }, 400)
+  }
+  console.error('Unhandled error:', err)
+  return c.json({ error: 'Internal server error' }, 500)
+})
+
+app.use('*', cors())
+
+app.route('/api/keys', keysRoute)
+app.route('/api/rooms', roomsRoute)
+app.route('/api/rooms', wsRoute)
+
+export default app

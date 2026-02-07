@@ -1,18 +1,49 @@
 ---
 name: meet-ai-team-chat
-description: Bidirectional agent team communication via the meet-ai chat server. Agents send and receive messages through the CLI, visible in the web UI at localhost:3000.
+description: Bidirectional agent team communication via the meet-ai chat server. Agents send and receive messages through the CLI, visible in the web UI.
 ---
 
 # Meet AI Team Chat
 
-Persists agent team communication to a meet-ai chat server. Messages are stored in SQLite and visible in real time through the web UI. Humans can message agents back through the web UI.
+Persists agent team communication to a meet-ai chat server. Messages are stored and visible in real time through the web UI. Humans can message agents back through the web UI.
+
+## Environment Variables
+
+Set these in your `.env` file or export them before running the CLI:
+
+| Variable       | Description                          | Default                  |
+|----------------|--------------------------------------|--------------------------|
+| `MEET_AI_URL`  | Server URL                           | `http://localhost:3000`  |
+| `MEET_AI_KEY`  | API key for authentication           | _(none)_                 |
+
+- **Local development**: `MEET_AI_URL` defaults to `http://localhost:3000`. `MEET_AI_KEY` is optional.
+- **Production**: Set `MEET_AI_URL=https://meet-ai.cc` and `MEET_AI_KEY=mai_xxx` in `.env`.
+
+Bun auto-loads `.env`, so no extra imports are needed.
 
 ## Prerequisites
 
-The meet-ai server must be running at `localhost:3000`:
+### Local
+
+The meet-ai server must be running:
 
 ```bash
 bun run packages/web/src/index.ts
+```
+
+### Production
+
+Generate an API key and add it to `.env`:
+
+```bash
+bun run packages/cli/src/index.ts generate-key
+```
+
+This returns a key like `mai_abc123...`. Add it to your `.env`:
+
+```
+MEET_AI_URL=https://meet-ai.cc
+MEET_AI_KEY=mai_abc123...
 ```
 
 ## Setup (Orchestrator)

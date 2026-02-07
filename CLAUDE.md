@@ -34,6 +34,34 @@ test('hello world', () => {
 
 For more information, read the Bun API docs in `node_modules/bun-types/docs/**.mdx`.
 
+**Exception:** `packages/worker` uses vitest (not bun:test) because `@cloudflare/vitest-pool-workers` is the only way to test inside the Workers runtime with D1/DO bindings. The pool-workers package requires vitest@3 — vitest@4 is not supported yet.
+
+## meet-ai API Key in Claude Code Settings
+
+Add `MEET_AI_KEY` and `MEET_AI_URL` via the `env` field in `settings.json`.
+
+**User-level** (`~/.claude/settings.json`) — applies to all projects:
+
+```json
+{
+  "env": {
+    "MEET_AI_URL": "https://meet-ai.cc",
+    "MEET_AI_KEY": "mai_YourKeyHere1234567890ab"
+  }
+}
+```
+
+**Project-level** (`.claude/settings.json`) — applies to this repo only:
+
+```json
+{
+  "env": {
+    "MEET_AI_URL": "http://localhost:8787",
+    "MEET_AI_KEY": "mai_YourKeyHere1234567890ab"
+  }
+}
+```
+
 ## Agent Team Communication
 
 When working as part of an agent team, every agent (including the orchestrator) MUST relay all inter-agent messages through the meet-ai CLI and poll for incoming messages. Communication is bidirectional — humans can message agents through the web UI.
