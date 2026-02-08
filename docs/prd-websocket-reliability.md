@@ -132,7 +132,7 @@ Handle SIGINT/SIGTERM to send a clean WebSocket close frame before process exit.
 
 Handle potential `ArrayBuffer` from Bun's WS: `typeof event.data === 'string' ? event.data : new TextDecoder().decode(event.data)`.
 
-### Phase 3 — Observability (P2)
+### Phase 3 — Observability (P2) ✅ DONE
 
 **3.1 Stderr lifecycle events**
 

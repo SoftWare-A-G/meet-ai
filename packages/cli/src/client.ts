@@ -1,5 +1,11 @@
 type Message = { id: string; roomId: string; sender: string; content: string };
 
+function wsLog(data: Record<string, unknown>) {
+  const json = JSON.stringify({ ...data, ts: new Date().toISOString() });
+  const isSuccess = data.event === 'connected' || data.event === 'reconnected' || data.event === 'catchup';
+  console.error(isSuccess ? `\x1b[32m${json}\x1b[0m` : json);
+}
+
 export function createClient(baseUrl: string, apiKey?: string) {
   function headers(extra?: Record<string, string>): Record<string, string> {
     const h: Record<string, string> = { "Content-Type": "application/json", ...extra };
@@ -99,7 +105,7 @@ export function createClient(baseUrl: string, apiKey?: string) {
         // 2.3 — Connection timeout: abort if no open within 10s
         const connectTimeout = setTimeout(() => {
           if (ws.readyState !== WebSocket.OPEN) {
-            console.error(`[ws] connection timeout after 10s`);
+            wsLog({ event: 'timeout', after_ms: 10_000 });
             ws.close();
           }
         }, 10_000);
@@ -108,7 +114,7 @@ export function createClient(baseUrl: string, apiKey?: string) {
           clearTimeout(connectTimeout);
           const wasReconnect = reconnectAttempt > 0;
           reconnectAttempt = 0;
-          console.error(`\x1b[32m[ws] ${wasReconnect ? 'reconnected' : 'connected'}\x1b[0m`);
+          wsLog({ event: wasReconnect ? 'reconnected' : 'connected' });
 
           // Send ping every 30s to keep connection alive
           if (pingInterval) clearInterval(pingInterval);
@@ -122,7 +128,7 @@ export function createClient(baseUrl: string, apiKey?: string) {
           if (lastSeenId) {
             try {
               const missed = await fetchMessages(roomId, { after: lastSeenId });
-              if (missed.length) console.error(`\x1b[32m[ws] caught up ${missed.length} missed message(s)\x1b[0m`);
+              if (missed.length) wsLog({ event: 'catchup', count: missed.length });
               for (const msg of missed) deliver(msg);
             } catch {
               // Catch-up failed — messages will arrive via WS or next reconnect
@@ -147,7 +153,7 @@ export function createClient(baseUrl: string, apiKey?: string) {
           const code = event.code;
           if (code === 1000) {
             // Normal close — don't reconnect
-            console.error(`\x1b[32m[ws] closed normally\x1b[0m`);
+            wsLog({ event: 'closed', code: 1000 });
             return;
           }
 
@@ -157,7 +163,8 @@ export function createClient(baseUrl: string, apiKey?: string) {
             : `code ${code}`;
 
           const delay = getReconnectDelay();
-          console.error(`[ws] disconnected (${reason}), reconnecting in ${Math.round(delay)}ms (attempt ${reconnectAttempt})`);
+          wsLog({ event: 'disconnected', code, reason });
+          wsLog({ event: 'reconnecting', attempt: reconnectAttempt, delay_ms: Math.round(delay) });
           setTimeout(connect, delay);
         };
 

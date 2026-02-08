@@ -1,5 +1,8 @@
 import { DurableObject } from 'cloudflare:workers'
 
+const STALE_TIMEOUT_MS = 120_000 // 2 minutes
+const ALARM_INTERVAL_MS = 60_000 // check every 60s
+
 export class ChatRoom extends DurableObject {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url)
@@ -18,23 +21,60 @@ export class ChatRoom extends DurableObject {
         )
       )
 
+      // Schedule alarm to clean up stale connections
+      const alarm = await this.ctx.storage.getAlarm()
+      if (!alarm) {
+        await this.ctx.storage.setAlarm(Date.now() + ALARM_INTERVAL_MS)
+      }
+
       return new Response(null, { status: 101, webSocket: client })
     }
 
     // /broadcast — internal broadcast from Worker
     if (url.pathname === '/broadcast') {
       const data = await request.text()
+      let sent = 0
+      let failed = 0
       for (const ws of this.ctx.getWebSockets()) {
         try {
           ws.send(data)
+          sent++
         } catch {
-          /* client disconnected */
+          failed++
         }
+      }
+      // 3.3 — Log broadcast failures
+      if (failed > 0) {
+        console.warn(`broadcast: ${sent} sent, ${failed} failed`)
       }
       return new Response('ok')
     }
 
     return new Response('not found', { status: 404 })
+  }
+
+  // 3.2 — Alarm-based stale connection cleanup
+  async alarm() {
+    const sockets = this.ctx.getWebSockets()
+    const now = Date.now()
+    let closed = 0
+
+    for (const ws of sockets) {
+      const lastPong = this.ctx.getWebSocketAutoResponseTimestamp(ws)
+      if (lastPong && now - lastPong.getTime() > STALE_TIMEOUT_MS) {
+        try { ws.close(1011, 'stale connection') } catch { /* already closed */ }
+        closed++
+      }
+    }
+
+    if (closed > 0) {
+      console.log(`alarm: closed ${closed} stale connection(s)`)
+    }
+
+    // Reschedule if there are still active connections
+    if (sockets.length - closed > 0) {
+      await this.ctx.storage.setAlarm(Date.now() + ALARM_INTERVAL_MS)
+    }
   }
 
   async webSocketMessage(_ws: WebSocket, _message: string | ArrayBuffer) {
