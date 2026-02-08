@@ -1,10 +1,4 @@
 node_modules
-*.db
-*.db-wal
-*.db-shm
-*.sqlite
-*.sqlite-shm
-*.sqlite-wal
 bun.lock
 .wrangler/
 .env
