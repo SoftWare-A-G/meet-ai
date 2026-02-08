@@ -10,7 +10,7 @@ routes = [
 ]
 
 [assets]
-directory = "../web/src/public"
+directory = "./public"
 
 [[d1_databases]]
 binding = "DB"

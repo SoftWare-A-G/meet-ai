@@ -1913,6 +1913,47 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "d1Xmt",
+      "x": 3334,
+      "y": 0,
+      "name": "Favicon 512",
+      "clip": true,
+      "width": 512,
+      "height": 512,
+      "fill": "#0A0A0A",
+      "cornerRadius": 96,
+      "layout": "none",
+      "children": [
+        {
+          "type": "text",
+          "id": "8ElF5",
+          "x": 97,
+          "y": -33,
+          "name": "M Letter",
+          "fill": "#FFFFFF",
+          "textGrowth": "fixed-width-height",
+          "width": 240,
+          "height": 470,
+          "content": "m",
+          "fontFamily": "JetBrains Mono",
+          "fontSize": 400,
+          "fontWeight": "bold"
+        },
+        {
+          "type": "rectangle",
+          "cornerRadius": 10,
+          "id": "7iqI8",
+          "x": 368,
+          "y": 109,
+          "name": "Cursor Bar",
+          "fill": "#2563EB",
+          "width": 40,
+          "height": 320
+        }
+      ]
     }
   ]
 }

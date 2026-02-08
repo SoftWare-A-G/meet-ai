@@ -1,5 +1,8 @@
 # This is instructions for Claude Code
 
+## Runtime, package manager
+USE `bun` INSTEAD OF `npm`, `bunx` instead of `npx`
+
 ## Bun shortcuts
 
 - Use `bun <file>` instead of `node <file>` or `ts-node <file>`

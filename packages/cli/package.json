@@ -2,10 +2,7 @@
   "name": "@meet-ai/cli",
   "version": "0.0.1",
   "private": true,
-  "dependencies": {
-    "@meet-ai/web": "workspace:*"
-  },
-  "scripts": {
+"scripts": {
     "start": "bun run src/index.ts",
     "test": "bun test"
   },

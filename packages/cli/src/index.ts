@@ -1,6 +1,6 @@
 import { createClient } from "./client";
 
-const API_URL = process.env.MEET_AI_URL || "http://localhost:3000";
+const API_URL = process.env.MEET_AI_URL || "http://localhost:8787";
 const API_KEY = process.env.MEET_AI_KEY;
 const client = createClient(API_URL, API_KEY);
 

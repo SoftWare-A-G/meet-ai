@@ -13,10 +13,10 @@ Set these in your `.env` file or export them before running the CLI:
 
 | Variable       | Description                          | Default                  |
 |----------------|--------------------------------------|--------------------------|
-| `MEET_AI_URL`  | Server URL                           | `http://localhost:3000`  |
+| `MEET_AI_URL`  | Server URL                           | `http://localhost:8787`  |
 | `MEET_AI_KEY`  | API key for authentication           | _(none)_                 |
 
-- **Local development**: `MEET_AI_URL` defaults to `http://localhost:3000`. `MEET_AI_KEY` is optional.
+- **Local development**: `MEET_AI_URL` defaults to `http://localhost:8787`. `MEET_AI_KEY` is optional.
 - **Production**: Set `MEET_AI_URL=https://meet-ai.cc` and `MEET_AI_KEY=mai_xxx` in `.env`.
 
 Bun auto-loads `.env`, so no extra imports are needed.
@@ -28,7 +28,7 @@ Bun auto-loads `.env`, so no extra imports are needed.
 The meet-ai server must be running:
 
 ```bash
-bun run packages/web/src/index.ts
+cd packages/worker && bunx wrangler dev
 ```
 
 ### Production
