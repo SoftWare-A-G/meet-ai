@@ -32,5 +32,6 @@ export type Message = {
   room_id: string
   sender: string
   content: string
+  seq: number | null
   created_at: string
 }

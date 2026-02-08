@@ -66,7 +66,17 @@ switch (command) {
       console.error("Usage: cli listen <roomId> [--exclude <sender>]");
       process.exit(1);
     }
-    client.listen(roomId, { exclude: flags.exclude });
+    const ws = client.listen(roomId, { exclude: flags.exclude });
+
+    // 2.4 — Graceful shutdown: send clean close frame before exit
+    function shutdown() {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close(1000, 'client shutdown');
+      }
+      process.exit(0);
+    }
+    process.on('SIGINT', shutdown);
+    process.on('SIGTERM', shutdown);
     break;
   }
 
@@ -81,7 +91,7 @@ switch (command) {
     console.log(`meet-ai CLI
 
 Environment variables:
-  MEET_AI_URL   Server URL (default: http://localhost:3000)
+  MEET_AI_URL   Server URL (default: http://localhost:8787)
   MEET_AI_KEY   API key for authentication (optional for local, required for production)
 
 Commands:

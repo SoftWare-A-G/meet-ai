@@ -96,7 +96,15 @@ export function createClient(baseUrl: string, apiKey?: string) {
       function connect() {
         const ws = new WebSocket(`${wsUrl}/api/rooms/${roomId}/ws${tokenParam}`);
 
+        // 2.3 — Connection timeout: abort if no open within 10s
+        const connectTimeout = setTimeout(() => {
+          if (ws.readyState !== WebSocket.OPEN) {
+            ws.close();
+          }
+        }, 10_000);
+
         ws.onopen = async () => {
+          clearTimeout(connectTimeout);
           const wasReconnect = reconnectAttempt > 0;
           reconnectAttempt = 0;
           console.error(`\x1b[32m[ws] ${wasReconnect ? 'reconnected' : 'connected'}\x1b[0m`);
@@ -130,10 +138,25 @@ export function createClient(baseUrl: string, apiKey?: string) {
           deliver(data as Message);
         };
 
-        ws.onclose = () => {
+        ws.onclose = (event) => {
+          clearTimeout(connectTimeout);
           if (pingInterval) clearInterval(pingInterval);
+
+          // 2.2 — Close code handling
+          const code = event.code;
+          if (code === 1000) {
+            // Normal close — don't reconnect
+            console.error(`\x1b[32m[ws] closed normally\x1b[0m`);
+            return;
+          }
+
+          const reason = code === 1006 ? 'network drop'
+            : code === 1012 ? 'service restart'
+            : code === 1013 ? 'server back-off'
+            : `code ${code}`;
+
           const delay = getReconnectDelay();
-          console.error(`[ws] disconnected, reconnecting in ${Math.round(delay)}ms (attempt ${reconnectAttempt})`);
+          console.error(`[ws] disconnected (${reason}), reconnecting in ${Math.round(delay)}ms (attempt ${reconnectAttempt})`);
           setTimeout(connect, delay);
         };
 

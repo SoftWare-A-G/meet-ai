@@ -59,8 +59,29 @@ export function queries(db: D1Database) {
 
     async insertMessage(id: string, roomId: string, sender: string, content: string) {
       await db.prepare(
-        'INSERT INTO messages (id, room_id, sender, content) VALUES (?, ?, ?, ?)'
-      ).bind(id, roomId, sender, content).run()
+        `INSERT INTO messages (id, room_id, sender, content, seq)
+         VALUES (?, ?, ?, ?, COALESCE((SELECT MAX(seq) FROM messages WHERE room_id = ?), 0) + 1)`
+      ).bind(id, roomId, sender, content, roomId).run()
+
+      const row = await db.prepare(
+        'SELECT seq FROM messages WHERE id = ?'
+      ).bind(id).first<{ seq: number }>()
+
+      return row!.seq
+    },
+
+    async listMessagesSinceSeq(roomId: string, sinceSeq: number, exclude?: string) {
+      let sql = 'SELECT id, room_id, sender, content, seq, created_at FROM messages WHERE room_id = ? AND seq > ?'
+      const params: (string | number)[] = [roomId, sinceSeq]
+
+      if (exclude) {
+        sql += ' AND sender != ?'
+        params.push(exclude)
+      }
+      sql += ' ORDER BY seq'
+
+      const result = await db.prepare(sql).bind(...params).all<Message>()
+      return result.results
     },
   }
 }

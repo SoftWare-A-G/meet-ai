@@ -41,7 +41,15 @@ roomsRoute.get('/:id/messages', requireAuth, async (c) => {
   }
 
   const after = c.req.query('after')
+  const sinceSeq = c.req.query('since_seq')
   const exclude = c.req.query('exclude')
+
+  // Prefer since_seq (cheaper query) over after (rowid subquery)
+  if (sinceSeq) {
+    const messages = await db.listMessagesSinceSeq(roomId, Number(sinceSeq), exclude || undefined)
+    return c.json(messages)
+  }
+
   const messages = await db.listMessages(roomId, after || undefined, exclude || undefined)
   return c.json(messages)
 })
@@ -63,9 +71,9 @@ roomsRoute.post('/:id/messages', requireAuth, rateLimitByKey(60, 60_000), async 
   }
 
   const id = crypto.randomUUID()
-  await db.insertMessage(id, roomId, body.sender, body.content)
+  const seq = await db.insertMessage(id, roomId, body.sender, body.content)
 
-  const message = { id, room_id: roomId, sender: body.sender, content: body.content }
+  const message = { id, room_id: roomId, sender: body.sender, content: body.content, seq }
 
   // Broadcast via Durable Object
   const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
