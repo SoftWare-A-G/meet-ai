@@ -9,6 +9,15 @@ export class ChatRoom extends DurableObject {
       const pair = new WebSocketPair()
       const [client, server] = Object.values(pair)
       this.ctx.acceptWebSocket(server)
+
+      // Edge-level auto-response: pings are answered without waking the DO
+      this.ctx.setWebSocketAutoResponse(
+        new WebSocketRequestResponsePair(
+          JSON.stringify({ type: 'ping' }),
+          JSON.stringify({ type: 'pong' })
+        )
+      )
+
       return new Response(null, { status: 101, webSocket: client })
     }
 
@@ -28,18 +37,8 @@ export class ChatRoom extends DurableObject {
     return new Response('not found', { status: 404 })
   }
 
-  async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer) {
-    // Handle ping/pong to keep connections alive
-    try {
-      const text = typeof message === 'string' ? message : new TextDecoder().decode(message)
-      const data = JSON.parse(text)
-      if (data.type === 'ping') {
-        ws.send(JSON.stringify({ type: 'pong' }))
-        return
-      }
-    } catch {
-      // Not JSON or not a ping — ignore
-    }
+  async webSocketMessage(_ws: WebSocket, _message: string | ArrayBuffer) {
+    // Ping/pong handled by setWebSocketAutoResponse (edge-level, no DO wake).
     // All other client messages are ignored — messages must go through
     // the REST API (POST /api/rooms/:id/messages) which persists to D1
     // and then broadcasts via the /broadcast internal endpoint.

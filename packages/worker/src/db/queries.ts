@@ -39,18 +39,21 @@ export function queries(db: D1Database) {
       ).bind(roomId, keyId).first<Pick<Room, 'id' | 'key_id' | 'name'>>()
     },
 
-    async listMessages(roomId: string, afterId?: string) {
+    async listMessages(roomId: string, afterId?: string, exclude?: string) {
+      let sql = 'SELECT id, room_id, sender, content, created_at FROM messages WHERE room_id = ?'
+      const params: string[] = [roomId]
+
       if (afterId) {
-        const result = await db.prepare(
-          `SELECT id, room_id, sender, content, created_at FROM messages
-           WHERE room_id = ? AND rowid > (SELECT rowid FROM messages WHERE id = ?)
-           ORDER BY rowid`
-        ).bind(roomId, afterId).all<Message>()
-        return result.results
+        sql += ' AND rowid > (SELECT rowid FROM messages WHERE id = ?)'
+        params.push(afterId)
       }
-      const result = await db.prepare(
-        'SELECT id, room_id, sender, content, created_at FROM messages WHERE room_id = ? ORDER BY rowid'
-      ).bind(roomId).all<Message>()
+      if (exclude) {
+        sql += ' AND sender != ?'
+        params.push(exclude)
+      }
+      sql += ' ORDER BY rowid'
+
+      const result = await db.prepare(sql).bind(...params).all<Message>()
       return result.results
     },
 

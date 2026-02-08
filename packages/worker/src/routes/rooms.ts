@@ -41,7 +41,8 @@ roomsRoute.get('/:id/messages', requireAuth, async (c) => {
   }
 
   const after = c.req.query('after')
-  const messages = await db.listMessages(roomId, after || undefined)
+  const exclude = c.req.query('exclude')
+  const messages = await db.listMessages(roomId, after || undefined, exclude || undefined)
   return c.json(messages)
 })
 

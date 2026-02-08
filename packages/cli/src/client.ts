@@ -62,11 +62,45 @@ export function createClient(baseUrl: string, apiKey?: string) {
       const wsUrl = baseUrl.replace(/^http/, "ws");
       const tokenParam = apiKey ? `?token=${apiKey}` : "";
       let pingInterval: ReturnType<typeof setInterval> | null = null;
+      let reconnectAttempt = 0;
+
+      // Dedup set — cap at 200 to bound memory
+      const seen = new Set<string>();
+      let lastSeenId: string | null = null;
+
+      function deliver(msg: Message) {
+        if (seen.has(msg.id)) return;
+        seen.add(msg.id);
+        if (seen.size > 200) {
+          const first = seen.values().next().value!;
+          seen.delete(first);
+        }
+        lastSeenId = msg.id;
+        if (options?.exclude && msg.sender === options.exclude) return;
+        if (options?.onMessage) {
+          options.onMessage(msg);
+        } else {
+          console.log(JSON.stringify(msg));
+        }
+      }
+
+      function getReconnectDelay() {
+        const delay = Math.min(1000 * 2 ** Math.min(reconnectAttempt, 5), 30_000);
+        reconnectAttempt++;
+        return delay + delay * 0.5 * Math.random();
+      }
+
+      // Shared getMessages reference for catch-up
+      const fetchMessages = this.getMessages.bind(this);
 
       function connect() {
         const ws = new WebSocket(`${wsUrl}/api/rooms/${roomId}/ws${tokenParam}`);
 
-        ws.onopen = () => {
+        ws.onopen = async () => {
+          const wasReconnect = reconnectAttempt > 0;
+          reconnectAttempt = 0;
+          console.error(`\x1b[32m[ws] ${wasReconnect ? 'reconnected' : 'connected'}\x1b[0m`);
+
           // Send ping every 30s to keep connection alive
           if (pingInterval) clearInterval(pingInterval);
           pingInterval = setInterval(() => {
@@ -74,24 +108,33 @@ export function createClient(baseUrl: string, apiKey?: string) {
               ws.send(JSON.stringify({ type: "ping" }));
             }
           }, 30_000);
+
+          // REST catch-up: fetch messages missed during disconnect
+          if (lastSeenId) {
+            try {
+              const missed = await fetchMessages(roomId, { after: lastSeenId });
+              if (missed.length) console.error(`\x1b[32m[ws] caught up ${missed.length} missed message(s)\x1b[0m`);
+              for (const msg of missed) deliver(msg);
+            } catch {
+              // Catch-up failed — messages will arrive via WS or next reconnect
+            }
+          }
         };
 
         ws.onmessage = (event) => {
-          const data = JSON.parse(event.data as string);
+          const text = typeof event.data === "string"
+            ? event.data
+            : new TextDecoder().decode(event.data as ArrayBuffer);
+          const data = JSON.parse(text);
           if (data.type === "pong") return;
-          const msg: Message = data;
-          if (options?.exclude && msg.sender === options.exclude) return;
-          if (options?.onMessage) {
-            options.onMessage(msg);
-          } else {
-            console.log(JSON.stringify(msg));
-          }
+          deliver(data as Message);
         };
 
         ws.onclose = () => {
           if (pingInterval) clearInterval(pingInterval);
-          // Reconnect after 2s
-          setTimeout(connect, 2_000);
+          const delay = getReconnectDelay();
+          console.error(`[ws] disconnected, reconnecting in ${Math.round(delay)}ms (attempt ${reconnectAttempt})`);
+          setTimeout(connect, delay);
         };
 
         ws.onerror = () => {
