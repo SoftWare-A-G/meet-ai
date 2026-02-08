@@ -40,7 +40,7 @@ export function queries(db: D1Database) {
     },
 
     async listMessages(roomId: string, afterId?: string, exclude?: string) {
-      let sql = 'SELECT id, room_id, sender, content, created_at FROM messages WHERE room_id = ?'
+      let sql = 'SELECT id, room_id, sender, content, seq, created_at FROM messages WHERE room_id = ?'
       const params: string[] = [roomId]
 
       if (afterId) {

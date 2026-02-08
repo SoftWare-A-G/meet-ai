@@ -209,6 +209,147 @@ describe('Messages', () => {
     expect(res.status).toBe(404)
   })
 
+  it('POST response includes sequential seq numbers', async () => {
+    const key = await createKey()
+    const roomId = await createRoom(key, 'seq-room')
+
+    const res1 = await sendMessage(key, roomId, 'alice', 'first')
+    const msg1 = await res1.json() as { seq: number }
+
+    const res2 = await sendMessage(key, roomId, 'bob', 'second')
+    const msg2 = await res2.json() as { seq: number }
+
+    const res3 = await sendMessage(key, roomId, 'alice', 'third')
+    const msg3 = await res3.json() as { seq: number }
+
+    expect(msg1.seq).toBe(1)
+    expect(msg2.seq).toBe(2)
+    expect(msg3.seq).toBe(3)
+  })
+
+  it('GET messages includes seq field', async () => {
+    const key = await createKey()
+    const roomId = await createRoom(key, 'seq-list-room')
+
+    await sendMessage(key, roomId, 'alice', 'one')
+    await sendMessage(key, roomId, 'bob', 'two')
+
+    const res = await SELF.fetch(`http://localhost/api/rooms/${roomId}/messages`, {
+      headers: { Authorization: `Bearer ${key}` },
+    })
+    const messages = await res.json() as { content: string; seq: number }[]
+    expect(messages).toHaveLength(2)
+    expect(messages[0].seq).toBe(1)
+    expect(messages[1].seq).toBe(2)
+  })
+
+  it('supports since_seq parameter', async () => {
+    const key = await createKey()
+    const roomId = await createRoom(key, 'since-seq-room')
+
+    await sendMessage(key, roomId, 'alice', 'msg1')
+    await sendMessage(key, roomId, 'bob', 'msg2')
+    await sendMessage(key, roomId, 'alice', 'msg3')
+
+    const res = await SELF.fetch(
+      `http://localhost/api/rooms/${roomId}/messages?since_seq=1`,
+      { headers: { Authorization: `Bearer ${key}` } }
+    )
+    const messages = await res.json() as { content: string; seq: number }[]
+    expect(messages).toHaveLength(2)
+    expect(messages[0].content).toBe('msg2')
+    expect(messages[0].seq).toBe(2)
+    expect(messages[1].content).toBe('msg3')
+    expect(messages[1].seq).toBe(3)
+  })
+
+  it('supports exclude parameter on server side', async () => {
+    const key = await createKey()
+    const roomId = await createRoom(key, 'exclude-room')
+
+    await sendMessage(key, roomId, 'alice', 'from alice')
+    await sendMessage(key, roomId, 'bob', 'from bob')
+    await sendMessage(key, roomId, 'alice', 'also alice')
+
+    const res = await SELF.fetch(
+      `http://localhost/api/rooms/${roomId}/messages?exclude=alice`,
+      { headers: { Authorization: `Bearer ${key}` } }
+    )
+    const messages = await res.json() as { sender: string }[]
+    expect(messages).toHaveLength(1)
+    expect(messages[0].sender).toBe('bob')
+  })
+
+  it('since_seq and exclude work together', async () => {
+    const key = await createKey()
+    const roomId = await createRoom(key, 'combo-room')
+
+    await sendMessage(key, roomId, 'alice', 'a1')
+    await sendMessage(key, roomId, 'bob', 'b1')
+    await sendMessage(key, roomId, 'alice', 'a2')
+    await sendMessage(key, roomId, 'bob', 'b2')
+
+    const res = await SELF.fetch(
+      `http://localhost/api/rooms/${roomId}/messages?since_seq=1&exclude=alice`,
+      { headers: { Authorization: `Bearer ${key}` } }
+    )
+    const messages = await res.json() as { sender: string; content: string; seq: number }[]
+    expect(messages).toHaveLength(2)
+    expect(messages[0].content).toBe('b1')
+    expect(messages[1].content).toBe('b2')
+  })
+
+  it('after and exclude work together', async () => {
+    const key = await createKey()
+    const roomId = await createRoom(key, 'after-exclude-room')
+
+    const res1 = await sendMessage(key, roomId, 'alice', 'a1')
+    const msg1 = await res1.json() as { id: string }
+    await sendMessage(key, roomId, 'bob', 'b1')
+    await sendMessage(key, roomId, 'alice', 'a2')
+    await sendMessage(key, roomId, 'bob', 'b2')
+
+    const res = await SELF.fetch(
+      `http://localhost/api/rooms/${roomId}/messages?after=${msg1.id}&exclude=alice`,
+      { headers: { Authorization: `Bearer ${key}` } }
+    )
+    const messages = await res.json() as { sender: string; content: string }[]
+    expect(messages).toHaveLength(2)
+    expect(messages[0].content).toBe('b1')
+    expect(messages[1].content).toBe('b2')
+  })
+
+  it('seq numbers are independent per room', async () => {
+    const key = await createKey()
+    const room1 = await createRoom(key, 'room-a')
+    const room2 = await createRoom(key, 'room-b')
+
+    const r1m1 = await sendMessage(key, room1, 'alice', 'room1-first')
+    const r1m2 = await sendMessage(key, room1, 'alice', 'room1-second')
+    const r2m1 = await sendMessage(key, room2, 'bob', 'room2-first')
+
+    expect((await r1m1.json() as { seq: number }).seq).toBe(1)
+    expect((await r1m2.json() as { seq: number }).seq).toBe(2)
+    expect((await r2m1.json() as { seq: number }).seq).toBe(1)
+  })
+
+  it('POST message returns 404 for non-existent room', async () => {
+    const key = await createKey()
+    const res = await sendMessage(key, 'nonexistent', 'alice', 'hello')
+    expect(res.status).toBe(404)
+  })
+
+  it('POST message rejects invalid JSON', async () => {
+    const key = await createKey()
+    const roomId = await createRoom(key, 'json-room')
+    const res = await SELF.fetch(`http://localhost/api/rooms/${roomId}/messages`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: 'not json',
+    })
+    expect(res.status).toBe(400)
+  })
+
   it('supports after parameter for polling', async () => {
     const key = await createKey()
     const roomId = await createRoom(key, 'poll-room')

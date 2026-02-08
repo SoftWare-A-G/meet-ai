@@ -99,6 +99,7 @@ export function createClient(baseUrl: string, apiKey?: string) {
         // 2.3 — Connection timeout: abort if no open within 10s
         const connectTimeout = setTimeout(() => {
           if (ws.readyState !== WebSocket.OPEN) {
+            console.error(`[ws] connection timeout after 10s`);
             ws.close();
           }
         }, 10_000);
