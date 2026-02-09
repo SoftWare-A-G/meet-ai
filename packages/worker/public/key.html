@@ -407,6 +407,51 @@
     .settings-content .block-copy:hover { color: #e5e5e5; border-color: #3a3a3a; }
     .settings-content .block-copy.copied { color: #22c55e; border-color: #22c55e40; }
 
+    .settings-desc {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 12px;
+      line-height: 1.5;
+    }
+    .settings-desc code {
+      background: rgba(128,128,128,0.15);
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 12px;
+      color: #ccc;
+      font-family: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
+    }
+    .settings-hint {
+      font-size: 12px;
+      color: #888;
+      margin: 8px 0 6px 0;
+      line-height: 1.4;
+    }
+    .settings-hint strong { color: #bbb; }
+    .settings-cmd {
+      background: #111;
+      border: 1px solid #2a2a2a;
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+    }
+    .settings-cmd code {
+      flex: 1;
+      font-family: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
+      font-size: 12px;
+      color: #c4b5fd;
+      word-break: break-all;
+    }
+    .settings-cmd .block-copy {
+      position: static;
+      opacity: 1;
+      flex-shrink: 0;
+    }
+
     /* Actions */
     .actions {
       display: flex;
@@ -894,13 +939,20 @@
           '</div>' +
           '<div class="settings-section stagger-in">' +
             '<h3>Add to Claude Code</h3>' +
+            '<p class="settings-desc">Claude Code reads environment variables from <code>settings.json</code>. Pick one:</p>' +
             '<div class="settings-tabs">' +
               '<button class="settings-tab active" data-tab="user">User-level</button>' +
               '<button class="settings-tab" data-tab="project">Project-level</button>' +
             '</div>' +
             '<div class="settings-content">' +
               '<div class="label" id="settings-path">~/.claude/settings.json</div>' +
+              '<p class="settings-hint" id="settings-hint">Applies to <strong>all projects</strong>. Run this to create and open the file:</p>' +
+              '<div class="settings-cmd" id="settings-cmd">' +
+                '<code id="settings-cmd-text">mkdir -p ~/.claude && touch ~/.claude/settings.json && open ~/.claude/settings.json</code>' +
+                '<button class="block-copy" id="cmd-copy">Copy</button>' +
+              '</div>' +
               '<pre id="settings-json">' + colorizeSettings(key, 'https://meet-ai.cc') + '</pre>' +
+              '<p class="settings-hint">Paste the JSON above into the file and save.</p>' +
               '<button class="block-copy" id="settings-copy">Copy</button>' +
             '</div>' +
           '</div>' +
@@ -941,11 +993,16 @@
         copyText('MEET_AI_KEY=' + key, this, 'Copy');
       });
 
+      // Copy terminal command
+      document.getElementById('cmd-copy').addEventListener('click', function() {
+        var cmdText = document.getElementById('settings-cmd-text').textContent;
+        copyText(cmdText, this, 'Copy');
+      });
+
       // Copy settings JSON
       var currentTab = 'user';
       document.getElementById('settings-copy').addEventListener('click', function() {
-        var url = currentTab === 'user' ? 'https://meet-ai.cc' : 'https://meet-ai.cc';
-        copyText(settingsJsonRaw(key, url), this, 'Copy');
+        copyText(settingsJsonRaw(key, 'https://meet-ai.cc'), this, 'Copy');
       });
 
       // Settings tabs
@@ -957,12 +1014,18 @@
           tabs.forEach(function(t) { t.classList.remove('active'); });
           tab.classList.add('active');
           currentTab = tab.dataset.tab;
+          var hintEl = document.getElementById('settings-hint');
+          var cmdTextEl = document.getElementById('settings-cmd-text');
           if (tab.dataset.tab === 'user') {
             pathEl.textContent = '~/.claude/settings.json';
             jsonEl.innerHTML = colorizeSettings(key, 'https://meet-ai.cc');
+            if (hintEl) hintEl.innerHTML = 'Applies to <strong>all projects</strong>. Run this to create and open the file:';
+            if (cmdTextEl) cmdTextEl.textContent = 'mkdir -p ~/.claude && touch ~/.claude/settings.json && open ~/.claude/settings.json';
           } else {
             pathEl.textContent = '.claude/settings.json';
             jsonEl.innerHTML = colorizeSettings(key, 'https://meet-ai.cc');
+            if (hintEl) hintEl.innerHTML = 'Applies to <strong>this project only</strong>. Run from your project root:';
+            if (cmdTextEl) cmdTextEl.textContent = 'mkdir -p .claude && touch .claude/settings.json && open .claude/settings.json';
           }
         });
       });
