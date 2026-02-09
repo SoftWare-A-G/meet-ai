@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { createClient } from "./client";
 import { appendToInbox, getTeamMembers, resolveInboxTargets, checkIdleAgents, IDLE_CHECK_INTERVAL_MS } from "./inbox-router";
 
