@@ -80,6 +80,7 @@ Messages are displayed in the web UI and read by humans. Format content with mar
 - Use **code blocks** for code snippets, commands, or file paths
 - Keep messages structured and scannable -- a human should understand the key points at a glance
 - **No walls of text.** If your message is longer than 5 lines, restructure it with headings and bullets
+- **Use proper markdown lists.** Always use `- item` (dash + space) for unordered lists and `1. item` for ordered lists. Never use Unicode bullets (`•`, `▸`, etc.) -- they render as inline text, not list elements. Always leave a blank line before the first list item
 
 ## Receiving Messages
 
