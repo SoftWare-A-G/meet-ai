@@ -1,9 +1,52 @@
-type Message = { id: string; roomId: string; sender: string; content: string };
+type Message = { id: string; roomId: string; sender: string; sender_type: string; content: string; color?: string };
 
 function wsLog(data: Record<string, unknown>) {
   const json = JSON.stringify({ ...data, ts: new Date().toISOString() });
   const isSuccess = data.event === 'connected' || data.event === 'reconnected' || data.event === 'catchup';
   console.error(isSuccess ? `\x1b[32m${json}\x1b[0m` : json);
+}
+
+export interface RetryOptions {
+  maxRetries?: number;
+  baseDelay?: number;
+  shouldRetry?: (error: unknown) => boolean;
+}
+
+function isRetryable(error: unknown): boolean {
+  // Network errors (fetch throws TypeError on network failure)
+  if (error instanceof TypeError) return true;
+  // Our own errors from non-ok responses — check for 5xx
+  if (error instanceof Error && /^HTTP 5\d{2}$/.test(error.message)) return true;
+  return false;
+}
+
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  options?: RetryOptions,
+): Promise<T> {
+  const maxRetries = options?.maxRetries ?? 3;
+  const baseDelay = options?.baseDelay ?? 1000;
+  const shouldRetry = options?.shouldRetry ?? isRetryable;
+
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      if (attempt >= maxRetries || !shouldRetry(err)) throw err;
+
+      const delay = baseDelay * 2 ** attempt;
+      console.error(JSON.stringify({
+        event: "retry",
+        attempt: attempt + 1,
+        delay_ms: delay,
+        error: err instanceof Error ? err.message : String(err),
+      }));
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+  throw lastError;
 }
 
 export function createClient(baseUrl: string, apiKey?: string) {
@@ -29,26 +72,29 @@ export function createClient(baseUrl: string, apiKey?: string) {
       return res.json() as Promise<{ id: string; name: string }>;
     },
 
-    async sendMessage(roomId: string, sender: string, content: string) {
-      const res = await fetch(`${baseUrl}/api/rooms/${roomId}/messages`, {
-        method: "POST",
-        headers: headers(),
-        body: JSON.stringify({ sender, content }),
+    async sendMessage(roomId: string, sender: string, content: string, color?: string) {
+      return withRetry(async () => {
+        const res = await fetch(`${baseUrl}/api/rooms/${roomId}/messages`, {
+          method: "POST",
+          headers: headers(),
+          body: JSON.stringify({ sender, content, sender_type: 'agent', ...(color && { color }) }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error((err as any).error ?? `HTTP ${res.status}`);
+        }
+        return res.json() as Promise<Message>;
       });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error ?? `HTTP ${res.status}`);
-      }
-      return res.json() as Promise<Message>;
     },
 
     async getMessages(
       roomId: string,
-      options?: { after?: string; exclude?: string },
+      options?: { after?: string; exclude?: string; senderType?: string },
     ) {
       const params = new URLSearchParams();
       if (options?.after) params.set("after", options.after);
       if (options?.exclude) params.set("exclude", options.exclude);
+      if (options?.senderType) params.set("sender_type", options.senderType);
       const qs = params.toString();
       const url = `${baseUrl}/api/rooms/${roomId}/messages${qs ? `?${qs}` : ""}`;
       const res = await fetch(url, {
@@ -63,7 +109,11 @@ export function createClient(baseUrl: string, apiKey?: string) {
 
     listen(
       roomId: string,
-      options?: { exclude?: string; onMessage?: (msg: Message) => void },
+      options?: {
+        exclude?: string;
+        senderType?: string;
+        onMessage?: (msg: Message) => void;
+      },
     ) {
       const wsUrl = baseUrl.replace(/^http/, "ws");
       const tokenParam = apiKey ? `?token=${apiKey}` : "";
@@ -83,6 +133,7 @@ export function createClient(baseUrl: string, apiKey?: string) {
         }
         lastSeenId = msg.id;
         if (options?.exclude && msg.sender === options.exclude) return;
+        if (options?.senderType && msg.sender_type !== options.senderType) return;
         if (options?.onMessage) {
           options.onMessage(msg);
         } else {
@@ -91,7 +142,7 @@ export function createClient(baseUrl: string, apiKey?: string) {
       }
 
       function getReconnectDelay() {
-        const delay = Math.min(1000 * 2 ** Math.min(reconnectAttempt, 5), 30_000);
+        const delay = Math.min(1000 * 2 ** Math.min(reconnectAttempt, 4), 15_000);
         reconnectAttempt++;
         return delay + delay * 0.5 * Math.random();
       }
