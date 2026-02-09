@@ -59,26 +59,6 @@
     .room-item:hover { background: var(--c-hover-item); }
     .room-item.active { background: var(--c-active-item); color: var(--c-active-item-text); font-weight: 600; }
     .room-item .room-hash { opacity: 0.5; font-size: 13px; }
-    .sidebar-create {
-      padding: 10px 8px; border-top: 1px solid var(--c-sidebar-border);
-      display: flex; gap: 6px; align-items: center;
-    }
-    .sidebar-create input {
-      flex: 1; min-width: 0; height: 36px; padding: 0 10px;
-      border: 1px solid var(--c-sidebar-border);
-      border-radius: 8px; background: var(--c-hover-item);
-      color: var(--c-sidebar-text); font-size: 14px; outline: none;
-    }
-    .sidebar-create input::placeholder { opacity: 0.5; color: var(--c-sidebar-text); }
-    .sidebar-create input:focus { border-color: var(--c-active-item); }
-    .sidebar-create button {
-      width: 36px; height: 36px; flex-shrink: 0;
-      border: none; border-radius: 8px;
-      background: var(--c-primary); color: var(--c-primary-text); cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      padding: 0;
-    }
-    .sidebar-create button svg { width: 20px; height: 20px; flex-shrink: 0; }
     .sidebar-footer {
       padding: 10px 16px; border-top: 1px solid var(--c-sidebar-border);
       display: flex; align-items: center; gap: 8px;
@@ -394,10 +374,6 @@
     </div>
     <div class="sidebar-section-label">Channels</div>
     <div class="room-list" id="room-list"></div>
-    <div class="sidebar-create">
-      <input id="room-name" placeholder="New channel name">
-      <button id="create-room-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-    </div>
     <div class="sidebar-footer">
       <span class="user-presence" style="width:8px;height:8px;border-radius:50%;background:var(--c-presence);flex-shrink:0;"></span>
       <span class="user-handle" id="handle-display" title="Click to change your name"></span>
@@ -836,8 +812,6 @@
     let unreadCount = 0;
 
     const roomList = document.getElementById('room-list');
-    const roomNameInput = document.getElementById('room-name');
-    const createRoomBtn = document.getElementById('create-room-btn');
     const main = document.getElementById('main');
     const channelNameEl = document.getElementById('channel-name');
 
@@ -869,30 +843,6 @@
       d.textContent = str;
       return d.innerHTML;
     }
-
-    createRoomBtn.addEventListener('click', async () => {
-      const name = roomNameInput.value.trim();
-      if (!name) return;
-      try {
-        const res = await fetch('/api/rooms', {
-          method: 'POST',
-          headers: authHeaders(),
-          body: JSON.stringify({ name }),
-        });
-        if (res.status === 401) { location.href = '/key'; return; }
-        const room = await res.json();
-        rooms.push(room);
-        renderRoomList();
-        selectRoom(room);
-        roomNameInput.value = '';
-      } catch (e) {
-        console.error('Failed to create room:', e);
-      }
-    });
-
-    roomNameInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); createRoomBtn.click(); }
-    });
 
     // ===== Chat =====
     async function selectRoom(room, skipPushState) {
