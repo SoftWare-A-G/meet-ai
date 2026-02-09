@@ -31,6 +31,13 @@ app.get('/auth/:token', async (c) => {
   return c.redirect(`/chat?token=${encodeURIComponent(token)}`, 302)
 })
 
+// Serve chat.html for /chat and /chat/ (PWA start_url)
+app.get('/chat', async (c) => {
+  const url = new URL(c.req.url)
+  url.pathname = '/chat.html'
+  return c.env.ASSETS.fetch(url.toString())
+})
+
 // Serve chat.html for /chat/:roomId paths (SPA routing)
 app.get('/chat/:roomId', async (c) => {
   const url = new URL(c.req.url)
