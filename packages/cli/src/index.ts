@@ -1,4 +1,5 @@
 import { createClient } from "./client";
+import { appendToInbox, getTeamMembers, resolveInboxTargets } from "./inbox-router";
 
 const API_URL = process.env.MEET_AI_URL || "http://localhost:8787";
 const API_KEY = process.env.MEET_AI_KEY;
@@ -33,13 +34,14 @@ switch (command) {
   }
 
   case "send-message": {
-    const [roomId, sender, ...rest] = args;
+    const { positional: smPos, flags: smFlags } = parseFlags(args);
+    const [roomId, sender, ...rest] = smPos;
     const content = rest.join(" ");
     if (!roomId || !sender || !content) {
-      console.error("Usage: cli send-message <roomId> <sender> <content>");
+      console.error("Usage: cli send-message <roomId> <sender> <content> [--color <color>]");
       process.exit(1);
     }
-    const msg = await client.sendMessage(roomId, sender, content);
+    const msg = await client.sendMessage(roomId, sender, content, smFlags.color);
     console.log(`Message sent: ${msg.id}`);
     break;
   }
@@ -54,6 +56,7 @@ switch (command) {
     const messages = await client.getMessages(roomId, {
       after: flags.after,
       exclude: flags.exclude,
+      senderType: flags['sender-type'],
     });
     console.log(JSON.stringify(messages));
     break;
@@ -63,12 +66,52 @@ switch (command) {
     const { positional, flags } = parseFlags(args);
     const roomId = positional[0];
     if (!roomId) {
-      console.error("Usage: cli listen <roomId> [--exclude <sender>]");
+      console.error("Usage: cli listen <roomId> [--exclude <sender>] [--sender-type <type>] [--team <name> --inbox <agent>]");
       process.exit(1);
     }
-    const ws = client.listen(roomId, { exclude: flags.exclude });
 
-    // 2.4 — Graceful shutdown: send clean close frame before exit
+    const team = flags.team;
+    const inbox = flags.inbox;
+    const inboxDir = team
+      ? `${process.env.HOME}/.claude/teams/${team}/inboxes`
+      : null;
+    const defaultInboxPath = inboxDir && inbox
+      ? `${inboxDir}/${inbox}.json`
+      : null;
+
+    const teamDir = team ? `${process.env.HOME}/.claude/teams/${team}` : null;
+
+    function routeToInbox(msg: { sender: string; content: string }) {
+      if (!inboxDir) return;
+      const entry = {
+        from: "meet-ai:" + msg.sender,
+        text: msg.content,
+        timestamp: new Date().toISOString(),
+        read: false,
+      };
+
+      const members = teamDir ? getTeamMembers(teamDir) : new Set<string>();
+      const targets = resolveInboxTargets(msg.content, members);
+
+      if (targets) {
+        for (const target of targets) {
+          appendToInbox(`${inboxDir}/${target}.json`, entry);
+        }
+      } else if (defaultInboxPath) {
+        appendToInbox(defaultInboxPath, entry);
+      }
+    }
+
+    const onMessage = inboxDir
+      ? (msg: any) => {
+          console.log(JSON.stringify(msg));
+          routeToInbox(msg);
+        }
+      : undefined;
+
+    const ws = client.listen(roomId, { exclude: flags.exclude, senderType: flags['sender-type'], onMessage });
+
+    // Graceful shutdown: send clean close frame before exit
     function shutdown() {
       if (ws.readyState === WebSocket.OPEN) {
         ws.close(1000, 'client shutdown');
@@ -97,7 +140,15 @@ Environment variables:
 Commands:
   create-room <name>                           Create a new chat room
   send-message <roomId> <sender> <content>     Send a message to a room
-  poll <roomId> [--after <id>] [--exclude <s>] Fetch messages from a room
-  listen <roomId> [--exclude <sender>]         Stream messages via WebSocket
+    --color <color>       Set sender name color (e.g. #ff0000, red)
+  poll <roomId> [options]                      Fetch messages from a room
+    --after <id>          Only messages after this ID
+    --exclude <sender>    Exclude messages from sender
+    --sender-type <type>  Filter by sender_type (human|agent)
+  listen <roomId> [options]                    Stream messages via WebSocket
+    --exclude <sender>    Exclude messages from sender
+    --sender-type <type>  Filter by sender_type (human|agent)
+    --team <name>         Write to Claude Code team inbox
+    --inbox <agent>       Target agent inbox (requires --team)
   generate-key                                 Generate a new API key`);
 }
