@@ -901,7 +901,7 @@
       // Copy settings JSON
       var currentTab = 'user';
       document.getElementById('settings-copy').addEventListener('click', function() {
-        var url = currentTab === 'user' ? 'https://meet-ai.cc' : 'http://localhost:8787';
+        var url = currentTab === 'user' ? 'https://meet-ai.cc' : 'https://meet-ai.cc';
         copyText(settingsJsonRaw(key, url), this, 'Copy');
       });
 
@@ -919,7 +919,7 @@
             jsonEl.innerHTML = colorizeSettings(key, 'https://meet-ai.cc');
           } else {
             pathEl.textContent = '.claude/settings.json';
-            jsonEl.innerHTML = colorizeSettings(key, 'http://localhost:8787');
+            jsonEl.innerHTML = colorizeSettings(key, 'https://meet-ai.cc');
           }
         });
       });
