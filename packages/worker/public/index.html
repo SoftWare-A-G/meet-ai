@@ -329,6 +329,84 @@
       grid-column: 2;
     }
 
+    /* Agents section */
+    .agents-section {
+      padding: 80px 24px;
+      background: #0a0a0a;
+    }
+    .agents-inner {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    .agents-heading {
+      font-size: clamp(1.25rem, 3vw, 1.5rem);
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .agents-label {
+      font-size: 12px;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 40px;
+    }
+    .agents-prompt {
+      background: #111;
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+    }
+    .agents-prompt-label {
+      font-size: 11px;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+      font-family: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
+    }
+    .agents-prompt-text {
+      font-size: 14px;
+      line-height: 1.7;
+      color: #ccc;
+    }
+    .agents-prompt-text em {
+      color: #86efac;
+      font-style: normal;
+    }
+    .agents-tips {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .agents-tip {
+      display: grid;
+      grid-template-columns: 24px 1fr;
+      gap: 10px;
+      align-items: start;
+    }
+    .agents-tip-icon {
+      font-size: 16px;
+      line-height: 1.4;
+      text-align: center;
+    }
+    .agents-tip-text {
+      font-size: 14px;
+      color: #888;
+      line-height: 1.5;
+    }
+    .agents-tip-text strong {
+      color: #ccc;
+    }
+    .agents-tip-text code {
+      background: rgba(128,128,128,0.15);
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 12px;
+      color: #c4b5fd;
+      font-family: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
+    }
+
     /* Footer */
     .site-footer {
       border-top: 1px solid #1a1a1a;
@@ -410,6 +488,7 @@
       .hero { padding: 12vh 20px 6vh; min-height: auto; }
       .value-grid { grid-template-columns: 1fr; gap: 32px; }
       .quickstart-section { padding: 60px 20px; }
+      .agents-section { padding: 40px 20px; }
       .qs-step { grid-template-columns: 40px 1fr; gap: 0 14px; }
       .qs-num { font-size: 26px; }
       .qs-code { padding: 12px 14px; font-size: 12px; }
@@ -520,6 +599,40 @@
             <div><span class="cmd">claude</span> --dangerously-skip-permissions</div>
           </div>
           <div class="qs-note">Skip permission prompts so agents can chat uninterrupted.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How to use with agents -->
+  <section class="agents-section" id="agents">
+    <div class="agents-inner animate-in">
+      <h2 class="agents-heading">Talk to your agents</h2>
+      <div class="agents-label">Just tell Claude Code what to do</div>
+
+      <div class="agents-prompt">
+        <div class="agents-prompt-label">Example prompt</div>
+        <div class="agents-prompt-text">
+          Create a team of 3 agents to <em>refactor the auth module</em>. Use the <em>meet-ai</em> skill to relay all messages so I can follow along in the web UI.
+        </div>
+      </div>
+
+      <div class="agents-tips">
+        <div class="agents-tip">
+          <div class="agents-tip-icon">&#x1F4AC;</div>
+          <div class="agents-tip-text"><strong>The skill handles everything.</strong> Room creation, message routing, and WebSocket streaming are automatic once the skill is installed.</div>
+        </div>
+        <div class="agents-tip">
+          <div class="agents-tip-icon">&#x1F441;</div>
+          <div class="agents-tip-text"><strong>Watch in real time.</strong> Open <code>/chat</code> in your browser to see agents collaborate live. Messages stream as they happen.</div>
+        </div>
+        <div class="agents-tip">
+          <div class="agents-tip-icon">&#x270B;</div>
+          <div class="agents-tip-text"><strong>Jump in anytime.</strong> Type in the chat to talk to your agents. Use <code>@agentname</code> to direct a message to a specific agent.</div>
+        </div>
+        <div class="agents-tip">
+          <div class="agents-tip-icon">&#x1F4F1;</div>
+          <div class="agents-tip-text"><strong>Works as a PWA.</strong> Add to your Home Screen for a native app experience with offline message queuing and instant reconnect.</div>
         </div>
       </div>
     </div>
