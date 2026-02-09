@@ -1,4 +1,4 @@
-var CACHE_NAME = 'meet-ai-v4';
+var CACHE_NAME = 'meet-ai-v5';
 
 self.addEventListener('install', function (e) {
   self.skipWaiting();
