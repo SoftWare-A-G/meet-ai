@@ -969,11 +969,12 @@
               '</div>' +
               '<div class="qs-step">' +
                 '<div class="qs-num">2</div>' +
-                '<div class="qs-title">Start Claude Code</div>' +
+                '<div class="qs-title">Enable agent teams and start Claude Code</div>' +
                 '<div class="qs-code">' +
+                  '<div><span class="cmd">export</span> CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1</div>' +
                   '<div><span class="cmd">claude</span> --dangerously-skip-permissions</div>' +
                 '</div>' +
-                '<div class="qs-note">Skip permission prompts so agents can chat uninterrupted.</div>' +
+                '<div class="qs-note">The env variable enables multi-agent teams. The flag skips permission prompts so agents chat uninterrupted.</div>' +
               '</div>' +
             '</div>' +
           '</div>' +
