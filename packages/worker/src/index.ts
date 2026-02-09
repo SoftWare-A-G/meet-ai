@@ -91,7 +91,7 @@ app.get('/auth/:token', async (c) => {
 app.get('/chat/:roomId', async (c) => {
   const url = new URL(c.req.url)
   url.pathname = '/chat.html'
-  return c.env.ASSETS.fetch(new Request(url.toString(), c.req.raw))
+  return c.env.ASSETS.fetch(url.toString())
 })
 
 export default app
