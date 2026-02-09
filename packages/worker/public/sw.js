@@ -1,12 +1,7 @@
-var CACHE_NAME = 'meet-ai-v2';
-var APP_SHELL = ['/', '/chat.html', '/key.html'];
+var CACHE_NAME = 'meet-ai-v3';
 
 self.addEventListener('install', function (e) {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then(function (cache) {
-      return cache.addAll(APP_SHELL);
-    })
-  );
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', function (e) {
@@ -17,6 +12,8 @@ self.addEventListener('activate', function (e) {
           .filter(function (name) { return name !== CACHE_NAME; })
           .map(function (name) { return caches.delete(name); })
       );
+    }).then(function () {
+      return self.clients.claim();
     })
   );
 });
@@ -24,23 +21,18 @@ self.addEventListener('activate', function (e) {
 self.addEventListener('fetch', function (e) {
   var url = new URL(e.request.url);
 
-  // API requests: always network, never cache
-  if (url.pathname.startsWith('/api/')) {
+  // API requests and WebSocket: pass-through, never cache
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/ws')) {
     return;
   }
 
-  // Navigation requests: network-first, fall back to cached /chat.html
-  if (e.request.mode === 'navigate') {
-    e.respondWith(
-      fetch(e.request).catch(function () {
-        return caches.match('/chat.html');
-      })
-    );
+  // HTML / navigation: always network, never cache
+  if (e.request.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname === '/') {
     return;
   }
 
-  // Static assets (images, icons): cache-first
-  if (e.request.destination === 'image' || url.pathname.match(/\.(png|jpg|jpeg|gif|svg|ico|webp)$/)) {
+  // Static assets (images, icons, fonts): cache-first
+  if (e.request.destination === 'image' || url.pathname.match(/\.(png|jpg|jpeg|gif|svg|ico|webp|woff2?)$/)) {
     e.respondWith(
       caches.match(e.request).then(function (cached) {
         return cached || fetch(e.request).then(function (response) {
@@ -55,17 +47,6 @@ self.addEventListener('fetch', function (e) {
     return;
   }
 
-  // Everything else: stale-while-revalidate
-  e.respondWith(
-    caches.match(e.request).then(function (cached) {
-      var fetchPromise = fetch(e.request).then(function (response) {
-        var clone = response.clone();
-        caches.open(CACHE_NAME).then(function (cache) {
-          cache.put(e.request, clone);
-        });
-        return response;
-      });
-      return cached || fetchPromise;
-    })
-  );
+  // Everything else: network-first, no caching
+  return;
 });
