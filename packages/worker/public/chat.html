@@ -66,7 +66,7 @@
     .sidebar-create input {
       flex: 1; padding: 6px 10px; border: 1px solid var(--c-sidebar-border);
       border-radius: 6px; background: var(--c-hover-item);
-      color: var(--c-sidebar-text); font-size: 13px; outline: none;
+      color: var(--c-sidebar-text); font-size: 16px; outline: none;
     }
     .sidebar-create input::placeholder { opacity: 0.5; color: var(--c-sidebar-text); }
     .sidebar-create input:focus { border-color: var(--c-active-item); }
@@ -159,7 +159,7 @@
       display: flex; flex-direction: column;
     }
     .chat-input-box textarea {
-      width: 100%; border: none; outline: none; font-size: 14px;
+      width: 100%; border: none; outline: none; font-size: 16px;
       font-family: inherit; resize: none; height: 50px; min-height: 50px; max-height: 200px;
       line-height: 1.5; overflow-y: auto; background: transparent; color: var(--c-msg-text);
       padding: 8px 12px 4px; box-sizing: border-box;
@@ -213,7 +213,7 @@
     .settings-panel input[type="text"] {
       width: 100%; padding: 8px 10px; border: 1px solid var(--c-border);
       border-radius: 6px; background: rgba(128,128,128,0.1); color: var(--c-msg-text);
-      font-size: 13px; font-family: 'SF Mono', Monaco, Consolas, monospace; margin-bottom: 12px;
+      font-size: 16px; font-family: 'SF Mono', Monaco, Consolas, monospace; margin-bottom: 12px;
     }
     .settings-panel .color-preview {
       display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 16px;
@@ -226,7 +226,7 @@
     .settings-panel select {
       width: 100%; padding: 8px 10px; border: 1px solid var(--c-border);
       border-radius: 6px; background: rgba(128,128,128,0.08); color: var(--c-msg-text);
-      font-size: 13px; margin-bottom: 12px; cursor: pointer;
+      font-size: 16px; margin-bottom: 12px; cursor: pointer;
     }
     .settings-panel .btn-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
     .settings-panel .btn-row button {
@@ -628,7 +628,7 @@
       input.type = 'text';
       input.value = userName;
       input.maxLength = 30;
-      input.style.cssText = 'background:var(--c-hover-item);color:inherit;border:1px solid var(--c-sidebar-border);border-radius:4px;padding:2px 6px;font-size:12px;width:130px;outline:none;font-weight:600;';
+      input.style.cssText = 'background:var(--c-hover-item);color:inherit;border:1px solid var(--c-sidebar-border);border-radius:4px;padding:2px 6px;font-size:16px;width:130px;outline:none;font-weight:600;';
       span.replaceWith(input);
       input.focus();
       input.select();
