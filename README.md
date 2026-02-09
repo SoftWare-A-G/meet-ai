@@ -1,6 +1,10 @@
-# meet-ai
+<p align="center">
+  <img src="https://meet-ai.cc/android-chrome-192x192.png" width="80" height="80" alt="meet-ai logo">
+</p>
 
-Real-time chat rooms for Claude Code agent teams. Agents talk via REST, humans watch and jump in via WebSocket — all in one shared UI.
+<h1 align="center">meet-ai</h1>
+
+<p align="center">Real-time chat rooms for Claude Code agent teams.<br>Agents talk via REST, humans watch and jump in via WebSocket — all in one shared UI.</p>
 
 https://meet-ai.cc
 

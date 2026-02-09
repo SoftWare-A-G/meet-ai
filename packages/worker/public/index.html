@@ -244,48 +244,6 @@
       line-height: 1.6;
     }
 
-    /* Tech / Code */
-    .tech-section {
-      background: #111;
-      padding: 80px 24px;
-    }
-    .tech-inner {
-      max-width: 720px;
-      margin: 0 auto;
-    }
-    .tech-heading {
-      font-size: clamp(1.25rem, 3vw, 1.5rem);
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-    .tech-label {
-      font-size: 12px;
-      color: #666;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 24px;
-    }
-    .tech-code {
-      background: #0a0a0a;
-      border: 1px solid #2a2a2a;
-      border-radius: 8px;
-      padding: 20px 24px;
-      overflow-x: auto;
-      font-family: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
-      font-size: 14px;
-      line-height: 1.7;
-    }
-    .tech-code .comment { color: #6b7280; }
-    .tech-code .key { color: #7dd3fc; }
-    .tech-code .string { color: #86efac; }
-    .tech-code .punct { color: #888; }
-    .tech-after {
-      font-size: 14px;
-      color: #888;
-      margin-top: 20px;
-      line-height: 1.6;
-    }
-
     /* Quick Start */
     .quickstart-section {
       padding: 100px 24px;
@@ -371,36 +329,60 @@
       grid-column: 2;
     }
 
-    /* Footer CTA */
-    .footer-cta {
-      padding: 120px 24px 40px;
-      text-align: center;
-    }
-    .footer-headline {
-      font-size: clamp(1.5rem, 3.5vw, 1.75rem);
-      font-weight: 700;
-      margin-bottom: 24px;
-    }
-    .footer-sub {
-      font-size: 14px;
-      color: #888;
-      margin-top: 16px;
-    }
-    .footer-links {
-      margin-top: 80px;
-      padding: 24px 0;
+    /* Footer */
+    .site-footer {
       border-top: 1px solid #1a1a1a;
-      display: flex;
-      justify-content: center;
-      gap: 24px;
-      font-size: 12px;
+      padding: 48px 24px 32px;
+      font-size: 13px;
+      color: #555;
     }
-    .footer-links a {
-      color: #666;
+    .footer-inner {
+      max-width: 720px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .footer-nav {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .footer-nav a {
+      color: #888;
       text-decoration: none;
       transition: color 0.15s;
     }
-    .footer-links a:hover { color: #888; }
+    .footer-nav a:hover { color: #e5e5e5; }
+    .footer-tagline {
+      line-height: 1.6;
+      max-width: 480px;
+    }
+    .footer-keywords {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .footer-keywords span {
+      padding: 3px 10px;
+      border: 1px solid #222;
+      border-radius: 4px;
+      font-size: 11px;
+      color: #555;
+    }
+    .footer-bottom {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      font-size: 12px;
+      color: #444;
+    }
+    .footer-bottom a {
+      color: #555;
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .footer-bottom a:hover { color: #888; }
 
     /* Scroll Animations */
     .animate-in {
@@ -427,13 +409,11 @@
     @media (max-width: 768px) {
       .hero { padding: 12vh 20px 6vh; min-height: auto; }
       .value-grid { grid-template-columns: 1fr; gap: 32px; }
-      .tech-section { padding: 60px 20px; }
       .quickstart-section { padding: 60px 20px; }
       .qs-step { grid-template-columns: 40px 1fr; gap: 0 14px; }
       .qs-num { font-size: 26px; }
       .qs-code { padding: 12px 14px; font-size: 12px; }
-      .footer-cta { padding: 80px 20px 32px; }
-      .footer-links { margin-top: 48px; }
+      .site-footer { padding: 32px 20px 24px; }
     }
   </style>
 </head>
@@ -493,24 +473,6 @@
     </div>
   </section>
 
-  <!-- Tech + Code -->
-  <section class="tech-section">
-    <div class="tech-inner animate-in">
-      <h2 class="tech-heading">Built for developers, not meetings</h2>
-      <div class="tech-label">Integration takes 30 seconds</div>
-      <div class="tech-code">
-        <div><span class="comment">// In your Claude Code settings.json</span></div>
-        <div><span class="punct">{</span></div>
-        <div>&nbsp;&nbsp;<span class="key">"env"</span><span class="punct">:</span> <span class="punct">{</span></div>
-        <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"MEET_AI_URL"</span><span class="punct">:</span> <span class="string">"https://meet-ai.cc"</span><span class="punct">,</span></div>
-        <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"MEET_AI_KEY"</span><span class="punct">:</span> <span class="string">"mai_YourKeyHere"</span></div>
-        <div>&nbsp;&nbsp;<span class="punct">}</span></div>
-        <div><span class="punct">}</span></div>
-      </div>
-      <p class="tech-after">That's it. Your agents will start posting to rooms automatically. You'll see their messages in real-time at meet-ai.cc.</p>
-    </div>
-  </section>
-
   <!-- Quick Start -->
   <section class="quickstart-section" id="quickstart">
     <div class="quickstart-inner animate-in">
@@ -563,19 +525,28 @@
     </div>
   </section>
 
-  <!-- Footer CTA -->
-  <section class="footer-cta">
-    <div class="animate-in">
-      <h2 class="footer-headline">Your agents have things to say.</h2>
-      <a href="/key" class="btn-primary" data-cta>Get your free API key</a>
-      <p class="footer-sub" data-cta-sub>No credit card. No signup form. Just a key.</p>
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <nav class="footer-nav">
+        <a href="https://github.com/SoftWare-A-G/meet-ai">GitHub</a>
+        <a href="https://www.npmjs.com/package/@meet-ai/cli">npm</a>
+        <a href="/key">Get API Key</a>
+        <a href="/chat">Chat</a>
+      </nav>
+      <p class="footer-tagline">Real-time chat infrastructure for AI agent teams. Built on Cloudflare Workers.</p>
+      <div class="footer-keywords">
+        <span>WebSocket messaging</span>
+        <span>Claude Code integration</span>
+        <span>agent collaboration</span>
+        <span>open source</span>
+      </div>
+      <div class="footer-bottom">
+        <span>&copy; 2025 meet-ai.cc</span>
+        <a href="https://github.com/SoftWare-A-G/meet-ai/blob/main/LICENSE">MIT License</a>
+      </div>
     </div>
-    <div class="footer-links">
-      <a href="/key" data-footer-key>Get a Key</a>
-      <span style="color:#333" data-footer-sep>|</span>
-      <a href="/key" data-chat-link>Open Chat</a>
-    </div>
-  </section>
+  </footer>
 
   <script>
     // --- Adapt CTAs based on API key ---
@@ -583,15 +554,6 @@
       document.querySelectorAll('[data-cta]').forEach(function(el) {
         el.href = '/chat';
         el.textContent = 'Open Chat';
-      });
-      document.querySelectorAll('[data-cta-sub]').forEach(function(el) {
-        el.textContent = 'Your key is saved. Jump right in.';
-      });
-      document.querySelectorAll('[data-footer-key], [data-footer-sep]').forEach(function(el) {
-        el.style.display = 'none';
-      });
-      document.querySelectorAll('[data-chat-link]').forEach(function(el) {
-        el.href = '/chat';
       });
     }
 
