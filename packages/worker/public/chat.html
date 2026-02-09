@@ -1235,25 +1235,6 @@
         } catch (e) { /* ignore */ }
       }
 
-      // --- Restore queued messages on page load ---
-      async function restoreQueuedMessages(roomId) {
-        try {
-          const db = await openMessageQueue();
-          const tx = db.transaction('outbox', 'readonly');
-          const req = tx.objectStore('outbox').getAll();
-          const messages = await new Promise((r, j) => { req.onsuccess = () => r(req.result); req.onerror = j; });
-          const roomMessages = messages.filter(m => m.roomId === roomId);
-          for (const msg of roomMessages) {
-            appendPendingMessage(msg.tempId, msg.sender, msg.content);
-            markMessageFailed(msg.tempId);
-          }
-          // Auto-flush if online
-          if (navigator.onLine && roomMessages.length > 0) {
-            flushQueuedMessages();
-          }
-        } catch (e) { /* ignore */ }
-      }
-
       // --- Flush all queued messages (iOS fallback for Background Sync) ---
       async function flushQueuedMessages() {
         try {
@@ -1281,6 +1262,25 @@
             } catch {
               markMessageFailed(msg.tempId);
             }
+          }
+        } catch (e) { /* ignore */ }
+      }
+
+      // --- Restore queued messages on page load ---
+      async function restoreQueuedMessages(roomId) {
+        try {
+          const db = await openMessageQueue();
+          const tx = db.transaction('outbox', 'readonly');
+          const req = tx.objectStore('outbox').getAll();
+          const messages = await new Promise((r, j) => { req.onsuccess = () => r(req.result); req.onerror = j; });
+          const roomMessages = messages.filter(m => m.roomId === roomId);
+          for (const msg of roomMessages) {
+            appendPendingMessage(msg.tempId, msg.sender, msg.content);
+            markMessageFailed(msg.tempId);
+          }
+          // Auto-flush if online
+          if (navigator.onLine && roomMessages.length > 0) {
+            flushQueuedMessages();
           }
         } catch (e) { /* ignore */ }
       }
@@ -1613,10 +1613,19 @@
           return;
         }
         const data = await res.json();
-        await navigator.clipboard.writeText(data.url);
-        showToast('Login link copied!');
+        try {
+          await navigator.clipboard.writeText(data.url);
+          showToast('Login link copied!');
+        } catch {
+          // Clipboard blocked on iOS Safari — fallback to native share or select
+          if (navigator.share) {
+            await navigator.share({ url: data.url }).catch(() => {});
+          } else {
+            prompt('Copy this link:', data.url);
+          }
+        }
       } catch (e) {
-        showToast('Failed to create link');
+        showToast('Network error: ' + (e.message || 'Failed to create link'));
       } finally {
         btn.style.opacity = '';
         btn.style.pointerEvents = '';
