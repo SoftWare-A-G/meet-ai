@@ -955,6 +955,9 @@
         console.error('Failed to load messages:', e);
       }
 
+      // Restore any queued offline messages for this room
+      restoreQueuedMessages(room.id);
+
       const msgInput = document.getElementById('msg-input');
 
       async function sendCurrentMessage() {
@@ -1097,6 +1100,56 @@
         } catch (e) { /* ignore */ }
       }
 
+      // --- Restore queued messages on page load ---
+      async function restoreQueuedMessages(roomId) {
+        try {
+          const db = await openMessageQueue();
+          const tx = db.transaction('outbox', 'readonly');
+          const req = tx.objectStore('outbox').getAll();
+          const messages = await new Promise((r, j) => { req.onsuccess = () => r(req.result); req.onerror = j; });
+          const roomMessages = messages.filter(m => m.roomId === roomId);
+          for (const msg of roomMessages) {
+            appendPendingMessage(msg.tempId, msg.sender, msg.content);
+            markMessageFailed(msg.tempId);
+          }
+          // Auto-flush if online
+          if (navigator.onLine && roomMessages.length > 0) {
+            flushQueuedMessages();
+          }
+        } catch (e) { /* ignore */ }
+      }
+
+      // --- Flush all queued messages (iOS fallback for Background Sync) ---
+      async function flushQueuedMessages() {
+        try {
+          const db = await openMessageQueue();
+          const tx = db.transaction('outbox', 'readonly');
+          const req = tx.objectStore('outbox').getAll();
+          const messages = await new Promise((r, j) => { req.onsuccess = () => r(req.result); req.onerror = j; });
+          for (const msg of messages) {
+            const el = document.querySelector(`[data-temp-id="${msg.tempId}"]`);
+            if (el) {
+              el.classList.remove('msg-failed');
+              el.classList.add('msg-pending');
+              const timeEl = el.querySelector('.msg-time');
+              if (timeEl) timeEl.textContent = 'sending';
+            }
+            try {
+              const res = await fetch(`/api/rooms/${msg.roomId}/messages`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + msg.apiKey },
+                body: JSON.stringify({ sender: msg.sender, content: msg.content }),
+              });
+              if (!res.ok) throw new Error('HTTP ' + res.status);
+              markMessageSent(msg.tempId);
+              await removeFromOfflineQueue(msg.tempId);
+            } catch {
+              markMessageFailed(msg.tempId);
+            }
+          }
+        } catch (e) { /* ignore */ }
+      }
+
       // --- Listen for SW flush results ---
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.addEventListener('message', (e) => {
@@ -1177,13 +1230,19 @@
       };
     }
 
-    // Reconnect WebSocket immediately when PWA wakes from background
+    // Reconnect WebSocket and flush queue when PWA wakes from background
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && currentRoom) {
         if (!ws || ws.readyState !== WebSocket.OPEN) {
           connectWs(currentRoom.id);
         }
+        flushQueuedMessages();
       }
+    });
+
+    // Auto-flush queued messages when connectivity returns
+    window.addEventListener('online', () => {
+      if (currentRoom) flushQueuedMessages();
     });
 
     // ===== Sender colors =====
