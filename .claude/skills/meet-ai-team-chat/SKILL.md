@@ -1,1 +1,0 @@
-../../../packages/meet-ai-team-chat/meet-ai-team-chat/SKILL.md

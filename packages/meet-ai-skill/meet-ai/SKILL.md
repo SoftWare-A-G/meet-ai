@@ -1,5 +1,5 @@
 ---
-name: meet-ai-team-chat
+name: meet-ai
 description: Bidirectional agent team communication via the meet-ai chat server. Agents send and receive messages through the CLI, visible in the web UI.
 ---
 
