@@ -678,11 +678,16 @@
     });
 
     // ===== Chat =====
-    async function selectRoom(room) {
+    async function selectRoom(room, skipPushState) {
       currentRoom = room;
       unreadCount = 0;
       channelNameEl.textContent = room.name;
       renderRoomList();
+
+      // Update URL to /chat/ROOM_ID
+      if (!skipPushState) {
+        history.pushState({ roomId: room.id }, '', '/chat/' + room.id);
+      }
 
       // Close mobile sidebar
       document.getElementById('sidebar').classList.remove('open');
@@ -942,8 +947,77 @@
       if (window.highlightAllCode) window.highlightAllCode(contentEl);
     }
 
+    // ===== URL Routing =====
+    function getRoomIdFromUrl() {
+      const match = location.pathname.match(/^\/chat\/([a-f0-9-]+)$/i);
+      return match ? match[1] : null;
+    }
+
+    async function selectRoomById(roomId, skipPushState) {
+      // Wait for rooms to load if needed
+      if (rooms.length === 0) {
+        await loadRooms();
+      }
+      const room = rooms.find(r => r.id === roomId);
+      if (room) {
+        selectRoom(room, skipPushState);
+      } else {
+        // Show 404 state — don't reveal whether the room exists or the user lacks access
+        currentRoom = null;
+        channelNameEl.textContent = 'Not found';
+        renderRoomList();
+        if (ws) { ws.close(); ws = null; }
+        const existingMessages = main.querySelector('.messages');
+        if (existingMessages) existingMessages.remove();
+        const existingInput = main.querySelector('.chat-input-area');
+        if (existingInput) existingInput.remove();
+        const existingEmpty = document.getElementById('empty-state');
+        if (existingEmpty) existingEmpty.remove();
+        const notFound = document.createElement('div');
+        notFound.className = 'empty-state';
+        notFound.id = 'empty-state';
+        notFound.innerHTML = '<div class="icon">#</div><div>Room not found</div><div style="font-size:13px;margin-top:4px"><a href="/chat" style="color:var(--c-primary)">Back to channels</a></div>';
+        main.appendChild(notFound);
+      }
+    }
+
+    // Handle browser back/forward
+    window.addEventListener('popstate', (e) => {
+      const roomId = getRoomIdFromUrl();
+      if (roomId) {
+        selectRoomById(roomId, true);
+      } else {
+        // Navigated back to /chat — deselect room, show empty state
+        currentRoom = null;
+        channelNameEl.textContent = 'Select a channel';
+        renderRoomList();
+        if (ws) { ws.close(); ws = null; }
+        const existingMessages = main.querySelector('.messages');
+        if (existingMessages) existingMessages.remove();
+        const existingInput = main.querySelector('.chat-input-area');
+        if (existingInput) existingInput.remove();
+        if (!document.getElementById('empty-state')) {
+          const empty = document.createElement('div');
+          empty.className = 'empty-state';
+          empty.id = 'empty-state';
+          empty.innerHTML = '<div class="icon">#</div><div>Select or create a channel to start chatting</div>';
+          main.appendChild(empty);
+        }
+      }
+    });
+
     // ===== Init =====
-    loadRooms();
+    async function init() {
+      await loadRooms();
+      const roomId = getRoomIdFromUrl();
+      if (roomId) {
+        selectRoomById(roomId, true);
+      } else {
+        // Ensure /chat is in history state for clean back navigation
+        history.replaceState({ roomId: null }, '', location.pathname);
+      }
+    }
+    init();
   </script>
 </body>
 </html>

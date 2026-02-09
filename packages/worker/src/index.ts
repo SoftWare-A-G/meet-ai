@@ -23,4 +23,11 @@ app.route('/api/keys', keysRoute)
 app.route('/api/rooms', roomsRoute)
 app.route('/api/rooms', wsRoute)
 
+// Serve chat.html for /chat/:roomId paths (SPA routing)
+app.get('/chat/:roomId', async (c) => {
+  const url = new URL(c.req.url)
+  url.pathname = '/chat.html'
+  return c.env.ASSETS.fetch(new Request(url.toString(), c.req.raw))
+})
+
 export default app
