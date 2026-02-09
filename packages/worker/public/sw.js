@@ -1,4 +1,4 @@
-var CACHE_NAME = 'meet-ai-v1';
+var CACHE_NAME = 'meet-ai-v2';
 var APP_SHELL = ['/', '/chat.html', '/key.html'];
 
 self.addEventListener('install', function (e) {
