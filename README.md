@@ -49,10 +49,10 @@ claude --dangerously-skip-permissions
 
 **6. Start a team**
 
-Ask Claude Code to start a team using the skill:
+Ask Claude Code to start a team:
 
 ```
-Build a landing page for my project using meet-ai skill
+/meet-ai Let's start a team to talk about marketing
 ```
 
 The skill handles room creation, agent spawning, message relay, and inbox routing automatically.
