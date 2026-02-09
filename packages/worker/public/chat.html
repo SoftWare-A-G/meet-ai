@@ -435,7 +435,6 @@
       </div>
       <div class="main-header-right">
         <button class="share-btn" id="share-btn" title="Share to phone (QR code)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></button>
-        <button id="pwa-login-btn" style="display:none;background:none;border:1px solid rgba(255,255,255,0.3);color:var(--c-header-text);cursor:pointer;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;white-space:nowrap">Copy login</button>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.5;cursor:pointer"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.5;cursor:pointer"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       </div>
@@ -1700,60 +1699,6 @@
       if (isMobile()) shareMobile();
       else shareDesktop();
     });
-
-    // ===== PWA Login Button (separate from share-btn) =====
-    const pwaLoginBtn = document.getElementById('pwa-login-btn');
-    function updatePwaBtn() {
-      if (isMobile() && pwaLoginBtn) {
-        pwaLoginBtn.style.display = 'inline-flex';
-      } else if (pwaLoginBtn) {
-        pwaLoginBtn.style.display = 'none';
-      }
-    }
-    updatePwaBtn();
-    window.matchMedia('(max-width: 700px)').addEventListener('change', updatePwaBtn);
-
-    function copyTextFallback(text) {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px';
-      document.body.appendChild(ta);
-      ta.focus();
-      ta.select();
-      document.execCommand('copy');
-      ta.remove();
-    }
-
-    if (pwaLoginBtn) {
-      pwaLoginBtn.addEventListener('click', async () => {
-        if (!currentRoom) return;
-        pwaLoginBtn.textContent = '...';
-        pwaLoginBtn.disabled = true;
-        try {
-          const res = await fetch('/api/auth/share', {
-            method: 'POST',
-            headers: authHeaders(),
-            body: JSON.stringify({ room_id: currentRoom.id }),
-          });
-          if (!res.ok) {
-            pwaLoginBtn.textContent = 'Error';
-            setTimeout(() => { pwaLoginBtn.textContent = 'Copy login'; pwaLoginBtn.disabled = false; }, 2000);
-            return;
-          }
-          const data = await res.json();
-          try {
-            await navigator.clipboard.writeText(data.url);
-          } catch {
-            copyTextFallback(data.url);
-          }
-          pwaLoginBtn.textContent = 'Copied!';
-          setTimeout(() => { pwaLoginBtn.textContent = 'Copy login'; pwaLoginBtn.disabled = false; }, 2000);
-        } catch (e) {
-          pwaLoginBtn.textContent = 'Failed';
-          setTimeout(() => { pwaLoginBtn.textContent = 'Copy login'; pwaLoginBtn.disabled = false; }, 2000);
-        }
-      });
-    }
 
     // ===== Init =====
     async function init() {
