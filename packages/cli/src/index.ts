@@ -163,7 +163,7 @@ switch (command) {
 
 Environment variables:
   MEET_AI_URL   Server URL (default: https://meet-ai.cc)
-  MEET_AI_KEY   API key for authentication (optional for local, required for production)
+  MEET_AI_KEY   API key for authentication
 
 Commands:
   create-room <name>                           Create a new chat room
