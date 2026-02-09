@@ -1576,15 +1576,21 @@
     // Detect touch device (covers iOS, Android, iPad regardless of viewport width)
     const isTouchDevice = navigator.maxTouchPoints > 0;
 
-    // Set share button icon: link icon + "Share" label on touch, phone icon + "Share" on desktop
-    (function updateShareIcon() {
+    // Set invite button: on touch in browser → "Install App", on desktop → "Share" (QR), in PWA → hide
+    const isStandaloneMode = window.navigator.standalone === true
+      || window.matchMedia('(display-mode: standalone)').matches;
+
+    (function updateInviteIcon() {
       const btn = document.getElementById('invite-btn');
-      if (isTouchDevice) {
-        btn.title = 'Share login link';
-        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Share';
+      if (isStandaloneMode) {
+        // Already in PWA — no need for install or share
+        btn.style.display = 'none';
+      } else if (isTouchDevice) {
+        btn.title = 'Install as app';
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Install';
       } else {
         btn.title = 'Share to phone (QR code)';
-        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg> Share';
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg> Invite';
       }
     })();
 
@@ -1596,40 +1602,75 @@
       setTimeout(() => toast.remove(), 2100);
     }
 
-    async function inviteMobile() {
-      if (!currentRoom) return;
-      const btn = document.getElementById('invite-btn');
-      btn.style.opacity = '0.3';
-      btn.style.pointerEvents = 'none';
-      try {
-        const res = await fetch('/api/auth/share', {
-          method: 'POST',
-          headers: authHeaders(),
-          body: JSON.stringify({ room_id: currentRoom.id }),
-        });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          showToast(err.error || 'Failed to create link');
-          return;
-        }
-        const data = await res.json();
-        try {
-          await navigator.clipboard.writeText(data.url);
-          showToast('Login link copied!');
-        } catch {
-          // Clipboard blocked on iOS Safari — fallback to native share or select
-          if (navigator.share) {
-            await navigator.share({ url: data.url }).catch(() => {});
-          } else {
-            prompt('Copy this link:', data.url);
-          }
-        }
-      } catch (e) {
-        showToast('Network error: ' + (e.message || 'Failed to create link'));
-      } finally {
-        btn.style.opacity = '';
-        btn.style.pointerEvents = '';
+    function inviteMobile() {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+        || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const isAndroid = /Android/.test(navigator.userAgent);
+
+      let steps = '';
+      if (isIOS) {
+        steps = `
+          <div class="install-step">
+            <div class="step-num">1</div>
+            <div class="step-text">Tap the <strong>Share</strong> button <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;display:inline"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg> at the bottom of Safari</div>
+          </div>
+          <div class="install-step">
+            <div class="step-num">2</div>
+            <div class="step-text">Scroll down and tap <strong>Add to Home Screen</strong></div>
+          </div>
+          <div class="install-step">
+            <div class="step-num">3</div>
+            <div class="step-text">Tap <strong>Add</strong> in the top right corner</div>
+          </div>
+          <div class="install-step">
+            <div class="step-num">4</div>
+            <div class="step-text">Open <strong>meet-ai</strong> from your Home Screen</div>
+          </div>
+        `;
+      } else if (isAndroid) {
+        steps = `
+          <div class="install-step">
+            <div class="step-num">1</div>
+            <div class="step-text">Tap the <strong>menu</strong> button <span style="font-size:18px">&#8942;</span> in Chrome</div>
+          </div>
+          <div class="install-step">
+            <div class="step-num">2</div>
+            <div class="step-text">Tap <strong>Install app</strong> or <strong>Add to Home screen</strong></div>
+          </div>
+          <div class="install-step">
+            <div class="step-num">3</div>
+            <div class="step-text">Open <strong>meet-ai</strong> from your Home Screen</div>
+          </div>
+        `;
+      } else {
+        steps = `
+          <div class="install-step">
+            <div class="step-num">1</div>
+            <div class="step-text">Install the app using your browser's install option</div>
+          </div>
+          <div class="install-step">
+            <div class="step-num">2</div>
+            <div class="step-text">Open the app from your Home Screen</div>
+          </div>
+        `;
       }
+
+      const overlay = document.createElement('div');
+      overlay.className = 'qr-overlay';
+      overlay.innerHTML = `
+        <div class="qr-panel">
+          <h2>Install meet-ai</h2>
+          <p class="qr-subtitle">Add to your Home Screen for the best experience</p>
+          <div style="text-align:left;margin:16px 0">${steps}</div>
+          <button class="btn-close" id="qr-close">Got it</button>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+
+      overlay.querySelector('#qr-close').onclick = () => overlay.remove();
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) overlay.remove();
+      });
     }
 
     function inviteDesktop() {
