@@ -117,6 +117,12 @@
       padding: 6px 8px; font-size: 14px; word-break: break-word;
     }
     .msg:hover { background: rgba(128,128,128,0.08); }
+    .msg.msg-pending { opacity: 0.5; }
+    .msg.msg-pending .msg-time::after { content: ' ⏳'; }
+    .msg.msg-failed { opacity: 0.7; }
+    .msg.msg-failed .msg-time::after { content: ' ❌'; }
+    .msg.msg-failed .msg-retry { display: inline; }
+    .msg-retry { display: none; font-size: 11px; color: var(--c-primary); cursor: pointer; margin-left: 6px; text-decoration: underline; }
     .msg-avatar {
       width: 36px; height: 36px; border-radius: 6px; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
@@ -956,15 +962,150 @@
         if (!content) return;
         msgInput.value = '';
         msgInput.style.height = 'auto';
+
+        const tempId = 'pending-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+        appendPendingMessage(tempId, userName, content);
+
         try {
-          await fetch(`/api/rooms/${currentRoom.id}/messages`, {
+          const res = await fetch(`/api/rooms/${currentRoom.id}/messages`, {
             method: 'POST',
             headers: authHeaders(),
             body: JSON.stringify({ sender: userName, content }),
           });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          markMessageSent(tempId);
         } catch (e) {
           console.error('Failed to send message:', e);
+          await queueOfflineMessage(currentRoom.id, userName, content, tempId);
+          markMessageFailed(tempId);
         }
+      }
+
+      // --- Pending / failed message UI ---
+      function appendPendingMessage(tempId, sender, text) {
+        const messagesEl = document.getElementById('messages');
+        if (!messagesEl) return;
+        const senderColor = hashColor(sender);
+        const avatarBg = darkenForAvatar(sender);
+        const initials = sender.slice(0, 2).toUpperCase();
+        const resolvedAvatarBg = resolveColor(avatarBg);
+        const avatarText = contrastRatio('#FFFFFF', resolvedAvatarBg) >= contrastRatio('#000000', resolvedAvatarBg) ? '#FFFFFF' : '#000000';
+        const div = document.createElement('div');
+        div.className = 'msg msg-pending';
+        div.dataset.tempId = tempId;
+        div.innerHTML = `
+          <div class="msg-avatar" style="background:${avatarBg};color:${avatarText}">${escapeHtml(initials)}</div>
+          <div class="msg-body">
+            <div class="msg-header">
+              <span class="msg-sender" style="color:${senderColor}">${escapeHtml(sender)}</span>
+              <span class="msg-time">sending</span>
+              <span class="msg-retry" onclick="retryMessage(this)">retry</span>
+            </div>
+            <div class="msg-content"></div>
+          </div>
+        `;
+        div.querySelector('.msg-content').innerHTML = DOMPurify.sanitize(marked.parse(text, { breaks: true }));
+        div.dataset.content = text;
+        messagesEl.appendChild(div);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      }
+
+      function markMessageSent(tempId) {
+        const el = document.querySelector(`[data-temp-id="${tempId}"]`);
+        if (el) {
+          el.classList.remove('msg-pending', 'msg-failed');
+          const timeEl = el.querySelector('.msg-time');
+          if (timeEl) timeEl.textContent = formatTime(new Date().toISOString());
+        }
+      }
+
+      function markMessageFailed(tempId) {
+        const el = document.querySelector(`[data-temp-id="${tempId}"]`);
+        if (el) {
+          el.classList.remove('msg-pending');
+          el.classList.add('msg-failed');
+          const timeEl = el.querySelector('.msg-time');
+          if (timeEl) timeEl.textContent = 'failed';
+        }
+      }
+
+      window.retryMessage = async function(retryEl) {
+        const msgEl = retryEl.closest('.msg');
+        if (!msgEl || !currentRoom) return;
+        const content = msgEl.dataset.content;
+        const tempId = msgEl.dataset.tempId;
+        msgEl.classList.remove('msg-failed');
+        msgEl.classList.add('msg-pending');
+        msgEl.querySelector('.msg-time').textContent = 'sending';
+        try {
+          const res = await fetch(`/api/rooms/${currentRoom.id}/messages`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({ sender: userName, content }),
+          });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          markMessageSent(tempId);
+          await removeFromOfflineQueue(tempId);
+        } catch (e) {
+          markMessageFailed(tempId);
+        }
+      };
+
+      // --- IndexedDB offline message queue ---
+      function openMessageQueue() {
+        return new Promise((resolve, reject) => {
+          const req = indexedDB.open('meet-ai-queue', 1);
+          req.onupgradeneeded = () => {
+            const db = req.result;
+            if (!db.objectStoreNames.contains('outbox')) {
+              db.createObjectStore('outbox', { keyPath: 'tempId' });
+            }
+          };
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async function queueOfflineMessage(roomId, sender, content, tempId) {
+        try {
+          const db = await openMessageQueue();
+          const tx = db.transaction('outbox', 'readwrite');
+          tx.objectStore('outbox').put({
+            tempId,
+            roomId,
+            sender,
+            content,
+            apiKey: getApiKey(),
+            timestamp: Date.now(),
+          });
+          await new Promise((r, j) => { tx.oncomplete = r; tx.onerror = j; });
+          // Register background sync if available
+          if ('serviceWorker' in navigator && 'SyncManager' in window) {
+            const reg = await navigator.serviceWorker.ready;
+            await reg.sync.register('send-messages');
+          }
+        } catch (e) {
+          console.error('Failed to queue offline message:', e);
+        }
+      }
+
+      async function removeFromOfflineQueue(tempId) {
+        try {
+          const db = await openMessageQueue();
+          const tx = db.transaction('outbox', 'readwrite');
+          tx.objectStore('outbox').delete(tempId);
+        } catch (e) { /* ignore */ }
+      }
+
+      // --- Listen for SW flush results ---
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.addEventListener('message', (e) => {
+          if (e.data?.type === 'sync-sent') {
+            markMessageSent(e.data.tempId);
+          } else if (e.data?.type === 'sync-failed') {
+            markMessageFailed(e.data.tempId);
+          }
+        });
       }
 
       document.getElementById('msg-send').addEventListener('click', sendCurrentMessage);
@@ -1027,6 +1168,15 @@
         }, 2000);
       };
     }
+
+    // Reconnect WebSocket immediately when PWA wakes from background
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && currentRoom) {
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+          connectWs(currentRoom.id);
+        }
+      }
+    });
 
     // ===== Sender colors =====
     function hashColor(name) {
@@ -1422,7 +1572,7 @@ if ('serviceWorker' in navigator) {
   caches.keys().then(function (names) {
     names.forEach(function (name) { caches.delete(name); });
   });
-  navigator.serviceWorker.register('/sw.js?v=3');
+  navigator.serviceWorker.register('/sw.js?v=4');
 }
 </script>
 </body>

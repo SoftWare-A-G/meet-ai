@@ -1,4 +1,4 @@
-var CACHE_NAME = 'meet-ai-v3';
+var CACHE_NAME = 'meet-ai-v4';
 
 self.addEventListener('install', function (e) {
   self.skipWaiting();
@@ -50,3 +50,64 @@ self.addEventListener('fetch', function (e) {
   // Everything else: network-first, no caching
   return;
 });
+
+// --- Background Sync: flush offline message queue ---
+self.addEventListener('sync', function (e) {
+  if (e.tag === 'send-messages') {
+    e.waitUntil(flushOutbox());
+  }
+});
+
+function openOutbox() {
+  return new Promise(function (resolve, reject) {
+    var req = indexedDB.open('meet-ai-queue', 1);
+    req.onupgradeneeded = function () {
+      var db = req.result;
+      if (!db.objectStoreNames.contains('outbox')) {
+        db.createObjectStore('outbox', { keyPath: 'tempId' });
+      }
+    };
+    req.onsuccess = function () { resolve(req.result); };
+    req.onerror = function () { reject(req.error); };
+  });
+}
+
+function flushOutbox() {
+  return openOutbox().then(function (db) {
+    return new Promise(function (resolve, reject) {
+      var tx = db.transaction('outbox', 'readonly');
+      var store = tx.objectStore('outbox');
+      var req = store.getAll();
+      req.onsuccess = function () { resolve(req.result); };
+      req.onerror = function () { reject(req.error); };
+    }).then(function (messages) {
+      return Promise.all(messages.map(function (msg) {
+        return fetch('/api/rooms/' + msg.roomId + '/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + msg.apiKey,
+          },
+          body: JSON.stringify({ sender: msg.sender, content: msg.content }),
+        }).then(function (res) {
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          // Remove from queue on success
+          var delTx = db.transaction('outbox', 'readwrite');
+          delTx.objectStore('outbox').delete(msg.tempId);
+          // Notify client
+          notifyClients({ type: 'sync-sent', tempId: msg.tempId });
+        }).catch(function () {
+          notifyClients({ type: 'sync-failed', tempId: msg.tempId });
+        });
+      }));
+    });
+  });
+}
+
+function notifyClients(data) {
+  self.clients.matchAll().then(function (clients) {
+    clients.forEach(function (client) {
+      client.postMessage(data);
+    });
+  });
+}
