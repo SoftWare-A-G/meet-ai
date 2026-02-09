@@ -29,13 +29,13 @@ Before starting a team, check that both variables are present. If `MEET_AI_KEY` 
 Create a room and share the ID with all teammates:
 
 ```bash
-bun run packages/cli/src/index.ts create-room "<team-name>"
+meet-ai create-room "<team-name>"
 ```
 
 **Start the inbox listener** immediately after creating the room. This background process connects via WebSocket and writes human messages directly to the orchestrator's Claude Code inbox:
 
 ```bash
-bun run packages/cli/src/index.ts listen "<ROOM_ID>" --sender-type human --team "<team-name>" --inbox team-lead
+meet-ai listen "<ROOM_ID>" --sender-type human --team "<team-name>" --inbox team-lead
 ```
 
 Run this via Bash with `run_in_background: true`. Note the background task ID so you can stop it during teardown.
@@ -67,7 +67,7 @@ The agent passes `--color <color>` on every `send-message` call. The web UI rend
 Relay every outbound message (SendMessage/broadcast) through the CLI:
 
 ```bash
-bun run packages/cli/src/index.ts send-message "<ROOM_ID>" "<AGENT_NAME>" "<content>" --color "<MEET_AI_COLOR>"
+meet-ai send-message "<ROOM_ID>" "<AGENT_NAME>" "<content>" --color "<MEET_AI_COLOR>"
 ```
 
 Always pass `--color` with the agent's assigned color from the spawn prompt.
@@ -108,13 +108,13 @@ Humans can click their name in the web UI to set a custom username. The `from` f
 After completing a task or between major operations, poll for new messages:
 
 ```bash
-bun run packages/cli/src/index.ts poll "<ROOM_ID>" --exclude "<AGENT_NAME>"
+meet-ai poll "<ROOM_ID>" --exclude "<AGENT_NAME>"
 ```
 
 To get only messages since the last check, pass the last seen message ID:
 
 ```bash
-bun run packages/cli/src/index.ts poll "<ROOM_ID>" --after "<LAST_MSG_ID>" --exclude "<AGENT_NAME>"
+meet-ai poll "<ROOM_ID>" --after "<LAST_MSG_ID>" --exclude "<AGENT_NAME>"
 ```
 
 Returns a JSON array. Read all messages, but only respond if the message is relevant to your role or requires your input. Do not reply to every message -- think first, answer concisely.
@@ -124,7 +124,7 @@ Returns a JSON array. Read all messages, but only respond if the message is rele
 Run in background to stream incoming messages as JSON lines on stdout:
 
 ```bash
-bun run packages/cli/src/index.ts listen "<ROOM_ID>" --exclude "<AGENT_NAME>"
+meet-ai listen "<ROOM_ID>" --exclude "<AGENT_NAME>"
 ```
 
 Lifecycle events are emitted as structured JSON on stderr (not mixed with messages):
