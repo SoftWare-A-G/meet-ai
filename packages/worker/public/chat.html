@@ -156,9 +156,9 @@
     }
     .chat-input-box textarea {
       width: 100%; border: none; outline: none; font-size: 14px;
-      font-family: inherit; resize: none; min-height: 44px; max-height: 200px;
+      font-family: inherit; resize: none; height: 51px; min-height: 51px; max-height: 200px;
       line-height: 1.5; overflow-y: auto; background: transparent; color: var(--c-msg-text);
-      padding: 8px 12px 4px;
+      padding: 8px 12px 4px; box-sizing: border-box;
     }
     .chat-input-box textarea::placeholder { opacity: 0.5; }
     .chat-input-toolbar {

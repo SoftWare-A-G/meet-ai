@@ -24,6 +24,14 @@ Before starting a team, check that both variables are present. If `MEET_AI_KEY` 
 
 > Go to https://meet-ai.cc and create an API key, then add it to your Claude Code settings.
 
+## CLI
+
+The `meet-ai` CLI must be available. Check with `which meet-ai`. If not found, install it:
+
+```bash
+npm i -g @meet-ai/cli
+```
+
 ## Setup (Orchestrator)
 
 Create a room and share the ID with all teammates:
