@@ -1,5 +1,5 @@
 import { createClient } from "./client";
-import { appendToInbox, getTeamMembers, resolveInboxTargets } from "./inbox-router";
+import { appendToInbox, getTeamMembers, resolveInboxTargets, checkIdleAgents, IDLE_CHECK_INTERVAL_MS } from "./inbox-router";
 
 const API_URL = process.env.MEET_AI_URL || "http://localhost:8787";
 const API_KEY = process.env.MEET_AI_KEY;
@@ -111,8 +111,35 @@ switch (command) {
 
     const ws = client.listen(roomId, { exclude: flags.exclude, senderType: flags['sender-type'], onMessage });
 
+    // Idle agent heartbeat checker
+    let idleCheckTimeout: ReturnType<typeof setTimeout> | null = null;
+    const idleNotified = new Set<string>();
+
+    if (inboxDir && inbox && teamDir) {
+      function scheduleIdleCheck() {
+        idleCheckTimeout = setTimeout(() => {
+          const members = getTeamMembers(teamDir!);
+          const newlyIdle = checkIdleAgents(inboxDir!, members, inbox!, idleNotified);
+          for (const agent of newlyIdle) {
+            idleNotified.add(agent);
+            if (defaultInboxPath) {
+              appendToInbox(defaultInboxPath, {
+                from: "meet-ai:idle-check",
+                text: `${agent} idle for 5+ minutes`,
+                timestamp: new Date().toISOString(),
+                read: false,
+              });
+            }
+          }
+          scheduleIdleCheck();
+        }, IDLE_CHECK_INTERVAL_MS);
+      }
+      scheduleIdleCheck();
+    }
+
     // Graceful shutdown: send clean close frame before exit
     function shutdown() {
+      if (idleCheckTimeout) clearTimeout(idleCheckTimeout);
       if (ws.readyState === WebSocket.OPEN) {
         ws.close(1000, 'client shutdown');
       }

@@ -1,7 +1,7 @@
 import { test, expect, beforeEach, afterEach } from "bun:test";
 import { mkdirSync, rmSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
-import { appendToInbox, getTeamMembers, resolveInboxTargets } from "../src/inbox-router";
+import { appendToInbox, getTeamMembers, resolveInboxTargets, checkIdleAgents, IDLE_THRESHOLD_MS } from "../src/inbox-router";
 
 const tmpDir = join(import.meta.dir, ".tmp-test");
 
@@ -121,4 +121,77 @@ test("getTeamMembers returns empty set for invalid JSON", () => {
 
   const members = getTeamMembers(teamDir);
   expect(members).toEqual(new Set());
+});
+
+// --- checkIdleAgents ---
+
+test("checkIdleAgents returns empty when no members", () => {
+  const notified = new Set<string>();
+  const result = checkIdleAgents(tmpDir, new Set(), "team-lead", notified);
+  expect(result).toEqual([]);
+});
+
+test("checkIdleAgents returns empty when all inbox files are recent", () => {
+  const inboxDir = join(tmpDir, "inboxes");
+  mkdirSync(inboxDir, { recursive: true });
+  writeFileSync(join(inboxDir, "researcher.json"), "[]");
+
+  const notified = new Set<string>();
+  const members = new Set(["team-lead", "researcher"]);
+  const result = checkIdleAgents(inboxDir, members, "team-lead", notified);
+  expect(result).toEqual([]);
+});
+
+test("checkIdleAgents returns agent name when inbox file is stale", () => {
+  const inboxDir = join(tmpDir, "inboxes");
+  mkdirSync(inboxDir, { recursive: true });
+  writeFileSync(join(inboxDir, "researcher.json"), "[]");
+
+  const notified = new Set<string>();
+  const members = new Set(["team-lead", "researcher"]);
+  const staleTime = Date.now() + IDLE_THRESHOLD_MS + 1000;
+  const result = checkIdleAgents(inboxDir, members, "team-lead", notified, staleTime);
+  expect(result).toEqual(["researcher"]);
+});
+
+test("checkIdleAgents skips agent when inbox file does not exist (new agent)", () => {
+  const inboxDir = join(tmpDir, "inboxes");
+  mkdirSync(inboxDir, { recursive: true });
+
+  const notified = new Set<string>();
+  const members = new Set(["team-lead", "researcher"]);
+  const result = checkIdleAgents(inboxDir, members, "team-lead", notified);
+  expect(result).toEqual([]);
+});
+
+test("checkIdleAgents skips the excluded agent", () => {
+  const inboxDir = join(tmpDir, "inboxes");
+  mkdirSync(inboxDir, { recursive: true });
+
+  const notified = new Set<string>();
+  const members = new Set(["team-lead", "researcher"]);
+  const staleTime = Date.now() + IDLE_THRESHOLD_MS + 1000;
+  const result = checkIdleAgents(inboxDir, members, "team-lead", notified, staleTime);
+  expect(result).not.toContain("team-lead");
+});
+
+test("checkIdleAgents does not return already-notified agents", () => {
+  const inboxDir = join(tmpDir, "inboxes");
+  mkdirSync(inboxDir, { recursive: true });
+
+  const notified = new Set(["researcher"]);
+  const members = new Set(["team-lead", "researcher"]);
+  const result = checkIdleAgents(inboxDir, members, "team-lead", notified);
+  expect(result).toEqual([]);
+});
+
+test("checkIdleAgents clears notified when file is recently updated", () => {
+  const inboxDir = join(tmpDir, "inboxes");
+  mkdirSync(inboxDir, { recursive: true });
+  writeFileSync(join(inboxDir, "researcher.json"), "[]");
+
+  const notified = new Set(["researcher"]);
+  const members = new Set(["team-lead", "researcher"]);
+  checkIdleAgents(inboxDir, members, "team-lead", notified);
+  expect(notified.has("researcher")).toBe(false);
 });
