@@ -65,7 +65,7 @@
       max-width: 70%; font-size: 14px; word-break: break-word;
     }
     .messages .msg .sender { font-weight: 600; font-size: 12px; margin-bottom: 2px; }
-    .messages .msg .content { line-height: 1.5; }
+    .messages .msg .content { line-height: 1.5; overflow-x: auto; }
     .messages .msg .content p { margin: 0 0 8px 0; }
     .messages .msg .content p:last-child { margin-bottom: 0; }
     .messages .msg .content strong { font-weight: 700; }
@@ -84,6 +84,10 @@
     .messages .msg .content blockquote { border-left: 3px solid #333; padding-left: 12px; color: #888; margin: 4px 0; }
     .messages .msg .content hr { border: none; border-top: 1px solid #2a2a2a; margin: 8px 0; }
     .messages .msg .content a { color: #2563eb; text-decoration: underline; }
+    .messages .msg .content table { border-collapse: collapse; margin: 8px 0; min-width: 100%; font-size: 13px; }
+    .messages .msg .content th, .messages .msg .content td { border: 1px solid #333; padding: 6px 10px; text-align: left; }
+    .messages .msg .content th { background: #1f2937; font-weight: 600; }
+    .messages .msg .content tr:nth-child(even) { background: rgba(255,255,255,0.03); }
     .chat-input {
       display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid #2a2a2a; align-items: flex-end;
     }
@@ -125,7 +129,7 @@
       <span class="header-title">meet-ai.cc</span>
     </div>
     <div class="header-right">
-      <span class="header-handle" id="handle-display"></span>
+      <span class="header-handle" id="handle-display" title="Click to change your name" style="cursor:pointer"></span>
       <button class="btn-small" id="key-btn" title="API Key settings">Key</button>
     </div>
   </div>
@@ -178,8 +182,43 @@
       return handle;
     }
 
-    const userName = getOrCreateHandle();
+    let userName = getOrCreateHandle();
     document.getElementById("handle-display").textContent = userName;
+
+    document.querySelector(".header-right").addEventListener("click", (e) => {
+      const span = e.target.closest("#handle-display");
+      if (!span) return;
+
+      const input = document.createElement("input");
+      input.type = "text";
+      input.value = userName;
+      input.maxLength = 30;
+      input.style.cssText = "background:#1a1a1a;color:#e5e5e5;border:1px solid #333;border-radius:4px;padding:2px 6px;font-size:12px;width:140px;outline:none;";
+      span.replaceWith(input);
+      input.focus();
+      input.select();
+
+      function save() {
+        const val = input.value.trim();
+        if (val) {
+          userName = val;
+          localStorage.setItem("meet-ai-handle", userName);
+        }
+        const newSpan = document.createElement("span");
+        newSpan.className = "header-handle";
+        newSpan.id = "handle-display";
+        newSpan.title = "Click to change your name";
+        newSpan.style.cursor = "pointer";
+        newSpan.textContent = userName;
+        input.replaceWith(newSpan);
+      }
+
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); save(); }
+        if (e.key === "Escape") { input.value = userName; save(); }
+      });
+      input.addEventListener("blur", save);
+    });
 
     // --- State ---
     let currentRoom = null;
@@ -267,7 +306,7 @@
         if (res.ok) {
           const history = await res.json();
           for (const msg of history) {
-            appendMessage(msg.sender, msg.content);
+            appendMessage(msg.sender, msg.content, msg.color);
           }
         }
       } catch (e) {
@@ -321,7 +360,7 @@
       ws.onmessage = (e) => {
         try {
           const msg = JSON.parse(e.data);
-          if (msg.sender && msg.content) appendMessage(msg.sender, msg.content);
+          if (msg.sender && msg.content) appendMessage(msg.sender, msg.content, msg.color);
         } catch { /* ignore malformed messages */ }
       };
       ws.onerror = () => { console.error("WebSocket error"); };
@@ -358,7 +397,7 @@
       pill.textContent = `${unreadCount} new message${unreadCount === 1 ? "" : "s"} \u2193`;
     }
 
-    function appendMessage(sender, text) {
+    function appendMessage(sender, text, color) {
       const messages = document.getElementById("messages");
       if (!messages) return;
 
@@ -369,7 +408,7 @@
       const senderEl = document.createElement("div");
       senderEl.className = "sender";
       senderEl.textContent = sender;
-      senderEl.style.color = hashColor(sender);
+      senderEl.style.color = color || hashColor(sender);
       const contentEl = document.createElement("div");
       contentEl.className = "content";
       contentEl.innerHTML = DOMPurify.sanitize(marked.parse(text));

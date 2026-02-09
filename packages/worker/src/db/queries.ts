@@ -39,8 +39,8 @@ export function queries(db: D1Database) {
       ).bind(roomId, keyId).first<Pick<Room, 'id' | 'key_id' | 'name'>>()
     },
 
-    async listMessages(roomId: string, afterId?: string, exclude?: string) {
-      let sql = 'SELECT id, room_id, sender, content, seq, created_at FROM messages WHERE room_id = ?'
+    async listMessages(roomId: string, afterId?: string, exclude?: string, senderType?: string) {
+      let sql = 'SELECT id, room_id, sender, sender_type, content, color, seq, created_at FROM messages WHERE room_id = ?'
       const params: string[] = [roomId]
 
       if (afterId) {
@@ -51,17 +51,21 @@ export function queries(db: D1Database) {
         sql += ' AND sender != ?'
         params.push(exclude)
       }
+      if (senderType) {
+        sql += ' AND sender_type = ?'
+        params.push(senderType)
+      }
       sql += ' ORDER BY rowid'
 
       const result = await db.prepare(sql).bind(...params).all<Message>()
       return result.results
     },
 
-    async insertMessage(id: string, roomId: string, sender: string, content: string) {
+    async insertMessage(id: string, roomId: string, sender: string, content: string, senderType: string = 'human', color?: string) {
       await db.prepare(
-        `INSERT INTO messages (id, room_id, sender, content, seq)
-         VALUES (?, ?, ?, ?, COALESCE((SELECT MAX(seq) FROM messages WHERE room_id = ?), 0) + 1)`
-      ).bind(id, roomId, sender, content, roomId).run()
+        `INSERT INTO messages (id, room_id, sender, sender_type, content, color, seq)
+         VALUES (?, ?, ?, ?, ?, ?, COALESCE((SELECT MAX(seq) FROM messages WHERE room_id = ?), 0) + 1)`
+      ).bind(id, roomId, sender, senderType, content, color ?? null, roomId).run()
 
       const row = await db.prepare(
         'SELECT seq FROM messages WHERE id = ?'
@@ -70,13 +74,17 @@ export function queries(db: D1Database) {
       return row!.seq
     },
 
-    async listMessagesSinceSeq(roomId: string, sinceSeq: number, exclude?: string) {
-      let sql = 'SELECT id, room_id, sender, content, seq, created_at FROM messages WHERE room_id = ? AND seq > ?'
+    async listMessagesSinceSeq(roomId: string, sinceSeq: number, exclude?: string, senderType?: string) {
+      let sql = 'SELECT id, room_id, sender, sender_type, content, color, seq, created_at FROM messages WHERE room_id = ? AND seq > ?'
       const params: (string | number)[] = [roomId, sinceSeq]
 
       if (exclude) {
         sql += ' AND sender != ?'
         params.push(exclude)
+      }
+      if (senderType) {
+        sql += ' AND sender_type = ?'
+        params.push(senderType)
       }
       sql += ' ORDER BY seq'
 

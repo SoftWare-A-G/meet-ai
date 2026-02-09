@@ -25,11 +25,11 @@ async function createRoom(key: string, name: string): Promise<string> {
   return room.id
 }
 
-async function sendMessage(key: string, roomId: string, sender: string, content: string) {
+async function sendMessage(key: string, roomId: string, sender: string, content: string, senderType?: string, color?: string) {
   return SELF.fetch(`http://localhost/api/rooms/${roomId}/messages`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sender, content }),
+    body: JSON.stringify({ sender, content, ...(senderType && { sender_type: senderType }), ...(color && { color }) }),
   })
 }
 
@@ -350,6 +350,58 @@ describe('Messages', () => {
     expect(res.status).toBe(400)
   })
 
+  it('sender_type defaults to human', async () => {
+    const key = await createKey()
+    const roomId = await createRoom(key, 'type-room')
+
+    const res = await sendMessage(key, roomId, 'alice', 'hello')
+    const msg = await res.json() as { sender_type: string }
+    expect(msg.sender_type).toBe('human')
+
+    const listRes = await SELF.fetch(`http://localhost/api/rooms/${roomId}/messages`, {
+      headers: { Authorization: `Bearer ${key}` },
+    })
+    const messages = await listRes.json() as { sender_type: string }[]
+    expect(messages[0].sender_type).toBe('human')
+  })
+
+  it('sender_type can be set to agent', async () => {
+    const key = await createKey()
+    const roomId = await createRoom(key, 'agent-room')
+
+    const res = await sendMessage(key, roomId, 'bot', 'beep boop', 'agent')
+    const msg = await res.json() as { sender_type: string }
+    expect(msg.sender_type).toBe('agent')
+  })
+
+  it('sender_type rejects invalid values (falls back to human)', async () => {
+    const key = await createKey()
+    const roomId = await createRoom(key, 'invalid-type-room')
+
+    const res = await sendMessage(key, roomId, 'alice', 'test', 'robot')
+    const msg = await res.json() as { sender_type: string }
+    expect(msg.sender_type).toBe('human')
+  })
+
+  it('supports sender_type filter on poll', async () => {
+    const key = await createKey()
+    const roomId = await createRoom(key, 'filter-room')
+
+    await sendMessage(key, roomId, 'alice', 'from human')
+    await sendMessage(key, roomId, 'bot', 'from agent', 'agent')
+    await sendMessage(key, roomId, 'bob', 'also human')
+
+    const res = await SELF.fetch(
+      `http://localhost/api/rooms/${roomId}/messages?sender_type=human`,
+      { headers: { Authorization: `Bearer ${key}` } }
+    )
+    const messages = await res.json() as { sender: string; sender_type: string }[]
+    expect(messages).toHaveLength(2)
+    expect(messages[0].sender).toBe('alice')
+    expect(messages[1].sender).toBe('bob')
+    expect(messages.every(m => m.sender_type === 'human')).toBe(true)
+  })
+
   it('supports after parameter for polling', async () => {
     const key = await createKey()
     const roomId = await createRoom(key, 'poll-room')
@@ -372,5 +424,54 @@ describe('Messages', () => {
     expect(messages).toHaveLength(2)
     expect(messages[0].content).toBe('msg2')
     expect(messages[1].content).toBe('msg3')
+  })
+
+  it('color defaults to null when not provided', async () => {
+    const key = await createKey()
+    const roomId = await createRoom(key, 'color-default-room')
+
+    const res = await sendMessage(key, roomId, 'alice', 'no color')
+    const msg = await res.json() as { color: string | null }
+    expect(msg.color).toBeNull()
+
+    const listRes = await SELF.fetch(`http://localhost/api/rooms/${roomId}/messages`, {
+      headers: { Authorization: `Bearer ${key}` },
+    })
+    const messages = await listRes.json() as { color: string | null }[]
+    expect(messages[0].color).toBeNull()
+  })
+
+  it('color can be set to a named color', async () => {
+    const key = await createKey()
+    const roomId = await createRoom(key, 'color-named-room')
+
+    const res = await sendMessage(key, roomId, 'bot', 'blue message', 'agent', 'blue')
+    const msg = await res.json() as { color: string }
+    expect(msg.color).toBe('blue')
+  })
+
+  it('color can be set to a hex code', async () => {
+    const key = await createKey()
+    const roomId = await createRoom(key, 'color-hex-room')
+
+    const res = await sendMessage(key, roomId, 'bot', 'hex message', 'agent', '#418FAF')
+    const msg = await res.json() as { color: string }
+    expect(msg.color).toBe('#418FAF')
+  })
+
+  it('color is included in GET messages response', async () => {
+    const key = await createKey()
+    const roomId = await createRoom(key, 'color-list-room')
+
+    await sendMessage(key, roomId, 'alice', 'no color')
+    await sendMessage(key, roomId, 'bot', 'with color', 'agent', 'cyan')
+
+    const res = await SELF.fetch(`http://localhost/api/rooms/${roomId}/messages`, {
+      headers: { Authorization: `Bearer ${key}` },
+    })
+    const messages = await res.json() as { color: string | null }[]
+    expect(messages).toHaveLength(2)
+    expect(messages[0].color).toBeNull()
+    expect(messages[1].color).toBe('cyan')
   })
 })

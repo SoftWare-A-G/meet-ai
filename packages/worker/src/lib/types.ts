@@ -31,7 +31,9 @@ export type Message = {
   id: string
   room_id: string
   sender: string
+  sender_type: 'human' | 'agent'
   content: string
+  color: string | null
   seq: number | null
   created_at: string
 }

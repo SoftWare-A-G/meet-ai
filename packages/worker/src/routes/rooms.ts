@@ -43,14 +43,15 @@ roomsRoute.get('/:id/messages', requireAuth, async (c) => {
   const after = c.req.query('after')
   const sinceSeq = c.req.query('since_seq')
   const exclude = c.req.query('exclude')
+  const senderType = c.req.query('sender_type')
 
   // Prefer since_seq (cheaper query) over after (rowid subquery)
   if (sinceSeq) {
-    const messages = await db.listMessagesSinceSeq(roomId, Number(sinceSeq), exclude || undefined)
+    const messages = await db.listMessagesSinceSeq(roomId, Number(sinceSeq), exclude || undefined, senderType || undefined)
     return c.json(messages)
   }
 
-  const messages = await db.listMessages(roomId, after || undefined, exclude || undefined)
+  const messages = await db.listMessages(roomId, after || undefined, exclude || undefined, senderType || undefined)
   return c.json(messages)
 })
 
@@ -65,15 +66,17 @@ roomsRoute.post('/:id/messages', requireAuth, rateLimitByKey(60, 60_000), async 
     return c.json({ error: 'room not found' }, 404)
   }
 
-  const body = await c.req.json<{ sender?: string; content?: string }>()
+  const body = await c.req.json<{ sender?: string; content?: string; sender_type?: string; color?: string }>()
   if (!body.sender || !body.content) {
     return c.json({ error: 'sender and content are required' }, 400)
   }
 
+  const senderType = body.sender_type === 'agent' ? 'agent' : 'human'
+  const color = body.color || null
   const id = crypto.randomUUID()
-  const seq = await db.insertMessage(id, roomId, body.sender, body.content)
+  const seq = await db.insertMessage(id, roomId, body.sender, body.content, senderType, color ?? undefined)
 
-  const message = { id, room_id: roomId, sender: body.sender, content: body.content, seq }
+  const message = { id, room_id: roomId, sender: body.sender, sender_type: senderType, content: body.content, color, seq }
 
   // Broadcast via Durable Object
   const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
