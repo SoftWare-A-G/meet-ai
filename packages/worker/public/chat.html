@@ -68,7 +68,7 @@
     .sidebar-create input:focus { border-color: var(--c-active-item); }
     .sidebar-create button {
       padding: 6px 10px; border: none; border-radius: 6px;
-      background: var(--c-primary); color: #fff; cursor: pointer; font-size: 13px;
+      background: var(--c-primary); color: var(--c-primary-text); cursor: pointer; font-size: 13px;
       font-weight: 600;
     }
     .sidebar-footer {
@@ -112,7 +112,7 @@
     .msg-avatar {
       width: 36px; height: 36px; border-radius: 6px; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
-      font-weight: 700; font-size: 14px; color: #fff; margin-top: 2px;
+      font-weight: 700; font-size: 14px; margin-top: 2px;
     }
     .msg-body { flex: 1; min-width: 0; }
     .msg-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 2px; }
@@ -174,7 +174,7 @@
     .chat-input-toolbar .toolbar-spacer { flex: 1; }
     .chat-input-toolbar button.send-btn {
       padding: 4px; border: none; border-radius: 4px; width: 28px; height: 28px;
-      background: var(--c-primary); color: #fff; cursor: pointer;
+      background: var(--c-primary); color: var(--c-primary-text); cursor: pointer;
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
     .chat-input-toolbar button.send-btn:hover { filter: brightness(1.1); }
@@ -189,7 +189,7 @@
     /* --- New messages pill --- */
     .new-messages-pill {
       position: sticky; bottom: 8px; align-self: center;
-      background: var(--c-primary); color: #fff;
+      background: var(--c-primary); color: var(--c-primary-text);
       padding: 6px 16px; border-radius: 16px; font-size: 13px;
       cursor: pointer; z-index: 5; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     }
@@ -228,7 +228,7 @@
     .settings-panel .btn-row button {
       padding: 8px 16px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: 600;
     }
-    .settings-panel .btn-save { background: var(--c-primary); color: #fff; border: none; }
+    .settings-panel .btn-save { background: var(--c-primary); color: var(--c-primary-text); border: none; }
     .settings-panel .btn-cancel { background: transparent; color: var(--c-msg-text); border: 1px solid var(--c-border); }
     .settings-panel .btn-reset { background: transparent; color: var(--c-primary); border: 1px solid var(--c-border); margin-right: auto; }
 
@@ -270,9 +270,9 @@
 <body>
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
-      <span>meet-ai <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;opacity:0.7"><path d="m6 9 6 6 6-6"/></svg></span>
+      <span>meet-ai</span>
       <div class="sidebar-header-actions">
-        <button id="settings-btn" title="Color Settings">&#9881;</button>
+        <button id="settings-btn" title="Color Settings"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
       </div>
     </div>
     <div class="sidebar-section-label">Channels</div>
@@ -285,8 +285,7 @@
       <span class="user-presence" style="width:8px;height:8px;border-radius:50%;background:var(--c-presence);flex-shrink:0;"></span>
       <span class="user-handle" id="handle-display" title="Click to change your name"></span>
       <div class="sidebar-footer-actions">
-        <button id="settings-btn-footer" title="Settings"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
-        <button id="key-btn" title="API Key settings">Key</button>
+        <button id="key-btn" title="API Key settings"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></button>
       </div>
     </div>
   </aside>
@@ -342,8 +341,12 @@
     }
 
     function luminance(hex) {
-      const [r, g, b] = hexToRgb(hex);
-      return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      // WCAG 2.0 relative luminance (proper sRGB linearization)
+      const [r, g, b] = hexToRgb(hex).map(v => {
+        v = v / 255;
+        return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+      });
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
     }
 
     function contrastRatio(hex1, hex2) {
@@ -356,7 +359,10 @@
 
     function ensureContrast(textHex, bgHex, minRatio) {
       if (contrastRatio(textHex, bgHex) >= minRatio) return textHex;
-      return luminance(bgHex) < 0.5 ? '#FFFFFF' : '#1D1C1D';
+      // Pick whichever (white or black) has better contrast with the bg
+      const whiteRatio = contrastRatio('#FFFFFF', bgHex);
+      const darkRatio = contrastRatio('#000000', bgHex);
+      return whiteRatio >= darkRatio ? '#FFFFFF' : '#000000';
     }
 
     // Derive chat area background from sidebar bg (match Pencil designs)
@@ -418,13 +424,17 @@
 
       // Input container — matches sidebar bg on dark themes (Pencil design pattern)
       root.style.setProperty('--c-input-bg', sidebarDark ? c[0] : chatBg);
+
+      // Primary button text — ensure readability on the primary/presence color
+      const primaryTextWhite = contrastRatio('#FFFFFF', c[6]);
+      const primaryTextBlack = contrastRatio('#000000', c[6]);
+      root.style.setProperty('--c-primary-text', primaryTextWhite >= primaryTextBlack ? '#FFFFFF' : '#000000');
     }
 
     applySchema(getSchema());
 
     // ===== Settings =====
     document.getElementById('settings-btn').onclick = () => openSettings();
-    document.getElementById('settings-btn-footer').onclick = () => openSettings();
 
     const THEME_PRESETS = [
       { name: 'meet-ai Default', schema: '#194234,#9c2e33,#E7C12e,#194234,#9c2e33,#FFFFFF,#ee6030,#9C2E33,#9c2e33,#FFFFFF' },
@@ -893,11 +903,14 @@
       const senderColor = color ? ensureSenderContrast(color) : hashColor(sender);
       const avatarBg = color ? ensureSenderContrast(color) : darkenForAvatar(sender);
       const initials = sender.slice(0, 2).toUpperCase();
+      // Pick avatar text color for best contrast against avatar bg
+      const resolvedAvatarBg = resolveColor(avatarBg);
+      const avatarText = contrastRatio('#FFFFFF', resolvedAvatarBg) >= contrastRatio('#000000', resolvedAvatarBg) ? '#FFFFFF' : '#000000';
 
       const div = document.createElement('div');
       div.className = 'msg';
       div.innerHTML = `
-        <div class="msg-avatar" style="background:${avatarBg}">${escapeHtml(initials)}</div>
+        <div class="msg-avatar" style="background:${avatarBg};color:${avatarText}">${escapeHtml(initials)}</div>
         <div class="msg-body">
           <div class="msg-header">
             <span class="msg-sender" style="color:${senderColor}">${escapeHtml(sender)}</span>
