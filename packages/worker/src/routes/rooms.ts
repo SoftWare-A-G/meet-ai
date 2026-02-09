@@ -26,6 +26,16 @@ roomsRoute.post('/', requireAuth, async (c) => {
   const db = queries(c.env.DB)
   await db.insertRoom(id, keyId, body.name)
 
+  // Notify lobby subscribers
+  const doId = c.env.LOBBY.idFromName(keyId)
+  const stub = c.env.LOBBY.get(doId)
+  c.executionCtx.waitUntil(
+    stub.fetch(new Request('http://internal/broadcast', {
+      method: 'POST',
+      body: JSON.stringify({ type: 'room_created', id, name: body.name }),
+    }))
+  )
+
   return c.json({ id, name: body.name }, 201)
 })
 

@@ -1,6 +1,7 @@
 export type Bindings = {
   DB: D1Database
   CHAT_ROOM: DurableObjectNamespace
+  LOBBY: DurableObjectNamespace
   ASSETS: Fetcher
 }
 

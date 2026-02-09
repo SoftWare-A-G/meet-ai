@@ -477,19 +477,17 @@ describe('Messages', () => {
 })
 
 describe('Share Tokens', () => {
-  async function createShareToken(key: string, roomId: string) {
+  async function createShareToken(key: string) {
     return SELF.fetch('http://localhost/api/auth/share', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ room_id: roomId }),
+      headers: { Authorization: `Bearer ${key}` },
     })
   }
 
   it('POST /api/auth/share creates a share token', async () => {
     const key = await createKey()
-    const roomId = await createRoom(key, 'share-room')
 
-    const res = await createShareToken(key, roomId)
+    const res = await createShareToken(key)
     expect(res.status).toBe(201)
     const body = await res.json() as { token: string; url: string }
     expect(body.token).toBeTruthy()
@@ -497,47 +495,22 @@ describe('Share Tokens', () => {
     expect(body.url).toContain(body.token)
   })
 
-  it('POST /api/auth/share fails without room_id', async () => {
-    const key = await createKey()
-
-    const res = await SELF.fetch('http://localhost/api/auth/share', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
-    })
-    expect(res.status).toBe(400)
-    const body = await res.json() as { error: string }
-    expect(body.error).toBe('room_id is required')
-  })
-
-  it('POST /api/auth/share fails for non-existent room', async () => {
-    const key = await createKey()
-
-    const res = await createShareToken(key, 'nonexistent-room-id')
-    expect(res.status).toBe(404)
-    const body = await res.json() as { error: string }
-    expect(body.error).toBe('room not found')
-  })
-
   it('GET /api/auth/claim/:token claims a valid token', async () => {
     const key = await createKey()
-    const roomId = await createRoom(key, 'claim-room')
 
-    const shareRes = await createShareToken(key, roomId)
+    const shareRes = await createShareToken(key)
     const { token } = await shareRes.json() as { token: string }
 
     const claimRes = await SELF.fetch(`http://localhost/api/auth/claim/${token}`)
     expect(claimRes.status).toBe(200)
-    const body = await claimRes.json() as { api_key: string; room_id: string }
+    const body = await claimRes.json() as { api_key: string }
     expect(body.api_key).toBe(key)
-    expect(body.room_id).toBe(roomId)
   })
 
   it('GET /api/auth/claim/:token fails for already-used token', async () => {
     const key = await createKey()
-    const roomId = await createRoom(key, 'used-token-room')
 
-    const shareRes = await createShareToken(key, roomId)
+    const shareRes = await createShareToken(key)
     const { token } = await shareRes.json() as { token: string }
 
     // First claim succeeds
@@ -553,10 +526,9 @@ describe('Share Tokens', () => {
 
   it('GET /api/auth/claim/:token fails for expired token', async () => {
     const key = await createKey()
-    const roomId = await createRoom(key, 'expired-token-room')
 
     // Create a share token, then manually set its expires_at to the past
-    const shareRes = await createShareToken(key, roomId)
+    const shareRes = await createShareToken(key)
     const { token } = await shareRes.json() as { token: string }
 
     await env.DB.prepare(

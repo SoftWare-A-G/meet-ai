@@ -1654,9 +1654,31 @@
 
     document.getElementById('invite-btn').addEventListener('click', inviteDesktop);
 
+    // ===== Lobby WebSocket (room lifecycle events) =====
+    let lobbyWs = null;
+    function connectLobby() {
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const key = getApiKey();
+      const tokenParam = key ? `?token=${encodeURIComponent(key)}` : '';
+      lobbyWs = new WebSocket(`${protocol}//${location.host}/api/lobby/ws${tokenParam}`);
+      lobbyWs.onmessage = (e) => {
+        try {
+          const evt = JSON.parse(e.data);
+          if (evt.type === 'room_created') {
+            rooms.push({ id: evt.id, name: evt.name });
+            renderRoomList();
+          }
+        } catch { /* ignore */ }
+      };
+      lobbyWs.onclose = () => {
+        setTimeout(connectLobby, 3000);
+      };
+    }
+
     // ===== Init =====
     async function init() {
       await loadRooms();
+      connectLobby();
       const roomId = getRoomIdFromUrl();
       if (roomId) {
         selectRoomById(roomId, true);
