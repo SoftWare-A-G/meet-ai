@@ -439,6 +439,36 @@
       color: #888;
     }
 
+    /* Paste key */
+    .paste-link {
+      font-size: 14px;
+      color: #555;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      transition: color 0.15s;
+    }
+    .paste-link:hover { color: #888; }
+
+    .paste-form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+      max-width: 480px;
+    }
+    .paste-form .key-field input {
+      font-size: 16px;
+    }
+    .paste-error {
+      font-size: 13px;
+      color: #f87171;
+      text-align: center;
+    }
+
     /* Confirmation dialog */
     .confirm-dialog {
       display: flex;
@@ -537,6 +567,9 @@
       .btn-copy { width: 100%; }
       .actions { flex-direction: column; }
       .actions > * { width: 100%; text-align: center; }
+      .paste-form .key-field { flex-direction: column; }
+      .paste-form .key-field input { width: 100%; }
+      .paste-form .btn-copy { width: 100%; }
     }
   </style>
 </head>
@@ -646,10 +679,113 @@
         '<div class="generate-wrapper stagger-in">' +
           '<button class="btn-primary" id="generate-btn">Get your API key</button>' +
           '<span class="muted-text">Free forever. No credit card.</span>' +
+          '<button class="paste-link" id="paste-link">I already have a key</button>' +
         '</div>';
 
       document.getElementById('generate-btn').addEventListener('click', generateKey);
+      document.getElementById('paste-link').addEventListener('click', showPasteKeyState);
       staggerReveal(content, '.stagger-in', 100);
+    }
+
+    function showPasteKeyState() {
+      transitionTo(function() {
+        content.innerHTML =
+          '<h1 class="headline stagger-in">Connect your key.</h1>' +
+          '<p class="subtitle stagger-in">Paste your API key or login link below.</p>' +
+          '<div class="generate-wrapper stagger-in">' +
+            '<div class="paste-form">' +
+              '<div class="key-field">' +
+                '<input type="text" id="paste-input" placeholder="Paste your API key (mai_...) or login link" autocomplete="off" autocapitalize="off" spellcheck="false">' +
+                '<button class="btn-copy" id="connect-btn">Connect</button>' +
+              '</div>' +
+              '<div id="paste-error" class="paste-error" style="display:none;"></div>' +
+            '</div>' +
+            '<button class="paste-link" id="back-link">\u2190 Back</button>' +
+          '</div>';
+
+        var pasteInput = document.getElementById('paste-input');
+        var connectBtn = document.getElementById('connect-btn');
+        var backLink = document.getElementById('back-link');
+
+        connectBtn.addEventListener('click', function() {
+          connectWithKey(pasteInput.value.trim());
+        });
+
+        pasteInput.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') {
+            connectWithKey(pasteInput.value.trim());
+          }
+        });
+
+        backLink.addEventListener('click', function() {
+          transitionTo(showGenerateState);
+        });
+
+        staggerReveal(content, '.stagger-in', 100);
+
+        setTimeout(function() { pasteInput.focus(); }, 400);
+      });
+    }
+
+    async function connectWithKey(value) {
+      var errorEl = document.getElementById('paste-error');
+      var connectBtn = document.getElementById('connect-btn');
+      var pasteInput = document.getElementById('paste-input');
+
+      if (!value) {
+        errorEl.textContent = 'Please paste your key or login link.';
+        errorEl.style.display = '';
+        return;
+      }
+
+      errorEl.style.display = 'none';
+
+      if (value.indexOf('http') === 0 && value.indexOf('/auth/') !== -1) {
+        // Extract token from login link
+        var match = value.match(/\/auth\/([^/?#]+)/);
+        if (!match) {
+          errorEl.textContent = 'Invalid login link.';
+          errorEl.style.display = '';
+          return;
+        }
+        var token = match[1];
+
+        connectBtn.disabled = true;
+        connectBtn.textContent = '...';
+        pasteInput.disabled = true;
+
+        try {
+          var res = await fetch('/api/auth/claim/' + encodeURIComponent(token));
+          if (!res.ok) {
+            var body = await res.text();
+            throw new Error(body || 'HTTP ' + res.status);
+          }
+          var data = await res.json();
+          var key = data.api_key || data.key || data.apiKey;
+          if (!key) throw new Error('No key returned');
+
+          localStorage.setItem(STORAGE_KEY, key);
+
+          var roomId = data.room_id || data.roomId;
+          if (roomId) {
+            window.location.href = '/chat/' + roomId;
+          } else {
+            transitionTo(function() { render(); });
+          }
+        } catch (err) {
+          connectBtn.disabled = false;
+          connectBtn.textContent = 'Connect';
+          pasteInput.disabled = false;
+          errorEl.textContent = 'Failed to claim link: ' + err.message;
+          errorEl.style.display = '';
+        }
+      } else if (value.indexOf('mai_') === 0) {
+        localStorage.setItem(STORAGE_KEY, value);
+        transitionTo(function() { render(); });
+      } else {
+        errorEl.textContent = 'Invalid key or link. Keys start with mai_ and links contain /auth/.';
+        errorEl.style.display = '';
+      }
     }
 
     function showExistingKey(key) {
