@@ -1158,7 +1158,15 @@
       ws.onmessage = (e) => {
         try {
           const msg = JSON.parse(e.data);
-          if (msg.sender && msg.content) appendMessage(msg.sender, msg.content, msg.color, msg.created_at);
+          if (!msg.sender || !msg.content) return;
+          // Deduplicate: if this is our own message echoed back, remove the pending/sent optimistic version
+          if (msg.sender === userName) {
+            const pending = document.querySelector('.msg[data-content]');
+            if (pending && pending.dataset.content === msg.content) {
+              pending.remove();
+            }
+          }
+          appendMessage(msg.sender, msg.content, msg.color, msg.created_at);
         } catch { /* ignore malformed */ }
       };
       ws.onerror = () => { console.error('WebSocket error'); };
