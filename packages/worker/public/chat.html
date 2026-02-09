@@ -61,20 +61,24 @@
     .room-item .room-hash { opacity: 0.5; font-size: 13px; }
     .sidebar-create {
       padding: 10px 8px; border-top: 1px solid var(--c-sidebar-border);
-      display: flex; gap: 6px;
+      display: flex; gap: 6px; align-items: center;
     }
     .sidebar-create input {
-      flex: 1; padding: 6px 10px; border: 1px solid var(--c-sidebar-border);
-      border-radius: 6px; background: var(--c-hover-item);
-      color: var(--c-sidebar-text); font-size: 16px; outline: none;
+      flex: 1; min-width: 0; height: 36px; padding: 0 10px;
+      border: 1px solid var(--c-sidebar-border);
+      border-radius: 8px; background: var(--c-hover-item);
+      color: var(--c-sidebar-text); font-size: 14px; outline: none;
     }
     .sidebar-create input::placeholder { opacity: 0.5; color: var(--c-sidebar-text); }
     .sidebar-create input:focus { border-color: var(--c-active-item); }
     .sidebar-create button {
-      padding: 6px 10px; border: none; border-radius: 6px;
-      background: var(--c-primary); color: var(--c-primary-text); cursor: pointer; font-size: 13px;
-      font-weight: 600;
+      width: 36px; height: 36px; flex-shrink: 0;
+      border: none; border-radius: 8px;
+      background: var(--c-primary); color: var(--c-primary-text); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0;
     }
+    .sidebar-create button svg { width: 20px; height: 20px; flex-shrink: 0; }
     .sidebar-footer {
       padding: 10px 16px; border-top: 1px solid var(--c-sidebar-border);
       display: flex; align-items: center; gap: 8px;
@@ -339,7 +343,7 @@
     <div class="room-list" id="room-list"></div>
     <div class="sidebar-create">
       <input id="room-name" placeholder="New channel name">
-      <button id="create-room-btn">+</button>
+      <button id="create-room-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
     </div>
     <div class="sidebar-footer">
       <span class="user-presence" style="width:8px;height:8px;border-radius:50%;background:var(--c-presence);flex-shrink:0;"></span>
