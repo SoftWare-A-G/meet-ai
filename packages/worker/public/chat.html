@@ -257,13 +257,13 @@
       border: 1px solid var(--c-border);
     }
     .share-panel .btn-close:hover { background: rgba(128,128,128,0.1); }
-    .share-btn {
+    .invite-btn {
       background: none; border: 1px solid rgba(255,255,255,0.3); color: var(--c-header-text);
       cursor: pointer; display: flex !important; align-items: center;
       justify-content: center; padding: 4px 10px; border-radius: 6px; gap: 6px;
       font-size: 12px; font-weight: 600; font-family: inherit; white-space: nowrap;
     }
-    .share-btn:hover { background: rgba(128,128,128,0.1); }
+    .invite-btn:hover { background: rgba(128,128,128,0.1); }
 
     /* --- Toast notification --- */
     .toast {
@@ -435,7 +435,7 @@
         <span class="channel-name" id="channel-name">Select a channel</span>
       </div>
       <div class="main-header-right">
-        <button class="share-btn" id="share-btn" title="Share to phone (QR code)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg><span class="share-btn-label">Share</span></button>
+        <button class="invite-btn" id="invite-btn" title="Share to phone (QR code)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg><span class="invite-btn-label">Share</span></button>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.5;cursor:pointer"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.5;cursor:pointer"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       </div>
@@ -1578,7 +1578,7 @@
 
     // Set share button icon: link icon + "Share" label on touch, phone icon + "Share" on desktop
     (function updateShareIcon() {
-      const btn = document.getElementById('share-btn');
+      const btn = document.getElementById('invite-btn');
       if (isTouchDevice) {
         btn.title = 'Share login link';
         btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Share';
@@ -1598,7 +1598,7 @@
 
     async function shareMobile() {
       if (!currentRoom) return;
-      const btn = document.getElementById('share-btn');
+      const btn = document.getElementById('invite-btn');
       btn.style.opacity = '0.3';
       btn.style.pointerEvents = 'none';
       try {
@@ -1697,7 +1697,7 @@
       })();
     }
 
-    document.getElementById('share-btn').addEventListener('click', () => {
+    document.getElementById('invite-btn').addEventListener('click', () => {
       if (isTouchDevice) shareMobile();
       else shareDesktop();
     });
