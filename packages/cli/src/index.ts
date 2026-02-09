@@ -37,7 +37,7 @@ switch (command) {
   case "send-message": {
     const { positional: smPos, flags: smFlags } = parseFlags(args);
     const [roomId, sender, ...rest] = smPos;
-    const content = rest.join(" ");
+    const content = rest.join(" ").replace(/\\n/g, '\n');
     if (!roomId || !sender || !content) {
       console.error("Usage: cli send-message <roomId> <sender> <content> [--color <color>]");
       process.exit(1);

@@ -157,7 +157,7 @@ export function createClient(baseUrl: string, apiKey?: string) {
         const connectTimeout = setTimeout(() => {
           if (ws.readyState !== WebSocket.OPEN) {
             wsLog({ event: 'timeout', after_ms: 10_000 });
-            ws.close();
+            ws.close(4000, 'connect timeout');
           }
         }, 10_000);
 
