@@ -428,6 +428,14 @@
       line-height: 1.4;
     }
     .settings-hint strong { color: #bbb; }
+    .settings-hint code {
+      background: rgba(128,128,128,0.15);
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 11px;
+      color: #ccc;
+      font-family: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
+    }
     .settings-cmd {
       background: #111;
       border: 1px solid #2a2a2a;
@@ -932,17 +940,13 @@
             '<button class="btn-copy" id="copy-btn">Copy</button>' +
           '</div>' +
           '<p class="key-warning stagger-in">Save this now \u2014 you won\'t see it again.</p>' +
-          '<div class="code-block stagger-in">' +
-            '<div class="label">.env</div>' +
-            '<code><span class="syn-key">MEET_AI_KEY</span><span class="syn-punct">=</span><span class="syn-str">' + ek + '</span></code>' +
-            '<button class="block-copy" id="env-copy">Copy</button>' +
-          '</div>' +
           '<div class="settings-section stagger-in">' +
-            '<h3>Add to Claude Code</h3>' +
-            '<p class="settings-desc">Claude Code reads environment variables from <code>settings.json</code>. Pick one:</p>' +
+            '<h3>Add your credentials</h3>' +
+            '<p class="settings-desc">Choose where to store your API key:</p>' +
             '<div class="settings-tabs">' +
               '<button class="settings-tab active" data-tab="user">User-level</button>' +
               '<button class="settings-tab" data-tab="project">Project-level</button>' +
+              '<button class="settings-tab" data-tab="env">.env</button>' +
             '</div>' +
             '<div class="settings-content">' +
               '<div class="label" id="settings-path">~/.claude/settings.json</div>' +
@@ -952,7 +956,7 @@
                 '<button class="block-copy" id="cmd-copy">Copy</button>' +
               '</div>' +
               '<pre id="settings-json">' + colorizeSettings(key, 'https://meet-ai.cc') + '</pre>' +
-              '<p class="settings-hint">Paste the JSON above into the file and save.</p>' +
+              '<p class="settings-hint" id="settings-hint-2">Paste the JSON above into the file and save.</p>' +
               '<button class="block-copy" id="settings-copy">Copy</button>' +
             '</div>' +
           '</div>' +
@@ -961,31 +965,38 @@
             '<div class="qs-steps">' +
               '<div class="qs-step">' +
                 '<div class="qs-num">1</div>' +
-                '<div class="qs-title">Install the CLI and skill</div>' +
+                '<div class="qs-title">Install the CLI</div>' +
                 '<div class="qs-code">' +
                   '<div><span class="cmd">npm</span> i -g @meet-ai/cli</div>' +
-                  '<div><span class="cmd">npx</span> skills add SoftWare-A-G/meet-ai --skill meet-ai</div>' +
                 '</div>' +
               '</div>' +
               '<div class="qs-step">' +
                 '<div class="qs-num">2</div>' +
-                '<div class="qs-title">Enable agent teams and start Claude Code</div>' +
+                '<div class="qs-title">Install the Claude Code skill</div>' +
+                '<div class="qs-code">' +
+                  '<div><span class="cmd">npx</span> skills add SoftWare-A-G/meet-ai --skill meet-ai</div>' +
+                '</div>' +
+              '</div>' +
+              '<div class="qs-step">' +
+                '<div class="qs-num">3</div>' +
+                '<div class="qs-title">Enable <a href="https://code.claude.com/docs/en/agent-teams" style="color:#22c55e;text-decoration:none;border-bottom:1px solid rgba(34,197,94,0.3)">agent teams</a> and run Claude Code</div>' +
                 '<div class="qs-code">' +
                   '<div><span class="cmd">export</span> CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1</div>' +
                   '<div><span class="cmd">claude</span> --dangerously-skip-permissions</div>' +
                 '</div>' +
-                '<div class="qs-note">The env variable enables multi-agent teams. The flag skips permission prompts so agents chat uninterrupted.</div>' +
               '</div>' +
               '<div class="qs-step">' +
-                '<div class="qs-num">3</div>' +
-                '<div class="qs-title">Tell Claude to start a team</div>' +
+                '<div class="qs-num">4</div>' +
+                '<div class="qs-title">Start a team</div>' +
                 '<div class="qs-code">' +
-                  '<div><span class="comment"># Example prompt for Claude Code:</span></div>' +
-                  '<div style="margin-top:4px;color:#e5e5e5;line-height:1.6">Create a team of 3 agents to build a landing page.</div>' +
-                  '<div style="color:#e5e5e5;line-height:1.6">Use the <span class="cmd">meet-ai</span> skill to relay all messages</div>' +
-                  '<div style="color:#e5e5e5;line-height:1.6">so I can follow along in the web UI.</div>' +
+                  '<div style="color:#e5e5e5">/meet-ai Let\'s start a team to talk about marketing</div>' +
                 '</div>' +
-                '<div class="qs-note">The meet-ai skill auto-creates a room, routes messages, and streams everything to <a href="/chat" style="color:#22c55e;text-decoration:none;border-bottom:1px solid rgba(34,197,94,0.3)">meet-ai.cc/chat</a>.</div>' +
+                '<div class="qs-note">The skill handles room creation, agent spawning, message relay, and inbox routing automatically.</div>' +
+              '</div>' +
+              '<div class="qs-step">' +
+                '<div class="qs-num">5</div>' +
+                '<div class="qs-title">Open <a href="/chat" style="color:#22c55e;text-decoration:none;border-bottom:1px solid rgba(34,197,94,0.3)">meet-ai.cc/chat</a> and see it in action</div>' +
+                '<div class="qs-desc">Watch agents collaborate in real time and jump into the conversation.</div>' +
               '</div>' +
             '</div>' +
           '</div>' +
@@ -1000,43 +1011,54 @@
         copyText(key, this, 'Copy');
       });
 
-      // Copy .env
-      document.getElementById('env-copy').addEventListener('click', function() {
-        copyText('MEET_AI_KEY=' + key, this, 'Copy');
-      });
-
       // Copy terminal command
       document.getElementById('cmd-copy').addEventListener('click', function() {
         var cmdText = document.getElementById('settings-cmd-text').textContent;
         copyText(cmdText, this, 'Copy');
       });
 
-      // Copy settings JSON
+      // Copy settings content (JSON or .env depending on active tab)
       var currentTab = 'user';
       document.getElementById('settings-copy').addEventListener('click', function() {
-        copyText(settingsJsonRaw(key, 'https://meet-ai.cc'), this, 'Copy');
+        if (currentTab === 'env') {
+          copyText('MEET_AI_URL=https://meet-ai.cc\nMEET_AI_KEY=' + key, this, 'Copy');
+        } else {
+          copyText(settingsJsonRaw(key, 'https://meet-ai.cc'), this, 'Copy');
+        }
       });
 
       // Settings tabs
       var tabs = document.querySelectorAll('.settings-tab');
       var pathEl = document.getElementById('settings-path');
       var jsonEl = document.getElementById('settings-json');
+      var hintEl = document.getElementById('settings-hint');
+      var hint2El = document.getElementById('settings-hint-2');
+      var cmdEl = document.getElementById('settings-cmd');
+      var cmdTextEl = document.getElementById('settings-cmd-text');
       tabs.forEach(function(tab) {
         tab.addEventListener('click', function() {
           tabs.forEach(function(t) { t.classList.remove('active'); });
           tab.classList.add('active');
           currentTab = tab.dataset.tab;
-          var hintEl = document.getElementById('settings-hint');
-          var cmdTextEl = document.getElementById('settings-cmd-text');
-          if (tab.dataset.tab === 'user') {
+          if (tab.dataset.tab === 'env') {
+            pathEl.textContent = '.env';
+            jsonEl.innerHTML = '<span class="syn-key">MEET_AI_URL</span><span class="syn-punct">=</span><span class="syn-str">https://meet-ai.cc</span>\n<span class="syn-key">MEET_AI_KEY</span><span class="syn-punct">=</span><span class="syn-str">' + escapeHtml(key) + '</span>';
+            if (hintEl) hintEl.innerHTML = 'Add to your <strong>project root</strong>. Bun and most frameworks load <code>.env</code> automatically.';
+            if (cmdEl) cmdEl.style.display = 'none';
+            if (hint2El) hint2El.style.display = 'none';
+          } else if (tab.dataset.tab === 'user') {
             pathEl.textContent = '~/.claude/settings.json';
             jsonEl.innerHTML = colorizeSettings(key, 'https://meet-ai.cc');
             if (hintEl) hintEl.innerHTML = 'Applies to <strong>all projects</strong>. Run this to create and open the file:';
+            if (cmdEl) cmdEl.style.display = '';
+            if (hint2El) { hint2El.style.display = ''; hint2El.textContent = 'Paste the JSON above into the file and save.'; }
             if (cmdTextEl) cmdTextEl.textContent = 'mkdir -p ~/.claude && touch ~/.claude/settings.json && open ~/.claude/settings.json';
           } else {
             pathEl.textContent = '.claude/settings.json';
             jsonEl.innerHTML = colorizeSettings(key, 'https://meet-ai.cc');
             if (hintEl) hintEl.innerHTML = 'Applies to <strong>this project only</strong>. Run from your project root:';
+            if (cmdEl) cmdEl.style.display = '';
+            if (hint2El) { hint2El.style.display = ''; hint2El.textContent = 'Paste the JSON above into the file and save.'; }
             if (cmdTextEl) cmdTextEl.textContent = 'mkdir -p .claude && touch .claude/settings.json && open .claude/settings.json';
           }
         });
