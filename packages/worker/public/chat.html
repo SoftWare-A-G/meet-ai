@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
@@ -22,7 +22,11 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { height: 100%; overflow: hidden; }
-    body { font-family: system-ui, -apple-system, sans-serif; display: flex; background: var(--c-chat-bg, #0D1117); }
+    body {
+      font-family: system-ui, -apple-system, sans-serif; display: flex;
+      background: var(--c-chat-bg, #0D1117);
+      padding-bottom: env(safe-area-inset-bottom, 0);
+    }
 
     /* --- Layout --- */
     .sidebar {
@@ -90,7 +94,7 @@
     .sidebar-footer-actions button:hover { opacity: 1; background: var(--c-hover-item); }
 
     /* --- Main area --- */
-    .main { flex: 1; display: flex; flex-direction: column; background: var(--c-chat-bg); color: var(--c-msg-text); min-width: 0; height: 100vh; }
+    .main { flex: 1; display: flex; flex-direction: column; background: var(--c-chat-bg); color: var(--c-msg-text); min-width: 0; height: 100dvh; }
     .main-header {
       padding: 0 20px; border-bottom: 1px solid var(--c-border);
       background: var(--c-header-bg); color: var(--c-header-text);
@@ -147,7 +151,7 @@
 
     /* --- Chat input --- */
     .chat-input-area {
-      padding: 0 20px 14px; flex-shrink: 0;
+      padding: 0 20px calc(14px + env(safe-area-inset-bottom, 0px)); flex-shrink: 0;
     }
     .chat-input-box {
       border: 1px solid var(--c-border); border-radius: 8px;
