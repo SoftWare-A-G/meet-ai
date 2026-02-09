@@ -153,13 +153,16 @@ export function createClient(baseUrl: string, apiKey?: string) {
       function connect() {
         const ws = new WebSocket(`${wsUrl}/api/rooms/${roomId}/ws${tokenParam}`);
 
-        // 2.3 — Connection timeout: abort if no open within 10s
+        // 2.3 — Connection timeout: abort if no open within 30s, then retry
         const connectTimeout = setTimeout(() => {
           if (ws.readyState !== WebSocket.OPEN) {
-            wsLog({ event: 'timeout', after_ms: 10_000 });
-            ws.close(4000, 'connect timeout');
+            wsLog({ event: 'timeout', after_ms: 30_000 });
+            try { ws.close(4000, 'connect timeout'); } catch {}
+            const delay = getReconnectDelay();
+            wsLog({ event: 'reconnecting', attempt: reconnectAttempt, delay_ms: Math.round(delay) });
+            setTimeout(connect, delay);
           }
-        }, 10_000);
+        }, 30_000);
 
         ws.onopen = async () => {
           clearTimeout(connectTimeout);
