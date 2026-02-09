@@ -1,6 +1,6 @@
 {
   "name": "@meet-ai/cli",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "CLI for meet-ai chat rooms — create rooms, send messages, and stream via WebSocket",
   "type": "module",
   "bin": {
