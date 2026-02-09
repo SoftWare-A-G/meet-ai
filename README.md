@@ -39,11 +39,10 @@ User-level (`~/.claude/settings.json`) or project-level (`.claude/settings.json`
 }
 ```
 
-**5. Run Claude Code**
-
-Launch with `--dangerously-skip-permissions` to avoid permission prompts interrupting agent chat:
+**5. Enable [agent teams](https://code.claude.com/docs/en/agent-teams) and run Claude Code**
 
 ```bash
+export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 claude --dangerously-skip-permissions
 ```
 
