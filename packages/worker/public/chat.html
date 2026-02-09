@@ -227,36 +227,36 @@
     .settings-panel .btn-reset { background: transparent; color: var(--c-primary); border: 1px solid var(--c-border); margin-right: auto; }
 
     /* --- QR Share Modal --- */
-    .share-overlay {
+    .qr-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100;
       display: flex; align-items: center; justify-content: center;
     }
-    .share-panel {
+    .qr-panel {
       background: var(--c-chat-bg); color: var(--c-msg-text);
       border: 1px solid var(--c-border); border-radius: 12px;
       padding: 24px; width: 360px; max-width: 90vw; text-align: center;
     }
-    .share-panel h2 { margin-bottom: 4px; font-size: 18px; }
-    .share-panel .share-subtitle { font-size: 13px; opacity: 0.6; margin-bottom: 16px; }
-    .share-panel .qr-container { margin: 0 auto 16px; }
-    .share-panel .qr-container img { border-radius: 8px; }
-    .share-panel .share-url {
+    .qr-panel h2 { margin-bottom: 4px; font-size: 18px; }
+    .qr-panel .qr-subtitle { font-size: 13px; opacity: 0.6; margin-bottom: 16px; }
+    .qr-panel .qr-container { margin: 0 auto 16px; }
+    .qr-panel .qr-container img { border-radius: 8px; }
+    .qr-panel .qr-url {
       font-size: 12px; font-family: 'SF Mono', Monaco, Consolas, monospace;
       background: rgba(128,128,128,0.1); border: 1px solid var(--c-border);
       border-radius: 6px; padding: 8px 10px; word-break: break-all;
       cursor: pointer; margin-bottom: 8px; position: relative;
     }
-    .share-panel .share-url:hover { background: rgba(128,128,128,0.15); }
-    .share-panel .share-expires { font-size: 12px; opacity: 0.5; margin-bottom: 16px; }
-    .share-panel .share-copied {
+    .qr-panel .qr-url:hover { background: rgba(128,128,128,0.15); }
+    .qr-panel .qr-expires { font-size: 12px; opacity: 0.5; margin-bottom: 16px; }
+    .qr-panel .qr-copied {
       font-size: 12px; color: #3FB950; margin-bottom: 8px; min-height: 18px;
     }
-    .share-panel .btn-close {
+    .qr-panel .btn-close {
       padding: 8px 20px; border-radius: 6px; font-size: 13px; cursor: pointer;
       font-weight: 600; background: transparent; color: var(--c-msg-text);
       border: 1px solid var(--c-border);
     }
-    .share-panel .btn-close:hover { background: rgba(128,128,128,0.1); }
+    .qr-panel .btn-close:hover { background: rgba(128,128,128,0.1); }
     .invite-btn {
       background: none; border: 1px solid rgba(255,255,255,0.3); color: var(--c-header-text);
       cursor: pointer; display: flex !important; align-items: center;
@@ -1596,7 +1596,7 @@
       setTimeout(() => toast.remove(), 2100);
     }
 
-    async function shareMobile() {
+    async function inviteMobile() {
       if (!currentRoom) return;
       const btn = document.getElementById('invite-btn');
       btn.style.opacity = '0.3';
@@ -1623,29 +1623,29 @@
       }
     }
 
-    function shareDesktop() {
+    function inviteDesktop() {
       if (!currentRoom) return;
 
       const overlay = document.createElement('div');
-      overlay.className = 'share-overlay';
+      overlay.className = 'qr-overlay';
       overlay.innerHTML = `
-        <div class="share-panel">
+        <div class="qr-panel">
           <h2>Share to Phone</h2>
-          <p class="share-subtitle">Scan with your phone camera to open this chat</p>
+          <p class="qr-subtitle">Scan with your phone camera to open this chat</p>
           <div class="qr-container" id="qr-container">
             <div style="width:200px;height:200px;display:flex;align-items:center;justify-content:center;margin:0 auto">
               <div style="width:32px;height:32px;border:3px solid var(--c-border);border-top-color:var(--c-primary);border-radius:50%;animation:spin 0.8s linear infinite"></div>
             </div>
           </div>
-          <div class="share-url" id="share-url" style="display:none" title="Click to copy"></div>
-          <div class="share-copied" id="share-copied"></div>
-          <div class="share-expires">Expires in 5 minutes</div>
-          <button class="btn-close" id="share-close">Close</button>
+          <div class="qr-url" id="qr-url" style="display:none" title="Click to copy"></div>
+          <div class="qr-copied" id="qr-copied"></div>
+          <div class="qr-expires">Expires in 5 minutes</div>
+          <button class="btn-close" id="qr-close">Close</button>
         </div>
       `;
       document.body.appendChild(overlay);
 
-      overlay.querySelector('#share-close').onclick = () => overlay.remove();
+      overlay.querySelector('#qr-close').onclick = () => overlay.remove();
       overlay.addEventListener('click', (e) => {
         if (e.target === overlay) overlay.remove();
       });
@@ -1666,8 +1666,8 @@
 
           const data = await res.json();
           const qrContainer = overlay.querySelector('#qr-container');
-          const urlEl = overlay.querySelector('#share-url');
-          const copiedEl = overlay.querySelector('#share-copied');
+          const urlEl = overlay.querySelector('#qr-url');
+          const copiedEl = overlay.querySelector('#qr-copied');
 
           // Generate QR code
           const qr = qrcode(0, 'M');
@@ -1698,8 +1698,8 @@
     }
 
     document.getElementById('invite-btn').addEventListener('click', () => {
-      if (isTouchDevice) shareMobile();
-      else shareDesktop();
+      if (isTouchDevice) inviteMobile();
+      else inviteDesktop();
     });
 
     // ===== Init =====
