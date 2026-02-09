@@ -1570,20 +1570,14 @@
       }
     });
 
-    // ===== Share =====
-    const isMobile = () => window.matchMedia('(max-width: 700px)').matches;
-
-    // Detect touch device (covers iOS, Android, iPad regardless of viewport width)
-    const isTouchDevice = navigator.maxTouchPoints > 0;
-
-    // Set invite button: on touch in browser → "Install App", on desktop → "Share" (QR), in PWA → hide
+    // ===== QR Code / Phone button =====
     const isStandaloneMode = window.navigator.standalone === true
       || window.matchMedia('(display-mode: standalone)').matches;
 
-    // Button is hidden by default in HTML. Only show on desktop (non-touch, non-PWA).
+    // Button is hidden by default in HTML. Show everywhere except inside PWA.
     (function updateInviteIcon() {
       const btn = document.getElementById('invite-btn');
-      if (!isStandaloneMode && !isTouchDevice) {
+      if (!isStandaloneMode) {
         btn.style.display = '';
       }
     })();
@@ -1594,77 +1588,6 @@
       toast.textContent = text;
       document.body.appendChild(toast);
       setTimeout(() => toast.remove(), 2100);
-    }
-
-    function inviteMobile() {
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-        || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-      const isAndroid = /Android/.test(navigator.userAgent);
-
-      let steps = '';
-      if (isIOS) {
-        steps = `
-          <div class="install-step">
-            <div class="step-num">1</div>
-            <div class="step-text">Tap the <strong>Share</strong> button <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;display:inline"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg> at the bottom of Safari</div>
-          </div>
-          <div class="install-step">
-            <div class="step-num">2</div>
-            <div class="step-text">Scroll down and tap <strong>Add to Home Screen</strong></div>
-          </div>
-          <div class="install-step">
-            <div class="step-num">3</div>
-            <div class="step-text">Tap <strong>Add</strong> in the top right corner</div>
-          </div>
-          <div class="install-step">
-            <div class="step-num">4</div>
-            <div class="step-text">Open <strong>meet-ai</strong> from your Home Screen</div>
-          </div>
-        `;
-      } else if (isAndroid) {
-        steps = `
-          <div class="install-step">
-            <div class="step-num">1</div>
-            <div class="step-text">Tap the <strong>menu</strong> button <span style="font-size:18px">&#8942;</span> in Chrome</div>
-          </div>
-          <div class="install-step">
-            <div class="step-num">2</div>
-            <div class="step-text">Tap <strong>Install app</strong> or <strong>Add to Home screen</strong></div>
-          </div>
-          <div class="install-step">
-            <div class="step-num">3</div>
-            <div class="step-text">Open <strong>meet-ai</strong> from your Home Screen</div>
-          </div>
-        `;
-      } else {
-        steps = `
-          <div class="install-step">
-            <div class="step-num">1</div>
-            <div class="step-text">Install the app using your browser's install option</div>
-          </div>
-          <div class="install-step">
-            <div class="step-num">2</div>
-            <div class="step-text">Open the app from your Home Screen</div>
-          </div>
-        `;
-      }
-
-      const overlay = document.createElement('div');
-      overlay.className = 'qr-overlay';
-      overlay.innerHTML = `
-        <div class="qr-panel">
-          <h2>Install meet-ai</h2>
-          <p class="qr-subtitle">Add to your Home Screen for the best experience</p>
-          <div style="text-align:left;margin:16px 0">${steps}</div>
-          <button class="btn-close" id="qr-close">Got it</button>
-        </div>
-      `;
-      document.body.appendChild(overlay);
-
-      overlay.querySelector('#qr-close').onclick = () => overlay.remove();
-      overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) overlay.remove();
-      });
     }
 
     function inviteDesktop() {
@@ -1741,10 +1664,7 @@
       })();
     }
 
-    document.getElementById('invite-btn').addEventListener('click', () => {
-      if (isTouchDevice) inviteMobile();
-      else inviteDesktop();
-    });
+    document.getElementById('invite-btn').addEventListener('click', inviteDesktop);
 
     // ===== Init =====
     async function init() {
