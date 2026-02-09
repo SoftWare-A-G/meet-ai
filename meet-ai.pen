@@ -2015,13 +2015,13 @@
                     },
                     {
                       "type": "icon_font",
-                      "id": "Xrd6Q",
-                      "name": "chevronIcon",
+                      "id": "nfhaH",
+                      "name": "settingsIcon",
                       "width": 18,
                       "height": 18,
-                      "iconFontName": "chevron-down",
+                      "iconFontName": "settings",
                       "iconFontFamily": "lucide",
-                      "fill": "#FFFFFF"
+                      "fill": "#FFFFFFAA"
                     }
                   ]
                 },
@@ -2291,10 +2291,10 @@
                     {
                       "type": "icon_font",
                       "id": "EtIFM",
-                      "name": "settingsIcon",
+                      "name": "keyIcon",
                       "width": 18,
                       "height": 18,
-                      "iconFontName": "settings",
+                      "iconFontName": "key-round",
                       "iconFontFamily": "lucide",
                       "fill": "#FFFFFFAA"
                     }
@@ -3061,13 +3061,13 @@
                     },
                     {
                       "type": "icon_font",
-                      "id": "zLIWL",
-                      "name": "chevronIcon",
+                      "id": "Rfrju",
+                      "name": "settingsIcon",
                       "width": 18,
                       "height": 18,
-                      "iconFontName": "chevron-down",
+                      "iconFontName": "settings",
                       "iconFontFamily": "lucide",
-                      "fill": "#FFFFFF"
+                      "fill": "#FFFFFFAA"
                     }
                   ]
                 },
@@ -3337,10 +3337,10 @@
                     {
                       "type": "icon_font",
                       "id": "fmSbh",
-                      "name": "settingsIcon",
+                      "name": "keyIcon",
                       "width": 18,
                       "height": 18,
-                      "iconFontName": "settings",
+                      "iconFontName": "key-round",
                       "iconFontFamily": "lucide",
                       "fill": "#FFFFFFAA"
                     }
@@ -4107,13 +4107,13 @@
                     },
                     {
                       "type": "icon_font",
-                      "id": "4a9X7",
-                      "name": "chevronIcon",
+                      "id": "g9q24",
+                      "name": "settingsIcon",
                       "width": 18,
                       "height": 18,
-                      "iconFontName": "chevron-down",
+                      "iconFontName": "settings",
                       "iconFontFamily": "lucide",
-                      "fill": "#FFFFFF"
+                      "fill": "#FFFFFFAA"
                     }
                   ]
                 },
@@ -4383,10 +4383,10 @@
                     {
                       "type": "icon_font",
                       "id": "3gYD7",
-                      "name": "settingsIcon",
+                      "name": "keyIcon",
                       "width": 18,
                       "height": 18,
-                      "iconFontName": "settings",
+                      "iconFontName": "key-round",
                       "iconFontFamily": "lucide",
                       "fill": "#FFFFFFAA"
                     }
@@ -4522,7 +4522,7 @@
                       "name": "Avatar 1",
                       "width": 36,
                       "height": 36,
-                      "fill": "#ee6030",
+                      "fill": "#F0936A",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -4608,7 +4608,7 @@
                       "name": "Avatar 2",
                       "width": 36,
                       "height": 36,
-                      "fill": "#9C2E33",
+                      "fill": "#E06B6E",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -4694,7 +4694,7 @@
                       "name": "Avatar 3",
                       "width": 36,
                       "height": 36,
-                      "fill": "#2D6A4F",
+                      "fill": "#52B788",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -4780,7 +4780,7 @@
                       "name": "Avatar 4",
                       "width": 36,
                       "height": 36,
-                      "fill": "#6B21A8",
+                      "fill": "#A855F7",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -4866,7 +4866,7 @@
                       "name": "Avatar 5",
                       "width": 36,
                       "height": 36,
-                      "fill": "#0891B2",
+                      "fill": "#22D3EE",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -5154,13 +5154,13 @@
                     },
                     {
                       "type": "icon_font",
-                      "id": "tJqoV",
-                      "name": "chevronIcon",
+                      "id": "OktwY",
+                      "name": "settingsIcon",
                       "width": 18,
                       "height": 18,
-                      "iconFontName": "chevron-down",
+                      "iconFontName": "settings",
                       "iconFontFamily": "lucide",
-                      "fill": "#1D1C1D"
+                      "fill": "#616061"
                     }
                   ]
                 },
@@ -5430,10 +5430,10 @@
                     {
                       "type": "icon_font",
                       "id": "kIw71",
-                      "name": "settingsIcon",
+                      "name": "keyIcon",
                       "width": 18,
                       "height": 18,
-                      "iconFontName": "settings",
+                      "iconFontName": "key-round",
                       "iconFontFamily": "lucide",
                       "fill": "#616061"
                     }
@@ -6200,13 +6200,13 @@
                     },
                     {
                       "type": "icon_font",
-                      "id": "3Aika",
-                      "name": "chevronIcon",
+                      "id": "duXVd",
+                      "name": "settingsIcon",
                       "width": 18,
                       "height": 18,
-                      "iconFontName": "chevron-down",
+                      "iconFontName": "settings",
                       "iconFontFamily": "lucide",
-                      "fill": "#abb2bf"
+                      "fill": "#5c6370"
                     }
                   ]
                 },
@@ -6476,10 +6476,10 @@
                     {
                       "type": "icon_font",
                       "id": "yKDux",
-                      "name": "settingsIcon",
+                      "name": "keyIcon",
                       "width": 18,
                       "height": 18,
-                      "iconFontName": "settings",
+                      "iconFontName": "key-round",
                       "iconFontFamily": "lucide",
                       "fill": "#5c6370"
                     }
@@ -6615,7 +6615,7 @@
                       "name": "Avatar 1",
                       "width": 36,
                       "height": 36,
-                      "fill": "#ee6030",
+                      "fill": "#e5c07b",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -6701,7 +6701,7 @@
                       "name": "Avatar 2",
                       "width": 36,
                       "height": 36,
-                      "fill": "#9C2E33",
+                      "fill": "#e06c75",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -6787,7 +6787,7 @@
                       "name": "Avatar 3",
                       "width": 36,
                       "height": 36,
-                      "fill": "#2D6A4F",
+                      "fill": "#98c379",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -6873,7 +6873,7 @@
                       "name": "Avatar 4",
                       "width": 36,
                       "height": 36,
-                      "fill": "#6B21A8",
+                      "fill": "#c678dd",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -6959,7 +6959,7 @@
                       "name": "Avatar 5",
                       "width": 36,
                       "height": 36,
-                      "fill": "#0891B2",
+                      "fill": "#56b6c2",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -7247,13 +7247,13 @@
                     },
                     {
                       "type": "icon_font",
-                      "id": "iLsLD",
-                      "name": "chevronIcon",
+                      "id": "lV2MU",
+                      "name": "settingsIcon",
                       "width": 18,
                       "height": 18,
-                      "iconFontName": "chevron-down",
+                      "iconFontName": "settings",
                       "iconFontFamily": "lucide",
-                      "fill": "#f8f8f2"
+                      "fill": "#6272a4"
                     }
                   ]
                 },
@@ -7523,10 +7523,10 @@
                     {
                       "type": "icon_font",
                       "id": "hlqpt",
-                      "name": "settingsIcon",
+                      "name": "keyIcon",
                       "width": 18,
                       "height": 18,
-                      "iconFontName": "settings",
+                      "iconFontName": "key-round",
                       "iconFontFamily": "lucide",
                       "fill": "#6272a4"
                     }
@@ -7662,7 +7662,7 @@
                       "name": "Avatar 1",
                       "width": 36,
                       "height": 36,
-                      "fill": "#ee6030",
+                      "fill": "#ffb86c",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -7748,7 +7748,7 @@
                       "name": "Avatar 2",
                       "width": 36,
                       "height": 36,
-                      "fill": "#9C2E33",
+                      "fill": "#ff5555",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -7834,7 +7834,7 @@
                       "name": "Avatar 3",
                       "width": 36,
                       "height": 36,
-                      "fill": "#2D6A4F",
+                      "fill": "#50fa7b",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -7920,7 +7920,7 @@
                       "name": "Avatar 4",
                       "width": 36,
                       "height": 36,
-                      "fill": "#6B21A8",
+                      "fill": "#bd93f9",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -8006,7 +8006,7 @@
                       "name": "Avatar 5",
                       "width": 36,
                       "height": 36,
-                      "fill": "#0891B2",
+                      "fill": "#8be9fd",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -8294,13 +8294,13 @@
                     },
                     {
                       "type": "icon_font",
-                      "id": "3NBkd",
-                      "name": "chevronIcon",
+                      "id": "1HN0x",
+                      "name": "settingsIcon",
                       "width": 18,
                       "height": 18,
-                      "iconFontName": "chevron-down",
+                      "iconFontName": "settings",
                       "iconFontFamily": "lucide",
-                      "fill": "#e6edf3"
+                      "fill": "#8b949e"
                     }
                   ]
                 },
@@ -8570,10 +8570,10 @@
                     {
                       "type": "icon_font",
                       "id": "02Woq",
-                      "name": "settingsIcon",
+                      "name": "keyIcon",
                       "width": 18,
                       "height": 18,
-                      "iconFontName": "settings",
+                      "iconFontName": "key-round",
                       "iconFontFamily": "lucide",
                       "fill": "#8b949e"
                     }
@@ -8709,7 +8709,7 @@
                       "name": "Avatar 1",
                       "width": 36,
                       "height": 36,
-                      "fill": "#ee6030",
+                      "fill": "#ffa657",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -8795,7 +8795,7 @@
                       "name": "Avatar 2",
                       "width": 36,
                       "height": 36,
-                      "fill": "#9C2E33",
+                      "fill": "#f85149",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -8881,7 +8881,7 @@
                       "name": "Avatar 3",
                       "width": 36,
                       "height": 36,
-                      "fill": "#2D6A4F",
+                      "fill": "#3fb950",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -8967,7 +8967,7 @@
                       "name": "Avatar 4",
                       "width": 36,
                       "height": 36,
-                      "fill": "#6B21A8",
+                      "fill": "#bc8cff",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -9053,7 +9053,7 @@
                       "name": "Avatar 5",
                       "width": 36,
                       "height": 36,
-                      "fill": "#0891B2",
+                      "fill": "#79c0ff",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -9341,13 +9341,13 @@
                     },
                     {
                       "type": "icon_font",
-                      "id": "w3mEw",
-                      "name": "chevronIcon",
+                      "id": "I39Sf",
+                      "name": "settingsIcon",
                       "width": 18,
                       "height": 18,
-                      "iconFontName": "chevron-down",
+                      "iconFontName": "settings",
                       "iconFontFamily": "lucide",
-                      "fill": "#eceff4"
+                      "fill": "#d8dee9"
                     }
                   ]
                 },
@@ -9617,10 +9617,10 @@
                     {
                       "type": "icon_font",
                       "id": "bdvLu",
-                      "name": "settingsIcon",
+                      "name": "keyIcon",
                       "width": 18,
                       "height": 18,
-                      "iconFontName": "settings",
+                      "iconFontName": "key-round",
                       "iconFontFamily": "lucide",
                       "fill": "#d8dee9"
                     }
@@ -9756,7 +9756,7 @@
                       "name": "Avatar 1",
                       "width": 36,
                       "height": 36,
-                      "fill": "#ee6030",
+                      "fill": "#ebcb8b",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -9842,7 +9842,7 @@
                       "name": "Avatar 2",
                       "width": 36,
                       "height": 36,
-                      "fill": "#9C2E33",
+                      "fill": "#bf616a",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -9928,7 +9928,7 @@
                       "name": "Avatar 3",
                       "width": 36,
                       "height": 36,
-                      "fill": "#2D6A4F",
+                      "fill": "#a3be8c",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -10014,7 +10014,7 @@
                       "name": "Avatar 4",
                       "width": 36,
                       "height": 36,
-                      "fill": "#6B21A8",
+                      "fill": "#b48ead",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -10100,7 +10100,7 @@
                       "name": "Avatar 5",
                       "width": 36,
                       "height": 36,
-                      "fill": "#0891B2",
+                      "fill": "#88c0d0",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -10388,13 +10388,13 @@
                     },
                     {
                       "type": "icon_font",
-                      "id": "qAUeN",
-                      "name": "chevronIcon",
+                      "id": "XjJg7",
+                      "name": "settingsIcon",
                       "width": 18,
                       "height": 18,
-                      "iconFontName": "chevron-down",
+                      "iconFontName": "settings",
                       "iconFontFamily": "lucide",
-                      "fill": "#f8f8f2"
+                      "fill": "#75715e"
                     }
                   ]
                 },
@@ -10664,10 +10664,10 @@
                     {
                       "type": "icon_font",
                       "id": "83w6v",
-                      "name": "settingsIcon",
+                      "name": "keyIcon",
                       "width": 18,
                       "height": 18,
-                      "iconFontName": "settings",
+                      "iconFontName": "key-round",
                       "iconFontFamily": "lucide",
                       "fill": "#75715e"
                     }
@@ -10803,7 +10803,7 @@
                       "name": "Avatar 1",
                       "width": 36,
                       "height": 36,
-                      "fill": "#ee6030",
+                      "fill": "#fd971f",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -10889,7 +10889,7 @@
                       "name": "Avatar 2",
                       "width": 36,
                       "height": 36,
-                      "fill": "#9C2E33",
+                      "fill": "#f92672",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -10975,7 +10975,7 @@
                       "name": "Avatar 3",
                       "width": 36,
                       "height": 36,
-                      "fill": "#2D6A4F",
+                      "fill": "#a6e22e",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -11061,7 +11061,7 @@
                       "name": "Avatar 4",
                       "width": 36,
                       "height": 36,
-                      "fill": "#6B21A8",
+                      "fill": "#ae81ff",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -11147,7 +11147,7 @@
                       "name": "Avatar 5",
                       "width": 36,
                       "height": 36,
-                      "fill": "#0891B2",
+                      "fill": "#66d9ef",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -11435,13 +11435,13 @@
                     },
                     {
                       "type": "icon_font",
-                      "id": "rfMoC",
-                      "name": "chevronIcon",
+                      "id": "lDs3X",
+                      "name": "settingsIcon",
                       "width": 18,
                       "height": 18,
-                      "iconFontName": "chevron-down",
+                      "iconFontName": "settings",
                       "iconFontFamily": "lucide",
-                      "fill": "#839496"
+                      "fill": "#657b83"
                     }
                   ]
                 },
@@ -11711,10 +11711,10 @@
                     {
                       "type": "icon_font",
                       "id": "43Lav",
-                      "name": "settingsIcon",
+                      "name": "keyIcon",
                       "width": 18,
                       "height": 18,
-                      "iconFontName": "settings",
+                      "iconFontName": "key-round",
                       "iconFontFamily": "lucide",
                       "fill": "#657b83"
                     }
@@ -11850,7 +11850,7 @@
                       "name": "Avatar 1",
                       "width": 36,
                       "height": 36,
-                      "fill": "#ee6030",
+                      "fill": "#cb4b16",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -11936,7 +11936,7 @@
                       "name": "Avatar 2",
                       "width": 36,
                       "height": 36,
-                      "fill": "#9C2E33",
+                      "fill": "#dc322f",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -12022,7 +12022,7 @@
                       "name": "Avatar 3",
                       "width": 36,
                       "height": 36,
-                      "fill": "#2D6A4F",
+                      "fill": "#859900",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -12108,7 +12108,7 @@
                       "name": "Avatar 4",
                       "width": 36,
                       "height": 36,
-                      "fill": "#6B21A8",
+                      "fill": "#6c71c4",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -12194,7 +12194,7 @@
                       "name": "Avatar 5",
                       "width": 36,
                       "height": 36,
-                      "fill": "#0891B2",
+                      "fill": "#2aa198",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -12482,13 +12482,13 @@
                     },
                     {
                       "type": "icon_font",
-                      "id": "1SzjL",
-                      "name": "chevronIcon",
+                      "id": "MBE89",
+                      "name": "settingsIcon",
                       "width": 18,
                       "height": 18,
-                      "iconFontName": "chevron-down",
+                      "iconFontName": "settings",
                       "iconFontFamily": "lucide",
-                      "fill": "#a9b1d6"
+                      "fill": "#565f89"
                     }
                   ]
                 },
@@ -12758,10 +12758,10 @@
                     {
                       "type": "icon_font",
                       "id": "LSPbU",
-                      "name": "settingsIcon",
+                      "name": "keyIcon",
                       "width": 18,
                       "height": 18,
-                      "iconFontName": "settings",
+                      "iconFontName": "key-round",
                       "iconFontFamily": "lucide",
                       "fill": "#565f89"
                     }
@@ -12897,7 +12897,7 @@
                       "name": "Avatar 1",
                       "width": 36,
                       "height": 36,
-                      "fill": "#ee6030",
+                      "fill": "#ff9e64",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -12983,7 +12983,7 @@
                       "name": "Avatar 2",
                       "width": 36,
                       "height": 36,
-                      "fill": "#9C2E33",
+                      "fill": "#f7768e",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -13069,7 +13069,7 @@
                       "name": "Avatar 3",
                       "width": 36,
                       "height": 36,
-                      "fill": "#2D6A4F",
+                      "fill": "#73daca",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -13155,7 +13155,7 @@
                       "name": "Avatar 4",
                       "width": 36,
                       "height": 36,
-                      "fill": "#6B21A8",
+                      "fill": "#bb9af7",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -13241,7 +13241,7 @@
                       "name": "Avatar 5",
                       "width": 36,
                       "height": 36,
-                      "fill": "#0891B2",
+                      "fill": "#7dcfff",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -13530,13 +13530,13 @@
                     },
                     {
                       "type": "icon_font",
-                      "id": "xBIDm",
-                      "name": "chevronIcon",
+                      "id": "7vTPk",
+                      "name": "settingsIcon",
                       "width": 18,
                       "height": 18,
-                      "iconFontName": "chevron-down",
+                      "iconFontName": "settings",
                       "iconFontFamily": "lucide",
-                      "fill": "#cdd6f4"
+                      "fill": "#6C7086"
                     }
                   ]
                 },
@@ -13573,13 +13573,13 @@
                           "height": 12,
                           "iconFontName": "chevron-down",
                           "iconFontFamily": "lucide",
-                          "fill": "#a6adc8"
+                          "fill": "#6C7086"
                         },
                         {
                           "type": "text",
                           "id": "h14WT",
                           "name": "channelsText",
-                          "fill": "#a6adc8",
+                          "fill": "#6C7086",
                           "content": "Channels",
                           "fontFamily": "Inter",
                           "fontSize": 14,
@@ -13806,12 +13806,12 @@
                     {
                       "type": "icon_font",
                       "id": "qF15Z",
-                      "name": "settingsIcon",
+                      "name": "keyIcon",
                       "width": 18,
                       "height": 18,
-                      "iconFontName": "settings",
+                      "iconFontName": "key-round",
                       "iconFontFamily": "lucide",
-                      "fill": "#a6adc8"
+                      "fill": "#6C7086"
                     }
                   ]
                 }
@@ -14570,13 +14570,13 @@
                     },
                     {
                       "type": "icon_font",
-                      "id": "NlNIZ",
-                      "name": "chevronIcon",
+                      "id": "ZeQcH",
+                      "name": "settingsIcon",
                       "width": 18,
                       "height": 18,
-                      "iconFontName": "chevron-down",
+                      "iconFontName": "settings",
                       "iconFontFamily": "lucide",
-                      "fill": "#ebdbb2"
+                      "fill": "#928374"
                     }
                   ]
                 },
@@ -14613,13 +14613,13 @@
                           "height": 12,
                           "iconFontName": "chevron-down",
                           "iconFontFamily": "lucide",
-                          "fill": "#a89984"
+                          "fill": "#928374"
                         },
                         {
                           "type": "text",
                           "id": "63B6Z",
                           "name": "channelsText",
-                          "fill": "#a89984",
+                          "fill": "#928374",
                           "content": "Channels",
                           "fontFamily": "Inter",
                           "fontSize": 14,
@@ -14849,12 +14849,12 @@
                     {
                       "type": "icon_font",
                       "id": "CGf8c",
-                      "name": "settingsIcon",
+                      "name": "keyIcon",
                       "width": 18,
                       "height": 18,
-                      "iconFontName": "settings",
+                      "iconFontName": "key-round",
                       "iconFontFamily": "lucide",
-                      "fill": "#a89984"
+                      "fill": "#928374"
                     }
                   ]
                 }
@@ -14903,7 +14903,7 @@
                       "type": "text",
                       "id": "s10Yc",
                       "name": "headerHash",
-                      "fill": "#A89984",
+                      "fill": "#928374",
                       "content": "#",
                       "fontFamily": "Inter",
                       "fontSize": 18,
@@ -14943,7 +14943,7 @@
                       "height": 18,
                       "iconFontName": "search",
                       "iconFontFamily": "lucide",
-                      "fill": "#A89984"
+                      "fill": "#928374"
                     },
                     {
                       "type": "icon_font",
@@ -14953,7 +14953,7 @@
                       "height": 18,
                       "iconFontName": "users",
                       "iconFontFamily": "lucide",
-                      "fill": "#A89984"
+                      "fill": "#928374"
                     }
                   ]
                 }
@@ -15034,7 +15034,7 @@
                               "type": "text",
                               "id": "afipd",
                               "name": "timestamp1",
-                              "fill": "#A89984",
+                              "fill": "#928374",
                               "content": "10:23 AM",
                               "fontFamily": "Inter",
                               "fontSize": 12
@@ -15120,7 +15120,7 @@
                               "type": "text",
                               "id": "YCJBC",
                               "name": "timestamp2",
-                              "fill": "#A89984",
+                              "fill": "#928374",
                               "content": "10:25 AM",
                               "fontFamily": "Inter",
                               "fontSize": 12
@@ -15206,7 +15206,7 @@
                               "type": "text",
                               "id": "FlxAi",
                               "name": "timestamp3",
-                              "fill": "#A89984",
+                              "fill": "#928374",
                               "content": "10:28 AM",
                               "fontFamily": "Inter",
                               "fontSize": 12
@@ -15292,7 +15292,7 @@
                               "type": "text",
                               "id": "NjNm9",
                               "name": "timestamp4",
-                              "fill": "#A89984",
+                              "fill": "#928374",
                               "content": "10:31 AM",
                               "fontFamily": "Inter",
                               "fontSize": 12
@@ -15378,7 +15378,7 @@
                               "type": "text",
                               "id": "uvb4h",
                               "name": "timestamp5",
-                              "fill": "#A89984",
+                              "fill": "#928374",
                               "content": "10:34 AM",
                               "fontFamily": "Inter",
                               "fontSize": 12
@@ -15446,7 +15446,7 @@
                           "type": "text",
                           "id": "OfqS8",
                           "name": "inputPlaceholder",
-                          "fill": "#A89984",
+                          "fill": "#928374",
                           "content": "Message #general",
                           "fontFamily": "Inter",
                           "fontSize": 14
@@ -15488,7 +15488,7 @@
                           "height": 18,
                           "iconFontName": "bold",
                           "iconFontFamily": "lucide",
-                          "fill": "#A89984"
+                          "fill": "#928374"
                         },
                         {
                           "type": "icon_font",
@@ -15498,7 +15498,7 @@
                           "height": 18,
                           "iconFontName": "italic",
                           "iconFontFamily": "lucide",
-                          "fill": "#A89984"
+                          "fill": "#928374"
                         },
                         {
                           "type": "icon_font",
@@ -15508,7 +15508,7 @@
                           "height": 18,
                           "iconFontName": "code",
                           "iconFontFamily": "lucide",
-                          "fill": "#A89984"
+                          "fill": "#928374"
                         },
                         {
                           "type": "icon_font",
@@ -15518,7 +15518,7 @@
                           "height": 18,
                           "iconFontName": "link",
                           "iconFontFamily": "lucide",
-                          "fill": "#A89984"
+                          "fill": "#928374"
                         },
                         {
                           "type": "frame",
@@ -15612,7 +15612,7 @@
                       "type": "text",
                       "id": "yqxjc",
                       "name": "workspaceName",
-                      "fill": "#FFFFFF",
+                      "fill": "#383A42",
                       "content": "meet-ai",
                       "fontFamily": "Inter",
                       "fontSize": 16,
@@ -15620,13 +15620,13 @@
                     },
                     {
                       "type": "icon_font",
-                      "id": "QobtO",
-                      "name": "chevronIcon",
+                      "id": "ws4Xj",
+                      "name": "settingsIcon",
                       "width": 18,
                       "height": 18,
-                      "iconFontName": "chevron-down",
+                      "iconFontName": "settings",
                       "iconFontFamily": "lucide",
-                      "fill": "#FFFFFF"
+                      "fill": "#A0A1A7"
                     }
                   ]
                 },
@@ -15663,13 +15663,13 @@
                           "height": 12,
                           "iconFontName": "chevron-down",
                           "iconFontFamily": "lucide",
-                          "fill": "#FFFFFFAA"
+                          "fill": "#A0A1A7"
                         },
                         {
                           "type": "text",
                           "id": "D0EFs",
                           "name": "channelsText",
-                          "fill": "#FFFFFFBB",
+                          "fill": "#A0A1A7",
                           "content": "Channels",
                           "fontFamily": "Inter",
                           "fontSize": 14,
@@ -15696,7 +15696,7 @@
                           "type": "text",
                           "id": "TtBxX",
                           "name": "hashGeneral",
-                          "fill": "#194234",
+                          "fill": "#FFFFFF",
                           "content": "#",
                           "fontFamily": "Inter",
                           "fontSize": 16
@@ -15705,7 +15705,7 @@
                           "type": "text",
                           "id": "P0169",
                           "name": "textGeneral",
-                          "fill": "#194234",
+                          "fill": "#FFFFFF",
                           "content": "general",
                           "fontFamily": "Inter",
                           "fontSize": 14,
@@ -15730,7 +15730,7 @@
                           "type": "text",
                           "id": "vH4MO",
                           "name": "hashRandom",
-                          "fill": "#FFFFFF",
+                          "fill": "#383A42",
                           "content": "#",
                           "fontFamily": "Inter",
                           "fontSize": 16
@@ -15739,7 +15739,7 @@
                           "type": "text",
                           "id": "9h363",
                           "name": "textRandom",
-                          "fill": "#FFFFFF",
+                          "fill": "#383A42",
                           "content": "random",
                           "fontFamily": "Inter",
                           "fontSize": 14
@@ -15763,7 +15763,7 @@
                           "type": "text",
                           "id": "2F8p5",
                           "name": "hashDev",
-                          "fill": "#FFFFFF",
+                          "fill": "#383A42",
                           "content": "#",
                           "fontFamily": "Inter",
                           "fontSize": 16
@@ -15772,7 +15772,7 @@
                           "type": "text",
                           "id": "obgxD",
                           "name": "textDev",
-                          "fill": "#FFFFFF",
+                          "fill": "#383A42",
                           "content": "dev",
                           "fontFamily": "Inter",
                           "fontSize": 14
@@ -15796,7 +15796,7 @@
                           "type": "text",
                           "id": "f3ZIY",
                           "name": "hashDesign",
-                          "fill": "#FFFFFF",
+                          "fill": "#383A42",
                           "content": "#",
                           "fontFamily": "Inter",
                           "fontSize": 16
@@ -15805,7 +15805,7 @@
                           "type": "text",
                           "id": "v3diP",
                           "name": "textDesign",
-                          "fill": "#FFFFFF",
+                          "fill": "#383A42",
                           "content": "design",
                           "fontFamily": "Inter",
                           "fontSize": 14
@@ -15877,7 +15877,7 @@
                           "type": "text",
                           "id": "7cxht",
                           "name": "userName",
-                          "fill": "#FFFFFF",
+                          "fill": "#383A42",
                           "content": "designer",
                           "fontFamily": "Inter",
                           "fontSize": 13,
@@ -15896,12 +15896,12 @@
                     {
                       "type": "icon_font",
                       "id": "OTrCK",
-                      "name": "settingsIcon",
+                      "name": "keyIcon",
                       "width": 18,
                       "height": 18,
-                      "iconFontName": "settings",
+                      "iconFontName": "key-round",
                       "iconFontFamily": "lucide",
-                      "fill": "#FFFFFFAA"
+                      "fill": "#A0A1A7"
                     }
                   ]
                 }
@@ -16035,7 +16035,7 @@
                       "name": "Avatar 1",
                       "width": 36,
                       "height": 36,
-                      "fill": "#ee6030",
+                      "fill": "#E45649",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -16071,7 +16071,7 @@
                               "type": "text",
                               "id": "wWXu4",
                               "name": "senderName1",
-                              "fill": "#ee6030",
+                              "fill": "#E45649",
                               "content": "researcher",
                               "fontFamily": "Inter",
                               "fontSize": 14,
@@ -16121,7 +16121,7 @@
                       "name": "Avatar 2",
                       "width": 36,
                       "height": 36,
-                      "fill": "#9C2E33",
+                      "fill": "#50A14F",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -16157,7 +16157,7 @@
                               "type": "text",
                               "id": "7KQVQ",
                               "name": "senderName2",
-                              "fill": "#9C2E33",
+                              "fill": "#50A14F",
                               "content": "backend-dev",
                               "fontFamily": "Inter",
                               "fontSize": 14,
@@ -16207,7 +16207,7 @@
                       "name": "Avatar 3",
                       "width": 36,
                       "height": 36,
-                      "fill": "#2D6A4F",
+                      "fill": "#4078F2",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -16243,7 +16243,7 @@
                               "type": "text",
                               "id": "CDyVQ",
                               "name": "senderName3",
-                              "fill": "#2D6A4F",
+                              "fill": "#4078F2",
                               "content": "frontend-dev",
                               "fontFamily": "Inter",
                               "fontSize": 14,
@@ -16293,7 +16293,7 @@
                       "name": "Avatar 4",
                       "width": 36,
                       "height": 36,
-                      "fill": "#6B21A8",
+                      "fill": "#A626A4",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -16329,7 +16329,7 @@
                               "type": "text",
                               "id": "I1hjU",
                               "name": "senderName4",
-                              "fill": "#6B21A8",
+                              "fill": "#A626A4",
                               "content": "formatter",
                               "fontFamily": "Inter",
                               "fontSize": 14,
@@ -16379,7 +16379,7 @@
                       "name": "Avatar 5",
                       "width": 36,
                       "height": 36,
-                      "fill": "#0891B2",
+                      "fill": "#0184BC",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -16415,7 +16415,7 @@
                               "type": "text",
                               "id": "nONE2",
                               "name": "senderName5",
-                              "fill": "#0891B2",
+                              "fill": "#0184BC",
                               "content": "designer",
                               "fontFamily": "Inter",
                               "fontSize": 14,
@@ -16667,13 +16667,13 @@
                     },
                     {
                       "type": "icon_font",
-                      "id": "3398R",
-                      "name": "chevronIcon",
+                      "id": "1ng71",
+                      "name": "settingsIcon",
                       "width": 18,
                       "height": 18,
-                      "iconFontName": "chevron-down",
+                      "iconFontName": "settings",
                       "iconFontFamily": "lucide",
-                      "fill": "#BFBDB6"
+                      "fill": "#565B66"
                     }
                   ]
                 },
@@ -16943,10 +16943,10 @@
                     {
                       "type": "icon_font",
                       "id": "fGVIr",
-                      "name": "settingsIcon",
+                      "name": "keyIcon",
                       "width": 18,
                       "height": 18,
-                      "iconFontName": "settings",
+                      "iconFontName": "key-round",
                       "iconFontFamily": "lucide",
                       "fill": "#565B66"
                     }
@@ -17082,7 +17082,7 @@
                       "name": "Avatar 1",
                       "width": 36,
                       "height": 36,
-                      "fill": "#ee6030",
+                      "fill": "#e6b450",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -17168,7 +17168,7 @@
                       "name": "Avatar 2",
                       "width": 36,
                       "height": 36,
-                      "fill": "#9C2E33",
+                      "fill": "#f07178",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -17254,7 +17254,7 @@
                       "name": "Avatar 3",
                       "width": 36,
                       "height": 36,
-                      "fill": "#2D6A4F",
+                      "fill": "#aad94c",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -17340,7 +17340,7 @@
                       "name": "Avatar 4",
                       "width": 36,
                       "height": 36,
-                      "fill": "#6B21A8",
+                      "fill": "#d2a6ff",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -17426,7 +17426,7 @@
                       "name": "Avatar 5",
                       "width": 36,
                       "height": 36,
-                      "fill": "#0891B2",
+                      "fill": "#73b8ff",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -17714,13 +17714,13 @@
                     },
                     {
                       "type": "icon_font",
-                      "id": "zP7XQ",
-                      "name": "chevronIcon",
+                      "id": "UbAaD",
+                      "name": "settingsIcon",
                       "width": 18,
                       "height": 18,
-                      "iconFontName": "chevron-down",
+                      "iconFontName": "settings",
                       "iconFontFamily": "lucide",
-                      "fill": "#A599E9"
+                      "fill": "#756296"
                     }
                   ]
                 },
@@ -17990,10 +17990,10 @@
                     {
                       "type": "icon_font",
                       "id": "GTyK1",
-                      "name": "settingsIcon",
+                      "name": "keyIcon",
                       "width": 18,
                       "height": 18,
-                      "iconFontName": "settings",
+                      "iconFontName": "key-round",
                       "iconFontFamily": "lucide",
                       "fill": "#756296"
                     }
@@ -18054,7 +18054,7 @@
                       "type": "text",
                       "id": "oSFbw",
                       "name": "headerChannelName",
-                      "fill": "#a599e9",
+                      "fill": "#E0DEF4",
                       "content": "general",
                       "fontFamily": "Inter",
                       "fontSize": 16,
@@ -18129,7 +18129,7 @@
                       "name": "Avatar 1",
                       "width": 36,
                       "height": 36,
-                      "fill": "#ee6030",
+                      "fill": "#fad000",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -18186,7 +18186,7 @@
                           "type": "text",
                           "id": "ceLBS",
                           "name": "msgText1",
-                          "fill": "#a599e9",
+                          "fill": "#E0DEF4",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
                           "content": "I found some interesting patterns in the WebSocket reconnection data. The average reconnection time is 1.2s with exponential backoff.",
@@ -18215,7 +18215,7 @@
                       "name": "Avatar 2",
                       "width": 36,
                       "height": 36,
-                      "fill": "#9C2E33",
+                      "fill": "#ff628c",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -18272,7 +18272,7 @@
                           "type": "text",
                           "id": "CSQOd",
                           "name": "msgText2",
-                          "fill": "#a599e9",
+                          "fill": "#E0DEF4",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
                           "content": "Good findings! I just pushed the retry wrapper with exponential backoff to the CLI client. All 25 tests passing.",
@@ -18301,7 +18301,7 @@
                       "name": "Avatar 3",
                       "width": 36,
                       "height": 36,
-                      "fill": "#2D6A4F",
+                      "fill": "#3ad900",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -18358,7 +18358,7 @@
                           "type": "text",
                           "id": "KDVuj",
                           "name": "msgText3",
-                          "fill": "#a599e9",
+                          "fill": "#E0DEF4",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
                           "content": "The color support is now fully end-to-end. Each agent gets their own colored avatar and name. Looking great in the UI!",
@@ -18387,7 +18387,7 @@
                       "name": "Avatar 4",
                       "width": 36,
                       "height": 36,
-                      "fill": "#6B21A8",
+                      "fill": "#b362ff",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -18444,7 +18444,7 @@
                           "type": "text",
                           "id": "7TaZq",
                           "name": "msgText4",
-                          "fill": "#a599e9",
+                          "fill": "#E0DEF4",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
                           "content": "Markdown rendering is live. Bold, italic, code blocks, and links all working. Here is an example: **bold text** and `inline code`.",
@@ -18473,7 +18473,7 @@
                       "name": "Avatar 5",
                       "width": 36,
                       "height": 36,
-                      "fill": "#0891B2",
+                      "fill": "#80d8ff",
                       "cornerRadius": 4,
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -18530,7 +18530,7 @@
                           "type": "text",
                           "id": "kaZil",
                           "name": "msgText5",
-                          "fill": "#a599e9",
+                          "fill": "#E0DEF4",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
                           "content": "Working on the Slack-like UI mockup now. The dark green sidebar with the golden highlight for active channels is looking sharp.",
@@ -19114,19 +19114,19 @@
                             "fill": "rgba(255,255,255,0.1)"
                           },
                           "padding": [
-                            3,
-                            8
+                            5,
+                            6
                           ],
                           "children": [
                             {
-                              "type": "text",
-                              "id": "TF3Qp",
-                              "name": "keyLabel",
-                              "fill": "#FFFFFFCC",
-                              "content": "Key",
-                              "fontFamily": "Inter",
-                              "fontSize": 11,
-                              "fontWeight": "normal"
+                              "type": "icon_font",
+                              "id": "1mSPR",
+                              "name": "keyIcon1",
+                              "width": 14,
+                              "height": 14,
+                              "iconFontName": "key-round",
+                              "iconFontFamily": "lucide",
+                              "fill": "#FFFFFFCC"
                             }
                           ]
                         }
@@ -20158,19 +20158,19 @@
                             "fill": "rgba(255,255,255,0.1)"
                           },
                           "padding": [
-                            3,
-                            8
+                            5,
+                            6
                           ],
                           "children": [
                             {
-                              "type": "text",
-                              "id": "XAxqY",
-                              "name": "keyLabel",
-                              "fill": "#FFFFFFCC",
-                              "content": "Key",
-                              "fontFamily": "Inter",
-                              "fontSize": 11,
-                              "fontWeight": "normal"
+                              "type": "icon_font",
+                              "id": "5IXqj",
+                              "name": "keyIcon2",
+                              "width": 14,
+                              "height": 14,
+                              "iconFontName": "key-round",
+                              "iconFontFamily": "lucide",
+                              "fill": "#FFFFFFCC"
                             }
                           ]
                         }
