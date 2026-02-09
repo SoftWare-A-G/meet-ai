@@ -21,18 +21,18 @@ authRoute.post('/share', requireAuth, async (c) => {
     return c.json({ error: 'Could not extract API key' }, 400)
   }
 
-  const body = await c.req.json<{ room_id?: string }>()
-  if (!body.room_id) {
-    return c.json({ error: 'room_id is required' }, 400)
-  }
+  const body = await c.req.json<{ room_id?: string }>().catch(() => ({} as { room_id?: string }))
+  const roomId = body.room_id || null
 
-  // Verify room exists and belongs to this key
-  const room = await c.env.DB.prepare(
-    'SELECT id FROM rooms WHERE id = ? AND key_id = ?'
-  ).bind(body.room_id, keyId).first()
+  // Verify room exists and belongs to this key (when provided)
+  if (roomId) {
+    const room = await c.env.DB.prepare(
+      'SELECT id FROM rooms WHERE id = ? AND key_id = ?'
+    ).bind(roomId, keyId).first()
 
-  if (!room) {
-    return c.json({ error: 'room not found' }, 404)
+    if (!room) {
+      return c.json({ error: 'room not found' }, 404)
+    }
   }
 
   const token = crypto.randomUUID()
@@ -40,7 +40,7 @@ authRoute.post('/share', requireAuth, async (c) => {
 
   await c.env.DB.prepare(
     'INSERT INTO share_tokens (token, key_id, room_id, api_key, expires_at) VALUES (?, ?, ?, ?, ?)'
-  ).bind(token, keyId, body.room_id, rawKey, expiresAt).run()
+  ).bind(token, keyId, roomId, rawKey, expiresAt).run()
 
   const url = new URL(c.req.url)
   const shareUrl = `${url.protocol}//${url.host}/auth/${token}`
@@ -54,7 +54,7 @@ authRoute.get('/claim/:token', async (c) => {
 
   const row = await c.env.DB.prepare(
     'SELECT token, key_id, room_id, api_key, expires_at, used FROM share_tokens WHERE token = ?'
-  ).bind(token).first<{ token: string; key_id: string; room_id: string; api_key: string; expires_at: string; used: number }>()
+  ).bind(token).first<{ token: string; key_id: string; room_id: string | null; api_key: string; expires_at: string; used: number }>()
 
   if (!row || row.used === 1) {
     return c.json({ error: 'Invalid or expired link' }, 404)

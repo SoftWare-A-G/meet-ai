@@ -1591,17 +1591,12 @@
     }
 
     function inviteDesktop() {
-      if (!currentRoom) {
-        showToast('Select a channel first');
-        return;
-      }
-
       const overlay = document.createElement('div');
       overlay.className = 'qr-overlay';
       overlay.innerHTML = `
         <div class="qr-panel">
-          <h2>Share to Phone</h2>
-          <p class="qr-subtitle">Scan with your phone camera to open this chat</p>
+          <h2>Login on another device</h2>
+          <p class="qr-subtitle">Scan with your phone camera to sign in</p>
           <div class="qr-container" id="qr-container">
             <div style="width:200px;height:200px;display:flex;align-items:center;justify-content:center;margin:0 auto">
               <div style="width:32px;height:32px;border:3px solid var(--c-border);border-top-color:var(--c-primary);border-radius:50%;animation:spin 0.8s linear infinite"></div>
@@ -1622,10 +1617,11 @@
 
       (async () => {
         try {
+          const body = currentRoom ? { room_id: currentRoom.id } : {};
           const res = await fetch('/api/auth/share', {
             method: 'POST',
             headers: authHeaders(),
-            body: JSON.stringify({ room_id: currentRoom.id }),
+            body: JSON.stringify(body),
           });
 
           if (!res.ok) {
