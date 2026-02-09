@@ -757,11 +757,7 @@
             }
             const data = await res.json();
             localStorage.setItem('meet-ai-key', data.api_key);
-            if (data.room_id) {
-              location.href = '/chat/' + data.room_id;
-            } else {
-              location.reload();
-            }
+            location.reload();
           } else if (val.startsWith('mai_')) {
             localStorage.setItem('meet-ai-key', val);
             location.reload();
@@ -900,13 +896,8 @@
           }
           const data = await res.json();
           localStorage.setItem('meet-ai-key', data.api_key);
-          // Clean the token from URL and reload into the chat
-          if (data.room_id) {
-            location.href = '/chat/' + data.room_id;
-          } else {
-            history.replaceState(null, '', '/chat');
-            location.reload();
-          }
+          history.replaceState(null, '', '/chat');
+          location.reload();
         } catch (e) {
           errorEl.textContent = 'Connection error. Try again.';
           btn.disabled = false;
@@ -1617,11 +1608,9 @@
 
       (async () => {
         try {
-          const body = currentRoom ? { room_id: currentRoom.id } : {};
           const res = await fetch('/api/auth/share', {
             method: 'POST',
             headers: authHeaders(),
-            body: JSON.stringify(body),
           });
 
           if (!res.ok) {
