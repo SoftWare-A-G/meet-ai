@@ -311,6 +311,48 @@
       color: var(--c-primary, #3FB950); text-decoration: underline; cursor: pointer;
     }
 
+    /* --- Token connect / PWA install screen --- */
+    .token-screen {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 20px; padding: 24px;
+    }
+    .token-screen h2 { font-size: 22px; font-weight: 700; color: #C9D1D9; text-align: center; }
+    .token-screen p { font-size: 14px; color: #8B949E; text-align: center; max-width: 400px; line-height: 1.6; }
+    .token-screen .token-card {
+      width: 100%; max-width: 400px; background: #161B22; border: 1px solid #30363D;
+      border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 16px;
+    }
+    .token-screen .install-steps {
+      display: flex; flex-direction: column; gap: 12px; text-align: left;
+    }
+    .token-screen .install-step {
+      display: flex; gap: 12px; align-items: flex-start; font-size: 14px; color: #C9D1D9;
+    }
+    .token-screen .step-num {
+      width: 24px; height: 24px; border-radius: 50%; background: var(--c-primary, #3FB950);
+      color: var(--c-primary-text, #000); display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; flex-shrink: 0;
+    }
+    .token-screen .step-text { flex: 1; line-height: 1.5; }
+    .token-screen .step-text strong { color: #e5e5e5; }
+    .token-screen .connect-btn {
+      width: 100%; padding: 14px; border: none; border-radius: 8px;
+      background: var(--c-primary, #3FB950); color: var(--c-primary-text, #000);
+      font-size: 16px; font-weight: 600; cursor: pointer; font-family: inherit;
+      transition: filter 0.15s;
+    }
+    .token-screen .connect-btn:hover { filter: brightness(1.1); }
+    .token-screen .connect-btn:disabled { opacity: 0.6; cursor: wait; }
+    .token-screen .connect-error {
+      color: #F85149; font-size: 13px; text-align: center; min-height: 18px;
+    }
+    .token-screen .separator {
+      width: 100%; border-top: 1px solid #30363D; margin: 4px 0;
+    }
+    .token-screen .alt-text {
+      font-size: 13px; color: #8B949E; text-align: center;
+    }
+
     /* --- Mobile --- */
     .sidebar-backdrop {
       display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
@@ -647,8 +689,18 @@
     }
     document.getElementById('key-btn').onclick = () => { location.href = '/key'; };
 
-    if (!getApiKey()) {
-      // Show inline login prompt instead of redirecting
+    // Check for ?token= in URL (from /auth/<token> redirect)
+    const urlToken = new URLSearchParams(location.search).get('token');
+
+    if (urlToken && getApiKey()) {
+      // Already have a key — silently ignore the token, clean URL, load normally
+      history.replaceState(null, '', location.pathname);
+    } else if (urlToken && !getApiKey()) {
+      // Have a token but no key — show install instructions + Connect button
+      document.addEventListener('DOMContentLoaded', () => showTokenScreen(urlToken));
+      if (document.readyState !== 'loading') showTokenScreen(urlToken);
+    } else if (!getApiKey()) {
+      // No token, no key — show regular login prompt
       document.addEventListener('DOMContentLoaded', showLoginPrompt);
       if (document.readyState !== 'loading') showLoginPrompt();
     }
@@ -728,6 +780,139 @@
         if (e.key === 'Enter') { e.preventDefault(); handleLogin(); }
       });
       loginInput.focus();
+    }
+
+    // ===== Token Screen (PWA install + Connect) =====
+    function showTokenScreen(token) {
+      const sidebar = document.getElementById('sidebar');
+      const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+      if (sidebar) sidebar.style.display = 'none';
+      if (sidebarBackdrop) sidebarBackdrop.style.display = 'none';
+
+      const mainEl = document.getElementById('main');
+      const emptyState = document.getElementById('empty-state');
+      if (emptyState) emptyState.remove();
+      const header = document.getElementById('main-header');
+      if (header) header.style.display = 'none';
+
+      const isStandalone = window.navigator.standalone === true
+        || window.matchMedia('(display-mode: standalone)').matches;
+
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+        || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const isAndroid = /Android/.test(navigator.userAgent);
+
+      const screen = document.createElement('div');
+      screen.className = 'token-screen';
+
+      if (isStandalone) {
+        // Inside PWA — show Connect button only
+        screen.innerHTML = `
+          <h2>Connect to chat</h2>
+          <p>Tap the button below to activate your session.</p>
+          <div class="token-card">
+            <button class="connect-btn" id="token-connect-btn">Connect</button>
+            <div class="connect-error" id="token-error"></div>
+          </div>
+        `;
+      } else {
+        // In browser — show PWA install instructions + Connect
+        let steps = '';
+        if (isIOS) {
+          steps = `
+            <div class="install-step">
+              <div class="step-num">1</div>
+              <div class="step-text">Tap the <strong>Share</strong> button <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;display:inline"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg> at the bottom of Safari</div>
+            </div>
+            <div class="install-step">
+              <div class="step-num">2</div>
+              <div class="step-text">Scroll down and tap <strong>Add to Home Screen</strong></div>
+            </div>
+            <div class="install-step">
+              <div class="step-num">3</div>
+              <div class="step-text">Tap <strong>Add</strong> in the top right corner</div>
+            </div>
+            <div class="install-step">
+              <div class="step-num">4</div>
+              <div class="step-text">Open the app from your Home Screen and tap <strong>Connect</strong></div>
+            </div>
+          `;
+        } else if (isAndroid) {
+          steps = `
+            <div class="install-step">
+              <div class="step-num">1</div>
+              <div class="step-text">Tap the <strong>menu</strong> button <span style="font-size:18px">&#8942;</span> in Chrome</div>
+            </div>
+            <div class="install-step">
+              <div class="step-num">2</div>
+              <div class="step-text">Tap <strong>Install app</strong> or <strong>Add to Home screen</strong></div>
+            </div>
+            <div class="install-step">
+              <div class="step-num">3</div>
+              <div class="step-text">Open the app from your Home Screen and tap <strong>Connect</strong></div>
+            </div>
+          `;
+        } else {
+          steps = `
+            <div class="install-step">
+              <div class="step-num">1</div>
+              <div class="step-text">Install the app using your browser's install option</div>
+            </div>
+            <div class="install-step">
+              <div class="step-num">2</div>
+              <div class="step-text">Open the app and tap <strong>Connect</strong></div>
+            </div>
+          `;
+        }
+
+        screen.innerHTML = `
+          <h2>Install meet-ai</h2>
+          <p>Add meet-ai to your Home Screen for the best experience.</p>
+          <div class="token-card">
+            <div class="install-steps">${steps}</div>
+          </div>
+          <div class="separator"></div>
+          <p class="alt-text">Or connect directly in this browser:</p>
+          <div class="token-card">
+            <button class="connect-btn" id="token-connect-btn">Connect in browser</button>
+            <div class="connect-error" id="token-error"></div>
+          </div>
+        `;
+      }
+
+      mainEl.appendChild(screen);
+
+      document.getElementById('token-connect-btn').addEventListener('click', async () => {
+        const btn = document.getElementById('token-connect-btn');
+        const errorEl = document.getElementById('token-error');
+        btn.disabled = true;
+        btn.textContent = 'Connecting...';
+        errorEl.textContent = '';
+
+        try {
+          const res = await fetch('/api/auth/claim/' + encodeURIComponent(token));
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            errorEl.textContent = err.error || 'Link expired or already used';
+            btn.disabled = false;
+            btn.textContent = isStandalone ? 'Connect' : 'Connect in browser';
+            return;
+          }
+          const data = await res.json();
+          localStorage.setItem('meet-ai-key', data.api_key);
+          // Clean the token from URL and reload into the chat
+          if (data.room_id) {
+            location.href = '/chat/' + data.room_id;
+          } else {
+            history.replaceState(null, '', '/chat');
+            location.reload();
+          }
+        } catch (e) {
+          errorEl.textContent = 'Connection error. Try again.';
+          btn.disabled = false;
+          btn.textContent = isStandalone ? 'Connect' : 'Connect in browser';
+        }
+      });
     }
 
     // ===== Handle =====
