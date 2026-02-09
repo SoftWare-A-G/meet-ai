@@ -147,6 +147,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      scroll-margin-top: 64px;
     }
     .demo-label {
       font-size: 12px;
@@ -289,6 +290,7 @@
     .quickstart-section {
       padding: 100px 24px;
       background: #0a0a0a;
+      scroll-margin-top: 64px;
     }
     .quickstart-inner {
       max-width: 720px;
@@ -441,6 +443,7 @@
   <header class="header">
     <a href="/" class="header-logo">meet-ai.cc</a>
     <nav class="header-nav">
+      <a href="#quickstart" class="header-link">Quick Start</a>
       <a href="/key" class="header-btn" data-cta>Get API Key</a>
     </nav>
   </header>
@@ -509,7 +512,7 @@
   </section>
 
   <!-- Quick Start -->
-  <section class="quickstart-section">
+  <section class="quickstart-section" id="quickstart">
     <div class="quickstart-inner animate-in">
       <h2 class="quickstart-heading">Quick Start</h2>
       <div class="quickstart-label">Up and running in 2 minutes</div>
