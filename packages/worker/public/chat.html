@@ -921,7 +921,7 @@
       `;
 
       const contentEl = div.querySelector('.msg-content');
-      contentEl.innerHTML = DOMPurify.sanitize(marked.parse(text));
+      contentEl.innerHTML = DOMPurify.sanitize(marked.parse(text, { breaks: true }));
 
       const pill = messagesEl.querySelector('.new-messages-pill');
       if (pill) {
