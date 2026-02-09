@@ -1389,16 +1389,12 @@
             return;
           }
           const data = await res.json();
-          if (navigator.share) {
-            await navigator.share({ title: 'meet-ai login', url: data.url });
-          } else {
-            try {
-              await navigator.clipboard.writeText(data.url);
-            } catch {
-              copyTextFallback(data.url);
-            }
+          try {
+            await navigator.clipboard.writeText(data.url);
+          } catch {
+            copyTextFallback(data.url);
           }
-          pwaLoginBtn.textContent = 'Shared!';
+          pwaLoginBtn.textContent = 'Copied!';
           setTimeout(() => { pwaLoginBtn.textContent = 'Copy login'; pwaLoginBtn.disabled = false; }, 2000);
         } catch (e) {
           pwaLoginBtn.textContent = 'Failed';
