@@ -548,3 +548,34 @@ describe('Share Tokens', () => {
     expect(body.error).toBe('Invalid or expired link')
   })
 })
+
+describe('Lobby', () => {
+  it('GET /api/lobby/ws rejects without auth', async () => {
+    const res = await SELF.fetch('http://localhost/api/lobby/ws', {
+      headers: { Upgrade: 'websocket' },
+    })
+    expect(res.status).toBe(401)
+  })
+
+  it('GET /api/lobby/ws rejects non-websocket request', async () => {
+    const key = await createKey()
+    const res = await SELF.fetch('http://localhost/api/lobby/ws', {
+      headers: { Authorization: `Bearer ${key}` },
+    })
+    expect(res.status).toBe(426)
+  })
+
+  it('POST /api/rooms returns room_created event shape', async () => {
+    const key = await createKey()
+
+    const res = await SELF.fetch('http://localhost/api/rooms', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'lobby-test' }),
+    })
+    expect(res.status).toBe(201)
+    const body = await res.json() as { id: string; name: string }
+    expect(body.id).toBeTruthy()
+    expect(body.name).toBe('lobby-test')
+  })
+})
