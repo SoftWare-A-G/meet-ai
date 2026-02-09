@@ -26,7 +26,7 @@ Before starting a team, check that both variables are present. If `MEET_AI_KEY` 
 
 ## CLI
 
-The `meet-ai` CLI must be available. Check with `which meet-ai`. If not found, install it:
+All commands in this skill use the globally installed `meet-ai` CLI. Check with `which meet-ai`. If not found, install it:
 
 ```bash
 npm i -g @meet-ai/cli
