@@ -1591,7 +1591,10 @@
     }
 
     function inviteDesktop() {
-      if (!currentRoom) return;
+      if (!currentRoom) {
+        showToast('Select a channel first');
+        return;
+      }
 
       const overlay = document.createElement('div');
       overlay.className = 'qr-overlay';
