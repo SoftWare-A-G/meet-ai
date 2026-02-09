@@ -278,6 +278,53 @@
     }
     .share-btn:hover { opacity: 0.8; background: rgba(128,128,128,0.1); }
 
+    /* --- Toast notification --- */
+    .toast {
+      position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+      background: #3FB950; color: #000; padding: 10px 20px; border-radius: 8px;
+      font-size: 14px; font-weight: 600; z-index: 200; pointer-events: none;
+      animation: toast-fade 2s ease forwards;
+    }
+    @keyframes toast-fade {
+      0% { opacity: 0; transform: translateX(-50%) translateY(8px); }
+      15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+      80% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    /* --- Login prompt --- */
+    .login-prompt {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 16px; padding: 24px;
+    }
+    .login-prompt h2 { font-size: 20px; font-weight: 700; color: #C9D1D9; }
+    .login-prompt p { font-size: 14px; color: #8B949E; text-align: center; max-width: 360px; }
+    .login-prompt-form {
+      display: flex; gap: 8px; width: 100%; max-width: 420px;
+    }
+    .login-prompt-form input {
+      flex: 1; min-width: 0; height: 42px; padding: 0 12px;
+      border: 1px solid #30363D; border-radius: 8px;
+      background: #161B22; color: #C9D1D9; font-size: 14px; outline: none;
+    }
+    .login-prompt-form input::placeholder { color: #8B949E; }
+    .login-prompt-form input:focus { border-color: var(--c-primary, #3FB950); }
+    .login-prompt-form button {
+      height: 42px; padding: 0 20px; border: none; border-radius: 8px;
+      background: var(--c-primary, #3FB950); color: var(--c-primary-text, #000);
+      font-size: 14px; font-weight: 600; cursor: pointer; flex-shrink: 0;
+    }
+    .login-prompt-form button:hover { filter: brightness(1.1); }
+    .login-prompt .login-error {
+      color: #F85149; font-size: 13px; min-height: 18px;
+    }
+    .login-prompt .login-or {
+      font-size: 13px; color: #8B949E;
+    }
+    .login-prompt .login-or a {
+      color: var(--c-primary, #3FB950); text-decoration: underline; cursor: pointer;
+    }
+
     /* --- Mobile --- */
     .sidebar-backdrop {
       display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
@@ -615,8 +662,90 @@
       if (key) h['Authorization'] = 'Bearer ' + key;
       return h;
     }
-    if (!getApiKey()) location.href = '/';
     document.getElementById('key-btn').onclick = () => { location.href = '/key'; };
+
+    if (!getApiKey()) {
+      // Show inline login prompt instead of redirecting
+      document.addEventListener('DOMContentLoaded', showLoginPrompt);
+      if (document.readyState !== 'loading') showLoginPrompt();
+    }
+
+    function showLoginPrompt() {
+      // Hide sidebar and header controls since user is not authenticated
+      const sidebar = document.getElementById('sidebar');
+      const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+      if (sidebar) sidebar.style.display = 'none';
+      if (sidebarBackdrop) sidebarBackdrop.style.display = 'none';
+
+      const mainEl = document.getElementById('main');
+      const emptyState = document.getElementById('empty-state');
+      if (emptyState) emptyState.remove();
+      const header = document.getElementById('main-header');
+      if (header) header.style.display = 'none';
+
+      const prompt = document.createElement('div');
+      prompt.className = 'login-prompt';
+      prompt.innerHTML = `
+        <h2>Welcome to meet-ai</h2>
+        <p>Paste a login link from another device or enter your API key to continue.</p>
+        <div class="login-prompt-form">
+          <input type="text" id="login-input" placeholder="Paste login link or API key" autocomplete="off" spellcheck="false">
+          <button id="login-go-btn">Go</button>
+        </div>
+        <div class="login-error" id="login-error"></div>
+        <div class="login-or">or <a href="/">get an API key</a></div>
+      `;
+      mainEl.appendChild(prompt);
+
+      const loginInput = document.getElementById('login-input');
+      const loginError = document.getElementById('login-error');
+      const loginGoBtn = document.getElementById('login-go-btn');
+
+      async function handleLogin() {
+        const val = loginInput.value.trim();
+        if (!val) return;
+        loginError.textContent = '';
+        loginGoBtn.disabled = true;
+        loginGoBtn.textContent = '...';
+
+        try {
+          if (val.startsWith('http') && val.includes('/auth/')) {
+            // Extract token from URL like https://meet-ai.cc/auth/TOKEN
+            const token = val.split('/auth/').pop().split('?')[0].split('#')[0];
+            if (!token) { loginError.textContent = 'Invalid link'; loginGoBtn.disabled = false; loginGoBtn.textContent = 'Go'; return; }
+            const res = await fetch('/api/auth/claim/' + encodeURIComponent(token));
+            if (!res.ok) {
+              const err = await res.json().catch(() => ({}));
+              loginError.textContent = err.error || 'Link expired or invalid';
+              loginGoBtn.disabled = false; loginGoBtn.textContent = 'Go';
+              return;
+            }
+            const data = await res.json();
+            localStorage.setItem('meet-ai-key', data.api_key);
+            if (data.room_id) {
+              location.href = '/chat/' + data.room_id;
+            } else {
+              location.reload();
+            }
+          } else if (val.startsWith('mai_')) {
+            localStorage.setItem('meet-ai-key', val);
+            location.reload();
+          } else {
+            loginError.textContent = 'Invalid link or key';
+            loginGoBtn.disabled = false; loginGoBtn.textContent = 'Go';
+          }
+        } catch (e) {
+          loginError.textContent = 'Connection error. Try again.';
+          loginGoBtn.disabled = false; loginGoBtn.textContent = 'Go';
+        }
+      }
+
+      loginGoBtn.addEventListener('click', handleLogin);
+      loginInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); handleLogin(); }
+      });
+      loginInput.focus();
+    }
 
     // ===== Handle =====
     const adjectives = ['curious','bold','swift','quiet','bright','keen','calm','wild','lazy','witty','brave','sly','warm','cool','zen'];
@@ -1087,8 +1216,59 @@
       }
     });
 
-    // ===== Share QR Code =====
-    document.getElementById('share-btn').addEventListener('click', async () => {
+    // ===== Share =====
+    const isMobile = () => window.matchMedia('(max-width: 700px)').matches;
+
+    // On mobile, show a link icon instead of the phone icon
+    function updateShareIcon() {
+      const btn = document.getElementById('share-btn');
+      if (isMobile()) {
+        btn.title = 'Copy login link';
+        btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
+      } else {
+        btn.title = 'Share to phone (QR code)';
+        btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>';
+      }
+    }
+    updateShareIcon();
+    window.matchMedia('(max-width: 700px)').addEventListener('change', updateShareIcon);
+
+    function showToast(text) {
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.textContent = text;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 2100);
+    }
+
+    async function shareMobile() {
+      if (!currentRoom) return;
+      const btn = document.getElementById('share-btn');
+      btn.style.opacity = '0.3';
+      btn.style.pointerEvents = 'none';
+      try {
+        const res = await fetch('/api/auth/share', {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify({ room_id: currentRoom.id }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          showToast(err.error || 'Failed to create link');
+          return;
+        }
+        const data = await res.json();
+        await navigator.clipboard.writeText(data.url);
+        showToast('Login link copied!');
+      } catch (e) {
+        showToast('Failed to create link');
+      } finally {
+        btn.style.opacity = '';
+        btn.style.pointerEvents = '';
+      }
+    }
+
+    function shareDesktop() {
       if (!currentRoom) return;
 
       const overlay = document.createElement('div');
@@ -1115,49 +1295,56 @@
         if (e.target === overlay) overlay.remove();
       });
 
-      try {
-        const res = await fetch('/api/auth/share', {
-          method: 'POST',
-          headers: authHeaders(),
-          body: JSON.stringify({ room_id: currentRoom.id }),
-        });
+      (async () => {
+        try {
+          const res = await fetch('/api/auth/share', {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({ room_id: currentRoom.id }),
+          });
 
-        if (!res.ok) {
-          const err = await res.json();
-          overlay.querySelector('#qr-container').innerHTML = `<p style="color:#F85149">${escapeHtml(err.error || 'Failed to create share link')}</p>`;
-          return;
-        }
-
-        const data = await res.json();
-        const qrContainer = overlay.querySelector('#qr-container');
-        const urlEl = overlay.querySelector('#share-url');
-        const copiedEl = overlay.querySelector('#share-copied');
-
-        // Generate QR code
-        const qr = qrcode(0, 'M');
-        qr.addData(data.url);
-        qr.make();
-        qrContainer.innerHTML = qr.createImgTag(5, 8);
-
-        // Show URL for manual copy
-        urlEl.style.display = 'block';
-        urlEl.textContent = data.url;
-        urlEl.addEventListener('click', async () => {
-          try {
-            await navigator.clipboard.writeText(data.url);
-            copiedEl.textContent = 'Copied to clipboard!';
-            setTimeout(() => { copiedEl.textContent = ''; }, 2000);
-          } catch {
-            // Fallback: select text
-            const range = document.createRange();
-            range.selectNodeContents(urlEl);
-            window.getSelection().removeAllRanges();
-            window.getSelection().addRange(range);
+          if (!res.ok) {
+            const err = await res.json();
+            overlay.querySelector('#qr-container').innerHTML = `<p style="color:#F85149">${escapeHtml(err.error || 'Failed to create share link')}</p>`;
+            return;
           }
-        });
-      } catch (e) {
-        overlay.querySelector('#qr-container').innerHTML = '<p style="color:#F85149">Failed to create share link</p>';
-      }
+
+          const data = await res.json();
+          const qrContainer = overlay.querySelector('#qr-container');
+          const urlEl = overlay.querySelector('#share-url');
+          const copiedEl = overlay.querySelector('#share-copied');
+
+          // Generate QR code
+          const qr = qrcode(0, 'M');
+          qr.addData(data.url);
+          qr.make();
+          qrContainer.innerHTML = qr.createImgTag(5, 8);
+
+          // Show URL for manual copy
+          urlEl.style.display = 'block';
+          urlEl.textContent = data.url;
+          urlEl.addEventListener('click', async () => {
+            try {
+              await navigator.clipboard.writeText(data.url);
+              copiedEl.textContent = 'Copied to clipboard!';
+              setTimeout(() => { copiedEl.textContent = ''; }, 2000);
+            } catch {
+              // Fallback: select text
+              const range = document.createRange();
+              range.selectNodeContents(urlEl);
+              window.getSelection().removeAllRanges();
+              window.getSelection().addRange(range);
+            }
+          });
+        } catch (e) {
+          overlay.querySelector('#qr-container').innerHTML = '<p style="color:#F85149">Failed to create share link</p>';
+        }
+      })();
+    }
+
+    document.getElementById('share-btn').addEventListener('click', () => {
+      if (isMobile()) shareMobile();
+      else shareDesktop();
     });
 
     // ===== Init =====
@@ -1171,7 +1358,7 @@
         history.replaceState({ roomId: null }, '', location.pathname);
       }
     }
-    init();
+    if (getApiKey()) init();
   </script>
 <script>
 if ('serviceWorker' in navigator) {
