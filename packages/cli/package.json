@@ -15,7 +15,7 @@
   ],
   "scripts": {
     "start": "bun run src/index.ts",
-    "build": "tsup src/index.ts --format esm --dts",
+    "build": "bun build src/index.ts --outdir dist --target node --format esm",
     "prepublishOnly": "bun run build",
     "test": "bun test"
   },
@@ -37,7 +37,6 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "tsup": "^8.0.0",
     "typescript": "5.9.3"
   }
 }
