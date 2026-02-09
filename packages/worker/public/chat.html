@@ -22,7 +22,7 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { height: 100%; overflow: hidden; }
-    body { font-family: system-ui, -apple-system, sans-serif; display: flex; }
+    body { font-family: system-ui, -apple-system, sans-serif; display: flex; background: var(--c-chat-bg, #0D1117); }
 
     /* --- Layout --- */
     .sidebar {
@@ -461,6 +461,9 @@
       root.style.setProperty('--c-chat-bg', chatBg);
       root.style.setProperty('--c-msg-text', msgText);
       root.style.setProperty('--c-border', border);
+
+      // Sync body background with chat bg for mobile overscroll
+      document.body.style.background = chatBg;
 
       // Input container — matches sidebar bg on dark themes (Pencil design pattern)
       root.style.setProperty('--c-input-bg', sidebarDark ? c[0] : chatBg);
