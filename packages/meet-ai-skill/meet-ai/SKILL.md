@@ -24,6 +24,26 @@ Before starting a team, check that both variables are present. If `MEET_AI_KEY` 
 
 > Go to https://meet-ai.cc and create an API key, then add it to your Claude Code settings.
 
+## Agent Teams Environment Variable
+
+Claude Code requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` to enable team functionality. Before creating a team, check for this variable:
+
+```bash
+echo $CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS
+```
+
+If it is missing or not set to `1`, **warn the user immediately**:
+
+> Agent teams are not enabled. Run this before starting Claude Code:
+>
+> ```
+> export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
+> ```
+>
+> Then restart Claude Code for the change to take effect.
+
+Do NOT proceed with team creation until this variable is confirmed.
+
 ## CLI
 
 All commands in this skill use the globally installed `meet-ai` CLI. Check with `which meet-ai`. If not found, install it:
