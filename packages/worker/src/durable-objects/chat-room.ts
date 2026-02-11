@@ -23,7 +23,10 @@ export class ChatRoom extends DurableObject {
         )
       )
 
-      // Send cached team info to the new client
+      // Send cached team info to the new client (load from storage if cache is empty)
+      if (!this.teamInfo) {
+        this.teamInfo = await this.ctx.storage.get<string>('teamInfo') ?? null
+      }
       if (this.teamInfo) {
         server.send(this.teamInfo)
       }
@@ -63,6 +66,7 @@ export class ChatRoom extends DurableObject {
       const parsed = JSON.parse(body)
       const payload = JSON.stringify({ type: 'team_info', ...parsed })
       this.teamInfo = payload
+      await this.ctx.storage.put('teamInfo', payload)
 
       for (const ws of this.ctx.getWebSockets()) {
         try {
