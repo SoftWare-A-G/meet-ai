@@ -36,6 +36,13 @@ export async function loadMessages(roomId: string): Promise<Message[]> {
   return res.json()
 }
 
+export async function loadLogs(roomId: string): Promise<Message[]> {
+  const res = await fetch(`/api/rooms/${roomId}/logs`, { headers: authHeaders() })
+  if (!res.ok) return []
+  const logs: Message[] = await res.json()
+  return logs.map(l => ({ ...l, type: 'log' as const }))
+}
+
 export async function sendMessage(roomId: string, sender: string, content: string): Promise<void> {
   const res = await fetch(`/api/rooms/${roomId}/messages`, {
     method: 'POST',

@@ -23,13 +23,19 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo }: ChatVie
   const [unreadCount, setUnreadCount] = useState(0)
   const { queue, remove, getForRoom } = useOfflineQueue()
 
-  // Load message history
+  // Load message history + logs
   useEffect(() => {
     let cancelled = false
     async function load() {
-      const history = await api.loadMessages(room.id)
+      const [history, logs] = await Promise.all([
+        api.loadMessages(room.id),
+        api.loadLogs(room.id),
+      ])
       if (cancelled) return
-      setMessages(history.map(m => ({ ...m, status: 'sent' as const })))
+      const all = [...history, ...logs].sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      )
+      setMessages(all.map(m => ({ ...m, status: 'sent' as const })))
 
       // Restore queued offline messages
       try {

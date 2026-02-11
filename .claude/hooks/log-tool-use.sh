@@ -80,7 +80,29 @@ case "$TOOL_NAME" in
     ;;
 esac
 
+# --- Get or create the parent message ID ---
+MSGID_FILE="/tmp/meet-ai-hook-${SESSION_ID}.msgid"
+MSG_ID=""
+
+if [ -f "$MSGID_FILE" ]; then
+  MSG_ID="$(cat "$MSGID_FILE" 2>/dev/null || true)"
+fi
+
+if [ -z "$MSG_ID" ]; then
+  # First tool call — create a parent message (synchronous, need the ID)
+  OUTPUT="$(meet-ai send-message "$ROOM_ID" "hook" "Agent activity" --color "#6b7280" 2>/dev/null || true)"
+  # Parse "Message sent: <uuid>" from output
+  MSG_ID="$(echo "$OUTPUT" | sed -n 's/^Message sent: //p')"
+  if [ -n "$MSG_ID" ]; then
+    echo -n "$MSG_ID" > "$MSGID_FILE"
+  fi
+fi
+
 # --- Send the log entry in the background ---
-meet-ai send-log "$ROOM_ID" "hook" "$SUMMARY" --color "#6b7280" &
+if [ -n "$MSG_ID" ]; then
+  meet-ai send-log "$ROOM_ID" "hook" "$SUMMARY" --color "#6b7280" --message-id "$MSG_ID" &
+else
+  meet-ai send-log "$ROOM_ID" "hook" "$SUMMARY" --color "#6b7280" &
+fi
 
 exit 0

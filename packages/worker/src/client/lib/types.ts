@@ -4,6 +4,8 @@ export type Room = {
 }
 
 export type Message = {
+  id?: string
+  message_id?: string | null
   sender: string
   content: string
   color?: string

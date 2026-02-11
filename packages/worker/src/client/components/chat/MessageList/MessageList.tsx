@@ -22,6 +22,21 @@ type RenderItem =
   | { kind: 'log-group'; logs: DisplayMessage[] }
 
 function groupMessages(messages: DisplayMessage[]): RenderItem[] {
+  // Build a map of message_id -> child logs for parent-child grouping
+  const childLogs = new Map<string, DisplayMessage[]>()
+  const standaloneItems: { index: number; msg: DisplayMessage }[] = []
+
+  for (let i = 0; i < messages.length; i++) {
+    const msg = messages[i]
+    if (msg.type === 'log' && msg.message_id) {
+      const arr = childLogs.get(msg.message_id) || []
+      arr.push(msg)
+      childLogs.set(msg.message_id, arr)
+    } else {
+      standaloneItems.push({ index: i, msg })
+    }
+  }
+
   const items: RenderItem[] = []
   let logBuffer: DisplayMessage[] = []
 
@@ -32,13 +47,17 @@ function groupMessages(messages: DisplayMessage[]): RenderItem[] {
     }
   }
 
-  for (let i = 0; i < messages.length; i++) {
-    const msg = messages[i]
+  for (const { index, msg } of standaloneItems) {
     if (msg.type === 'log') {
       logBuffer.push(msg)
     } else {
       flushLogs()
-      items.push({ kind: 'message', msg, index: i })
+      items.push({ kind: 'message', msg, index })
+      // Attach child logs right after their parent message
+      const children = msg.id ? childLogs.get(msg.id) : undefined
+      if (children && children.length > 0) {
+        items.push({ kind: 'log-group', logs: children })
+      }
     }
   }
   flushLogs()
