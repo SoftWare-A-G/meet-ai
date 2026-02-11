@@ -30,6 +30,7 @@ body {
   width: 260px; display: flex; flex-direction: column; flex-shrink: 0;
   border-right: 1px solid var(--c-border);
   background: var(--c-sidebar-bg); color: var(--c-sidebar-text);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 .sidebar-header {
   padding: 0 16px; font-weight: 700; font-size: 16px;
