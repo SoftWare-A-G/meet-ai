@@ -79,7 +79,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo }: ChatVie
 
   // WebSocket for real-time messages
   const onWsMessage = useCallback((msg: MessageType) => {
-    notifyIfHidden(msg, userName, room.name)
+    notifyIfHidden(msg, userName)
 
     // Deduplicate own echoed messages
     if (msg.sender === userName) {
