@@ -22,6 +22,7 @@ type ChatViewProps = {
 export default function ChatView({ room, apiKey, userName, onTeamInfo }: ChatViewProps) {
   const [messages, setMessages] = useState<DisplayMessage[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
+  const [forceScrollCounter, setForceScrollCounter] = useState(0)
   const { queue, remove, getForRoom } = useOfflineQueue()
 
   // Load message history + logs
@@ -140,6 +141,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo }: ChatVie
       tempId,
       status: 'pending' as const,
     }])
+    setForceScrollCounter(c => c + 1)
 
     try {
       await api.sendMessage(room.id, userName, content)
@@ -181,6 +183,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo }: ChatVie
       <MessageList
         messages={messages}
         unreadCount={unreadCount}
+        forceScrollCounter={forceScrollCounter}
         onScrollToBottom={() => setUnreadCount(0)}
         onRetry={handleRetry}
       />

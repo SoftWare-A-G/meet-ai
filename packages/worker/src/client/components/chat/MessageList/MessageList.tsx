@@ -13,6 +13,7 @@ type DisplayMessage = MessageType & {
 type MessageListProps = {
   messages: DisplayMessage[]
   unreadCount: number
+  forceScrollCounter: number
   onScrollToBottom: () => void
   onRetry?: (tempId: string) => void
 }
@@ -65,7 +66,7 @@ function groupMessages(messages: DisplayMessage[]): RenderItem[] {
   return items
 }
 
-export default function MessageList({ messages, unreadCount, onScrollToBottom, onRetry }: MessageListProps) {
+export default function MessageList({ messages, unreadCount, forceScrollCounter, onScrollToBottom, onRetry }: MessageListProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const { isAtBottom, atBottom, scrollToBottom } = useScrollAnchor(containerRef)
   const prevLengthRef = useRef<number>(0)
@@ -83,6 +84,13 @@ export default function MessageList({ messages, unreadCount, onScrollToBottom, o
       onScrollToBottom()
     }
   }, [atBottom, unreadCount, onScrollToBottom])
+
+  // Force scroll to bottom when user sends a message (always, regardless of position)
+  useEffect(() => {
+    if (forceScrollCounter > 0) {
+      scrollToBottom()
+    }
+  }, [forceScrollCounter])
 
   // Scroll to bottom on initial load
   useEffect(() => {
