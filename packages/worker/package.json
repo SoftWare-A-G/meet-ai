@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
+    "deploy": "bun run build:chat && wrangler deploy",
     "test": "vitest",
     "typecheck": "tsc --noEmit",
     "build:chat": "bun build src/client/chat.tsx --outfile public/chat.js --minify --target browser",
