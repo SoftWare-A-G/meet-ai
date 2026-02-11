@@ -22,8 +22,8 @@ export function notifyIfHidden(msg: Message, currentUser: string, roomName: stri
   if (msg.type === 'log') return
   if (msg.sender === currentUser) return
 
-  const notification = new Notification(`${roomName}: ${msg.sender}`, {
-    body: msg.content.slice(0, 100),
+  const notification = new Notification(msg.sender, {
+    body: `${roomName}\n${msg.content.slice(0, 100)}`,
     tag: msg.id ?? msg.message_id ?? undefined,
     icon: '/favicon.ico',
   })
