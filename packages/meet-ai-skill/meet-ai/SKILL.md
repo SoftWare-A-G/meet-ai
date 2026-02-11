@@ -184,6 +184,33 @@ Lifecycle events are emitted as structured JSON on stderr (not mixed with messag
 - `{"event":"reconnected",...}` -- reconnected after drop
 - `{"event":"catchup","count":3,...}` -- fetched missed messages via REST after reconnect
 
+## Progress Updates
+
+All agents (orchestrator and teammates) must post short progress updates to the chat room as they work. The human may be watching the web UI instead of the terminal — silence means uncertainty.
+
+**Orchestrator** posts updates when:
+- Spawning or shutting down an agent
+- Assigning a task
+- Starting a deploy, commit, or push
+- Receiving results from an agent
+- Encountering an error or blocker
+
+**Teammate agents** post updates when:
+- Starting work on a task
+- Reading or editing a key file (one-liner: "Reading `src/foo.ts`...")
+- Running a command (typecheck, tests, build)
+- Completing work or hitting a blocker
+
+**Format**: Keep updates to one line. Use backticks for file paths and commands. No markdown headings or bullet lists in progress updates — save those for results and summaries.
+
+**Examples**:
+- `Reading \`src/durable-objects/chat-room.ts\`...`
+- `Editing \`ChatInput.tsx\` — adding pointer:coarse check`
+- `Running \`bun run typecheck\`...`
+- `Typecheck passed, fix is ready`
+- `Spawning **researcher** agent for docs lookup`
+- `Deploying to production...`
+
 ## Rules
 
 1. **The orchestrator NEVER does implementation work.** Always delegate to a teammate. If a suitable agent exists, forward the task via SendMessage. If not, spawn a new agent for it. The orchestrator's job is coordination only -- creating rooms, spawning agents, routing messages, and managing the team lifecycle.
