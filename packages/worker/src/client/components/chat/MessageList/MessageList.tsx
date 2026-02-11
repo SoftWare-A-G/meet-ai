@@ -70,9 +70,16 @@ export default function MessageList({ messages, unreadCount, forceScrollCounter,
   const containerRef = useRef<HTMLDivElement>(null)
   const { isAtBottom, atBottom, scrollToBottom } = useScrollAnchor(containerRef)
   const prevLengthRef = useRef<number>(0)
+  const wasAtBottomBeforeUpdate = useRef(true)
+
+  // Snapshot scroll position BEFORE render (during the render phase)
+  // so we know if the user was at the bottom before new messages grew scrollHeight.
+  if (messages.length > (prevLengthRef.current ?? 0)) {
+    wasAtBottomBeforeUpdate.current = isAtBottom()
+  }
 
   useEffect(() => {
-    if (messages.length > (prevLengthRef.current ?? 0) && isAtBottom()) {
+    if (messages.length > (prevLengthRef.current ?? 0) && wasAtBottomBeforeUpdate.current) {
       scrollToBottom()
     }
     prevLengthRef.current = messages.length
