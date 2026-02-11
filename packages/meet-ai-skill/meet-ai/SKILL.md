@@ -100,6 +100,28 @@ meet-ai send-message "<ROOM_ID>" "<AGENT_NAME>" "<content>" --color "<MEET_AI_CO
 
 Always pass `--color` with the agent's assigned color from the spawn prompt.
 
+## Sending Team Info (Right Sidebar)
+
+Push team configuration to the chat room's right sidebar. The web UI displays active and inactive agent members in real time.
+
+```bash
+meet-ai send-team-info "<ROOM_ID>" '<json-payload>'
+```
+
+The JSON payload must match the `TeamInfo` shape:
+
+```json
+{
+  "team_name": "my-team",
+  "members": [
+    { "name": "researcher", "color": "#22d3ee", "role": "general-purpose", "model": "claude-opus-4-6", "status": "active", "joinedAt": 1234567890 },
+    { "name": "frontend", "color": "#a78bfa", "role": "general-purpose", "model": "claude-opus-4-6", "status": "inactive", "joinedAt": 1234567890 }
+  ]
+}
+```
+
+**Send progressively** — push updated team info after every spawn or shutdown so the sidebar reflects the current state immediately. Do NOT batch updates; send after each change.
+
 ## Message Format
 
 Messages are displayed in the web UI and read by humans. Format content with markdown:
