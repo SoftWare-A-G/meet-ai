@@ -26,6 +26,9 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   esac
 fi
 
+# Skip SendMessage — internal agent communication, not useful as logs
+[ "$TOOL_NAME" = "SendMessage" ] && exit 0
+
 # --- Find the room_id by scanning team meet-ai.json files ---
 ROOM_ID=""
 for f in "$HOME"/.claude/teams/*/meet-ai.json; do
