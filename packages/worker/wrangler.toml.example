@@ -11,6 +11,9 @@ routes = [
 
 [assets]
 directory = "./public"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/", "/api/*", "/chat/*", "/auth/*"]
 
 [[d1_databases]]
 binding = "DB"

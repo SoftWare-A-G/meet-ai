@@ -6,6 +6,7 @@ import { keysRoute } from './routes/keys'
 import { roomsRoute } from './routes/rooms'
 import { wsRoute } from './routes/ws'
 import { lobbyRoute } from './routes/lobby'
+import { pagesRoute } from './routes/pages'
 
 export { ChatRoom } from './durable-objects/chat-room'
 export { Lobby } from './durable-objects/lobby'
@@ -27,6 +28,7 @@ app.route('/api/keys', keysRoute)
 app.route('/api/rooms', roomsRoute)
 app.route('/api/rooms', wsRoute)
 app.route('/api/lobby', lobbyRoute)
+app.route('/', pagesRoute)
 
 // Auth landing page — claims a share token and redirects to chat
 app.get('/auth/:token', async (c) => {
