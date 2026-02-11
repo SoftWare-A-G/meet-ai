@@ -438,6 +438,30 @@ body {
   .team-toggle { display: none; }
 }
 
+/* --- Log messages --- */
+.log-group {
+  border-radius: 4px; margin: 1px 0; font-size: 12px;
+  font-family: 'SF Mono', Monaco, Consolas, monospace;
+  color: var(--c-msg-text); opacity: 0.65;
+}
+.log-group-header {
+  display: flex; align-items: center; gap: 6px;
+  padding: 3px 8px; cursor: pointer; border-radius: 4px;
+  user-select: none;
+}
+.log-group-header:hover { background: rgba(128,128,128,0.08); opacity: 1; }
+.log-group-toggle { font-size: 10px; width: 12px; text-align: center; flex-shrink: 0; }
+.log-group-summary { flex: 1; min-width: 0; }
+.log-group-time { font-size: 11px; opacity: 0.5; white-space: nowrap; }
+.log-group-entries { padding: 0 8px 4px 20px; }
+.log-entry {
+  display: flex; gap: 6px; padding: 1px 0; line-height: 1.4;
+  font-size: 12px;
+}
+.log-entry-time { opacity: 0.45; white-space: nowrap; flex-shrink: 0; }
+.log-entry-sender { font-weight: 600; white-space: nowrap; flex-shrink: 0; }
+.log-entry-content { min-width: 0; word-break: break-word; }
+
 /* --- Spin animation (used for QR loading) --- */
 @keyframes spin {
   to { transform: rotate(360deg); }

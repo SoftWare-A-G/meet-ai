@@ -151,6 +151,19 @@ switch (command) {
     break;
   }
 
+  case "send-log": {
+    const { positional: slPos, flags: slFlags } = parseFlags(args);
+    const [slRoomId, slSender, ...slRest] = slPos;
+    const slContent = slRest.join(" ").replace(/\\n/g, '\n');
+    if (!slRoomId || !slSender || !slContent) {
+      console.error("Usage: cli send-log <roomId> <sender> <content> [--color <color>]");
+      process.exit(1);
+    }
+    const log = await client.sendLog(slRoomId, slSender, slContent, slFlags.color);
+    console.log(`Log sent: ${log.id}`);
+    break;
+  }
+
   case "send-team-info": {
     const [tiRoomId, tiPayload] = args;
     if (!tiRoomId || !tiPayload) {
@@ -186,6 +199,8 @@ Environment variables:
 Commands:
   create-room <name>                           Create a new chat room
   send-message <roomId> <sender> <content>     Send a message to a room
+    --color <color>       Set sender name color (e.g. #ff0000, red)
+  send-log <roomId> <sender> <content>        Send a log entry to a room
     --color <color>       Set sender name color (e.g. #ff0000, red)
   poll <roomId> [options]                      Fetch messages from a room
     --after <id>          Only messages after this ID

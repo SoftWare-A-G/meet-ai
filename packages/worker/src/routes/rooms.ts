@@ -86,7 +86,42 @@ roomsRoute.post('/:id/messages', requireAuth, rateLimitByKey(60, 60_000), async 
   const id = crypto.randomUUID()
   const seq = await db.insertMessage(id, roomId, body.sender, body.content, senderType, color ?? undefined)
 
-  const message = { id, room_id: roomId, sender: body.sender, sender_type: senderType, content: body.content, color, seq }
+  const message = { id, room_id: roomId, sender: body.sender, sender_type: senderType, content: body.content, color, type: 'message' as const, seq }
+
+  // Broadcast via Durable Object
+  const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
+  const stub = c.env.CHAT_ROOM.get(doId)
+  c.executionCtx.waitUntil(
+    stub.fetch(new Request('http://internal/broadcast', {
+      method: 'POST',
+      body: JSON.stringify(message),
+    }))
+  )
+
+  return c.json(message, 201)
+})
+
+// POST /api/rooms/:id/logs — send a log message (60/min per key)
+roomsRoute.post('/:id/logs', requireAuth, rateLimitByKey(60, 60_000), async (c) => {
+  const keyId = c.get('keyId')
+  const roomId = c.req.param('id')
+  const db = queries(c.env.DB)
+
+  const room = await db.findRoom(roomId, keyId)
+  if (!room) {
+    return c.json({ error: 'room not found' }, 404)
+  }
+
+  const body = await c.req.json<{ sender?: string; content?: string; color?: string }>()
+  if (!body.sender || !body.content) {
+    return c.json({ error: 'sender and content are required' }, 400)
+  }
+
+  const color = body.color || null
+  const id = crypto.randomUUID()
+  const seq = await db.insertMessage(id, roomId, body.sender, body.content, 'agent', color ?? undefined, 'log')
+
+  const message = { id, room_id: roomId, sender: body.sender, sender_type: 'agent' as const, content: body.content, color, type: 'log' as const, seq }
 
   // Broadcast via Durable Object
   const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)

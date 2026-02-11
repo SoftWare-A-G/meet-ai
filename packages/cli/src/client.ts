@@ -232,6 +232,21 @@ export function createClient(baseUrl: string, apiKey?: string) {
       return connect();
     },
 
+    async sendLog(roomId: string, sender: string, content: string, color?: string) {
+      return withRetry(async () => {
+        const res = await fetch(`${baseUrl}/api/rooms/${roomId}/logs`, {
+          method: "POST",
+          headers: headers(),
+          body: JSON.stringify({ sender, content, ...(color && { color }) }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error((err as any).error ?? `HTTP ${res.status}`);
+        }
+        return res.json() as Promise<Message>;
+      });
+    },
+
     async sendTeamInfo(roomId: string, payload: string) {
       return withRetry(async () => {
         const res = await fetch(`${baseUrl}/api/rooms/${roomId}/team-info`, {

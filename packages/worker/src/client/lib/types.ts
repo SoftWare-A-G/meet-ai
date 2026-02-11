@@ -8,6 +8,7 @@ export type Message = {
   content: string
   color?: string
   created_at: string
+  type?: 'message' | 'log'
 }
 
 export type PendingMessage = {

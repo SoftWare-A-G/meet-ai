@@ -40,7 +40,7 @@ export function queries(db: D1Database) {
     },
 
     async listMessages(roomId: string, afterId?: string, exclude?: string, senderType?: string) {
-      let sql = 'SELECT id, room_id, sender, sender_type, content, color, seq, created_at FROM messages WHERE room_id = ?'
+      let sql = 'SELECT id, room_id, sender, sender_type, content, color, type, seq, created_at FROM messages WHERE room_id = ?'
       const params: string[] = [roomId]
 
       if (afterId) {
@@ -61,11 +61,11 @@ export function queries(db: D1Database) {
       return result.results
     },
 
-    async insertMessage(id: string, roomId: string, sender: string, content: string, senderType: string = 'human', color?: string) {
+    async insertMessage(id: string, roomId: string, sender: string, content: string, senderType: string = 'human', color?: string, type: string = 'message') {
       await db.prepare(
-        `INSERT INTO messages (id, room_id, sender, sender_type, content, color, seq)
-         VALUES (?, ?, ?, ?, ?, ?, COALESCE((SELECT MAX(seq) FROM messages WHERE room_id = ?), 0) + 1)`
-      ).bind(id, roomId, sender, senderType, content, color ?? null, roomId).run()
+        `INSERT INTO messages (id, room_id, sender, sender_type, content, color, type, seq)
+         VALUES (?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT MAX(seq) FROM messages WHERE room_id = ?), 0) + 1)`
+      ).bind(id, roomId, sender, senderType, content, color ?? null, type, roomId).run()
 
       const row = await db.prepare(
         'SELECT seq FROM messages WHERE id = ?'
@@ -75,7 +75,7 @@ export function queries(db: D1Database) {
     },
 
     async listMessagesSinceSeq(roomId: string, sinceSeq: number, exclude?: string, senderType?: string) {
-      let sql = 'SELECT id, room_id, sender, sender_type, content, color, seq, created_at FROM messages WHERE room_id = ? AND seq > ?'
+      let sql = 'SELECT id, room_id, sender, sender_type, content, color, type, seq, created_at FROM messages WHERE room_id = ? AND seq > ?'
       const params: (string | number)[] = [roomId, sinceSeq]
 
       if (exclude) {

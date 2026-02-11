@@ -36,6 +36,7 @@ export type Message = {
   sender_type: 'human' | 'agent'
   content: string
   color: string | null
+  type: 'message' | 'log'
   seq: number | null
   created_at: string
 }
