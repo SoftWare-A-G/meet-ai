@@ -11,6 +11,7 @@ export type Message = {
   color?: string
   created_at: string
   type?: 'message' | 'log'
+  seq?: number | null
 }
 
 export type PendingMessage = {

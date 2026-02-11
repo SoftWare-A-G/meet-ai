@@ -462,6 +462,19 @@ body {
 .log-entry-sender { font-weight: 600; white-space: nowrap; flex-shrink: 0; }
 .log-entry-content { min-width: 0; word-break: break-word; }
 
+/* --- Reconnecting bar --- */
+.reconnecting-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: 4px 12px;
+  font-size: 12px;
+  text-align: center;
+  background: rgba(234, 179, 8, 0.15);
+  color: #eab308;
+  border-bottom: 1px solid rgba(234, 179, 8, 0.25);
+}
+
 /* --- Spin animation (used for QR loading) --- */
 @keyframes spin {
   to { transform: rotate(360deg); }

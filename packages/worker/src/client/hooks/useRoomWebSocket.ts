@@ -1,9 +1,13 @@
-import { useEffect, useRef } from 'hono/jsx/dom'
+import { useEffect, useRef, useState } from 'hono/jsx/dom'
 import type { Message, TeamInfo } from '../lib/types'
+import { loadMessagesSinceSeq } from '../lib/api'
 
 type UseRoomWebSocketOptions = {
   onTeamInfo?: (info: TeamInfo) => void
 }
+
+const MIN_BACKOFF = 1000
+const MAX_BACKOFF = 30000
 
 export function useRoomWebSocket(
   roomId: string | null,
@@ -16,15 +20,38 @@ export function useRoomWebSocket(
   onMessageRef.current = onMessage
   const onTeamInfoRef = useRef(options?.onTeamInfo)
   onTeamInfoRef.current = options?.onTeamInfo
+  const lastSeqRef = useRef<number>(0) as { current: number }
+  const backoffRef = useRef<number>(MIN_BACKOFF) as { current: number }
+  const [connected, setConnected] = useState(true)
 
   useEffect(() => {
     if (!roomId || !apiKey) return
+
+    async function catchUp() {
+      if (!roomId || lastSeqRef.current === 0) return
+      try {
+        const missed = await loadMessagesSinceSeq(roomId, lastSeqRef.current)
+        for (const msg of missed) {
+          if (msg.seq && msg.seq > lastSeqRef.current) {
+            lastSeqRef.current = msg.seq
+          }
+          onMessageRef.current?.(msg)
+        }
+      } catch { /* ignore catch-up errors */ }
+    }
 
     function connect() {
       if (wsRef.current) wsRef.current.close()
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
       const tokenParam = `?token=${encodeURIComponent(apiKey as string)}`
       const ws = new WebSocket(`${protocol}//${location.host}/api/rooms/${roomId}/ws${tokenParam}`)
+
+      ws.onopen = () => {
+        setConnected(true)
+        backoffRef.current = MIN_BACKOFF
+        // Catch up missed messages on reconnect
+        catchUp()
+      }
 
       ws.onmessage = (e) => {
         try {
@@ -35,15 +62,21 @@ export function useRoomWebSocket(
           }
           const msg = data as Message
           if (!msg.sender || !msg.content) return
+          if (msg.seq && msg.seq > lastSeqRef.current) {
+            lastSeqRef.current = msg.seq
+          }
           onMessageRef.current?.(msg)
         } catch { /* ignore malformed */ }
       }
 
       ws.onerror = () => console.error('WebSocket error')
       ws.onclose = () => {
+        setConnected(false)
+        const delay = backoffRef.current
+        backoffRef.current = Math.min(delay * 2, MAX_BACKOFF)
         setTimeout(() => {
           if (wsRef.current === ws) connect()
-        }, 2000)
+        }, delay)
       }
 
       wsRef.current = ws
@@ -54,7 +87,12 @@ export function useRoomWebSocket(
     const onVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+          // WS is closed — reconnect immediately
+          backoffRef.current = MIN_BACKOFF
           connect()
+        } else {
+          // WS is open but may have missed frames while backgrounded
+          catchUp()
         }
       }
     }
@@ -70,5 +108,5 @@ export function useRoomWebSocket(
     }
   }, [roomId, apiKey])
 
-  return wsRef
+  return { wsRef, connected }
 }

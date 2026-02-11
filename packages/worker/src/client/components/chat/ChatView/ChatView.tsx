@@ -96,7 +96,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo }: ChatVie
     onTeamInfo?.(info)
   }, [onTeamInfo])
 
-  useRoomWebSocket(room.id, apiKey, onWsMessage, { onTeamInfo: onTeamInfoWs })
+  const { connected } = useRoomWebSocket(room.id, apiKey, onWsMessage, { onTeamInfo: onTeamInfoWs })
 
   // Flush queue on coming online
   useEffect(() => {
@@ -169,6 +169,9 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo }: ChatVie
 
   return (
     <>
+      {!connected && (
+        <div class="reconnecting-bar">Reconnecting...</div>
+      )}
       <MessageList
         messages={messages}
         unreadCount={unreadCount}

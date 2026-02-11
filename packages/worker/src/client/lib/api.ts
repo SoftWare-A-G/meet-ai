@@ -36,6 +36,12 @@ export async function loadMessages(roomId: string): Promise<Message[]> {
   return res.json()
 }
 
+export async function loadMessagesSinceSeq(roomId: string, sinceSeq: number): Promise<Message[]> {
+  const res = await fetch(`/api/rooms/${roomId}/messages?since_seq=${sinceSeq}`, { headers: authHeaders() })
+  if (!res.ok) return []
+  return res.json()
+}
+
 export async function loadLogs(roomId: string): Promise<Message[]> {
   const res = await fetch(`/api/rooms/${roomId}/logs`, { headers: authHeaders() })
   if (!res.ok) return []
