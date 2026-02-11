@@ -108,7 +108,7 @@ body {
 .msg-body { flex: 1; min-width: 0; }
 .msg-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 2px; }
 .msg-sender { font-weight: 700; font-size: 14px; }
-.msg-time { font-size: 11px; opacity: 0.45; }
+.msg-time { font-size: 11px; color: #8b8fa3; }
 .msg-content { line-height: 1.5; overflow-x: auto; }
 .msg-content p { margin: 0 0 6px 0; }
 .msg-content p:last-child { margin-bottom: 0; }

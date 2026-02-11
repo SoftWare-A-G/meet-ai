@@ -86,7 +86,7 @@ roomsRoute.post('/:id/messages', requireAuth, rateLimitByKey(60, 60_000), async 
   const id = crypto.randomUUID()
   const seq = await db.insertMessage(id, roomId, body.sender, body.content, senderType, color ?? undefined)
 
-  const message = { id, room_id: roomId, sender: body.sender, sender_type: senderType, content: body.content, color, type: 'message' as const, seq }
+  const message = { id, room_id: roomId, sender: body.sender, sender_type: senderType, content: body.content, color, type: 'message' as const, seq, created_at: new Date().toISOString() }
 
   // Broadcast via Durable Object
   const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
@@ -137,7 +137,7 @@ roomsRoute.post('/:id/logs', requireAuth, rateLimitByKey(60, 60_000), async (c) 
   const id = crypto.randomUUID()
   await db.insertLog(id, keyId, roomId, body.sender, body.content, color ?? undefined, messageId ?? undefined)
 
-  const log = { id, room_id: roomId, message_id: messageId, sender: body.sender, content: body.content, color, type: 'log' as const }
+  const log = { id, room_id: roomId, message_id: messageId, sender: body.sender, content: body.content, color, type: 'log' as const, created_at: new Date().toISOString() }
 
   // Broadcast via Durable Object
   const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
