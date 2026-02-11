@@ -32,6 +32,14 @@ async function sendMessage(key: string, roomId: string, sender: string, content:
   })
 }
 
+async function sendLog(key: string, roomId: string, sender: string, content: string, color?: string, messageId?: string) {
+  return SELF.fetch(`http://localhost/api/rooms/${roomId}/logs`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sender, content, ...(color && { color }), ...(messageId && { message_id: messageId }) }),
+  })
+}
+
 describe('API Keys', () => {
   it('POST /api/keys creates a key with mai_ prefix', async () => {
     const res = await SELF.fetch('http://localhost/api/keys', { method: 'POST' })
@@ -590,6 +598,88 @@ describe('Share Tokens', () => {
     expect(res.status).toBe(404)
     const body = await res.json() as { error: string }
     expect(body.error).toBe('Invalid or expired link')
+  })
+})
+
+describe('Logs', () => {
+  it('POST /api/rooms/:id/logs creates a log entry', async () => {
+    const key = await createKey()
+    const roomId = await createRoom(key, 'log-room')
+
+    const res = await sendLog(key, roomId, 'bot', 'processing task')
+    expect(res.status).toBe(201)
+    const log = await res.json() as { id: string; sender: string; content: string; type: string }
+    expect(log.sender).toBe('bot')
+    expect(log.content).toBe('processing task')
+    expect(log.type).toBe('log')
+  })
+
+  it('POST /api/rooms/:id/logs with message_id links log to message', async () => {
+    const key = await createKey()
+    const roomId = await createRoom(key, 'log-msg-room')
+
+    const msgRes = await sendMessage(key, roomId, 'alice', 'Working on iOS fix')
+    const msg = await msgRes.json() as { id: string }
+
+    const res = await sendLog(key, roomId, 'bot', 'compiling...', undefined, msg.id)
+    expect(res.status).toBe(201)
+    const log = await res.json() as { id: string; message_id: string }
+    expect(log.message_id).toBe(msg.id)
+  })
+
+  it('GET /api/rooms/:id/logs returns recent logs', async () => {
+    const key = await createKey()
+    const roomId = await createRoom(key, 'log-list-room')
+
+    await sendLog(key, roomId, 'bot', 'step 1')
+    await sendLog(key, roomId, 'bot', 'step 2', '#10b981')
+
+    const res = await SELF.fetch(`http://localhost/api/rooms/${roomId}/logs`, {
+      headers: { Authorization: `Bearer ${key}` },
+    })
+    expect(res.status).toBe(200)
+    const logs = await res.json() as { content: string; color: string | null }[]
+    expect(logs).toHaveLength(2)
+    expect(logs[0].content).toBe('step 1')
+    expect(logs[0].color).toBeNull()
+    expect(logs[1].content).toBe('step 2')
+    expect(logs[1].color).toBe('#10b981')
+  })
+
+  it('logs are scoped by key_id (tenant isolation)', async () => {
+    const key1 = await createKey()
+    const key2 = await createKey()
+    const roomId = await createRoom(key1, 'isolated-log-room')
+
+    await sendLog(key1, roomId, 'bot', 'secret log')
+
+    // Key1 sees the log
+    const res1 = await SELF.fetch(`http://localhost/api/rooms/${roomId}/logs`, {
+      headers: { Authorization: `Bearer ${key1}` },
+    })
+    const logs1 = await res1.json() as { content: string }[]
+    expect(logs1).toHaveLength(1)
+    expect(logs1[0].content).toBe('secret log')
+
+    // Key2 cannot access key1's room
+    const res2 = await SELF.fetch(`http://localhost/api/rooms/${roomId}/logs`, {
+      headers: { Authorization: `Bearer ${key2}` },
+    })
+    expect(res2.status).toBe(404)
+  })
+
+  it('requires auth for GET logs', async () => {
+    const res = await SELF.fetch('http://localhost/api/rooms/any-room/logs')
+    expect(res.status).toBe(401)
+  })
+
+  it('requires auth for POST logs', async () => {
+    const res = await SELF.fetch('http://localhost/api/rooms/any-room/logs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sender: 'bot', content: 'test' }),
+    })
+    expect(res.status).toBe(401)
   })
 })
 

@@ -7,6 +7,7 @@ import { roomsRoute } from './routes/rooms'
 import { wsRoute } from './routes/ws'
 import { lobbyRoute } from './routes/lobby'
 import { pagesRoute } from './routes/pages'
+import { queries } from './db/queries'
 
 export { ChatRoom } from './durable-objects/chat-room'
 export { Lobby } from './durable-objects/lobby'
@@ -37,4 +38,10 @@ app.get('/auth/:token', async (c) => {
 })
 
 
-export default app
+export default {
+  fetch: app.fetch,
+  async scheduled(_event: ScheduledEvent, env: AppEnv['Bindings'], _ctx: ExecutionContext) {
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().replace('T', ' ').slice(0, 19)
+    await queries(env.DB).deleteOldLogs(cutoff)
+  },
+}

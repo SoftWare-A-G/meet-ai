@@ -156,10 +156,10 @@ switch (command) {
     const [slRoomId, slSender, ...slRest] = slPos;
     const slContent = slRest.join(" ").replace(/\\n/g, '\n');
     if (!slRoomId || !slSender || !slContent) {
-      console.error("Usage: cli send-log <roomId> <sender> <content> [--color <color>]");
+      console.error("Usage: cli send-log <roomId> <sender> <content> [--color <color>] [--message-id <id>]");
       process.exit(1);
     }
-    const log = await client.sendLog(slRoomId, slSender, slContent, slFlags.color);
+    const log = await client.sendLog(slRoomId, slSender, slContent, slFlags.color, slFlags['message-id']);
     console.log(`Log sent: ${log.id}`);
     break;
   }
@@ -202,6 +202,7 @@ Commands:
     --color <color>       Set sender name color (e.g. #ff0000, red)
   send-log <roomId> <sender> <content>        Send a log entry to a room
     --color <color>       Set sender name color (e.g. #ff0000, red)
+    --message-id <id>     Associate log with a parent message
   poll <roomId> [options]                      Fetch messages from a room
     --after <id>          Only messages after this ID
     --exclude <sender>    Exclude messages from sender

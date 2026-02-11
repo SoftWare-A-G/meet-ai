@@ -101,6 +101,21 @@ roomsRoute.post('/:id/messages', requireAuth, rateLimitByKey(60, 60_000), async 
   return c.json(message, 201)
 })
 
+// GET /api/rooms/:id/logs — get recent logs
+roomsRoute.get('/:id/logs', requireAuth, async (c) => {
+  const keyId = c.get('keyId')
+  const roomId = c.req.param('id')
+  const db = queries(c.env.DB)
+
+  const room = await db.findRoom(roomId, keyId)
+  if (!room) {
+    return c.json({ error: 'room not found' }, 404)
+  }
+
+  const logs = await db.getLogsByRoom(keyId, roomId)
+  return c.json(logs)
+})
+
 // POST /api/rooms/:id/logs — send a log message (60/min per key)
 roomsRoute.post('/:id/logs', requireAuth, rateLimitByKey(60, 60_000), async (c) => {
   const keyId = c.get('keyId')
@@ -112,16 +127,17 @@ roomsRoute.post('/:id/logs', requireAuth, rateLimitByKey(60, 60_000), async (c) 
     return c.json({ error: 'room not found' }, 404)
   }
 
-  const body = await c.req.json<{ sender?: string; content?: string; color?: string }>()
+  const body = await c.req.json<{ sender?: string; content?: string; color?: string; message_id?: string }>()
   if (!body.sender || !body.content) {
     return c.json({ error: 'sender and content are required' }, 400)
   }
 
   const color = body.color || null
+  const messageId = body.message_id || null
   const id = crypto.randomUUID()
-  const seq = await db.insertMessage(id, roomId, body.sender, body.content, 'agent', color ?? undefined, 'log')
+  await db.insertLog(id, keyId, roomId, body.sender, body.content, color ?? undefined, messageId ?? undefined)
 
-  const message = { id, room_id: roomId, sender: body.sender, sender_type: 'agent' as const, content: body.content, color, type: 'log' as const, seq }
+  const log = { id, room_id: roomId, message_id: messageId, sender: body.sender, content: body.content, color, type: 'log' as const }
 
   // Broadcast via Durable Object
   const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
@@ -129,11 +145,11 @@ roomsRoute.post('/:id/logs', requireAuth, rateLimitByKey(60, 60_000), async (c) 
   c.executionCtx.waitUntil(
     stub.fetch(new Request('http://internal/broadcast', {
       method: 'POST',
-      body: JSON.stringify(message),
+      body: JSON.stringify(log),
     }))
   )
 
-  return c.json(message, 201)
+  return c.json(log, 201)
 })
 
 // POST /api/rooms/:id/team-info — push team info to ChatRoom DO

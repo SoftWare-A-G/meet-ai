@@ -1,4 +1,4 @@
-import type { ApiKey, Room, Message } from '../lib/types'
+import type { ApiKey, Room, Message, Log } from '../lib/types'
 
 export function queries(db: D1Database) {
   return {
@@ -90,6 +90,25 @@ export function queries(db: D1Database) {
 
       const result = await db.prepare(sql).bind(...params).all<Message>()
       return result.results
+    },
+
+    async insertLog(id: string, keyId: string, roomId: string, sender: string, content: string, color?: string, messageId?: string) {
+      await db.prepare(
+        'INSERT INTO logs (id, key_id, room_id, message_id, sender, content, color) VALUES (?, ?, ?, ?, ?, ?, ?)'
+      ).bind(id, keyId, roomId, messageId ?? null, sender, content, color ?? null).run()
+    },
+
+    async getLogsByRoom(keyId: string, roomId: string, limit: number = 100) {
+      const result = await db.prepare(
+        'SELECT id, room_id, key_id, message_id, sender, content, color, created_at FROM logs WHERE key_id = ? AND room_id = ? ORDER BY created_at DESC LIMIT ?'
+      ).bind(keyId, roomId, limit).all<Log>()
+      return result.results.reverse()
+    },
+
+    async deleteOldLogs(olderThan: string) {
+      await db.prepare(
+        'DELETE FROM logs WHERE created_at < ?'
+      ).bind(olderThan).run()
     },
   }
 }

@@ -41,6 +41,17 @@ export type Message = {
   created_at: string
 }
 
+export type Log = {
+  id: string
+  room_id: string
+  key_id: string
+  message_id: string | null
+  sender: string
+  content: string
+  color: string | null
+  created_at: string
+}
+
 export type TeamMember = {
   name: string
   color: string

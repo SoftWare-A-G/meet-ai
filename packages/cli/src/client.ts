@@ -232,12 +232,12 @@ export function createClient(baseUrl: string, apiKey?: string) {
       return connect();
     },
 
-    async sendLog(roomId: string, sender: string, content: string, color?: string) {
+    async sendLog(roomId: string, sender: string, content: string, color?: string, messageId?: string) {
       return withRetry(async () => {
         const res = await fetch(`${baseUrl}/api/rooms/${roomId}/logs`, {
           method: "POST",
           headers: headers(),
-          body: JSON.stringify({ sender, content, ...(color && { color }) }),
+          body: JSON.stringify({ sender, content, ...(color && { color }), ...(messageId && { message_id: messageId }) }),
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
