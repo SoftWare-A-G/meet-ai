@@ -4,6 +4,7 @@ import ChatInput from '../ChatInput'
 import { useRoomWebSocket } from '../../../hooks/useRoomWebSocket'
 import { useOfflineQueue } from '../../../hooks/useOfflineQueue'
 import * as api from '../../../lib/api'
+import { requestPermission, notifyIfHidden } from '../../../lib/notifications'
 import type { Message as MessageType, Room, TeamInfo } from '../../../lib/types'
 
 type DisplayMessage = MessageType & {
@@ -73,8 +74,13 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo }: ChatVie
     return () => { cancelled = true }
   }, [room.id])
 
+  // Request notification permission once on mount
+  useEffect(() => { requestPermission() }, [])
+
   // WebSocket for real-time messages
   const onWsMessage = useCallback((msg: MessageType) => {
+    notifyIfHidden(msg, userName)
+
     // Deduplicate own echoed messages
     if (msg.sender === userName) {
       setMessages(prev => {

@@ -111,3 +111,20 @@ function notifyClients(data) {
     });
   });
 }
+
+// --- Notification click: focus the chat tab ---
+self.addEventListener('notificationclick', function (e) {
+  e.notification.close();
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (clients) {
+      for (var i = 0; i < clients.length; i++) {
+        if (clients[i].url.includes('/chat') && 'focus' in clients[i]) {
+          return clients[i].focus();
+        }
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow('/chat');
+      }
+    })
+  );
+});
