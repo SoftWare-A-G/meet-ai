@@ -15,14 +15,14 @@ export async function requestPermission(): Promise<NotificationPermission> {
  * Only shows when the tab is hidden and permission is granted.
  * Skips log messages and messages from the current user.
  */
-export function notifyIfHidden(msg: Message, currentUser: string): void {
+export function notifyIfHidden(msg: Message, currentUser: string, roomName: string): void {
   if (!('Notification' in window)) return
   if (Notification.permission !== 'granted') return
   if (document.visibilityState !== 'hidden') return
   if (msg.type === 'log') return
   if (msg.sender === currentUser) return
 
-  const notification = new Notification(msg.sender, {
+  const notification = new Notification(`${roomName}: ${msg.sender}`, {
     body: msg.content.slice(0, 100),
     tag: msg.id ?? msg.message_id ?? undefined,
     icon: '/favicon.ico',
