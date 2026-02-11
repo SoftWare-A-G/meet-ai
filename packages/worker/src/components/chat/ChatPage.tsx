@@ -41,7 +41,7 @@ export function ChatPage() {
     container.querySelectorAll('pre code[class]').forEach(highlightEl);
   };
 </script>`)}
-      <script src="/chat.js"></script>
+      <script src="/chat.js?v=2"></script>
       {raw(`<script>
 if ('serviceWorker' in navigator) {
   caches.keys().then(function (names) {
