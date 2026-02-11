@@ -5,6 +5,7 @@ import MainPanel from '../main/MainPanel'
 import TeamSidebar from '../team/TeamSidebar'
 import SettingsModal from '../modals/SettingsModal'
 import QRShareModal from '../modals/QRShareModal'
+import IOSInstallModal from '../modals/IOSInstallModal'
 import Toast from '../shared/Toast'
 import { useLobbyWebSocket } from '../../hooks/useLobbyWebSocket'
 import { useUrlRouting, getRoomIdFromUrl } from '../../hooks/useUrlRouting'
@@ -29,6 +30,7 @@ export default function ChatLayout({ apiKey, userName, colorSchema, onNameChange
   const [toast, setToast] = useState<string | null>(null)
   const [teamInfo, setTeamInfo] = useState<TeamInfo | null>(null)
   const [teamSidebarOpen, setTeamSidebarOpen] = useState(false)
+  const [showIOSInstall, setShowIOSInstall] = useState(false)
 
   const isStandalone = (window.navigator as any).standalone === true
     || window.matchMedia('(display-mode: standalone)').matches
@@ -74,6 +76,11 @@ export default function ChatLayout({ apiKey, userName, colorSchema, onNameChange
     pushRoom(room.id)
   }, [pushRoom])
 
+  const handleInstallClick = useCallback(() => {
+    setSidebarOpen(false)
+    setShowIOSInstall(true)
+  }, [])
+
   const handleSettingsSave = useCallback((schema: string) => {
     onSchemaChange(schema)
     setShowSettings(false)
@@ -97,6 +104,7 @@ export default function ChatLayout({ apiKey, userName, colorSchema, onNameChange
         onNameChange={onNameChange}
         onSettingsClick={() => setShowSettings(true)}
         onClose={() => setSidebarOpen(false)}
+        onInstallClick={handleInstallClick}
       />
       {sidebarOpen && <SidebarBackdrop onClick={() => setSidebarOpen(false)} />}
       <MainPanel
@@ -124,6 +132,9 @@ export default function ChatLayout({ apiKey, userName, colorSchema, onNameChange
           onClose={() => setShowQR(false)}
           onToast={(text) => { setToast(text); setShowQR(false) }}
         />
+      )}
+      {showIOSInstall && (
+        <IOSInstallModal onClose={() => setShowIOSInstall(false)} />
       )}
       {toast && <Toast text={toast} onDone={() => setToast(null)} />}
     </>

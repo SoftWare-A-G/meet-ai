@@ -12,14 +12,15 @@ type SidebarProps = {
   onNameChange: (name: string) => void
   onSettingsClick: () => void
   onClose: () => void
+  onInstallClick: () => void
 }
 
-export default function Sidebar({ rooms, currentRoomId, userName, isOpen, onSelectRoom, onNameChange, onSettingsClick, onClose }: SidebarProps) {
+export default function Sidebar({ rooms, currentRoomId, userName, isOpen, onSelectRoom, onNameChange, onSettingsClick, onClose, onInstallClick }: SidebarProps) {
   return (
     <aside class={`sidebar${isOpen ? ' open' : ''}`}>
       <SidebarHeader onSettingsClick={onSettingsClick} onCloseClick={onClose} />
       <RoomList rooms={rooms} currentRoomId={currentRoomId} onSelectRoom={onSelectRoom} />
-      <SidebarFooter userName={userName} onNameChange={onNameChange} />
+      <SidebarFooter userName={userName} onNameChange={onNameChange} onInstallClick={onInstallClick} />
     </aside>
   )
 }
