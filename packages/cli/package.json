@@ -2,29 +2,12 @@
   "name": "@meet-ai/cli",
   "version": "0.0.6",
   "description": "CLI for meet-ai chat rooms — create rooms, send messages, and stream via WebSocket",
-  "type": "module",
-  "bin": {
-    "meet-ai": "./dist/index.js"
-  },
-  "main": "./dist/index.js",
-  "exports": {
-    ".": "./dist/index.js"
-  },
-  "files": [
-    "dist"
-  ],
-  "scripts": {
-    "start": "bun run src/index.ts",
-    "build": "bun build src/index.ts --outdir dist --target node --format esm",
-    "prepublishOnly": "bun run build",
-    "test": "bun test"
-  },
   "keywords": [
-    "meet-ai",
-    "cli",
     "chat",
-    "websocket",
-    "real-time"
+    "cli",
+    "meet-ai",
+    "real-time",
+    "websocket"
   ],
   "license": "MIT",
   "repository": {
@@ -32,11 +15,29 @@
     "url": "https://github.com/SoftWare-A-G/meet-ai",
     "directory": "packages/cli"
   },
-  "engines": {
-    "node": ">=22"
+  "bin": {
+    "meet-ai": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "build": "bun build src/index.ts --outdir dist --target node --format esm",
+    "prepublishOnly": "bun run build",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "typescript": "5.9.3"
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

@@ -165,7 +165,7 @@ Lifecycle events are emitted as structured JSON on stderr (not mixed with messag
 ## Rules
 
 1. **The orchestrator NEVER does implementation work.** Always delegate to a teammate. If a suitable agent exists, forward the task via SendMessage. If not, spawn a new agent for it. The orchestrator's job is coordination only -- creating rooms, spawning agents, routing messages, and managing the team lifecycle.
-2. **Every outbound message must be relayed** via the CLI. No exceptions.
+2. **Every outbound message must be relayed** via the CLI. No exceptions. This includes status updates, acknowledgments, and progress reports -- if you would say it to the user in the CC terminal, also relay it to the chat room so the human sees it in the web UI.
 3. **Use the agent's CC team name as sender.** The orchestrator uses its team name (e.g. `team-lead`), not a separate display name.
 4. **The orchestrator creates exactly one room per team session.**
 5. **The orchestrator MUST start the inbox listener** as a background process immediately after creating the room. Use `listen --sender-type human --team <name> --inbox team-lead`. This writes human messages directly to the orchestrator's Claude Code inbox.
@@ -175,3 +175,4 @@ Lifecycle events are emitted as structured JSON on stderr (not mixed with messag
 9. **NEVER stop background listeners, teams, or teammates yourself.** Only the human decides when to stop. Let everything run until the user explicitly asks to stop or Claude Code exits.
 10. **Teardown:** When the user asks to stop, shut down all teammate agents via `shutdown_request`, then stop the background listener via `TaskStop`, then call `TeamDelete`.
 11. **Shut down idle agents.** Track the last time each teammate received a task or message. If an agent has been idle for 5 minutes with no pending work, send a `shutdown_request` to free memory. If new work arrives for a shut-down agent, spawn a fresh one.
+12. **ALWAYS relay status updates to the chat room.** Every meaningful status change (agent spawned, task assigned, fix applied, waiting for results, etc.) must be sent to the chat room via CLI so the human can follow along in the web UI. Never communicate only through the CC terminal -- the human may be watching the web UI instead.

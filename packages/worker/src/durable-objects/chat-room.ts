@@ -4,6 +4,8 @@ const STALE_TIMEOUT_MS = 120_000 // 2 minutes
 const ALARM_INTERVAL_MS = 60_000 // check every 60s
 
 export class ChatRoom extends DurableObject {
+  private teamInfo: string | null = null
+
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url)
 
@@ -20,6 +22,11 @@ export class ChatRoom extends DurableObject {
           JSON.stringify({ type: 'pong' })
         )
       )
+
+      // Send cached team info to the new client
+      if (this.teamInfo) {
+        server.send(this.teamInfo)
+      }
 
       // Schedule alarm to clean up stale connections
       const alarm = await this.ctx.storage.getAlarm()
@@ -47,6 +54,22 @@ export class ChatRoom extends DurableObject {
       if (failed > 0) {
         console.warn(`broadcast: ${sent} sent, ${failed} failed`)
       }
+      return new Response('ok')
+    }
+
+    // /team-info — store and broadcast team info
+    if (url.pathname === '/team-info') {
+      const body = await request.text()
+      const parsed = JSON.parse(body)
+      const payload = JSON.stringify({ type: 'team_info', ...parsed })
+      this.teamInfo = payload
+
+      for (const ws of this.ctx.getWebSockets()) {
+        try {
+          ws.send(payload)
+        } catch { /* client gone */ }
+      }
+
       return new Response('ok')
     }
 

@@ -151,6 +151,24 @@ switch (command) {
     break;
   }
 
+  case "send-team-info": {
+    const [tiRoomId, tiPayload] = args;
+    if (!tiRoomId || !tiPayload) {
+      console.error("Usage: cli send-team-info <roomId> '<json-payload>'");
+      process.exit(1);
+    }
+    // Validate JSON before sending
+    try {
+      JSON.parse(tiPayload);
+    } catch {
+      console.error("Error: payload must be valid JSON");
+      process.exit(1);
+    }
+    await client.sendTeamInfo(tiRoomId, tiPayload);
+    console.log("Team info sent");
+    break;
+  }
+
   case "generate-key": {
     const result = await client.generateKey();
     console.log(`API Key: ${result.key}`);
@@ -178,5 +196,6 @@ Commands:
     --sender-type <type>  Filter by sender_type (human|agent)
     --team <name>         Write to Claude Code team inbox
     --inbox <agent>       Target agent inbox (requires --team)
+  send-team-info <roomId> '<json>'             Send team info to a room
   generate-key                                 Generate a new API key`);
 }

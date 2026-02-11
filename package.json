@@ -1,5 +1,28 @@
 {
   "name": "meet-ai",
   "private": true,
-  "workspaces": ["packages/*"]
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "lint": "oxlint",
+    "lint-changed": "oxlint $(git diff --name-only)",
+    "lint-changed:fix": "oxlint $(git diff --name-only) --fix",
+    "lint-staged": "oxlint $(git diff --cached --name-only)",
+    "lint-staged:fix": "oxlint $(git diff --cached --name-only) --fix",
+    "typecheck": "bun --filter '*' typecheck"
+  },
+  "devDependencies": {
+    "@types/bun": "catalog:",
+    "oxfmt": "0.26.0",
+    "oxlint": "1.41.0",
+    "typescript": "catalog:"
+  },
+  "catalog": {
+    "@types/bun": "1.3.6",
+    "@types/node": "25.0.10",
+    "tailwindcss": "4.1.18",
+    "typescript": "5.9.3",
+    "zod": "4.3.6"
+  }
 }

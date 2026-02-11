@@ -73,12 +73,30 @@ function copyText(text, btnEl, label) {
   });
 }
 
-function render() {
+async function render() {
   var existingKey = getStoredKey();
   if (existingKey) {
-    showExistingKey(existingKey);
+    var valid = await validateKey(existingKey);
+    if (valid) {
+      showExistingKey(existingKey);
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+      showGenerateState();
+    }
   } else {
     showGenerateState();
+  }
+}
+
+async function validateKey(key) {
+  try {
+    var res = await fetch('/api/rooms', {
+      headers: { 'Authorization': 'Bearer ' + key }
+    });
+    return res.status !== 401;
+  } catch {
+    // Network error — assume key is fine, don't wipe it
+    return true;
   }
 }
 

@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { env, SELF } from 'cloudflare:test'
-import { applyD1Migrations } from 'cloudflare:test'
+import { env, SELF, applyD1Migrations } from 'cloudflare:test'
 import { resetRateLimits } from '../src/middleware/rate-limit'
 
 beforeEach(async () => {
@@ -473,6 +472,51 @@ describe('Messages', () => {
     expect(messages).toHaveLength(2)
     expect(messages[0].color).toBeNull()
     expect(messages[1].color).toBe('cyan')
+  })
+})
+
+describe('Team Info', () => {
+  const teamInfoPayload = {
+    team_name: 'test-team',
+    members: [
+      { name: 'agent-1', color: 'blue', role: 'general-purpose', model: 'claude-opus-4-6', status: 'active', joinedAt: 1234567890 },
+    ],
+  }
+
+  it('POST /api/rooms/:id/team-info pushes team info', async () => {
+    const key = await createKey()
+    const roomId = await createRoom(key, 'team-room')
+
+    const res = await SELF.fetch(`http://localhost/api/rooms/${roomId}/team-info`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(teamInfoPayload),
+    })
+    expect(res.status).toBe(200)
+    const body = await res.json() as { ok: boolean }
+    expect(body.ok).toBe(true)
+  })
+
+  it('returns 404 for non-existent room', async () => {
+    const key = await createKey()
+
+    const res = await SELF.fetch('http://localhost/api/rooms/nonexistent/team-info', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(teamInfoPayload),
+    })
+    expect(res.status).toBe(404)
+    const body = await res.json() as { error: string }
+    expect(body.error).toBe('room not found')
+  })
+
+  it('requires auth', async () => {
+    const res = await SELF.fetch('http://localhost/api/rooms/any-room/team-info', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(teamInfoPayload),
+    })
+    expect(res.status).toBe(401)
   })
 })
 

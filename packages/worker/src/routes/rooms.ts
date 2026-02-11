@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import type { AppEnv } from '../lib/types'
+import type { AppEnv, TeamInfo } from '../lib/types'
 import { requireAuth } from '../middleware/auth'
 import { rateLimitByKey } from '../middleware/rate-limit'
 import { queries } from '../db/queries'
@@ -99,4 +99,27 @@ roomsRoute.post('/:id/messages', requireAuth, rateLimitByKey(60, 60_000), async 
   )
 
   return c.json(message, 201)
+})
+
+// POST /api/rooms/:id/team-info — push team info to ChatRoom DO
+roomsRoute.post('/:id/team-info', requireAuth, async (c) => {
+  const keyId = c.get('keyId')
+  const roomId = c.req.param('id')
+  const db = queries(c.env.DB)
+
+  const room = await db.findRoom(roomId, keyId)
+  if (!room) {
+    return c.json({ error: 'room not found' }, 404)
+  }
+
+  const body = await c.req.json<TeamInfo>()
+
+  const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
+  const stub = c.env.CHAT_ROOM.get(doId)
+  await stub.fetch(new Request('http://internal/team-info', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  }))
+
+  return c.json({ ok: true })
 })

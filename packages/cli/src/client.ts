@@ -232,6 +232,21 @@ export function createClient(baseUrl: string, apiKey?: string) {
       return connect();
     },
 
+    async sendTeamInfo(roomId: string, payload: string) {
+      return withRetry(async () => {
+        const res = await fetch(`${baseUrl}/api/rooms/${roomId}/team-info`, {
+          method: "POST",
+          headers: headers(),
+          body: payload,
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error((err as any).error ?? `HTTP ${res.status}`);
+        }
+        return res.text();
+      });
+    },
+
     async generateKey() {
       const res = await fetch(`${baseUrl}/api/keys`, {
         method: "POST",

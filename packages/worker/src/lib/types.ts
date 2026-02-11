@@ -39,3 +39,17 @@ export type Message = {
   seq: number | null
   created_at: string
 }
+
+export type TeamMember = {
+  name: string
+  color: string
+  role: string
+  model: string
+  status: 'active' | 'inactive'
+  joinedAt: number
+}
+
+export type TeamInfo = {
+  team_name: string
+  members: TeamMember[]
+}
