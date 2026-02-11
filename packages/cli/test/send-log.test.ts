@@ -21,7 +21,7 @@ beforeEach(() => {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
-  }) as typeof fetch;
+  }) as unknown as typeof fetch;
 });
 
 test("sendLog calls correct API endpoint", async () => {

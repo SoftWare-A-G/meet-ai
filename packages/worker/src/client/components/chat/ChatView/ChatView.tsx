@@ -5,6 +5,7 @@ import { useRoomWebSocket } from '../../../hooks/useRoomWebSocket'
 import { useOfflineQueue } from '../../../hooks/useOfflineQueue'
 import * as api from '../../../lib/api'
 import { requestPermission, notifyIfHidden } from '../../../lib/notifications'
+import { parseUtcDate } from '../../../lib/dates'
 import type { Message as MessageType, Room, TeamInfo } from '../../../lib/types'
 
 type DisplayMessage = MessageType & {
@@ -35,7 +36,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo }: ChatVie
       ])
       if (cancelled) return
       const all = [...history, ...logs].sort(
-        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        (a, b) => parseUtcDate(a.created_at).valueOf() - parseUtcDate(b.created_at).valueOf()
       )
       setMessages(all.map(m => ({ ...m, status: 'sent' as const })))
 
@@ -177,15 +178,13 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo }: ChatVie
 
   return (
     <>
-      {!connected && (
-        <div class="reconnecting-bar">Reconnecting...</div>
-      )}
       <MessageList
         messages={messages}
         unreadCount={unreadCount}
         forceScrollCounter={forceScrollCounter}
         onScrollToBottom={() => setUnreadCount(0)}
         onRetry={handleRetry}
+        connected={connected}
       />
       <ChatInput roomName={room.name} onSend={handleSend} />
     </>

@@ -16,6 +16,7 @@ type MessageListProps = {
   forceScrollCounter: number
   onScrollToBottom: () => void
   onRetry?: (tempId: string) => void
+  connected?: boolean
 }
 
 type RenderItem =
@@ -66,7 +67,7 @@ function groupMessages(messages: DisplayMessage[]): RenderItem[] {
   return items
 }
 
-export default function MessageList({ messages, unreadCount, forceScrollCounter, onScrollToBottom, onRetry }: MessageListProps) {
+export default function MessageList({ messages, unreadCount, forceScrollCounter, onScrollToBottom, onRetry, connected = true }: MessageListProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const { isAtBottom, atBottom, scrollToBottom } = useScrollAnchor(containerRef)
   const prevLengthRef = useRef<number>(0)
@@ -108,6 +109,9 @@ export default function MessageList({ messages, unreadCount, forceScrollCounter,
 
   return (
     <div class="messages" ref={containerRef}>
+      {!connected && (
+        <div class="reconnecting-bar">Reconnecting...</div>
+      )}
       {items.map((item, i) => {
         if (item.kind === 'log-group') {
           const first = item.logs[0]

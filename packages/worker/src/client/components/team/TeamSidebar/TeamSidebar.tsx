@@ -27,7 +27,7 @@ export default function TeamSidebar({ teamInfo, isOpen, onClose }: TeamSidebarPr
   return (
     <div class={`team-sidebar${isOpen ? ' open' : ''}`}>
       <div class="team-sidebar-header">
-        <span>{teamInfo.team_name}</span>
+        <span>Team</span>
         <span class="team-sidebar-count">{active.length}/{teamInfo.members.length}</span>
         <button class="team-sidebar-close-btn" onClick={onClose}>&times;</button>
       </div>

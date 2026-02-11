@@ -1,5 +1,6 @@
 import { useState } from 'hono/jsx/dom'
 import { hashColor, ensureSenderContrast } from '../../../lib/colors'
+import { formatTimeWithSeconds } from '../../../lib/dates'
 
 type LogEntry = {
   sender: string
@@ -10,15 +11,6 @@ type LogEntry = {
 
 type LogGroupProps = {
   logs: LogEntry[]
-}
-
-function formatTime(isoStr?: string): string {
-  if (!isoStr) return ''
-  try {
-    const d = new Date(isoStr)
-    if (isNaN(d.getTime())) return ''
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-  } catch { return '' }
 }
 
 function summaryText(logs: LogEntry[]): string {
@@ -35,8 +27,8 @@ export default function LogGroup({ logs }: LogGroupProps) {
 
   if (logs.length === 0) return null
 
-  const firstTime = formatTime(logs[0].created_at)
-  const lastTime = logs.length > 1 ? formatTime(logs[logs.length - 1].created_at) : null
+  const firstTime = formatTimeWithSeconds(logs[0].created_at)
+  const lastTime = logs.length > 1 ? formatTimeWithSeconds(logs[logs.length - 1].created_at) : null
   const timeRange = lastTime && lastTime !== firstTime ? `${firstTime} - ${lastTime}` : firstTime
 
   return (
@@ -52,7 +44,7 @@ export default function LogGroup({ logs }: LogGroupProps) {
             const senderColor = log.color ? ensureSenderContrast(log.color) : hashColor(log.sender)
             return (
               <div class="log-entry" key={`${log.sender}-${log.created_at}-${i}`}>
-                <span class="log-entry-time">{formatTime(log.created_at)}</span>
+                <span class="log-entry-time">{formatTimeWithSeconds(log.created_at)}</span>
                 <span class="log-entry-sender" style={`color:${senderColor}`}>{log.sender}:</span>
                 <span class="log-entry-content">{log.content}</span>
               </div>

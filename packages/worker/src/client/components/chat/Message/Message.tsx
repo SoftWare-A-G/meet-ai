@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'hono/jsx/dom'
 import { hashColor, darkenForAvatar, resolveColor, ensureSenderContrast } from '../../../lib/colors'
+import { formatTime } from '../../../lib/dates'
 import { contrastRatio } from '../../../lib/theme'
 import { renderMarkdown, highlightCode } from '../../../lib/markdown'
 
@@ -17,15 +18,6 @@ function escapeHtml(str: string): string {
   const d = document.createElement('div')
   d.textContent = str
   return d.innerHTML
-}
-
-function formatTime(isoStr?: string): string {
-  if (!isoStr) return ''
-  try {
-    const d = new Date(isoStr)
-    if (isNaN(d.getTime())) return ''
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  } catch { return '' }
 }
 
 export default function Message({ sender, content, color, timestamp, tempId, status = 'sent', onRetry }: MessageProps) {
