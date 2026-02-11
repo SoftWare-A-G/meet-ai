@@ -26,7 +26,7 @@ export default function ChatInput({ roomName, onSend }: ChatInputProps) {
   }, [onSend, reset])
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !matchMedia('(pointer: coarse)').matches) {
       e.preventDefault()
       handleSend()
     }
