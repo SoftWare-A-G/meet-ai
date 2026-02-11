@@ -475,6 +475,43 @@ body {
   border-bottom: 1px solid rgba(234, 179, 8, 0.25);
 }
 
+/* --- PWA Install Button --- */
+.install-btn {
+  background: none; border: 1px solid rgba(255,255,255,0.15); color: var(--c-sidebar-text);
+  cursor: pointer; display: flex; align-items: center; gap: 4px;
+  padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;
+  font-family: inherit; white-space: nowrap; opacity: 0.7; transition: opacity 0.15s, background 0.15s;
+}
+.install-btn:hover { opacity: 1; background: var(--c-hover-item); }
+
+/* --- iOS Install Modal --- */
+.ios-install-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+}
+.ios-install-panel {
+  background: var(--c-chat-bg); color: var(--c-msg-text);
+  border: 1px solid var(--c-border); border-radius: 12px;
+  padding: 24px; width: 340px; max-width: 90vw;
+}
+.ios-install-panel h3 { font-size: 18px; font-weight: 700; margin-bottom: 16px; text-align: center; }
+.ios-install-steps { display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px; }
+.ios-install-step { display: flex; gap: 12px; align-items: flex-start; font-size: 14px; line-height: 1.5; }
+.ios-step-num {
+  width: 24px; height: 24px; border-radius: 50%; background: var(--c-primary);
+  color: var(--c-primary-text); display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; flex-shrink: 0;
+}
+.ios-step-text { flex: 1; }
+.ios-step-text strong { color: #e5e5e5; }
+.ios-share-icon { vertical-align: middle; margin: 0 2px; }
+.ios-install-close {
+  width: 100%; padding: 10px; border: none; border-radius: 8px;
+  background: var(--c-primary); color: var(--c-primary-text);
+  font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
+}
+.ios-install-close:hover { filter: brightness(1.1); }
+
 /* --- Spin animation (used for QR loading) --- */
 @keyframes spin {
   to { transform: rotate(360deg); }
