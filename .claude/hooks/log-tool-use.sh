@@ -18,6 +18,14 @@ TOOL_NAME="$(echo "$INPUT" | jq -r '.tool_name // empty')"
 [ -z "$SESSION_ID" ] && exit 0
 [ -z "$TOOL_NAME" ] && exit 0
 
+# Skip Bash commands that are just cd or meet-ai CLI calls (avoid recursion)
+if [ "$TOOL_NAME" = "Bash" ]; then
+  CMD_CHECK="$(echo "$INPUT" | jq -r '.tool_input.command // empty')"
+  case "$CMD_CHECK" in
+    cd\ *|meet-ai\ *) exit 0 ;;
+  esac
+fi
+
 # --- Find the room_id by scanning team meet-ai.json files ---
 ROOM_ID=""
 for f in "$HOME"/.claude/teams/*/meet-ai.json; do
