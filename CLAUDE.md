@@ -42,7 +42,7 @@ This does NOT apply to:
 - Initial task/context prompts passed when spawning teammates via the Task tool
 - Internal thinking or tool usage that isn't a direct message to another agent
 
-The meet-ai server must be running at localhost:3000 before starting a team. See the `meet-ai-team-chat` skill in `.claude/skills/` for the full procedure.
+See the `meet-ai` skill in `packages/meet-ai-skill/meet-ai/SKILL.md` for the full procedure.
 
 ## Package Manager
 
