@@ -40,8 +40,9 @@ export default function RoomsScreen() {
   }, [])
 
   useEffect(() => {
+    if (!apiKey) return
     fetchRooms().finally(() => setLoading(false))
-  }, [fetchRooms])
+  }, [apiKey, fetchRooms])
 
   useLayoutEffect(() => {
     navigation.setOptions({
