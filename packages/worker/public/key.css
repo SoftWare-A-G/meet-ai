@@ -12,28 +12,11 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Container */
-.container {
-  width: 100%;
-  max-width: 560px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-#content {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
+button, input { font-family: inherit; }
 
-/* Headline — monospace hero style from landing page */
+/* Headline — clamp font-size can't be expressed in Tailwind */
 .headline {
-  font-family: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
   font-size: clamp(1.75rem, 4vw, 2.5rem);
-  font-weight: 800;
-  letter-spacing: -0.5px;
-  line-height: 1.2;
-  text-align: center;
 }
 .headline::after {
   content: '';
@@ -47,74 +30,6 @@ body {
 }
 @keyframes blink { 50% { opacity: 0; } }
 
-.subtitle {
-  font-size: 16px;
-  color: #888;
-  text-align: center;
-  margin-top: -8px;
-  line-height: 1.6;
-}
-
-/* Buttons */
-.btn-primary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 14px 32px;
-  border: none;
-  border-radius: 999px;
-  background: #2563eb;
-  color: #fff;
-  cursor: pointer;
-  font-size: 16px;
-  font-family: inherit;
-  font-weight: 600;
-  text-decoration: none;
-  transition: background 0.15s;
-  box-shadow: 0 0 60px rgba(37, 99, 235, 0.08);
-}
-.btn-primary:hover { background: #1d4ed8; }
-.btn-primary:active { background: #1e40af; }
-.btn-primary .arrow {
-  transition: transform 0.2s ease;
-}
-.btn-primary:hover .arrow {
-  transform: translateX(4px);
-}
-
-.btn-secondary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px 24px;
-  border: 1px solid #2a2a2a;
-  border-radius: 999px;
-  background: #1a1a1a;
-  color: #e5e5e5;
-  cursor: pointer;
-  font-size: 14px;
-  font-family: inherit;
-  font-weight: 500;
-  text-decoration: none;
-  transition: background 0.15s, border-color 0.15s;
-}
-.btn-secondary:hover { background: #222; border-color: #3a3a3a; }
-
-.muted-text {
-  font-size: 13px;
-  color: #555;
-  text-align: center;
-}
-
-/* Generate state wrapper */
-.generate-wrapper {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-}
-
 /* Spinner */
 .spinner {
   display: inline-block;
@@ -127,55 +42,8 @@ body {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Result */
-.result {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  text-align: left;
-}
-
-/* Success indicator */
-.success-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: #888;
-}
-.success-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #22c55e;
-  flex-shrink: 0;
-}
-
-/* Key field */
-.key-field {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  position: relative;
-}
-
-.key-field input {
-  flex: 1;
-  padding: 12px 14px;
-  border: 1px solid #2a2a2a;
-  border-left: 3px solid #2563eb;
-  border-radius: 8px;
-  background: #1a1a1a;
-  color: #e5e5e5;
-  font-family: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.15s;
-}
-.key-field input:focus { border-color: #3a3a3a; border-left-color: #2563eb; }
-
 /* Shimmer animation for key field */
-.key-field.shimmer input {
+.shimmer input {
   animation: shimmer-bg 0.8s ease-in-out;
 }
 @keyframes shimmer-bg {
@@ -184,20 +52,8 @@ body {
   100% { background: #1a1a1a; }
 }
 
-.btn-copy {
-  padding: 12px 16px;
-  border: 1px solid #2a2a2a;
-  border-radius: 8px;
-  background: #1a1a1a;
-  color: #e5e5e5;
-  cursor: pointer;
-  font-size: 14px;
-  font-family: inherit;
-  white-space: nowrap;
-  transition: background 0.15s, transform 0.15s, border-color 0.15s;
-}
-.btn-copy:hover { background: #222; border-color: #3a3a3a; }
-.btn-copy.copied {
+/* Copied state (used by copy buttons via JS classList.add) */
+.copied {
   color: #22c55e;
   border-color: #22c55e40;
   animation: pulse-copy 0.15s ease;
@@ -206,160 +62,12 @@ body {
   50% { transform: scale(1.05); }
 }
 
-.key-warning {
-  font-size: 13px;
-  color: #888;
-  margin-top: -8px;
-}
-
-/* Code blocks — env and settings */
-.code-block {
-  background: #1a1a1a;
-  border: 1px solid #2a2a2a;
-  border-radius: 8px;
-  padding: 16px;
-  position: relative;
-  transition: border-color 0.15s;
-}
-.code-block:hover { border-color: #3a3a3a; }
-
-.code-block .label {
-  font-size: 11px;
-  color: #666;
-  margin-bottom: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-family: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
-}
-
-.code-block code {
-  display: block;
-  font-family: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
-  font-size: 14px;
-  line-height: 1.6;
-  word-break: break-all;
-}
-
 /* Syntax coloring */
 .syn-key { color: #7dd3fc; }
 .syn-str { color: #86efac; }
 .syn-punct { color: #888; }
 
-.code-block .block-copy {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  padding: 4px 10px;
-  border: 1px solid #2a2a2a;
-  border-radius: 6px;
-  background: #111;
-  color: #888;
-  cursor: pointer;
-  font-size: 12px;
-  font-family: inherit;
-  opacity: 0;
-  transition: opacity 0.15s, color 0.15s, border-color 0.15s;
-}
-.code-block:hover .block-copy { opacity: 1; }
-.code-block .block-copy:hover { color: #e5e5e5; border-color: #3a3a3a; }
-.code-block .block-copy.copied { color: #22c55e; border-color: #22c55e40; }
-
-/* Settings section */
-.settings-section {
-  text-align: left;
-}
-
-.settings-section h3 {
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 12px;
-  color: #e5e5e5;
-}
-
-.settings-tabs {
-  display: flex;
-  gap: 0;
-  margin-bottom: 0;
-}
-
-.settings-tab {
-  padding: 8px 16px;
-  border: 1px solid #2a2a2a;
-  border-bottom: none;
-  border-radius: 8px 8px 0 0;
-  background: transparent;
-  color: #888;
-  cursor: pointer;
-  font-size: 13px;
-  font-family: inherit;
-  transition: background 0.15s, color 0.15s;
-}
-.settings-tab:hover { color: #e5e5e5; }
-.settings-tab.active {
-  background: #1a1a1a;
-  color: #e5e5e5;
-  border-color: #2a2a2a;
-}
-
-.settings-content {
-  background: #1a1a1a;
-  border: 1px solid #2a2a2a;
-  border-radius: 0 8px 8px 8px;
-  padding: 16px;
-  position: relative;
-  transition: border-color 0.15s;
-}
-.settings-content:hover { border-color: #3a3a3a; }
-
-.settings-content .label {
-  font-size: 11px;
-  color: #666;
-  margin-bottom: 6px;
-  font-family: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
-}
-
-.settings-content pre {
-  font-family: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
-  font-size: 13px;
-  line-height: 1.5;
-  white-space: pre;
-  overflow-x: auto;
-  margin: 0;
-}
-
-.settings-content .block-copy {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  padding: 4px 10px;
-  border: 1px solid #2a2a2a;
-  border-radius: 6px;
-  background: #111;
-  color: #888;
-  cursor: pointer;
-  font-size: 12px;
-  font-family: inherit;
-  opacity: 0;
-  transition: opacity 0.15s, color 0.15s, border-color 0.15s;
-}
-.settings-content:hover .block-copy { opacity: 1; }
-.settings-content .block-copy:hover { color: #e5e5e5; border-color: #3a3a3a; }
-.settings-content .block-copy.copied { color: #22c55e; border-color: #22c55e40; }
-
-.settings-desc {
-  font-size: 13px;
-  color: #888;
-  margin-bottom: 12px;
-  line-height: 1.5;
-}
-.settings-desc code {
-  background: rgba(128,128,128,0.15);
-  padding: 1px 5px;
-  border-radius: 3px;
-  font-size: 12px;
-  color: #ccc;
-  font-family: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
-}
+/* Settings hints (nested element styling via dangerouslySetInnerHTML) */
 .settings-hint {
   font-size: 12px;
   color: #888;
@@ -374,170 +82,6 @@ body {
   font-size: 11px;
   color: #ccc;
   font-family: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
-}
-.settings-cmd {
-  background: #111;
-  border: 1px solid #2a2a2a;
-  border-radius: 6px;
-  padding: 8px 12px;
-  margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  position: relative;
-}
-.settings-cmd code {
-  flex: 1;
-  font-family: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
-  font-size: 12px;
-  color: #c4b5fd;
-  word-break: break-all;
-}
-.settings-cmd .block-copy {
-  position: static;
-  opacity: 1;
-  flex-shrink: 0;
-}
-
-/* Actions */
-.actions {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-.actions-helper {
-  font-size: 13px;
-  color: #555;
-  text-align: center;
-}
-
-/* Existing key */
-.existing-key {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  align-items: center;
-}
-
-.key-badge {
-  font-family: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
-  font-size: 14px;
-  color: #888;
-  background: #1a1a1a;
-  border: 1px solid #2a2a2a;
-  border-radius: 8px;
-  padding: 10px 20px;
-  display: inline-block;
-}
-
-.key-context {
-  font-size: 14px;
-  color: #888;
-}
-
-/* Paste key */
-.paste-link {
-  font-size: 14px;
-  color: #555;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-family: inherit;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  transition: color 0.15s;
-}
-.paste-link:hover { color: #888; }
-
-.paste-form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  width: 100%;
-  max-width: 480px;
-}
-.paste-form .key-field input {
-  font-size: 16px;
-}
-.paste-error {
-  font-size: 13px;
-  color: #f87171;
-  text-align: center;
-}
-
-/* Confirmation dialog */
-.confirm-dialog {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  align-items: center;
-  padding: 20px;
-  background: #1a1a1a;
-  border: 1px solid #2a2a2a;
-  border-radius: 12px;
-}
-.confirm-dialog p {
-  font-size: 14px;
-  color: #e5e5e5;
-  text-align: center;
-}
-.confirm-dialog .confirm-actions {
-  display: flex;
-  gap: 12px;
-}
-.confirm-btn {
-  padding: 8px 20px;
-  border: 1px solid #2a2a2a;
-  border-radius: 999px;
-  background: transparent;
-  color: #888;
-  cursor: pointer;
-  font-size: 13px;
-  font-family: inherit;
-  transition: background 0.15s, color 0.15s;
-}
-.confirm-btn:hover { background: #222; color: #e5e5e5; }
-.confirm-btn.danger {
-  border-color: #5c2b2e;
-  color: #f87171;
-}
-.confirm-btn.danger:hover { background: #2a1215; }
-
-/* Quick Start */
-.qs-section { text-align: left; }
-.qs-section h3 { font-size: 14px; font-weight: 600; margin-bottom: 20px; color: #e5e5e5; }
-.qs-steps { display: flex; flex-direction: column; gap: 28px; }
-.qs-step { display: grid; grid-template-columns: 36px 1fr; gap: 0 14px; }
-.qs-num {
-  font-family: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
-  font-size: 24px; font-weight: 700; color: #22c55e; line-height: 1;
-  grid-row: 1 / 3; padding-top: 2px;
-}
-.qs-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; color: #e5e5e5; }
-.qs-desc { font-size: 13px; color: #888; line-height: 1.5; margin-bottom: 8px; }
-.qs-code {
-  background: #111; border: 1px solid #2a2a2a; border-radius: 8px;
-  padding: 10px 14px; overflow-x: auto;
-  font-family: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
-  font-size: 13px; line-height: 1.7; color: #ccc; grid-column: 2;
-}
-.qs-code .cmd { color: #c4b5fd; }
-.qs-code .comment { color: #6b7280; }
-.qs-note { font-size: 12px; color: #666; margin-top: 6px; grid-column: 2; }
-
-/* Error */
-.error {
-  background: #2a1215;
-  border: 1px solid #5c2b2e;
-  color: #f87171;
-  padding: 12px 16px;
-  border-radius: 8px;
-  font-size: 14px;
-}
-.error-title {
-  font-weight: 600;
-  margin-bottom: 4px;
 }
 
 /* Staggered entrance animations */
@@ -572,21 +116,6 @@ body {
   .spinner { animation: none; border-top-color: #fff; }
   .stagger-in { opacity: 1; transform: none; transition: none; }
   .fade-out, .fade-in { animation: none; opacity: 1; transform: none; }
-  .key-field.shimmer input { animation: none; }
-  .btn-copy.copied { animation: none; }
-  .btn-primary .arrow { transition: none; }
-}
-
-/* Responsive */
-@media (max-width: 520px) {
-  .headline { font-size: clamp(1.5rem, 6vw, 2rem); }
-  .btn-primary { width: 100%; }
-  .key-field { flex-direction: column; }
-  .key-field input { width: 100%; }
-  .btn-copy { width: 100%; }
-  .actions { flex-direction: column; }
-  .actions > * { width: 100%; text-align: center; }
-  .paste-form .key-field { flex-direction: column; }
-  .paste-form .key-field input { width: 100%; }
-  .paste-form .btn-copy { width: 100%; }
+  .shimmer input { animation: none; }
+  .copied { animation: none; }
 }

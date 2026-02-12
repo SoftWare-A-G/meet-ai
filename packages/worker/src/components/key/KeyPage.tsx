@@ -37,8 +37,8 @@ export function KeyPage() {
           </a>
         }
       />
-      <div class="container" id="app">
-        <div id="content"></div>
+      <div class="w-full max-w-xl flex flex-col gap-6" id="app">
+        <div class="flex flex-col gap-6" id="content"></div>
       </div>
       <script src="/key.js"></script>
       {raw(`<script>

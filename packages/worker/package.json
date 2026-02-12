@@ -4,12 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "bun run build:css && bun run build:chat && wrangler deploy",
+    "deploy": "bun run build:css && bun run build:chat && bun run build:key && wrangler deploy",
     "test": "vitest",
     "typecheck": "tsc --noEmit",
     "build:chat": "bun build src/client/chat.tsx --outfile public/chat.js --minify --target browser",
+    "build:key": "bun build src/client/key.tsx --outfile public/key.js --minify --target browser",
     "build:css": "bunx @tailwindcss/cli -i src/styles/main.css -o public/tailwind.css --minify",
     "dev:chat": "bun build src/client/chat.tsx --outfile public/chat.js --target browser --watch",
+    "dev:key": "bun build src/client/key.tsx --outfile public/key.js --target browser --watch",
     "dev:css": "bunx @tailwindcss/cli -i src/styles/main.css -o public/tailwind.css --watch"
   },
   "dependencies": {
