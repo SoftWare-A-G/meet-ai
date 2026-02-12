@@ -32,7 +32,7 @@ export function KeyPage() {
     >
       <Header
         nav={
-          <a href="/chat" class="header-btn" id="header-cta">
+          <a href="/chat" class="rounded-md bg-blue-600 px-4 py-1 text-sm font-medium text-white no-underline transition-colors duration-150 hover:bg-blue-700" id="header-cta">
             Open Chat
           </a>
         }

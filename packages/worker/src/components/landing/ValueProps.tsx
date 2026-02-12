@@ -18,13 +18,13 @@ const PROPS = [
 
 export function ValueProps() {
   return (
-    <section class="value-section">
-      <div class="value-grid">
+    <section class="px-6 pt-20 pb-32">
+      <div class="mx-auto grid max-w-4xl grid-cols-1 gap-8 md:grid-cols-3 md:gap-12">
         {PROPS.map((p) => (
-          <div class="value-col animate-in">
-            <div class="value-num">{p.num}</div>
-            <h3 class="value-title">{p.title}</h3>
-            <p class="value-desc">{p.desc}</p>
+          <div class="animate-in border-t border-edge-light pt-6">
+            <div class="mb-4 font-mono text-4xl leading-none text-edge-light">{p.num}</div>
+            <h3 class="mb-2 text-lg font-bold">{p.title}</h3>
+            <p class="text-sm leading-relaxed text-text-secondary">{p.desc}</p>
           </div>
         ))}
       </div>

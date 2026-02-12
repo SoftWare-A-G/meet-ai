@@ -21,6 +21,7 @@ export function Base({ title, description, css = [], head, children }: BaseProps
         <meta name="theme-color" content="#0a0a0a" />
         <title>{title}</title>
         {description && <meta name="description" content={description} />}
+        <link rel="stylesheet" href="/tailwind.css" />
         {css.map((href) => (
           <link rel="stylesheet" href={href} />
         ))}
