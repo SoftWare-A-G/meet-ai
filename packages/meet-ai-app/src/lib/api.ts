@@ -64,6 +64,13 @@ export async function loadMessagesSinceSeq(roomId: string, sinceSeq: number): Pr
   return res.json()
 }
 
+export async function loadLogs(roomId: string): Promise<Message[]> {
+  const res = await request(`/api/rooms/${roomId}/logs`)
+  if (!res.ok) return []
+  const logs: Message[] = await res.json()
+  return logs.map((l) => ({ ...l, type: 'log' as const }))
+}
+
 export async function sendMessage(roomId: string, sender: string, content: string): Promise<Message> {
   const res = await request(`/api/rooms/${roomId}/messages`, {
     method: 'POST',

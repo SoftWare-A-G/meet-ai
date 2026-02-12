@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { AppState, type AppStateStatus } from 'react-native'
 import { wsUrl, loadMessagesSinceSeq } from '@/lib/api'
-import type { Message } from '@/lib/types'
+import type { Message, TeamInfo } from '@/lib/types'
 
 const MIN_BACKOFF = 1000
 const MAX_BACKOFF = 30000
@@ -17,6 +17,7 @@ export function useRoomWebSocket(
   const lastSeqRef = useRef<number>(0)
   const backoffRef = useRef<number>(MIN_BACKOFF)
   const [connected, setConnected] = useState(true)
+  const [teamInfo, setTeamInfo] = useState<TeamInfo | null>(null)
 
   useEffect(() => {
     if (!roomId || !apiKey) return
@@ -47,6 +48,10 @@ export function useRoomWebSocket(
       ws.onmessage = (e) => {
         try {
           const data = JSON.parse(e.data)
+          if (data.type === 'team_info') {
+            setTeamInfo(data as TeamInfo)
+            return
+          }
           const msg = data as Message
           if (!msg.sender || !msg.content) return
           if (msg.seq && msg.seq > lastSeqRef.current) {
@@ -56,14 +61,17 @@ export function useRoomWebSocket(
         } catch { /* ignore */ }
       }
 
-      ws.onerror = () => console.error('WebSocket error')
+      ws.onerror = () => {
+        console.error('WebSocket error')
+        if (wsRef.current === ws) setConnected(false)
+      }
       ws.onclose = () => {
-        setConnected(false)
         const delay = backoffRef.current
         backoffRef.current = Math.min(delay * 2, MAX_BACKOFF)
-        setTimeout(() => {
-          if (wsRef.current === ws) connect()
-        }, delay)
+        if (wsRef.current === ws) {
+          setConnected(false)
+          setTimeout(() => connect(), delay)
+        }
       }
 
       wsRef.current = ws
@@ -86,6 +94,7 @@ export function useRoomWebSocket(
 
     return () => {
       subscription.remove()
+      setConnected(false)
       if (wsRef.current) {
         const ws = wsRef.current
         wsRef.current = null
@@ -94,5 +103,5 @@ export function useRoomWebSocket(
     }
   }, [roomId, apiKey])
 
-  return { connected }
+  return { connected, teamInfo }
 }
