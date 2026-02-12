@@ -1,6 +1,6 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native'
 import * as Linking from 'expo-linking'
-import { Slot, useRouter } from 'expo-router'
+import { Redirect, Slot, useRouter } from 'expo-router'
 import React, { useEffect } from 'react'
 import { ActivityIndicator, Alert, View, useColorScheme } from 'react-native'
 
@@ -41,7 +41,7 @@ function DeepLinkHandler() {
 }
 
 function RootLayoutInner() {
-  const { isLoading } = useAuth()
+  const { apiKey, isLoading } = useAuth()
 
   if (isLoading) {
     return (
@@ -51,10 +51,19 @@ function RootLayoutInner() {
     )
   }
 
+  if (!apiKey) {
+    return (
+      <>
+        <DeepLinkHandler />
+        <Redirect href="/(auth)/login" />
+      </>
+    )
+  }
+
   return (
     <>
       <DeepLinkHandler />
-      <Slot />
+      <Redirect href="/(app)" />
     </>
   )
 }
