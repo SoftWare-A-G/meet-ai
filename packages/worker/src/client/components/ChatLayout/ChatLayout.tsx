@@ -109,6 +109,7 @@ export default function ChatLayout({ apiKey, userName, colorSchema, onNameChange
       {sidebarOpen && <SidebarBackdrop onClick={() => setSidebarOpen(false)} />}
       <MainPanel
         currentRoom={currentRoom}
+        rooms={rooms}
         apiKey={apiKey}
         userName={userName}
         showInvite={!isStandalone}
@@ -116,6 +117,7 @@ export default function ChatLayout({ apiKey, userName, colorSchema, onNameChange
         onMobileToggle={() => setSidebarOpen(prev => !prev)}
         onTeamToggle={() => setTeamSidebarOpen(prev => !prev)}
         onInviteClick={() => setShowQR(true)}
+        onSelectRoom={handleSelectRoom}
         onTeamInfo={setTeamInfo}
       />
       {teamInfo && <TeamSidebar teamInfo={teamInfo} isOpen={teamSidebarOpen} onClose={() => setTeamSidebarOpen(false)} />}

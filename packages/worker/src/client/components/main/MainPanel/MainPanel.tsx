@@ -1,10 +1,11 @@
 import MainHeader from '../MainHeader'
-import EmptyState from '../EmptyState'
+import LobbyView from '../LobbyView'
 import ChatView from '../../chat/ChatView'
 import type { Room, TeamInfo } from '../../../lib/types'
 
 type MainPanelProps = {
   currentRoom: Room | null
+  rooms: Room[]
   apiKey: string
   userName: string
   showInvite: boolean
@@ -12,10 +13,11 @@ type MainPanelProps = {
   onMobileToggle: () => void
   onTeamToggle: () => void
   onInviteClick: () => void
+  onSelectRoom: (room: Room) => void
   onTeamInfo?: (info: TeamInfo | null) => void
 }
 
-export default function MainPanel({ currentRoom, apiKey, userName, showInvite, showTeamToggle, onMobileToggle, onTeamToggle, onInviteClick, onTeamInfo }: MainPanelProps) {
+export default function MainPanel({ currentRoom, rooms, apiKey, userName, showInvite, showTeamToggle, onMobileToggle, onTeamToggle, onInviteClick, onSelectRoom, onTeamInfo }: MainPanelProps) {
   const roomName = currentRoom?.name ?? 'Select a channel'
 
   return (
@@ -31,7 +33,7 @@ export default function MainPanel({ currentRoom, apiKey, userName, showInvite, s
       {currentRoom ? (
         <ChatView key={currentRoom.id} room={currentRoom} apiKey={apiKey} userName={userName} onTeamInfo={onTeamInfo} />
       ) : (
-        <EmptyState />
+        <LobbyView rooms={rooms} onSelectRoom={onSelectRoom} />
       )}
     </div>
   )
