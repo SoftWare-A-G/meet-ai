@@ -3,7 +3,7 @@ export type Bindings = {
   CHAT_ROOM: DurableObjectNamespace
   LOBBY: DurableObjectNamespace
   ASSETS: Fetcher
-  UPLOADS: R2Bucket
+  UPLOADS: KVNamespace
 }
 
 export type Variables = {

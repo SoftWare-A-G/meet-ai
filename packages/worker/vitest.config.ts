@@ -20,7 +20,7 @@ export default defineWorkersConfig(async () => {
               'enable_nodejs_perf_hooks_module',
             ],
             d1Databases: ['DB'],
-            r2Buckets: ['UPLOADS'],
+            kvNamespaces: ['UPLOADS'],
             bindings: { TEST_MIGRATIONS: migrations },
           },
         },

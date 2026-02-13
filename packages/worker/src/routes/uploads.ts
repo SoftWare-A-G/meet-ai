@@ -33,9 +33,8 @@ uploadsRoute.post('/:id/upload', requireAuth, rateLimitByKey(10, 60_000), async 
   const id = crypto.randomUUID()
   const r2Key = `${keyId}/${roomId}/${id}/${file.name}`
 
-  await c.env.UPLOADS.put(r2Key, file.stream(), {
-    httpMetadata: { contentType: file.type || 'application/octet-stream' },
-  })
+  const fileBytes = await file.arrayBuffer()
+  await c.env.UPLOADS.put(r2Key, fileBytes, { expirationTtl: 86400 })
 
   await db.insertAttachment(id, keyId, roomId, r2Key, file.name, file.size, file.type || 'application/octet-stream')
 
@@ -53,12 +52,12 @@ uploadsRoute.get('/attachments/:id', requireAuth, async (c) => {
     return c.json({ error: 'attachment not found' }, 404)
   }
 
-  const object = await c.env.UPLOADS.get(attachment.r2_key)
-  if (!object) {
+  const data = await c.env.UPLOADS.get(attachment.r2_key, { type: 'arrayBuffer' })
+  if (!data) {
     return c.json({ error: 'file not found' }, 404)
   }
 
-  return new Response(object.body, {
+  return new Response(data, {
     headers: {
       'Content-Type': attachment.content_type,
       'Content-Disposition': `attachment; filename="${attachment.filename}"`,
