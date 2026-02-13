@@ -5,7 +5,7 @@
 #
 # Always exits 0 so it never blocks the agent.
 
-set -euo pipefail
+set -eo pipefail
 trap 'exit 0' ERR
 
 # Read the hook event JSON from stdin
@@ -96,7 +96,8 @@ MSGID_FILE="/tmp/meet-ai-hook-${SESSION_ID}.msgid"
 MSG_ID=""
 
 if [ -f "$MSGID_FILE" ]; then
-  FILE_AGE=$(( $(date +%s) - $(stat -f %m "$MSGID_FILE") ))
+  FILE_MTIME="$(stat -f %m "$MSGID_FILE" 2>/dev/null || echo 0)"
+  FILE_AGE=$(( $(date +%s) - FILE_MTIME ))
   if [ "$FILE_AGE" -gt 120 ]; then
     rm -f "$MSGID_FILE"
     MSG_ID=""
