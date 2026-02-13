@@ -4,7 +4,6 @@ import { loadMessagesSinceSeq } from '../lib/api'
 
 type UseRoomWebSocketOptions = {
   onTeamInfo?: (info: TeamInfo) => void
-  onTasksInfo?: (info: TasksInfo) => void
 }
 
 const MIN_BACKOFF = 1000
@@ -21,11 +20,10 @@ export function useRoomWebSocket(
   onMessageRef.current = onMessage
   const onTeamInfoRef = useRef(options?.onTeamInfo)
   onTeamInfoRef.current = options?.onTeamInfo
-  const onTasksInfoRef = useRef(options?.onTasksInfo)
-  onTasksInfoRef.current = options?.onTasksInfo
   const lastSeqRef = useRef<number>(0) as { current: number }
   const backoffRef = useRef<number>(MIN_BACKOFF) as { current: number }
   const [connected, setConnected] = useState(true)
+  const [tasksInfo, setTasksInfo] = useState<TasksInfo | null>(null)
 
   useEffect(() => {
     if (!roomId || !apiKey) return
@@ -64,7 +62,7 @@ export function useRoomWebSocket(
             return
           }
           if (data.type === 'tasks_info') {
-            onTasksInfoRef.current?.(data as TasksInfo)
+            setTasksInfo(data as TasksInfo)
             return
           }
           const msg = data as Message
@@ -115,5 +113,5 @@ export function useRoomWebSocket(
     }
   }, [roomId, apiKey])
 
-  return { wsRef, connected }
+  return { wsRef, connected, tasksInfo }
 }

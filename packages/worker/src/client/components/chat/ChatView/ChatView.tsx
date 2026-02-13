@@ -18,7 +18,7 @@ type ChatViewProps = {
   apiKey: string
   userName: string
   onTeamInfo?: (info: TeamInfo | null) => void
-  onTasksInfo?: (info: TasksInfo) => void
+  onTasksInfo?: (info: TasksInfo | null) => void
 }
 
 export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksInfo }: ChatViewProps) {
@@ -108,11 +108,11 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
     onTeamInfo?.(info)
   }, [onTeamInfo])
 
-  const onTasksInfoWs = useCallback((info: TasksInfo) => {
-    onTasksInfo?.(info)
-  }, [onTasksInfo])
+  const { connected, tasksInfo } = useRoomWebSocket(room.id, apiKey, onWsMessage, { onTeamInfo: onTeamInfoWs })
 
-  const { connected } = useRoomWebSocket(room.id, apiKey, onWsMessage, { onTeamInfo: onTeamInfoWs, onTasksInfo: onTasksInfoWs })
+  useEffect(() => {
+    onTasksInfo?.(tasksInfo)
+  }, [tasksInfo])
 
   // Flush queue on coming online
   useEffect(() => {

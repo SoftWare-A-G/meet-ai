@@ -15,7 +15,7 @@ type MainPanelProps = {
   onInviteClick: () => void
   onSelectRoom: (room: Room) => void
   onTeamInfo?: (info: TeamInfo | null) => void
-  onTasksInfo?: (info: TasksInfo) => void
+  onTasksInfo?: (info: TasksInfo | null) => void
 }
 
 export default function MainPanel({ currentRoom, rooms, apiKey, userName, showInvite, showTeamToggle, onMobileToggle, onTeamToggle, onInviteClick, onSelectRoom, onTeamInfo, onTasksInfo }: MainPanelProps) {

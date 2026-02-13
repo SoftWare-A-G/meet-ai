@@ -59,19 +59,17 @@ export default function TeamSidebar({ teamInfo, tasksInfo, isOpen, onClose }: Te
           {inactive.map(m => <MemberRow key={m.name} member={m} inactive />)}
         </div>
       )}
-      {tasksInfo && tasksInfo.tasks.length > 0 && (
-        <div class="team-section">
-          <div class="team-section-label">
-            Tasks
-            <span class="tasks-count">
-              {tasksInfo.tasks.filter(t => t.status === 'completed').length}/{tasksInfo.tasks.length}
-            </span>
-          </div>
-          {tasksInfo.tasks.filter(t => t.status === 'in_progress').map(t => <TaskRow key={t.id} task={t} />)}
-          {tasksInfo.tasks.filter(t => t.status === 'pending').map(t => <TaskRow key={t.id} task={t} />)}
-          {tasksInfo.tasks.filter(t => t.status === 'completed').map(t => <TaskRow key={t.id} task={t} />)}
+      <div class="team-section" style={{ display: tasksInfo && tasksInfo.tasks.length > 0 ? '' : 'none' }}>
+        <div class="team-section-label">
+          Tasks
+          <span class="tasks-count">
+            {(tasksInfo?.tasks ?? []).filter(t => t.status === 'completed').length}/{(tasksInfo?.tasks ?? []).length}
+          </span>
         </div>
-      )}
+        {(tasksInfo?.tasks ?? []).filter(t => t.status === 'in_progress').map(t => <TaskRow key={t.id} task={t} />)}
+        {(tasksInfo?.tasks ?? []).filter(t => t.status === 'pending').map(t => <TaskRow key={t.id} task={t} />)}
+        {(tasksInfo?.tasks ?? []).filter(t => t.status === 'completed').map(t => <TaskRow key={t.id} task={t} />)}
+      </div>
     </div>
   )
 }
