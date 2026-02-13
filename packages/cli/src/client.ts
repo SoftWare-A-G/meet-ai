@@ -286,6 +286,21 @@ export function createClient(baseUrl: string, apiKey?: string) {
       });
     },
 
+    async sendTasks(roomId: string, payload: string) {
+      return withRetry(async () => {
+        const res = await fetch(`${baseUrl}/api/rooms/${roomId}/tasks`, {
+          method: "POST",
+          headers: headers(),
+          body: payload,
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error((err as any).error ?? `HTTP ${res.status}`);
+        }
+        return res.text();
+      });
+    },
+
     async getMessageAttachments(roomId: string, messageId: string) {
       const res = await fetch(
         `${baseUrl}/api/rooms/${roomId}/messages/${messageId}/attachments`,

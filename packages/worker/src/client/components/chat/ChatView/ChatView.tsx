@@ -6,7 +6,7 @@ import { useOfflineQueue } from '../../../hooks/useOfflineQueue'
 import * as api from '../../../lib/api'
 import { requestPermission, notifyIfHidden } from '../../../lib/notifications'
 import { parseUtcDate } from '../../../lib/dates'
-import type { Message as MessageType, Room, TeamInfo } from '../../../lib/types'
+import type { Message as MessageType, Room, TeamInfo, TasksInfo } from '../../../lib/types'
 
 type DisplayMessage = MessageType & {
   tempId?: string
@@ -18,9 +18,10 @@ type ChatViewProps = {
   apiKey: string
   userName: string
   onTeamInfo?: (info: TeamInfo | null) => void
+  onTasksInfo?: (info: TasksInfo) => void
 }
 
-export default function ChatView({ room, apiKey, userName, onTeamInfo }: ChatViewProps) {
+export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksInfo }: ChatViewProps) {
   const [messages, setMessages] = useState<DisplayMessage[]>([])
   const [attachmentCounts, setAttachmentCounts] = useState<Record<string, number>>({})
   const [unreadCount, setUnreadCount] = useState(0)
@@ -107,7 +108,11 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo }: ChatVie
     onTeamInfo?.(info)
   }, [onTeamInfo])
 
-  const { connected } = useRoomWebSocket(room.id, apiKey, onWsMessage, { onTeamInfo: onTeamInfoWs })
+  const onTasksInfoWs = useCallback((info: TasksInfo) => {
+    onTasksInfo?.(info)
+  }, [onTasksInfo])
+
+  const { connected } = useRoomWebSocket(room.id, apiKey, onWsMessage, { onTeamInfo: onTeamInfoWs, onTasksInfo: onTasksInfoWs })
 
   // Flush queue on coming online
   useEffect(() => {

@@ -11,7 +11,7 @@ import { useLobbyWebSocket } from '../../hooks/useLobbyWebSocket'
 import { useUrlRouting, getRoomIdFromUrl } from '../../hooks/useUrlRouting'
 import { STORAGE_KEYS } from '../../lib/constants'
 import * as api from '../../lib/api'
-import type { Room, TeamInfo } from '../../lib/types'
+import type { Room, TeamInfo, TasksInfo } from '../../lib/types'
 
 type ChatLayoutProps = {
   apiKey: string
@@ -29,6 +29,7 @@ export default function ChatLayout({ apiKey, userName, colorSchema, onNameChange
   const [showQR, setShowQR] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [teamInfo, setTeamInfo] = useState<TeamInfo | null>(null)
+  const [tasksInfo, setTasksInfo] = useState<TasksInfo | null>(null)
   const [teamSidebarOpen, setTeamSidebarOpen] = useState(false)
   const [showIOSInstall, setShowIOSInstall] = useState(false)
 
@@ -119,8 +120,9 @@ export default function ChatLayout({ apiKey, userName, colorSchema, onNameChange
         onInviteClick={() => setShowQR(true)}
         onSelectRoom={handleSelectRoom}
         onTeamInfo={setTeamInfo}
+        onTasksInfo={setTasksInfo}
       />
-      {teamInfo && <TeamSidebar teamInfo={teamInfo} isOpen={teamSidebarOpen} onClose={() => setTeamSidebarOpen(false)} />}
+      {teamInfo && <TeamSidebar teamInfo={teamInfo} tasksInfo={tasksInfo} isOpen={teamSidebarOpen} onClose={() => setTeamSidebarOpen(false)} />}
       {teamSidebarOpen && <div class="team-sidebar-backdrop" onClick={() => setTeamSidebarOpen(false)} style="display:block" />}
       {showSettings && (
         <SettingsModal

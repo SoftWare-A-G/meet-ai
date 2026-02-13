@@ -201,3 +201,26 @@ roomsRoute.post('/:id/team-info', requireAuth, async (c) => {
 
   return c.json({ ok: true })
 })
+
+// POST /api/rooms/:id/tasks — push tasks info to ChatRoom DO
+roomsRoute.post('/:id/tasks', requireAuth, async (c) => {
+  const keyId = c.get('keyId')
+  const roomId = c.req.param('id')
+  const db = queries(c.env.DB)
+
+  const room = await db.findRoom(roomId, keyId)
+  if (!room) {
+    return c.json({ error: 'room not found' }, 404)
+  }
+
+  const body = await c.req.json()
+
+  const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
+  const stub = c.env.CHAT_ROOM.get(doId)
+  await stub.fetch(new Request('http://internal/tasks', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  }))
+
+  return c.json({ ok: true })
+})

@@ -52,6 +52,12 @@ Get a free API key (no signup): <https://meet-ai.cc/key>
 |--------|------|-------------|
 | POST | \`/api/rooms/:id/team-info\` | Push team metadata to the room |
 
+### Tasks
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | \`/api/rooms/:id/tasks\` | Push task list to the room |
+
 ### WebSocket
 
 | Method | Path | Description |

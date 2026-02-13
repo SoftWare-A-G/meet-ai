@@ -5,6 +5,7 @@ const ALARM_INTERVAL_MS = 60_000 // check every 60s
 
 export class ChatRoom extends DurableObject {
   private teamInfo: string | null = null
+  private tasksInfo: string | null = null
 
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url)
@@ -29,6 +30,14 @@ export class ChatRoom extends DurableObject {
       }
       if (this.teamInfo) {
         server.send(this.teamInfo)
+      }
+
+      // Send cached tasks info to the new client (load from storage if cache is empty)
+      if (!this.tasksInfo) {
+        this.tasksInfo = await this.ctx.storage.get<string>('tasksInfo') ?? null
+      }
+      if (this.tasksInfo) {
+        server.send(this.tasksInfo)
       }
 
       // Schedule alarm to clean up stale connections
@@ -67,6 +76,23 @@ export class ChatRoom extends DurableObject {
       const payload = JSON.stringify({ type: 'team_info', ...parsed })
       this.teamInfo = payload
       await this.ctx.storage.put('teamInfo', payload)
+
+      for (const ws of this.ctx.getWebSockets()) {
+        try {
+          ws.send(payload)
+        } catch { /* client gone */ }
+      }
+
+      return new Response('ok')
+    }
+
+    // /tasks — store and broadcast tasks info
+    if (url.pathname === '/tasks') {
+      const body = await request.text()
+      const parsed = JSON.parse(body)
+      const payload = JSON.stringify({ type: 'tasks_info', ...parsed })
+      this.tasksInfo = payload
+      await this.ctx.storage.put('tasksInfo', payload)
 
       for (const ws of this.ctx.getWebSockets()) {
         try {

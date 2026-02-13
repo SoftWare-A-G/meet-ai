@@ -216,6 +216,24 @@ switch (command) {
     break;
   }
 
+  case "send-tasks": {
+    const [stRoomId, stPayload] = args;
+    if (!stRoomId || !stPayload) {
+      console.error("Usage: cli send-tasks <roomId> '<json-payload>'");
+      process.exit(1);
+    }
+    // Validate JSON before sending
+    try {
+      JSON.parse(stPayload);
+    } catch {
+      console.error("Error: payload must be valid JSON");
+      process.exit(1);
+    }
+    await client.sendTasks(stRoomId, stPayload);
+    console.log("Tasks info sent");
+    break;
+  }
+
   case "download-attachment": {
     const attachmentId = args[0];
     if (!attachmentId) {
@@ -284,5 +302,6 @@ Commands:
     --inbox <agent>       Target agent inbox (requires --team)
   download-attachment <attachmentId>             Download an attachment to /tmp
   send-team-info <roomId> '<json>'             Send team info to a room
+  send-tasks <roomId> '<json>'                 Send tasks info to a room
   generate-key                                 Generate a new API key`);
 }

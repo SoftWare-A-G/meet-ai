@@ -1,8 +1,9 @@
-import type { TeamInfo, TeamMember } from '../../../lib/types'
+import type { TeamInfo, TeamMember, TasksInfo, TaskItem } from '../../../lib/types'
 import { ensureSenderContrast } from '../../../lib/colors'
 
 type TeamSidebarProps = {
   teamInfo: TeamInfo
+  tasksInfo?: TasksInfo | null
   isOpen: boolean
   onClose: () => void
 }
@@ -20,7 +21,22 @@ function MemberRow({ member, inactive }: { member: TeamMember; inactive?: boolea
   )
 }
 
-export default function TeamSidebar({ teamInfo, isOpen, onClose }: TeamSidebarProps) {
+function TaskRow({ task }: { task: TaskItem }) {
+  const statusIcon = task.status === 'completed' ? '\u2713'
+    : task.status === 'in_progress' ? '\u25CF'
+    : '\u25CB'
+  const statusClass = `task-status task-status--${task.status.replace('_', '-')}`
+
+  return (
+    <div class="task-row">
+      <span class={statusClass}>{statusIcon}</span>
+      <span class="task-subject">{task.subject}</span>
+      {task.owner && <span class="task-owner">{task.owner}</span>}
+    </div>
+  )
+}
+
+export default function TeamSidebar({ teamInfo, tasksInfo, isOpen, onClose }: TeamSidebarProps) {
   const active = teamInfo.members.filter(m => m.status === 'active')
   const inactive = teamInfo.members.filter(m => m.status === 'inactive')
 
@@ -41,6 +57,19 @@ export default function TeamSidebar({ teamInfo, isOpen, onClose }: TeamSidebarPr
         <div class="team-section">
           <div class="team-section-label">Inactive</div>
           {inactive.map(m => <MemberRow key={m.name} member={m} inactive />)}
+        </div>
+      )}
+      {tasksInfo && tasksInfo.tasks.length > 0 && (
+        <div class="team-section">
+          <div class="team-section-label">
+            Tasks
+            <span class="tasks-count">
+              {tasksInfo.tasks.filter(t => t.status === 'completed').length}/{tasksInfo.tasks.length}
+            </span>
+          </div>
+          {tasksInfo.tasks.filter(t => t.status === 'in_progress').map(t => <TaskRow key={t.id} task={t} />)}
+          {tasksInfo.tasks.filter(t => t.status === 'pending').map(t => <TaskRow key={t.id} task={t} />)}
+          {tasksInfo.tasks.filter(t => t.status === 'completed').map(t => <TaskRow key={t.id} task={t} />)}
         </div>
       )}
     </div>

@@ -431,6 +431,25 @@ body {
 .team-member-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .team-member-model { font-size: 11px; opacity: 0.4; white-space: nowrap; }
 .team-member--inactive { opacity: 0.4; }
+.task-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 16px; font-size: 13px;
+}
+.task-status {
+  flex-shrink: 0; width: 16px; text-align: center; font-size: 12px;
+}
+.task-status--completed { color: #22c55e; }
+.task-status--in-progress { color: #eab308; }
+.task-status--pending { color: #6b7280; }
+.task-subject {
+  flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.task-owner {
+  font-size: 11px; color: #6b7280; flex-shrink: 0;
+}
+.tasks-count {
+  font-size: 11px; color: #6b7280; margin-left: 6px;
+}
 .team-sidebar-backdrop {
   display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
   z-index: 49; -webkit-tap-highlight-color: transparent;

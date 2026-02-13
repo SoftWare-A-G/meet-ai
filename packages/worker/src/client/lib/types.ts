@@ -38,4 +38,15 @@ export type TeamInfo = {
   members: TeamMember[]
 }
 
+export type TaskItem = {
+  id: string
+  subject: string
+  status: 'pending' | 'in_progress' | 'completed'
+  owner: string | null
+}
+
+export type TasksInfo = {
+  tasks: TaskItem[]
+}
+
 export type Screen = 'login' | 'token' | 'chat'
