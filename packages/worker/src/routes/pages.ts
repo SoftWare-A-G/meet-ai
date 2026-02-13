@@ -14,7 +14,11 @@ const render = (component: ReturnType<typeof createElement>) =>
 pagesRoute.get('/', (c) => {
   const accept = c.req.header('Accept') || ''
   if (accept.includes('text/markdown')) {
-    return c.text(landingMarkdown, 200, { 'Content-Type': 'text/markdown; charset=UTF-8' })
+    return c.text(landingMarkdown, 200, {
+      'Content-Type': 'text/markdown; charset=UTF-8',
+      'X-Markdown-Tokens': '600',
+      'Content-Signal': 'ai-train=yes, search=yes, ai-input=yes',
+    })
   }
   return c.html(render(createElement(LandingPage, {})))
 })
