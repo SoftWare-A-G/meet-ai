@@ -683,6 +683,172 @@ describe('Logs', () => {
   })
 })
 
+describe('Attachments / Uploads', () => {
+  /** Helper: build a FormData with a file field */
+  function buildUpload(content: string, filename: string, contentType: string = 'text/plain'): FormData {
+    const formData = new FormData()
+    formData.append('file', new File([content], filename, { type: contentType }))
+    return formData
+  }
+
+  async function uploadFile(key: string, roomId: string, content: string, filename: string, contentType?: string) {
+    const formData = buildUpload(content, filename, contentType)
+    return SELF.fetch(`http://localhost/api/rooms/${roomId}/upload`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}` },
+      body: formData,
+    })
+  }
+
+  it('POST /api/rooms/:id/upload uploads a file successfully', async () => {
+    const key = await createKey()
+    const roomId = await createRoom(key, 'upload-room')
+
+    const res = await uploadFile(key, roomId, 'hello world', 'test.txt')
+    expect(res.status).toBe(201)
+    const body = await res.json() as { id: string; filename: string; size: number; content_type: string }
+    expect(body.id).toBeTruthy()
+    expect(body.filename).toBe('test.txt')
+    expect(body.size).toBe(11) // 'hello world'.length
+    expect(body.content_type).toBe('text/plain')
+  })
+
+  it('upload rejects files exceeding 5MB', async () => {
+    const key = await createKey()
+    const roomId = await createRoom(key, 'upload-big-room')
+
+    // Create a string > 5MB
+    const bigContent = 'x'.repeat(5 * 1024 * 1024 + 1)
+    const res = await uploadFile(key, roomId, bigContent, 'big.bin', 'application/octet-stream')
+    expect(res.status).toBe(413)
+    const body = await res.json() as { error: string }
+    expect(body.error).toBe('file exceeds 5MB limit')
+  })
+
+  it('upload requires auth', async () => {
+    const res = await SELF.fetch('http://localhost/api/rooms/any-room/upload', {
+      method: 'POST',
+      body: buildUpload('test', 'test.txt'),
+    })
+    expect(res.status).toBe(401)
+  })
+
+  it('upload returns 404 for non-existent room', async () => {
+    const key = await createKey()
+    const res = await uploadFile(key, 'nonexistent-room', 'test', 'test.txt')
+    expect(res.status).toBe(404)
+    const body = await res.json() as { error: string }
+    expect(body.error).toBe('room not found')
+  })
+
+  it('GET /api/attachments/:id downloads an uploaded file', async () => {
+    const key = await createKey()
+    const roomId = await createRoom(key, 'download-room')
+
+    const uploadRes = await uploadFile(key, roomId, 'file content here', 'doc.txt')
+    const { id } = await uploadRes.json() as { id: string }
+
+    const downloadRes = await SELF.fetch(`http://localhost/api/attachments/${id}`, {
+      headers: { Authorization: `Bearer ${key}` },
+    })
+    expect(downloadRes.status).toBe(200)
+    expect(downloadRes.headers.get('Content-Type')).toBe('text/plain')
+    expect(downloadRes.headers.get('Content-Disposition')).toBe('attachment; filename="doc.txt"')
+    const text = await downloadRes.text()
+    expect(text).toBe('file content here')
+  })
+
+  it('download requires auth', async () => {
+    const res = await SELF.fetch('http://localhost/api/attachments/some-id')
+    expect(res.status).toBe(401)
+  })
+
+  it('download is scoped by key_id (tenant isolation)', async () => {
+    const key1 = await createKey()
+    const key2 = await createKey()
+    const roomId = await createRoom(key1, 'scoped-dl-room')
+
+    const uploadRes = await uploadFile(key1, roomId, 'secret file', 'secret.txt')
+    const { id } = await uploadRes.json() as { id: string }
+
+    // key1 can download
+    const res1 = await SELF.fetch(`http://localhost/api/attachments/${id}`, {
+      headers: { Authorization: `Bearer ${key1}` },
+    })
+    expect(res1.status).toBe(200)
+
+    // key2 cannot download key1's attachment
+    const res2 = await SELF.fetch(`http://localhost/api/attachments/${id}`, {
+      headers: { Authorization: `Bearer ${key2}` },
+    })
+    expect(res2.status).toBe(404)
+    const body = await res2.json() as { error: string }
+    expect(body.error).toBe('attachment not found')
+  })
+
+  it('download returns 404 for non-existent attachment', async () => {
+    const key = await createKey()
+    const res = await SELF.fetch('http://localhost/api/attachments/nonexistent-id', {
+      headers: { Authorization: `Bearer ${key}` },
+    })
+    expect(res.status).toBe(404)
+    const body = await res.json() as { error: string }
+    expect(body.error).toBe('attachment not found')
+  })
+
+  it('PATCH /api/attachments/:id links attachment to a message', async () => {
+    const key = await createKey()
+    const roomId = await createRoom(key, 'link-room')
+
+    // Upload a file
+    const uploadRes = await uploadFile(key, roomId, 'attachment content', 'patch.txt')
+    const { id: attachmentId } = await uploadRes.json() as { id: string }
+
+    // Create a message
+    const msgRes = await sendMessage(key, roomId, 'alice', 'message with attachment')
+    const { id: messageId } = await msgRes.json() as { id: string }
+
+    // Link attachment to message
+    const patchRes = await SELF.fetch(`http://localhost/api/attachments/${attachmentId}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message_id: messageId }),
+    })
+    expect(patchRes.status).toBe(200)
+    const body = await patchRes.json() as { ok: boolean }
+    expect(body.ok).toBe(true)
+  })
+
+  it('PATCH requires auth', async () => {
+    const res = await SELF.fetch('http://localhost/api/attachments/some-id', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message_id: 'msg-id' }),
+    })
+    expect(res.status).toBe(401)
+  })
+
+  it('PATCH is scoped by key_id (tenant isolation)', async () => {
+    const key1 = await createKey()
+    const key2 = await createKey()
+    const roomId = await createRoom(key1, 'scoped-patch-room')
+
+    // key1 uploads a file
+    const uploadRes = await uploadFile(key1, roomId, 'data', 'file.txt')
+    const { id: attachmentId } = await uploadRes.json() as { id: string }
+
+    // key2 tries to link it — should fail
+    const patchRes = await SELF.fetch(`http://localhost/api/attachments/${attachmentId}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${key2}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message_id: 'any-message-id' }),
+    })
+    expect(patchRes.status).toBe(404)
+    const body = await patchRes.json() as { error: string }
+    expect(body.error).toBe('attachment not found')
+  })
+})
+
 describe('Lobby', () => {
   it('GET /api/lobby/ws rejects without auth', async () => {
     const res = await SELF.fetch('http://localhost/api/lobby/ws', {

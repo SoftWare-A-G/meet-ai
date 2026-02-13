@@ -1,4 +1,5 @@
 type Message = { id: string; roomId: string; sender: string; sender_type: string; content: string; color?: string };
+type AttachmentMeta = { id: string; filename: string; size: number; content_type: string };
 
 function wsLog(data: Record<string, unknown>) {
   const json = JSON.stringify({ ...data, ts: new Date().toISOString() });
@@ -260,6 +261,36 @@ export function createClient(baseUrl: string, apiKey?: string) {
         }
         return res.text();
       });
+    },
+
+    async getMessageAttachments(roomId: string, messageId: string) {
+      const res = await fetch(
+        `${baseUrl}/api/rooms/${roomId}/messages/${messageId}/attachments`,
+        { headers: apiKey ? { "Authorization": `Bearer ${apiKey}` } : undefined },
+      );
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as any).error ?? `HTTP ${res.status}`);
+      }
+      return res.json() as Promise<AttachmentMeta[]>;
+    },
+
+    async downloadAttachment(attachmentId: string, filename: string): Promise<string> {
+      const res = await fetch(`${baseUrl}/api/attachments/${attachmentId}`, {
+        headers: apiKey ? { "Authorization": `Bearer ${apiKey}` } : undefined,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as any).error ?? `HTTP ${res.status}`);
+      }
+
+      const { mkdirSync, writeFileSync } = await import("fs");
+      const dir = "/tmp/meet-ai-attachments";
+      mkdirSync(dir, { recursive: true });
+      const localPath = `${dir}/${attachmentId}-${filename}`;
+      const buffer = Buffer.from(await res.arrayBuffer());
+      writeFileSync(localPath, buffer);
+      return localPath;
     },
 
     async generateKey() {

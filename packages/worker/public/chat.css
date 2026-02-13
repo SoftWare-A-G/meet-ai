@@ -537,6 +537,35 @@ body {
 }
 .ios-install-close:hover { filter: brightness(1.1); }
 
+/* --- Attachment chips in input --- */
+.chat-attachments-bar {
+  display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px 0;
+}
+.chat-attachment-chip {
+  display: flex; align-items: center; gap: 4px;
+  background: rgba(128,128,128,0.15); border-radius: 6px;
+  padding: 4px 8px; font-size: 12px; max-width: 200px;
+}
+.chat-attachment-chip.error { background: rgba(248,81,73,0.15); color: #F85149; }
+.chat-attachment-chip.uploading { opacity: 0.7; }
+.chat-attachment-chip.done { background: rgba(58,217,0,0.12); }
+.chip-name {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  max-width: 120px;
+}
+.chip-status { opacity: 0.6; white-space: nowrap; }
+.chip-error { font-size: 11px; white-space: nowrap; }
+.chip-remove {
+  background: none; border: none; color: var(--c-msg-text); cursor: pointer;
+  font-size: 14px; padding: 0 2px; opacity: 0.5; line-height: 1;
+}
+.chip-remove:hover { opacity: 1; }
+
+/* --- Attachment label on messages --- */
+.msg-attachments-label {
+  font-size: 12px; opacity: 0.6; margin-top: 4px;
+}
+
 /* --- Spin animation (used for QR loading) --- */
 @keyframes spin {
   to { transform: rotate(360deg); }

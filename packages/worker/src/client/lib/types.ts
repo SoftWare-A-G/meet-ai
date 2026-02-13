@@ -12,6 +12,7 @@ export type Message = {
   created_at: string
   type?: 'message' | 'log'
   seq?: number | null
+  attachment_count?: number
 }
 
 export type PendingMessage = {

@@ -1,4 +1,4 @@
-import type { ApiKey, Room, Message, Log } from '../lib/types'
+import type { ApiKey, Room, Message, Log, Attachment } from '../lib/types'
 
 export function queries(db: D1Database) {
   return {
@@ -109,6 +109,39 @@ export function queries(db: D1Database) {
       await db.prepare(
         'DELETE FROM logs WHERE created_at < ?'
       ).bind(olderThan).run()
+    },
+
+    async insertAttachment(id: string, keyId: string, roomId: string, r2Key: string, filename: string, size: number, contentType: string) {
+      await db.prepare(
+        'INSERT INTO attachments (id, key_id, room_id, r2_key, filename, size, content_type) VALUES (?, ?, ?, ?, ?, ?, ?)'
+      ).bind(id, keyId, roomId, r2Key, filename, size, contentType).run()
+    },
+
+    async findAttachment(id: string, keyId: string) {
+      return db.prepare(
+        'SELECT id, key_id, room_id, message_id, r2_key, filename, size, content_type, created_at FROM attachments WHERE id = ? AND key_id = ?'
+      ).bind(id, keyId).first<Attachment>()
+    },
+
+    async listAttachmentsByMessage(messageId: string) {
+      const result = await db.prepare(
+        'SELECT id, key_id, room_id, message_id, r2_key, filename, size, content_type, created_at FROM attachments WHERE message_id = ?'
+      ).bind(messageId).all<Attachment>()
+      return result.results
+    },
+
+    async linkAttachmentToMessage(id: string, keyId: string, messageId: string) {
+      const result = await db.prepare(
+        'UPDATE attachments SET message_id = ? WHERE id = ? AND key_id = ?'
+      ).bind(messageId, id, keyId).run()
+      return result.meta.changes > 0
+    },
+
+    async countAttachmentsByRoom(roomId: string) {
+      const result = await db.prepare(
+        'SELECT message_id, COUNT(*) as count FROM attachments WHERE room_id = ? AND message_id IS NOT NULL GROUP BY message_id'
+      ).bind(roomId).all<{ message_id: string; count: number }>()
+      return result.results
     },
   }
 }

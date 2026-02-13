@@ -7,6 +7,7 @@ import { roomsRoute } from './routes/rooms'
 import { wsRoute } from './routes/ws'
 import { lobbyRoute } from './routes/lobby'
 import { pagesRoute } from './routes/pages'
+import { uploadsRoute } from './routes/uploads'
 import { queries } from './db/queries'
 
 export { ChatRoom } from './durable-objects/chat-room'
@@ -29,6 +30,8 @@ app.route('/api/keys', keysRoute)
 app.route('/api/rooms', roomsRoute)
 app.route('/api/rooms', wsRoute)
 app.route('/api/lobby', lobbyRoute)
+app.route('/api/rooms', uploadsRoute)
+app.route('/api', uploadsRoute)
 app.route('/', pagesRoute)
 
 // Auth landing page — claims a share token and redirects to chat

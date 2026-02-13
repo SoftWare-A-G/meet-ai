@@ -8,6 +8,25 @@ const client = createClient(API_URL, API_KEY);
 
 const [command, ...args] = process.argv.slice(2);
 
+async function downloadMessageAttachments(roomId: string, messageId: string): Promise<string[]> {
+  try {
+    const attachments = await client.getMessageAttachments(roomId, messageId);
+    if (!attachments.length) return [];
+    const paths: string[] = [];
+    for (const att of attachments) {
+      try {
+        const localPath = await client.downloadAttachment(att.id, att.filename);
+        paths.push(localPath);
+      } catch (err) {
+        console.error(JSON.stringify({ event: "attachment_download_error", attachmentId: att.id, error: err instanceof Error ? err.message : String(err) }));
+      }
+    }
+    return paths;
+  } catch {
+    return [];
+  }
+}
+
 function parseFlags(args: string[]): { positional: string[]; flags: Record<string, string> } {
   const positional: string[] = [];
   const flags: Record<string, string> = {};
@@ -59,7 +78,12 @@ switch (command) {
       exclude: flags.exclude,
       senderType: flags['sender-type'],
     });
-    console.log(JSON.stringify(messages));
+    // Enrich messages with downloaded attachment paths
+    const enriched = await Promise.all(messages.map(async (msg: any) => {
+      const paths = await downloadMessageAttachments(roomId, msg.id);
+      return paths.length ? { ...msg, attachments: paths } : msg;
+    }));
+    console.log(JSON.stringify(enriched));
     break;
   }
 
@@ -82,33 +106,43 @@ switch (command) {
 
     const teamDir = team ? `${process.env.HOME}/.claude/teams/${team}` : null;
 
-    function routeToInbox(msg: { sender: string; content: string }) {
+    function routeToInbox(msg: { sender: string; content: string }, attachmentPaths?: string[]) {
       if (!inboxDir) return;
-      const entry = {
+      const entry: Record<string, unknown> = {
         from: "meet-ai:" + msg.sender,
         text: msg.content,
         timestamp: new Date().toISOString(),
         read: false,
       };
+      if (attachmentPaths?.length) {
+        entry.attachments = attachmentPaths;
+      }
 
       const members = teamDir ? getTeamMembers(teamDir) : new Set<string>();
       const targets = resolveInboxTargets(msg.content, members);
 
       if (targets) {
         for (const target of targets) {
-          appendToInbox(`${inboxDir}/${target}.json`, entry);
+          appendToInbox(`${inboxDir}/${target}.json`, entry as any);
         }
       } else if (defaultInboxPath) {
-        appendToInbox(defaultInboxPath, entry);
+        appendToInbox(defaultInboxPath, entry as any);
       }
     }
 
-    const onMessage = inboxDir
-      ? (msg: any) => {
-          console.log(JSON.stringify(msg));
-          routeToInbox(msg);
-        }
-      : undefined;
+    const onMessage = (msg: any) => {
+      // Check for attachments asynchronously, then output and route
+      if (msg.id && msg.room_id) {
+        downloadMessageAttachments(msg.room_id, msg.id).then(paths => {
+          const output = paths.length ? { ...msg, attachments: paths } : msg;
+          console.log(JSON.stringify(output));
+          if (inboxDir) routeToInbox(msg, paths);
+        });
+      } else {
+        console.log(JSON.stringify(msg));
+        if (inboxDir) routeToInbox(msg);
+      }
+    };
 
     const ws = client.listen(roomId, { exclude: flags.exclude, senderType: flags['sender-type'], onMessage });
 
@@ -182,6 +216,40 @@ switch (command) {
     break;
   }
 
+  case "download-attachment": {
+    const attachmentId = args[0];
+    if (!attachmentId) {
+      console.error("Usage: cli download-attachment <attachmentId>");
+      process.exit(1);
+    }
+    try {
+      // Fetch attachment metadata to get the filename
+      const res = await fetch(`${API_URL}/api/attachments/${attachmentId}`, {
+        headers: API_KEY ? { "Authorization": `Bearer ${API_KEY}` } : undefined,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.error((err as any).error ?? `HTTP ${res.status}`);
+        process.exit(1);
+      }
+      const disposition = res.headers.get("Content-Disposition") || "";
+      const filenameMatch = disposition.match(/filename="(.+?)"/);
+      const filename = filenameMatch?.[1] || attachmentId;
+
+      const { mkdirSync, writeFileSync } = await import("fs");
+      const dir = "/tmp/meet-ai-attachments";
+      mkdirSync(dir, { recursive: true });
+      const localPath = `${dir}/${attachmentId}-${filename}`;
+      const buffer = Buffer.from(await res.arrayBuffer());
+      writeFileSync(localPath, buffer);
+      console.log(localPath);
+    } catch (err) {
+      console.error(err instanceof Error ? err.message : String(err));
+      process.exit(1);
+    }
+    break;
+  }
+
   case "generate-key": {
     const result = await client.generateKey();
     console.log(`API Key: ${result.key}`);
@@ -212,6 +280,7 @@ Commands:
     --sender-type <type>  Filter by sender_type (human|agent)
     --team <name>         Write to Claude Code team inbox
     --inbox <agent>       Target agent inbox (requires --team)
+  download-attachment <attachmentId>             Download an attachment to /tmp
   send-team-info <roomId> '<json>'             Send team info to a room
   generate-key                                 Generate a new API key`);
 }

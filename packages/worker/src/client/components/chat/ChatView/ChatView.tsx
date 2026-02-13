@@ -22,23 +22,26 @@ type ChatViewProps = {
 
 export default function ChatView({ room, apiKey, userName, onTeamInfo }: ChatViewProps) {
   const [messages, setMessages] = useState<DisplayMessage[]>([])
+  const [attachmentCounts, setAttachmentCounts] = useState<Record<string, number>>({})
   const [unreadCount, setUnreadCount] = useState(0)
   const [forceScrollCounter, setForceScrollCounter] = useState(0)
   const { queue, remove, getForRoom } = useOfflineQueue()
 
-  // Load message history + logs
+  // Load message history + logs + attachment counts
   useEffect(() => {
     let cancelled = false
     async function load() {
-      const [history, logs] = await Promise.all([
+      const [history, logs, counts] = await Promise.all([
         api.loadMessages(room.id),
         api.loadLogs(room.id),
+        api.loadAttachmentCounts(room.id),
       ])
       if (cancelled) return
       const all = [...history, ...logs].sort(
         (a, b) => parseUtcDate(a.created_at).valueOf() - parseUtcDate(b.created_at).valueOf()
       )
       setMessages(all.map(m => ({ ...m, status: 'sent' as const })))
+      setAttachmentCounts(counts)
 
       // Restore queued offline messages
       try {
@@ -133,7 +136,11 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo }: ChatVie
     return () => window.removeEventListener('online', handler)
   }, [room.id])
 
-  const handleSend = useCallback(async (content: string) => {
+  const handleUploadFile = useCallback(async (file: File) => {
+    return api.uploadFile(room.id, file)
+  }, [room.id])
+
+  const handleSend = useCallback(async (content: string, attachmentIds: string[] = []) => {
     const tempId = 'pending-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6)
     setMessages(prev => [...prev, {
       sender: userName,
@@ -145,10 +152,23 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo }: ChatVie
     setForceScrollCounter(c => c + 1)
 
     try {
-      await api.sendMessage(room.id, userName, content)
+      const result = await api.sendMessage(room.id, userName, content)
       setMessages(prev => prev.map(m =>
         m.tempId === tempId ? { ...m, status: 'sent' as const } : m
       ))
+
+      // Link attachments to the message
+      if (attachmentIds.length > 0 && result.id) {
+        for (const attId of attachmentIds) {
+          try {
+            await api.linkAttachment(attId, result.id)
+          } catch { /* best-effort */ }
+        }
+        setAttachmentCounts(prev => ({
+          ...prev,
+          [result.id]: attachmentIds.length,
+        }))
+      }
     } catch {
       await queue({ tempId, roomId: room.id, sender: userName, content, apiKey, timestamp: Date.now() })
       setMessages(prev => prev.map(m =>
@@ -180,13 +200,18 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo }: ChatVie
     <>
       <MessageList
         messages={messages}
+        attachmentCounts={attachmentCounts}
         unreadCount={unreadCount}
         forceScrollCounter={forceScrollCounter}
         onScrollToBottom={() => setUnreadCount(0)}
         onRetry={handleRetry}
         connected={connected}
       />
-      <ChatInput roomName={room.name} onSend={handleSend} />
+      <ChatInput
+        roomName={room.name}
+        onSend={handleSend}
+        onUploadFile={handleUploadFile}
+      />
     </>
   )
 }

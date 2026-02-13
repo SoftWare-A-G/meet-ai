@@ -12,6 +12,7 @@ type MessageProps = {
   tempId?: string
   status?: 'sent' | 'pending' | 'failed'
   onRetry?: () => void
+  attachmentCount?: number
 }
 
 function escapeHtml(str: string): string {
@@ -20,7 +21,7 @@ function escapeHtml(str: string): string {
   return d.innerHTML
 }
 
-export default function Message({ sender, content, color, timestamp, tempId, status = 'sent', onRetry }: MessageProps) {
+export default function Message({ sender, content, color, timestamp, tempId, status = 'sent', onRetry, attachmentCount }: MessageProps) {
   const contentRef = useRef<HTMLDivElement>(null)
   const senderColor = color ? ensureSenderContrast(color) : hashColor(sender)
   const avatarBg = color ? ensureSenderContrast(color) : darkenForAvatar(sender)
@@ -52,6 +53,11 @@ export default function Message({ sender, content, color, timestamp, tempId, sta
           )}
         </div>
         <div class="msg-content" ref={contentRef} />
+        {attachmentCount && attachmentCount > 0 ? (
+          <div class="msg-attachments-label">
+            {'\u{1F4CE}'} {attachmentCount} attachment{attachmentCount > 1 ? 's' : ''}
+          </div>
+        ) : null}
       </div>
     </div>
   )

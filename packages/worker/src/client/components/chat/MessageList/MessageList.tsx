@@ -12,6 +12,7 @@ type DisplayMessage = MessageType & {
 
 type MessageListProps = {
   messages: DisplayMessage[]
+  attachmentCounts?: Record<string, number>
   unreadCount: number
   forceScrollCounter: number
   onScrollToBottom: () => void
@@ -70,7 +71,7 @@ function groupMessages(messages: DisplayMessage[]): RenderItem[] {
   return items
 }
 
-export default function MessageList({ messages, unreadCount, forceScrollCounter, onScrollToBottom, onRetry, connected = true }: MessageListProps) {
+export default function MessageList({ messages, attachmentCounts, unreadCount, forceScrollCounter, onScrollToBottom, onRetry, connected = true }: MessageListProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const { isAtBottom, atBottom, scrollToBottom } = useScrollAnchor(containerRef)
   const prevLengthRef = useRef<number>(0)
@@ -126,6 +127,7 @@ export default function MessageList({ messages, unreadCount, forceScrollCounter,
           )
         }
         const msg = item.msg
+        const attCount = msg.id && attachmentCounts ? attachmentCounts[msg.id] : undefined
         return (
           <Message
             key={msg.tempId || `${msg.sender}-${msg.created_at}-${item.index}`}
@@ -136,6 +138,7 @@ export default function MessageList({ messages, unreadCount, forceScrollCounter,
             tempId={msg.tempId}
             status={msg.status}
             onRetry={msg.tempId && onRetry ? () => onRetry(msg.tempId!) : undefined}
+            attachmentCount={attCount}
           />
         )
       })}

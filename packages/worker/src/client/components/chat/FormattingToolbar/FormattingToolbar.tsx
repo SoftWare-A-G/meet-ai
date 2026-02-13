@@ -3,6 +3,7 @@ import type { RefObject } from 'hono/jsx/dom'
 type FormattingToolbarProps = {
   textareaRef: RefObject<HTMLTextAreaElement>
   onSend: () => void
+  onAttach?: () => void
 }
 
 function applyFormat(textarea: HTMLTextAreaElement, fmt: string) {
@@ -29,13 +30,18 @@ function applyFormat(textarea: HTMLTextAreaElement, fmt: string) {
 // preventDefault() keeps focus in the textarea so .focus() calls aren't needed post-blur.
 const preventBlur = (e: Event) => e.preventDefault()
 
-export default function FormattingToolbar({ textareaRef, onSend }: FormattingToolbarProps) {
+export default function FormattingToolbar({ textareaRef, onSend, onAttach }: FormattingToolbarProps) {
   const handleFormat = (fmt: string) => {
     if (textareaRef.current) applyFormat(textareaRef.current, fmt)
   }
 
   return (
     <div class="chat-input-toolbar">
+      {onAttach && (
+        <button class="fmt-btn" title="Attach file" onMouseDown={preventBlur} onTouchStart={preventBlur} onTouchEnd={onAttach} onClick={onAttach}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
+        </button>
+      )}
       <button class="fmt-btn" title="Bold" onMouseDown={preventBlur} onTouchStart={preventBlur} onTouchEnd={() => handleFormat('bold')} onClick={() => handleFormat('bold')}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8" /></svg>
       </button>

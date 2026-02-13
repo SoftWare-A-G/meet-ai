@@ -152,6 +152,25 @@ roomsRoute.post('/:id/logs', requireAuth, rateLimitByKey(60, 60_000), async (c) 
   return c.json(log, 201)
 })
 
+// GET /api/rooms/:id/attachment-counts — get attachment counts per message
+roomsRoute.get('/:id/attachment-counts', requireAuth, async (c) => {
+  const keyId = c.get('keyId')
+  const roomId = c.req.param('id')
+  const db = queries(c.env.DB)
+
+  const room = await db.findRoom(roomId, keyId)
+  if (!room) {
+    return c.json({ error: 'room not found' }, 404)
+  }
+
+  const counts = await db.countAttachmentsByRoom(roomId)
+  const map: Record<string, number> = {}
+  for (const row of counts) {
+    map[row.message_id] = row.count
+  }
+  return c.json(map)
+})
+
 // POST /api/rooms/:id/team-info — push team info to ChatRoom DO
 roomsRoute.post('/:id/team-info', requireAuth, async (c) => {
   const keyId = c.get('keyId')

@@ -3,6 +3,7 @@ export type Bindings = {
   CHAT_ROOM: DurableObjectNamespace
   LOBBY: DurableObjectNamespace
   ASSETS: Fetcher
+  UPLOADS: R2Bucket
 }
 
 export type Variables = {
@@ -49,6 +50,18 @@ export type Log = {
   sender: string
   content: string
   color: string | null
+  created_at: string
+}
+
+export type Attachment = {
+  id: string
+  key_id: string
+  room_id: string
+  message_id: string | null
+  r2_key: string
+  filename: string
+  size: number
+  content_type: string
   created_at: string
 }
 

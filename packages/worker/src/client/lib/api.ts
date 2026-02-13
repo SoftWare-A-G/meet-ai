@@ -49,13 +49,14 @@ export async function loadLogs(roomId: string): Promise<Message[]> {
   return logs.map(l => ({ ...l, type: 'log' as const }))
 }
 
-export async function sendMessage(roomId: string, sender: string, content: string): Promise<void> {
+export async function sendMessage(roomId: string, sender: string, content: string): Promise<{ id: string }> {
   const res = await fetch(`/api/rooms/${roomId}/messages`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ sender, content }),
   })
   if (!res.ok) throw new Error('HTTP ' + res.status)
+  return res.json()
 }
 
 export async function claimToken(token: string): Promise<{ api_key: string }> {
@@ -70,5 +71,35 @@ export async function shareAuth(): Promise<{ url: string }> {
     headers: authHeaders(),
   })
   if (!res.ok) throw new Error('Failed to create share link')
+  return res.json()
+}
+
+export async function uploadFile(roomId: string, file: File): Promise<{ id: string; filename: string; size: number }> {
+  const key = getApiKey()
+  const headers: Record<string, string> = {}
+  if (key) headers['Authorization'] = 'Bearer ' + key
+  const formData = new FormData()
+  formData.append('file', file)
+  const res = await fetch(`/api/rooms/${roomId}/upload`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  })
+  if (!res.ok) throw new Error('Upload failed: HTTP ' + res.status)
+  return res.json()
+}
+
+export async function linkAttachment(attachmentId: string, messageId: string): Promise<void> {
+  const res = await fetch(`/api/attachments/${attachmentId}`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify({ message_id: messageId }),
+  })
+  if (!res.ok) throw new Error('Link failed: HTTP ' + res.status)
+}
+
+export async function loadAttachmentCounts(roomId: string): Promise<Record<string, number>> {
+  const res = await fetch(`/api/rooms/${roomId}/attachment-counts`, { headers: authHeaders() })
+  if (!res.ok) return {}
   return res.json()
 }
