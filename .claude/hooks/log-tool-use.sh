@@ -8,6 +8,10 @@
 set -eo pipefail
 trap 'exit 0' ERR
 
+# Bail immediately if no team session files exist — avoids all overhead for solo usage
+TEAM_FILES=("$HOME"/.claude/teams/*/meet-ai.json)
+[ ! -f "${TEAM_FILES[0]:-}" ] && exit 0
+
 # Read the hook event JSON from stdin
 INPUT="$(cat)"
 
