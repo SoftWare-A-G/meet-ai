@@ -16,7 +16,7 @@ pagesRoute.get('/', (c) => {
   if (accept.includes('text/markdown')) {
     return c.text(landingMarkdown, 200, {
       'Content-Type': 'text/markdown; charset=UTF-8',
-      'X-Markdown-Tokens': '600',
+      'X-Markdown-Tokens': '685',
       'Content-Signal': 'ai-train=yes, search=yes, ai-input=yes',
     })
   }
