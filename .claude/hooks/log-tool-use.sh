@@ -96,7 +96,13 @@ MSGID_FILE="/tmp/meet-ai-hook-${SESSION_ID}.msgid"
 MSG_ID=""
 
 if [ -f "$MSGID_FILE" ]; then
-  MSG_ID="$(cat "$MSGID_FILE" 2>/dev/null || true)"
+  FILE_AGE=$(( $(date +%s) - $(stat -f %m "$MSGID_FILE") ))
+  if [ "$FILE_AGE" -gt 120 ]; then
+    rm -f "$MSGID_FILE"
+    MSG_ID=""
+  else
+    MSG_ID="$(cat "$MSGID_FILE" 2>/dev/null || true)"
+  fi
 fi
 
 if [ -z "$MSG_ID" ]; then

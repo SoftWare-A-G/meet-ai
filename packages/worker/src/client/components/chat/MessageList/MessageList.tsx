@@ -54,9 +54,12 @@ function groupMessages(messages: DisplayMessage[]): RenderItem[] {
       logBuffer.push(msg)
     } else {
       flushLogs()
-      items.push({ kind: 'message', msg, index })
-      // Attach child logs right after their parent message
       const children = msg.id ? childLogs.get(msg.id) : undefined
+      const isHookAnchor = msg.sender === 'hook' && children && children.length > 0
+      // Hook messages with child logs only serve as time anchors — don't render them as bubbles
+      if (!isHookAnchor) {
+        items.push({ kind: 'message', msg, index })
+      }
       if (children && children.length > 0) {
         items.push({ kind: 'log-group', logs: children })
       }
