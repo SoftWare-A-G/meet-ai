@@ -50,6 +50,29 @@ export async function withRetry<T>(
   throw lastError;
 }
 
+const ATTACHMENTS_DIR = "/tmp/meet-ai-attachments";
+const MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+export function cleanupOldAttachments(): void {
+  try {
+    const { readdirSync, statSync, unlinkSync } = require("fs") as typeof import("fs");
+    const now = Date.now();
+    for (const entry of readdirSync(ATTACHMENTS_DIR)) {
+      try {
+        const filePath = `${ATTACHMENTS_DIR}/${entry}`;
+        const mtime = statSync(filePath).mtimeMs;
+        if (now - mtime > MAX_AGE_MS) {
+          unlinkSync(filePath);
+        }
+      } catch {
+        // Ignore per-file errors (already deleted, permission, etc.)
+      }
+    }
+  } catch {
+    // Directory doesn't exist or not readable — nothing to clean
+  }
+}
+
 export function createClient(baseUrl: string, apiKey?: string) {
   function headers(extra?: Record<string, string>): Record<string, string> {
     const h: Record<string, string> = { "Content-Type": "application/json", ...extra };
@@ -276,6 +299,9 @@ export function createClient(baseUrl: string, apiKey?: string) {
     },
 
     async downloadAttachment(attachmentId: string, filename: string): Promise<string> {
+      // Clean up old files before downloading new ones
+      cleanupOldAttachments();
+
       const res = await fetch(`${baseUrl}/api/attachments/${attachmentId}`, {
         headers: apiKey ? { "Authorization": `Bearer ${apiKey}` } : undefined,
       });

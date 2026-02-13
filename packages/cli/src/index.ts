@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { createClient } from "./client";
+import { createClient, cleanupOldAttachments } from "./client";
 import { appendToInbox, getTeamMembers, resolveInboxTargets, checkIdleAgents, IDLE_CHECK_INTERVAL_MS } from "./inbox-router";
 
 const API_URL = process.env.MEET_AI_URL || "https://meet-ai.cc";
@@ -223,6 +223,8 @@ switch (command) {
       process.exit(1);
     }
     try {
+      // Clean up old files before downloading new ones
+      cleanupOldAttachments();
       // Fetch attachment metadata to get the filename
       const res = await fetch(`${API_URL}/api/attachments/${attachmentId}`, {
         headers: API_KEY ? { "Authorization": `Bearer ${API_KEY}` } : undefined,
