@@ -51,7 +51,7 @@ export async function withRetry<T>(
 }
 
 const ATTACHMENTS_DIR = "/tmp/meet-ai-attachments";
-const MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
+const MAX_AGE_MS = 5 * 60 * 1000; // 5 minutes
 
 export function cleanupOldAttachments(): void {
   try {

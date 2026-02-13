@@ -34,7 +34,7 @@ uploadsRoute.post('/:id/upload', requireAuth, rateLimitByKey(10, 60_000), async 
   const r2Key = `${keyId}/${roomId}/${id}/${file.name}`
 
   const fileBytes = await file.arrayBuffer()
-  await c.env.UPLOADS.put(r2Key, fileBytes, { expirationTtl: 86400 })
+  await c.env.UPLOADS.put(r2Key, fileBytes, { expirationTtl: 300 })
 
   await db.insertAttachment(id, keyId, roomId, r2Key, file.name, file.size, file.type || 'application/octet-stream')
 
