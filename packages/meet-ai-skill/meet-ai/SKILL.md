@@ -130,6 +130,32 @@ The JSON payload must match the `TeamInfo` shape:
 
 **Send progressively** — push updated team info after every spawn or shutdown so the sidebar reflects the current state immediately. Do NOT batch updates; send after each change.
 
+## Sending Tasks (Right Sidebar)
+
+Push the current task list to the chat room's right sidebar. The web UI displays tasks grouped by status below the team members section, with a completion counter (e.g., "3/5").
+
+```bash
+meet-ai send-tasks "<ROOM_ID>" '<json-payload>'
+```
+
+The JSON payload must match the `Tasks` shape:
+
+```json
+{
+  "tasks": [
+    { "id": "1", "subject": "Fix auth bug", "status": "completed", "owner": "frontend-fixer" },
+    { "id": "2", "subject": "Add upload support", "status": "in_progress", "owner": "backend-dev" },
+    { "id": "3", "subject": "Write tests", "status": "pending", "owner": null }
+  ]
+}
+```
+
+- **status** values: `pending`, `in_progress`, `completed`
+- **owner** can be `null` for unassigned tasks
+- Tasks are displayed grouped by status: in-progress first, then pending, then completed
+
+**Send progressively** — push the updated task list after every `TaskCreate` or `TaskUpdate` so the sidebar reflects the current state immediately. Do NOT batch updates; send after each change.
+
 ## Message Format
 
 Messages are displayed in the web UI and read by humans. Format content with markdown:
