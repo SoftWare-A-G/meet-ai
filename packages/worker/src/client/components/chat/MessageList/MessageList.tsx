@@ -55,8 +55,8 @@ function groupMessages(messages: DisplayMessage[]): RenderItem[] {
     } else {
       flushLogs()
       const children = msg.id ? childLogs.get(msg.id) : undefined
-      const isHookAnchor = msg.sender === 'hook' && children && children.length > 0
-      // Hook messages with child logs only serve as time anchors — don't render them as bubbles
+      const isHookAnchor = msg.sender === 'hook'
+      // Hook messages never render as bubbles — they only exist as log group anchors
       if (!isHookAnchor) {
         items.push({ kind: 'message', msg, index })
       }
