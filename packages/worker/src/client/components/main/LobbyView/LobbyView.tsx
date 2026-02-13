@@ -11,13 +11,15 @@ export default function LobbyView({ rooms, onSelectRoom }: LobbyViewProps) {
     return <EmptyState message="No channels yet — create one to get started" />
   }
 
+  const sorted = [...rooms].reverse()
+
   return (
     <div class="lobby-view">
-      <div class="lobby-heading">Select a channel</div>
       <div class="lobby-room-list">
-        {rooms.map(room => (
+        {sorted.map(room => (
           <div key={room.id} class="lobby-room-item" onClick={() => onSelectRoom(room)}>
-            <span class="room-hash">#</span> {room.name}
+            <span class="lobby-room-name"><span class="room-hash">#</span> {room.name}</span>
+            <span class="lobby-room-chevron">›</span>
           </div>
         ))}
       </div>
