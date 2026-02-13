@@ -76,7 +76,7 @@ roomsRoute.post('/:id/messages', requireAuth, rateLimitByKey(60, 60_000), async 
     return c.json({ error: 'room not found' }, 404)
   }
 
-  const body = await c.req.json<{ sender?: string; content?: string; sender_type?: string; color?: string }>()
+  const body = await c.req.json<{ sender?: string; content?: string; sender_type?: string; color?: string; attachment_ids?: string[] }>()
   if (!body.sender || !body.content) {
     return c.json({ error: 'sender and content are required' }, 400)
   }
@@ -86,7 +86,15 @@ roomsRoute.post('/:id/messages', requireAuth, rateLimitByKey(60, 60_000), async 
   const id = crypto.randomUUID()
   const seq = await db.insertMessage(id, roomId, body.sender, body.content, senderType, color ?? undefined)
 
-  const message = { id, room_id: roomId, sender: body.sender, sender_type: senderType, content: body.content, color, type: 'message' as const, seq, created_at: new Date().toISOString() }
+  // Link attachments atomically before broadcast
+  const attachmentIds = body.attachment_ids ?? []
+  let attachmentCount = 0
+  for (const attId of attachmentIds) {
+    const linked = await db.linkAttachmentToMessage(attId, keyId, id)
+    if (linked) attachmentCount++
+  }
+
+  const message = { id, room_id: roomId, sender: body.sender, sender_type: senderType, content: body.content, color, type: 'message' as const, seq, created_at: new Date().toISOString(), attachment_count: attachmentCount }
 
   // Broadcast via Durable Object
   const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)

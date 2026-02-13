@@ -131,8 +131,8 @@ switch (command) {
     }
 
     const onMessage = (msg: any) => {
-      // Check for attachments asynchronously, then output and route
-      if (msg.id && msg.room_id) {
+      // Check for attachments asynchronously if broadcast indicates they exist
+      if (msg.id && msg.room_id && msg.attachment_count > 0) {
         downloadMessageAttachments(msg.room_id, msg.id).then(paths => {
           const output = paths.length ? { ...msg, attachments: paths } : msg;
           console.log(JSON.stringify(output));

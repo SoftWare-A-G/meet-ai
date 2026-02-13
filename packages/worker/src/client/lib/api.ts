@@ -49,11 +49,11 @@ export async function loadLogs(roomId: string): Promise<Message[]> {
   return logs.map(l => ({ ...l, type: 'log' as const }))
 }
 
-export async function sendMessage(roomId: string, sender: string, content: string): Promise<{ id: string }> {
+export async function sendMessage(roomId: string, sender: string, content: string, attachmentIds?: string[]): Promise<{ id: string }> {
   const res = await fetch(`/api/rooms/${roomId}/messages`, {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify({ sender, content }),
+    body: JSON.stringify({ sender, content, ...(attachmentIds?.length && { attachment_ids: attachmentIds }) }),
   })
   if (!res.ok) throw new Error('HTTP ' + res.status)
   return res.json()

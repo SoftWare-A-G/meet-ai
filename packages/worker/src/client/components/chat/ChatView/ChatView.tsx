@@ -152,18 +152,12 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo }: ChatVie
     setForceScrollCounter(c => c + 1)
 
     try {
-      const result = await api.sendMessage(room.id, userName, content)
+      const result = await api.sendMessage(room.id, userName, content, attachmentIds.length > 0 ? attachmentIds : undefined)
       setMessages(prev => prev.map(m =>
         m.tempId === tempId ? { ...m, status: 'sent' as const } : m
       ))
 
-      // Link attachments to the message
       if (attachmentIds.length > 0 && result.id) {
-        for (const attId of attachmentIds) {
-          try {
-            await api.linkAttachment(attId, result.id)
-          } catch { /* best-effort */ }
-        }
         setAttachmentCounts(prev => ({
           ...prev,
           [result.id]: attachmentIds.length,
