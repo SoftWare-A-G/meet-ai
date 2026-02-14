@@ -29,7 +29,7 @@ export default function MainHeader({
             onClick={onMobileToggle}>
             &#9776;
           </button>
-          <span className="text-[15px] opacity-50">#</span>
+          <span className="flex h-8 w-8 items-center justify-center text-xl opacity-50">#</span>
           <span className="text-base font-bold">{roomName}</span>
         </div>
         <div className="flex items-center gap-3">
