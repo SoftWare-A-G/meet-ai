@@ -33,9 +33,11 @@ export function useScrollAnchor(ref: RefObject<HTMLDivElement | null>) {
       wasAtBottomRef.current = true
       setAtBottom(true)
     })
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- rafId is a stable ref
   }, [ref])
 
   // Clean up pending animation frame on unmount
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- rafId is a stable ref
   useEffect(() => () => cancelAnimationFrame(rafId.current), [])
 
   return { isAtBottom, atBottom, scrollToBottom }

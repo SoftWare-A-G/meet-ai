@@ -5,15 +5,16 @@ export function parseSchema(str: string): string[] {
 }
 
 export function hexToRgb(hex: string): [number, number, number] {
-  hex = hex.replace('#', '')
-  if (hex.length === 3) hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2]
-  const n = parseInt(hex, 16)
+  let h = hex.replace('#', '')
+  if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]
+  const n = parseInt(h, 16)
+  // eslint-disable-next-line no-bitwise
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
 }
 
 export function luminance(hex: string): number {
-  const [r, g, b] = hexToRgb(hex).map(v => {
-    v = v / 255
+  const [r, g, b] = hexToRgb(hex).map(c => {
+    const v = c / 255
     return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)
   })
   return 0.2126 * r + 0.7152 * g + 0.0722 * b
@@ -38,7 +39,7 @@ function deriveChatBg(sidebarBg: string): string {
   const lum = luminance(sidebarBg)
   if (lum >= 0.5) return '#FFFFFF'
   const [r, g, b] = hexToRgb(sidebarBg)
-  return '#' + [r, g, b].map(v => Math.max(0, Math.round(v * 0.78 + 2)).toString(16).padStart(2, '0')).join('')
+  return `#${[r, g, b].map(v => Math.max(0, Math.round(v * 0.78 + 2)).toString(16).padStart(2, '0')).join('')}`
 }
 
 function deriveMsgText(chatBg: string, sidebarText: string): string {

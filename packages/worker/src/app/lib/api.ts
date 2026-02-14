@@ -19,7 +19,7 @@ export function clearApiKey(): void {
 function authHeaders(): Record<string, string> {
   const key = getApiKey()
   const h: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (key) h['Authorization'] = 'Bearer ' + key
+  if (key) h['Authorization'] = `Bearer ${key}`
   return h
 }
 
@@ -58,12 +58,12 @@ export async function sendMessage(roomId: string, sender: string, content: strin
     headers: authHeaders(),
     body: JSON.stringify({ sender, content, ...(attachmentIds?.length && { attachment_ids: attachmentIds }) }),
   })
-  if (!res.ok) throw new Error('HTTP ' + res.status)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }
 
 export async function claimToken(token: string): Promise<{ api_key: string }> {
-  const res = await fetch('/api/auth/claim/' + encodeURIComponent(token))
+  const res = await fetch(`/api/auth/claim/${encodeURIComponent(token)}`)
   if (!res.ok) throw new Error('Link expired or invalid')
   return res.json()
 }
@@ -80,7 +80,7 @@ export async function shareAuth(): Promise<{ url: string }> {
 export async function uploadFile(roomId: string, file: File): Promise<{ id: string; filename: string; size: number }> {
   const key = getApiKey()
   const headers: Record<string, string> = {}
-  if (key) headers['Authorization'] = 'Bearer ' + key
+  if (key) headers['Authorization'] = `Bearer ${key}`
   const formData = new FormData()
   formData.append('file', file)
   const res = await fetch(`/api/rooms/${roomId}/upload`, {
@@ -88,7 +88,7 @@ export async function uploadFile(roomId: string, file: File): Promise<{ id: stri
     headers,
     body: formData,
   })
-  if (!res.ok) throw new Error('Upload failed: HTTP ' + res.status)
+  if (!res.ok) throw new Error(`Upload failed: HTTP ${res.status}`)
   return res.json()
 }
 
@@ -98,7 +98,7 @@ export async function linkAttachment(attachmentId: string, messageId: string): P
     headers: authHeaders(),
     body: JSON.stringify({ message_id: messageId }),
   })
-  if (!res.ok) throw new Error('Link failed: HTTP ' + res.status)
+  if (!res.ok) throw new Error(`Link failed: HTTP ${res.status}`)
 }
 
 export async function loadAttachmentCounts(roomId: string): Promise<Record<string, number>> {

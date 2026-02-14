@@ -66,7 +66,7 @@ export default function InstallButton({ onIOSInstall }: InstallButtonProps) {
   if (!visible) return null
 
   return (
-    <button className="bg-transparent border border-white/15 text-sidebar-text cursor-pointer flex items-center gap-1 px-2 py-[3px] rounded text-[11px] font-semibold whitespace-nowrap opacity-70 transition-[opacity,background] duration-150 hover:opacity-100 hover:bg-hover-item" title="Install app" onClick={handleClick}>
+    <button type="button" className="bg-transparent border border-white/15 text-sidebar-text cursor-pointer flex items-center gap-1 px-2 py-[3px] rounded text-[11px] font-semibold whitespace-nowrap opacity-70 transition-[opacity,background] duration-150 hover:opacity-100 hover:bg-hover-item" title="Install app" onClick={handleClick}>
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
         <polyline points="7 10 12 15 17 10" />

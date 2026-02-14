@@ -84,9 +84,9 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
     const items = e.clipboardData?.items
     if (!items) return
     const files: File[] = []
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].kind === 'file') {
-        const file = items[i].getAsFile()
+    for (const item of items) {
+      if (item.kind === 'file') {
+        const file = item.getAsFile()
         if (file) files.push(file)
       }
     }
@@ -119,7 +119,7 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
                 {pf.status === 'uploading' && <span className="opacity-60 whitespace-nowrap">uploading...</span>}
                 {pf.status === 'error' && <span className="text-[11px] whitespace-nowrap">{pf.error}</span>}
                 {pf.status === 'done' && <span className="opacity-60 whitespace-nowrap">ready</span>}
-                <button className="bg-transparent border-none text-msg-text cursor-pointer text-sm px-0.5 opacity-50 leading-none hover:opacity-100" onClick={() => removeFile(pf.file)} title="Remove">×</button>
+                <button type="button" className="bg-transparent border-none text-msg-text cursor-pointer text-sm px-0.5 opacity-50 leading-none hover:opacity-100" onClick={() => removeFile(pf.file)} title="Remove">×</button>
               </div>
             ))}
           </div>

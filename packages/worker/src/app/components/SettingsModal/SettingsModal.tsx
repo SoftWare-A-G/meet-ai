@@ -1,8 +1,7 @@
 import { useState, useCallback } from 'react'
 import ColorPreview from '../ColorPreview'
-import { THEME_PRESETS } from '../../lib/constants'
+import { THEME_PRESETS, DEFAULT_SCHEMA } from '../../lib/constants'
 import { applySchema } from '../../lib/theme'
-import { DEFAULT_SCHEMA, STORAGE_KEYS } from '../../lib/constants'
 
 type SettingsModalProps = {
   currentSchema: string
@@ -72,9 +71,9 @@ export default function SettingsModal({ currentSchema, onSave, onClose }: Settin
         <input className="w-full px-2.5 py-2 border border-border rounded-md bg-white/10 text-msg-text text-base font-mono mb-3" type="text" value={schema} onChange={handleInputChange} />
         <ColorPreview schema={schema} />
         <div className="flex gap-2 justify-end mt-2">
-          <button className="px-4 py-2 rounded-md text-[13px] cursor-pointer font-semibold bg-transparent text-primary border border-border mr-auto" onClick={handleReset}>Reset</button>
-          <button className="px-4 py-2 rounded-md text-[13px] cursor-pointer font-semibold bg-transparent text-msg-text border border-border" onClick={handleCancel}>Cancel</button>
-          <button className="px-4 py-2 rounded-md text-[13px] cursor-pointer font-semibold bg-primary text-primary-text border-none" onClick={handleSave}>Save</button>
+          <button type="button" className="px-4 py-2 rounded-md text-[13px] cursor-pointer font-semibold bg-transparent text-primary border border-border mr-auto" onClick={handleReset}>Reset</button>
+          <button type="button" className="px-4 py-2 rounded-md text-[13px] cursor-pointer font-semibold bg-transparent text-msg-text border border-border" onClick={handleCancel}>Cancel</button>
+          <button type="button" className="px-4 py-2 rounded-md text-[13px] cursor-pointer font-semibold bg-primary text-primary-text border-none" onClick={handleSave}>Save</button>
         </div>
       </div>
     </div>

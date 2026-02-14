@@ -88,6 +88,7 @@ export default function MessageList({ messages, attachmentCounts, unreadCount, f
       scrollToBottom()
     }
     prevLengthRef.current = messages.length
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- scrollToBottom is stable
   }, [messages.length])
 
   // Auto-dismiss new messages pill when user scrolls to the bottom
@@ -102,9 +103,11 @@ export default function MessageList({ messages, attachmentCounts, unreadCount, f
     if (forceScrollCounter > 0) {
       scrollToBottom()
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- scrollToBottom is stable
   }, [forceScrollCounter])
 
   // Scroll to bottom on initial load
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- scrollToBottom is stable
   useEffect(() => {
     scrollToBottom()
   }, [])

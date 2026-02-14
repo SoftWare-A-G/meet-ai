@@ -27,7 +27,7 @@ export default function IOSInstallModal({ onClose }: IOSInstallModalProps) {
             <span className="flex-1">Tap <strong className="text-[#e5e5e5]">Add</strong> in the top right</span>
           </div>
         </div>
-        <button className="w-full py-2.5 border-none rounded-lg bg-primary text-primary-text text-sm font-semibold cursor-pointer hover:brightness-110" onClick={onClose}>Got it</button>
+        <button type="button" className="w-full py-2.5 border-none rounded-lg bg-primary text-primary-text text-sm font-semibold cursor-pointer hover:brightness-110" onClick={onClose}>Got it</button>
       </div>
     </div>
   )

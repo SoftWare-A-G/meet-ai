@@ -84,7 +84,7 @@ export default function TeamSidebar({ teamInfo, tasksInfo, isOpen, onClose }: Te
       <div className="px-4 font-bold text-sm border-b border-sidebar-border flex items-center justify-between h-14 shrink-0">
         <span>Team</span>
         <span className="text-xs font-normal opacity-50">{teamInfo ? `${activeCount}/${totalCount}` : ''}</span>
-        <button className="hidden bg-transparent border-none text-sidebar-text cursor-pointer text-[22px] p-1 rounded leading-none opacity-70 hover:opacity-100 hover:bg-hover-item max-[768px]:flex max-[768px]:items-center max-[768px]:justify-center" onClick={onClose}>&times;</button>
+        <button type="button" className="hidden bg-transparent border-none text-sidebar-text cursor-pointer text-[22px] p-1 rounded leading-none opacity-70 hover:opacity-100 hover:bg-hover-item max-[768px]:flex max-[768px]:items-center max-[768px]:justify-center" onClick={onClose}>&times;</button>
       </div>
       {teamInfo && <TeamSidebarContent teamInfo={teamInfo} tasksInfo={tasksInfo} />}
     </div>

@@ -78,6 +78,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
     }
     load()
     return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- getForRoom/remove are stable callbacks
   }, [room.id])
 
   // Request notification permission once on mount
@@ -112,6 +113,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
 
   useEffect(() => {
     onTasksInfo?.(tasksInfo)
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- onTasksInfo is stable
   }, [tasksInfo])
 
   // Flush queue on coming online
@@ -139,14 +141,13 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
     }
     window.addEventListener('online', handler)
     return () => window.removeEventListener('online', handler)
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- getForRoom/remove are stable callbacks
   }, [room.id])
 
-  const handleUploadFile = useCallback(async (file: File) => {
-    return api.uploadFile(room.id, file)
-  }, [room.id])
+  const handleUploadFile = useCallback(async (file: File) => api.uploadFile(room.id, file), [room.id])
 
   const handleSend = useCallback(async (content: string, attachmentIds: string[] = []) => {
-    const tempId = 'pending-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6)
+    const tempId = `pending-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
     setMessages(prev => [...prev, {
       sender: userName,
       content,

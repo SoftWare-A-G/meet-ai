@@ -1,6 +1,6 @@
 var CACHE_NAME = 'meet-ai-v5';
 
-self.addEventListener('install', function (e) {
+self.addEventListener('install', function (_e) {
   self.skipWaiting();
 });
 
@@ -44,11 +44,7 @@ self.addEventListener('fetch', function (e) {
         });
       })
     );
-    return;
   }
-
-  // Everything else: network-first, no caching
-  return;
 });
 
 // --- Background Sync: flush offline message queue ---
@@ -82,15 +78,15 @@ function flushOutbox() {
       req.onerror = function () { reject(req.error); };
     }).then(function (messages) {
       return Promise.all(messages.map(function (msg) {
-        return fetch('/api/rooms/' + msg.roomId + '/messages', {
+        return fetch(`/api/rooms/${msg.roomId}/messages`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + msg.apiKey,
+            'Authorization': `Bearer ${msg.apiKey}`,
           },
           body: JSON.stringify({ sender: msg.sender, content: msg.content }),
         }).then(function (res) {
-          if (!res.ok) throw new Error('HTTP ' + res.status);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
           // Remove from queue on success
           var delTx = db.transaction('outbox', 'readwrite');
           delTx.objectStore('outbox').delete(msg.tempId);
@@ -106,9 +102,9 @@ function flushOutbox() {
 
 function notifyClients(data) {
   self.clients.matchAll().then(function (clients) {
-    clients.forEach(function (client) {
+    for (var client of clients) {
       client.postMessage(data);
-    });
+    }
   });
 }
 
@@ -117,9 +113,9 @@ self.addEventListener('notificationclick', function (e) {
   e.notification.close();
   e.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (clients) {
-      for (var i = 0; i < clients.length; i++) {
-        if (clients[i].url.includes('/chat') && 'focus' in clients[i]) {
-          return clients[i].focus();
+      for (var client of clients) {
+        if (client.url.includes('/chat') && 'focus' in client) {
+          return client.focus();
         }
       }
       if (self.clients.openWindow) {

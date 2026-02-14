@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import qrcode from 'qrcode-generator'
 import * as api from '../../lib/api'
 
 type QRShareModalProps = {
@@ -6,7 +7,7 @@ type QRShareModalProps = {
   onToast: (text: string) => void
 }
 
-export default function QRShareModal({ onClose, onToast }: QRShareModalProps) {
+export default function QRShareModal({ onClose, onToast: _onToast }: QRShareModalProps) {
   const [url, setUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -18,8 +19,8 @@ export default function QRShareModal({ onClose, onToast }: QRShareModalProps) {
         const data = await api.shareAuth()
         if (cancelled) return
         setUrl(data.url)
-      } catch (e: any) {
-        if (!cancelled) setError(e.message || 'Failed to create share link')
+      } catch (error: any) {
+        if (!cancelled) setError(error.message || 'Failed to create share link')
       }
     }
     load()
@@ -81,7 +82,7 @@ export default function QRShareModal({ onClose, onToast }: QRShareModalProps) {
         )}
         <div className="text-xs text-[#3FB950] mb-2 min-h-[18px]">{copied ? 'Copied to clipboard!' : ''}</div>
         <div className="text-xs opacity-50 mb-4">Expires in 5 minutes</div>
-        <button className="px-5 py-2 rounded-md text-[13px] cursor-pointer font-semibold bg-transparent text-msg-text border border-border hover:bg-white/10" onClick={onClose}>Close</button>
+        <button type="button" className="px-5 py-2 rounded-md text-[13px] cursor-pointer font-semibold bg-transparent text-msg-text border border-border hover:bg-white/10" onClick={onClose}>Close</button>
       </div>
     </div>
   )

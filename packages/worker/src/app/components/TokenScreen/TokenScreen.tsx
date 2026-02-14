@@ -24,8 +24,8 @@ export default function TokenScreen({ token, onLogin }: TokenScreenProps) {
     try {
       const data = await api.claimToken(token)
       onLogin(data.api_key)
-    } catch (e: any) {
-      setError(e.message || 'Connection error. Try again.')
+    } catch (error: any) {
+      setError(error.message || 'Connection error. Try again.')
       setLoading(false)
     }
   }, [token, onLogin])

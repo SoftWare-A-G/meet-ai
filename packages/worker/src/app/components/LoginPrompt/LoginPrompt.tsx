@@ -32,8 +32,8 @@ export default function LoginPrompt({ onLogin }: LoginPromptProps) {
         setError('Invalid link or key')
         setLoading(false)
       }
-    } catch (e: any) {
-      setError(e.message || 'Connection error. Try again.')
+    } catch (error: any) {
+      setError(error.message || 'Connection error. Try again.')
       setLoading(false)
     }
   }, [onLogin])
@@ -57,7 +57,7 @@ export default function LoginPrompt({ onLogin }: LoginPromptProps) {
             onKeyDown={handleKeyDown}
             className="flex-1 min-w-0 h-[42px] px-3 border border-[#30363D] rounded-lg bg-[#161B22] text-[#C9D1D9] text-sm outline-none placeholder:text-[#8B949E] focus:border-primary"
           />
-          <button onClick={handleLogin} disabled={loading} className="h-[42px] px-5 border-none rounded-lg bg-primary text-primary-text text-sm font-semibold cursor-pointer shrink-0 hover:brightness-110">
+          <button type="button" onClick={handleLogin} disabled={loading} className="h-[42px] px-5 border-none rounded-lg bg-primary text-primary-text text-sm font-semibold cursor-pointer shrink-0 hover:brightness-110">
             {loading ? '...' : 'Go'}
           </button>
         </div>

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Message, TeamInfo, TasksInfo } from '../lib/types'
 import { loadMessagesSinceSeq } from '../lib/api'
+import type { Message, TeamInfo, TasksInfo } from '../lib/types'
 
 type UseRoomWebSocketOptions = {
   onTeamInfo?: (info: TeamInfo) => void
@@ -13,7 +13,7 @@ export function useRoomWebSocket(
   roomId: string | null,
   apiKey: string | null,
   onMessage: (msg: Message) => void,
-  options?: UseRoomWebSocketOptions,
+  options?: UseRoomWebSocketOptions
 ) {
   const wsRef = useRef<WebSocket | null>(null)
   const onMessageRef = useRef(onMessage)
@@ -38,7 +38,9 @@ export function useRoomWebSocket(
           }
           onMessageRef.current?.(msg)
         }
-      } catch { /* ignore catch-up errors */ }
+      } catch {
+        /* ignore catch-up errors */
+      }
     }
 
     function connect() {
@@ -54,7 +56,7 @@ export function useRoomWebSocket(
         catchUp()
       }
 
-      ws.onmessage = (e) => {
+      ws.onmessage = e => {
         try {
           const data = JSON.parse(e.data)
           if (data.type === 'team_info') {
@@ -71,10 +73,12 @@ export function useRoomWebSocket(
             lastSeqRef.current = msg.seq
           }
           onMessageRef.current?.(msg)
-        } catch { /* ignore malformed */ }
+        } catch {
+          /* ignore malformed */
+        }
       }
 
-      ws.onerror = () => console.error('WebSocket error')
+      ws.onerror = error => console.error('WebSocket error', error)
       ws.onclose = () => {
         setConnected(false)
         const delay = backoffRef.current

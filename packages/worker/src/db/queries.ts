@@ -61,7 +61,7 @@ export function queries(db: D1Database) {
       return result.results
     },
 
-    async insertMessage(id: string, roomId: string, sender: string, content: string, senderType: string = 'human', color?: string, type: string = 'message') {
+    async insertMessage(id: string, roomId: string, sender: string, content: string, senderType = 'human', color?: string, type = 'message') {
       await db.prepare(
         `INSERT INTO messages (id, room_id, sender, sender_type, content, color, type, seq)
          VALUES (?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT MAX(seq) FROM messages WHERE room_id = ?), 0) + 1)`
@@ -98,7 +98,7 @@ export function queries(db: D1Database) {
       ).bind(id, keyId, roomId, messageId ?? null, sender, content, color ?? null).run()
     },
 
-    async getLogsByRoom(keyId: string, roomId: string, limit: number = 100) {
+    async getLogsByRoom(keyId: string, roomId: string, limit = 100) {
       const result = await db.prepare(
         'SELECT id, room_id, key_id, message_id, sender, content, color, created_at FROM logs WHERE key_id = ? AND room_id = ? ORDER BY created_at DESC LIMIT ?'
       ).bind(keyId, roomId, limit).all<Log>()
