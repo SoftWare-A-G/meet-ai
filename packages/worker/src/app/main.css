@@ -42,9 +42,17 @@
   --animate-spin: spin 0.8s linear infinite;
   --animate-blink: blink 1s step-end infinite;
   --animate-shimmer: shimmer-bg 0.8s ease-in-out;
-  --animate-pulse-copy: pulse-copy 0.15s ease;
   --animate-fade-out: fadeOut 0.2s ease forwards;
   --animate-fade-in: fadeIn 0.3s ease forwards;
+}
+
+/* --- Body defaults --- */
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background: #0a0a0a;
+  color: #e5e5e5;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* --- Keyframes --- */
@@ -61,7 +69,6 @@
   40% { background: #1e2a3a; }
   100% { background: #1a1a1a; }
 }
-@keyframes pulse-copy { 50% { transform: scale(1.05); } }
 @keyframes fadeOut { to { opacity: 0; transform: translateY(-10px); } }
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
@@ -112,43 +119,99 @@
 /* --- Key page: shimmer animation for key field --- */
 .shimmer input { animation: shimmer-bg 0.8s ease-in-out; }
 
-/* --- Key page: copied state (toggled via JS classList) --- */
-.copied {
-  color: #22c55e;
-  border-color: #22c55e40;
-  animation: pulse-copy 0.15s ease;
+/* --- Landing page: smooth scroll --- */
+html { scroll-behavior: smooth; }
+
+/* --- Landing page: hero tagline (clamp can't be expressed in Tailwind) --- */
+.hero-tagline {
+  font-size: clamp(2rem, 5vw, 3.25rem);
+}
+.hero-tagline::after {
+  content: '';
+  display: inline-block;
+  width: 3px;
+  height: 0.9em;
+  background: #2563eb;
+  margin-left: 4px;
+  vertical-align: text-bottom;
+  animation: blink 1s step-end infinite;
 }
 
-/* --- Key page: syntax coloring --- */
-.syn-key { color: #7dd3fc; }
-.syn-str { color: #86efac; }
-.syn-punct { color: #888; }
-
-/* --- Key page: settings hints (dangerouslySetInnerHTML) --- */
-.settings-hint {
-  font-size: 12px;
-  color: #888;
-  margin: 8px 0 6px 0;
-  line-height: 1.4;
+/* --- Landing page: primary button --- */
+.btn-primary {
+  display: inline-block;
+  padding: 14px 32px;
+  border: none;
+  border-radius: 999px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s;
 }
-.settings-hint strong { color: #bbb; }
-.settings-hint code {
+.btn-primary:hover { background: #1d4ed8; }
+.btn-primary:active { background: #1e40af; }
+
+/* --- Landing page: demo messages --- */
+.demo-msg {
+  padding: 10px 14px;
+  background: #141414;
+  border-radius: 8px;
+  font-size: 14px;
+  word-break: break-word;
+  opacity: 0;
+  transform: translateY(8px);
+}
+.demo-msg.is-human { border-left: 3px solid #2563eb; }
+.demo-msg .demo-sender { font-weight: 600; font-size: 12px; margin-bottom: 3px; }
+.demo-msg.is-human .demo-sender { color: #2563eb; }
+.demo-msg .demo-text { color: #ccc; line-height: 1.5; }
+.demo-msg.animate-msg { animation: msg-in 0.5s ease forwards; }
+@keyframes msg-in { to { opacity: 1; transform: translateY(0); } }
+.demo-msg.fade-out { animation: msg-out 0.4s ease forwards; }
+@keyframes msg-out { to { opacity: 0; transform: translateY(-8px); } }
+
+
+/* --- Landing page: agents section nested styles --- */
+.agents-prompt-text em { color: #86efac; font-style: normal; }
+.agents-tip-text strong { color: #ccc; }
+.agents-tip-text code {
   background: rgba(128,128,128,0.15);
   padding: 1px 5px;
   border-radius: 3px;
-  font-size: 11px;
-  color: #ccc;
+  font-size: 12px;
+  color: #c4b5fd;
   font-family: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
+}
+
+/* --- Landing page: scroll animations --- */
+.animate-in {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.animate-in.visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 /* --- Reduced motion --- */
 @media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
   .headline::after { animation: none; opacity: 1; }
+  .hero-tagline::after { animation: none; opacity: 1; }
   .spinner { animation: none; border-top-color: #fff; }
   .stagger-in { opacity: 1; transform: none; transition: none; }
   .fade-out, .fade-in { animation: none; opacity: 1; transform: none; }
   .shimmer input { animation: none; }
   .copied { animation: none; }
+  .demo-msg { opacity: 1; transform: none; }
+  .demo-msg.animate-msg { animation: none; opacity: 1; transform: none; }
+  .demo-msg.fade-out { animation: none; }
+  .animate-in { opacity: 1; transform: none; transition: none; }
 }
 
 /* --- Rendered markdown content (can't add Tailwind to generated HTML) --- */

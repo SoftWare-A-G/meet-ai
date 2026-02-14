@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { createRootRoute, HeadContent, Outlet, Scripts } from '@tanstack/react-router'
 import appCss from '../main.css?url'
 
@@ -21,6 +22,15 @@ export const Route = createRootRoute({
 })
 
 function RootLayout() {
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      caches.keys().then(names => {
+        for (const name of names) caches.delete(name)
+      })
+      navigator.serviceWorker.register('/sw.js?v=5')
+    }
+  }, [])
+
   return (
     <html lang="en">
       <head>

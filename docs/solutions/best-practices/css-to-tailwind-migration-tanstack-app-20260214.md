@@ -125,4 +125,4 @@ Dynamic styles (runtime-computed colors like `ensureSenderContrast()`) kept as i
 - **Parallel agent strategy**: For large-scale CSS migrations (30+ files), split into component groups and use 4-5 parallel agents with a CSS-to-Tailwind mapping reference
 
 ## Related Issues
-No related issues documented yet.
+- See also: [hono-jsx-to-react-migration-tanstack-landing-20260214.md](./hono-jsx-to-react-migration-tanstack-landing-20260214.md) — Hono JSX to React migration gotchas for the landing page (same day, complementary scope)

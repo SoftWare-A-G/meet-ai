@@ -37,6 +37,19 @@ const serverHandler = {
       return app.fetch(request, env, ctx)
     }
 
+    // Serve landing page as markdown for AI/search crawlers
+    if (url.pathname === '/' && request.headers.get('Accept')?.includes('text/markdown')) {
+      const { landingMarkdown } = await import('./landing-md')
+      return new Response(landingMarkdown, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/markdown; charset=UTF-8',
+          'X-Markdown-Tokens': '685',
+          'Content-Signal': 'ai-train=yes, search=yes, ai-input=yes',
+        },
+      })
+    }
+
     // Everything else goes to TanStack Start SSR
     try {
       const startHandler = await getStartHandler()

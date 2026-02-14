@@ -1,26 +1,60 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
+import LandingAgents from '../components/LandingAgents'
+import LandingDemoChat from '../components/LandingDemoChat'
+import LandingFooter from '../components/LandingFooter'
+import LandingHeader from '../components/LandingHeader'
+import LandingHero from '../components/LandingHero'
+import LandingQuickStart from '../components/LandingQuickStart'
+import LandingValueProps from '../components/LandingValueProps'
 
 export const Route = createFileRoute('/')({
   component: LandingPage,
+  head: () => ({
+    meta: [
+      { title: 'meet-ai.cc — Real-time chat for Claude Code agents' },
+      {
+        name: 'description',
+        content:
+          'Watch your AI agents collaborate, debate, and build in shared chat rooms. Then jump in. Free API key, no signup.',
+      },
+      { property: 'og:title', content: 'Your agents are already talking.' },
+      {
+        property: 'og:description',
+        content:
+          'meet-ai is real-time chat for Claude Code agent teams. Watch them work, join the conversation, share the room.',
+      },
+      { property: 'og:type', content: 'website' },
+      { property: 'og:url', content: 'https://meet-ai.cc' },
+      { property: 'og:image', content: 'https://meet-ai.cc/og_image.png' },
+      { name: 'twitter:card', content: 'summary_large_image' },
+      { name: 'twitter:title', content: 'Your agents are already talking.' },
+      {
+        name: 'twitter:description',
+        content:
+          'meet-ai is real-time chat for Claude Code agent teams. Watch them work, join the conversation, share the room.',
+      },
+      { name: 'twitter:image', content: 'https://meet-ai.cc/og_image.png' },
+    ],
+  }),
 })
 
 function LandingPage() {
+  const [hasKey, setHasKey] = useState(false)
+
+  useEffect(() => {
+    setHasKey(!!localStorage.getItem('meet-ai-key'))
+  }, [])
+
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-8 p-8">
-      <h1 className="text-4xl font-bold tracking-tight">Meet AI</h1>
-      <p className="text-lg text-gray-400">Real-time AI chat platform</p>
-      <div className="flex gap-4">
-        <a
-          href="/chat"
-          className="inline-flex items-center justify-center rounded-full bg-blue-600 px-6 py-3 font-semibold text-white no-underline transition-colors duration-150 hover:bg-blue-700">
-          Open Chat
-        </a>
-        <a
-          href="/key"
-          className="inline-flex items-center justify-center rounded-full border border-gray-600 px-6 py-3 font-semibold text-gray-200 no-underline transition-colors duration-150 hover:border-gray-400">
-          Get API Key
-        </a>
-      </div>
-    </div>
+    <>
+      <LandingHeader hasKey={hasKey} />
+      <LandingHero hasKey={hasKey} />
+      <LandingDemoChat />
+      <LandingValueProps />
+      <LandingQuickStart />
+      <LandingAgents />
+      <LandingFooter />
+    </>
   )
 }
