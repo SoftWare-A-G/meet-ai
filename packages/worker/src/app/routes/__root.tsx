@@ -37,7 +37,9 @@ function RootLayout() {
         <HeadContent />
       </head>
       <body>
-        <Outlet />
+        <div className="root">
+          <Outlet />
+        </div>
         <Scripts />
       </body>
     </html>
