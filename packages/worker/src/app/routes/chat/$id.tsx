@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { useEffect } from 'react'
 import { useChatContext } from '../../lib/chat-context'
 import MainHeader from '../../components/MainHeader'
 import ChatView from '../../components/ChatView'
@@ -13,6 +14,11 @@ function ChatRoom() {
 
   const room = rooms.find(r => r.id === id)
   const roomName = room?.name ?? 'Loading...'
+
+  useEffect(() => {
+    document.title = room ? `Meet AI: ${room.name}` : 'Meet AI'
+    return () => { document.title = 'Meet AI' }
+  }, [room])
 
   return (
     <div className="flex-1 flex flex-col bg-chat-bg text-msg-text min-w-0 h-dvh">
