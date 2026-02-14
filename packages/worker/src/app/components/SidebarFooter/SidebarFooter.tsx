@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react'
 import { Tooltip } from '@base-ui/react/tooltip'
 import InstallButton from '../InstallButton'
+import { IconKey } from '../../icons'
 
 type SidebarFooterProps = {
   userName: string
@@ -69,7 +70,7 @@ export default function SidebarFooter({ userName, onNameChange, onInstallClick }
               className="bg-transparent border-none text-sidebar-text cursor-pointer text-[11px] p-1 rounded opacity-60 flex items-center justify-center hover:opacity-100 hover:bg-hover-item"
               onClick={() => { location.href = '/key' }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" /></svg>
+              <IconKey size={16} />
             </Tooltip.Trigger>
             <Tooltip.Portal>
               <Tooltip.Positioner sideOffset={8}>
