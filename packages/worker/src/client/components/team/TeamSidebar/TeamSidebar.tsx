@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'hono/jsx/dom'
+import { render } from 'hono/jsx/dom'
 import type { TeamInfo, TeamMember, TasksInfo, TaskItem } from '../../../lib/types'
 import { ensureSenderContrast } from '../../../lib/colors'
 
@@ -36,37 +38,69 @@ function TaskRow({ task }: { task: TaskItem }) {
   )
 }
 
+function TeamSidebarContent({ teamInfo, tasksInfo }: { teamInfo: TeamInfo; tasksInfo?: TasksInfo | null }) {
+  const active = teamInfo.members.filter(m => m.status === 'active')
+  const inactive = teamInfo.members.filter(m => m.status === 'inactive')
+  const tasks = tasksInfo?.tasks ?? []
+  const inProgress = tasks.filter(t => t.status === 'in_progress')
+  const pending = tasks.filter(t => t.status === 'pending')
+  const completed = tasks.filter(t => t.status === 'completed')
+
+  return (
+    <>
+      {active.length > 0 && (
+        <div class="team-section">
+          <div class="team-section-label">Active</div>
+          {active.map(m => <MemberRow key={m.name} member={m} />)}
+        </div>
+      )}
+      {inactive.length > 0 && (
+        <div class="team-section">
+          <div class="team-section-label">Inactive</div>
+          {inactive.map(m => <MemberRow key={m.name} member={m} inactive />)}
+        </div>
+      )}
+      {tasks.length > 0 && (
+        <div class="team-section">
+          <div class="team-section-label">
+            Tasks
+            <span class="tasks-count">{completed.length}/{tasks.length}</span>
+          </div>
+          {inProgress.map(t => <TaskRow key={t.id} task={t} />)}
+          {pending.map(t => <TaskRow key={t.id} task={t} />)}
+          {completed.map(t => <TaskRow key={t.id} task={t} />)}
+        </div>
+      )}
+    </>
+  )
+}
+
 export default function TeamSidebar({ teamInfo, tasksInfo, isOpen, onClose }: TeamSidebarProps) {
-  const members = teamInfo?.members ?? []
-  const active = members.filter(m => m.status === 'active')
-  const inactive = members.filter(m => m.status === 'inactive')
+  const bodyRef = useRef<HTMLDivElement | null>(null)
+
+  // Render content in a separate render root to bypass hono/jsx/dom reconciler bugs
+  // (cannot diff children arrays that change length, cannot handle false→component transitions)
+  useEffect(() => {
+    const el = bodyRef.current
+    if (!el) return
+    if (!teamInfo) {
+      el.innerHTML = ''
+      return
+    }
+    render(<TeamSidebarContent teamInfo={teamInfo} tasksInfo={tasksInfo} />, el)
+  }, [teamInfo, tasksInfo])
+
+  const activeCount = teamInfo?.members.filter(m => m.status === 'active').length ?? 0
+  const totalCount = teamInfo?.members.length ?? 0
 
   return (
     <div class={`team-sidebar${isOpen ? ' open' : ''}`}>
       <div class="team-sidebar-header">
         <span>Team</span>
-        <span class="team-sidebar-count">{active.length}/{members.length}</span>
+        <span class="team-sidebar-count">{teamInfo ? `${activeCount}/${totalCount}` : ''}</span>
         <button class="team-sidebar-close-btn" onClick={onClose}>&times;</button>
       </div>
-      <div class="team-section" style={{ display: active.length > 0 ? '' : 'none' }}>
-        <div class="team-section-label">Active</div>
-        {active.map(m => <MemberRow key={m.name} member={m} />)}
-      </div>
-      <div class="team-section" style={{ display: inactive.length > 0 ? '' : 'none' }}>
-        <div class="team-section-label">Inactive</div>
-        {inactive.map(m => <MemberRow key={m.name} member={m} inactive />)}
-      </div>
-      <div class="team-section" style={{ display: tasksInfo && tasksInfo.tasks.length > 0 ? '' : 'none' }}>
-        <div class="team-section-label">
-          Tasks
-          <span class="tasks-count">
-            {(tasksInfo?.tasks ?? []).filter(t => t.status === 'completed').length}/{(tasksInfo?.tasks ?? []).length}
-          </span>
-        </div>
-        {(tasksInfo?.tasks ?? []).filter(t => t.status === 'in_progress').map(t => <TaskRow key={t.id} task={t} />)}
-        {(tasksInfo?.tasks ?? []).filter(t => t.status === 'pending').map(t => <TaskRow key={t.id} task={t} />)}
-        {(tasksInfo?.tasks ?? []).filter(t => t.status === 'completed').map(t => <TaskRow key={t.id} task={t} />)}
-      </div>
+      <div ref={bodyRef} />
     </div>
   )
 }
