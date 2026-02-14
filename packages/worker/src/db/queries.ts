@@ -22,7 +22,7 @@ export function queries(db: D1Database) {
 
     async listRooms(keyId: string) {
       const result = await db.prepare(
-        'SELECT id, name, created_at FROM rooms WHERE key_id = ? ORDER BY created_at'
+        'SELECT id, name, created_at FROM rooms WHERE key_id = ? ORDER BY created_at DESC'
       ).bind(keyId).all<Pick<Room, 'id' | 'name' | 'created_at'>>()
       return result.results
     },
