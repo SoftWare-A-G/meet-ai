@@ -20,6 +20,7 @@ export function notifyIfHidden(msg: Message, currentUser: string): void {
   if (Notification.permission !== 'granted') return
   if (document.visibilityState !== 'hidden') return
   if (msg.type === 'log') return
+  if (msg.sender === 'hook') return
   if (msg.sender === currentUser) return
 
   const notification = new Notification(msg.sender, {

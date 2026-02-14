@@ -147,10 +147,12 @@ export default function MessageList({ messages, attachmentCounts, unreadCount, f
           />
         )
       })}
-      <NewMessagesPill
-        count={unreadCount}
-        onClick={() => { scrollToBottom(); onScrollToBottom() }}
-      />
+      {!atBottom && (
+        <NewMessagesPill
+          count={unreadCount}
+          onClick={() => { scrollToBottom(); onScrollToBottom() }}
+        />
+      )}
     </div>
   )
 }

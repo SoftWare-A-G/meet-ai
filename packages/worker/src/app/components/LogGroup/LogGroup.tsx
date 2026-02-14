@@ -40,11 +40,22 @@ export default function LogGroup({ logs }: LogGroupProps) {
       <Collapsible.Panel className="py-0 px-2 pb-1 pl-5">
         {logs.map((log, i) => {
           const senderColor = log.color ? ensureSenderContrast(log.color) : hashColor(log.sender)
+          const colonIdx = log.content.indexOf(': ')
+          const hookPrefix = colonIdx > 0 ? log.content.slice(0, colonIdx) : null
+          const hookRest = colonIdx > 0 ? log.content.slice(colonIdx + 2) : null
           return (
             <div className="flex gap-1.5 py-px leading-snug text-xs" key={`${log.sender}-${log.created_at}-${i}`}>
               <span className="opacity-45 whitespace-nowrap shrink-0">{formatTimeWithSeconds(log.created_at)}</span>
-              <span className="font-semibold whitespace-nowrap shrink-0" style={{ color: senderColor }}>{log.sender}:</span>
-              <span className="min-w-0 break-words">{log.content}</span>
+              {log.sender !== 'hook' && (
+                <span className="font-semibold whitespace-nowrap shrink-0" style={{ color: senderColor }}>{log.sender}:</span>
+              )}
+              <span className="min-w-0 break-words">
+                {hookPrefix ? (
+                  <><span className="font-semibold">{hookPrefix}:</span> {hookRest}</>
+                ) : (
+                  <span className="font-semibold">{log.content}</span>
+                )}
+              </span>
             </div>
           )
         })}

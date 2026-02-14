@@ -101,7 +101,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
       })
     } else {
       setMessages(prev => [...prev, { ...msg, status: 'sent' as const }])
-      if (msg.type !== 'log') {
+      if (msg.type !== 'log' && msg.sender !== 'hook') {
         setUnreadCount(c => c + 1)
       }
     }
