@@ -1,5 +1,5 @@
 import { Tooltip } from '@base-ui/react/tooltip'
-import { IconMenu2, IconHash, IconQrcode, IconUsers } from '../../icons'
+import { IconMenu2, IconQrcode, IconUsers } from '../../icons'
 
 type MainHeaderProps = {
   roomName: string
@@ -30,9 +30,6 @@ export default function MainHeader({
             onClick={onMobileToggle}>
             <IconMenu2 size={20} />
           </button>
-          <span className="flex h-8 w-8 items-center justify-center opacity-50">
-            <IconHash size={22} />
-          </span>
           <span className="text-base font-bold">{roomName}</span>
         </div>
         <div className="flex items-center gap-3">
