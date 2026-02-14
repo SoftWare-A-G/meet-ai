@@ -381,13 +381,12 @@ describe('Messages', () => {
     expect(msg.sender_type).toBe('agent')
   })
 
-  it('sender_type rejects invalid values (falls back to human)', async () => {
+  it('sender_type rejects invalid values', async () => {
     const key = await createKey()
     const roomId = await createRoom(key, 'invalid-type-room')
 
     const res = await sendMessage(key, roomId, 'alice', 'test', 'robot')
-    const msg = await res.json() as { sender_type: string }
-    expect(msg.sender_type).toBe('human')
+    expect(res.status).toBe(400)
   })
 
   it('supports sender_type filter on poll', async () => {

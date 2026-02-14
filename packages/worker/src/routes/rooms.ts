@@ -1,8 +1,10 @@
 import { Hono } from 'hono'
+import { zValidator } from '@hono/zod-validator'
 import { queries } from '../db/queries'
 import { requireAuth } from '../middleware/auth'
 import { rateLimitByKey } from '../middleware/rate-limit'
-import type { AppEnv, TeamInfo } from '../lib/types'
+import { createRoomSchema, sendMessageSchema, sendLogSchema, teamInfoSchema } from '../schemas/rooms'
+import type { AppEnv } from '../lib/types'
 
 export const roomsRoute = new Hono<AppEnv>()
 
@@ -15,12 +17,9 @@ export const roomsRoute = new Hono<AppEnv>()
   })
 
   // POST /api/rooms — create a room
-  .post('/', requireAuth, async c => {
+  .post('/', requireAuth, zValidator('json', createRoomSchema), async c => {
     const keyId = c.get('keyId')
-    const body = await c.req.json<{ name?: string }>()
-    if (!body.name) {
-      return c.json({ error: 'name is required' }, 400)
-    }
+    const body = c.req.valid('json')
 
     const id = crypto.randomUUID()
     const db = queries(c.env.DB)
@@ -78,7 +77,7 @@ export const roomsRoute = new Hono<AppEnv>()
   })
 
   // POST /api/rooms/:id/messages — send a message (60/min per key)
-  .post('/:id/messages', requireAuth, rateLimitByKey(60, 60_000), async c => {
+  .post('/:id/messages', requireAuth, rateLimitByKey(60, 60_000), zValidator('json', sendMessageSchema), async c => {
     const keyId = c.get('keyId')
     const roomId = c.req.param('id')
     const db = queries(c.env.DB)
@@ -88,16 +87,7 @@ export const roomsRoute = new Hono<AppEnv>()
       return c.json({ error: 'room not found' }, 404)
     }
 
-    const body = await c.req.json<{
-      sender?: string
-      content?: string
-      sender_type?: string
-      color?: string
-      attachment_ids?: string[]
-    }>()
-    if (!body.sender || !body.content) {
-      return c.json({ error: 'sender and content are required' }, 400)
-    }
+    const body = c.req.valid('json')
 
     const senderType = body.sender_type === 'agent' ? 'agent' : 'human'
     const color = body.color || null
@@ -163,7 +153,7 @@ export const roomsRoute = new Hono<AppEnv>()
   })
 
   // POST /api/rooms/:id/logs — send a log message (60/min per key)
-  .post('/:id/logs', requireAuth, rateLimitByKey(60, 60_000), async c => {
+  .post('/:id/logs', requireAuth, rateLimitByKey(60, 60_000), zValidator('json', sendLogSchema), async c => {
     const keyId = c.get('keyId')
     const roomId = c.req.param('id')
     const db = queries(c.env.DB)
@@ -173,15 +163,7 @@ export const roomsRoute = new Hono<AppEnv>()
       return c.json({ error: 'room not found' }, 404)
     }
 
-    const body = await c.req.json<{
-      sender?: string
-      content?: string
-      color?: string
-      message_id?: string
-    }>()
-    if (!body.sender || !body.content) {
-      return c.json({ error: 'sender and content are required' }, 400)
-    }
+    const body = c.req.valid('json')
 
     const color = body.color || null
     const messageId = body.message_id || null
@@ -242,7 +224,7 @@ export const roomsRoute = new Hono<AppEnv>()
   })
 
   // POST /api/rooms/:id/team-info — push team info to ChatRoom DO
-  .post('/:id/team-info', requireAuth, async c => {
+  .post('/:id/team-info', requireAuth, zValidator('json', teamInfoSchema), async c => {
     const keyId = c.get('keyId')
     const roomId = c.req.param('id')
     const db = queries(c.env.DB)
@@ -252,7 +234,7 @@ export const roomsRoute = new Hono<AppEnv>()
       return c.json({ error: 'room not found' }, 404)
     }
 
-    const body = await c.req.json<TeamInfo>()
+    const body = c.req.valid('json')
 
     const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
     const stub = c.env.CHAT_ROOM.get(doId)

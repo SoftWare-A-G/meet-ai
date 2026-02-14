@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { HTTPException } from 'hono/http-exception'
 import { cors } from 'hono/cors'
 import { queries } from './db/queries'
 import { authRoute } from './routes/auth'
@@ -16,6 +17,10 @@ export const app = new Hono<AppEnv>()
   .onError((err, c) => {
     if (err instanceof SyntaxError) {
       return c.json({ error: 'Invalid JSON' }, 400)
+    }
+
+    if (err instanceof HTTPException) {
+      return c.json({ error: err.message }, err.status)
     }
 
     console.error('Unhandled error:', err)
