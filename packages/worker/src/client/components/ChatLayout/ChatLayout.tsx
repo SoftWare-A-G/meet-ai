@@ -122,8 +122,8 @@ export default function ChatLayout({ apiKey, userName, colorSchema, onNameChange
         onTeamInfo={setTeamInfo}
         onTasksInfo={setTasksInfo}
       />
-      {teamInfo && <TeamSidebar teamInfo={teamInfo} tasksInfo={tasksInfo} isOpen={teamSidebarOpen} onClose={() => setTeamSidebarOpen(false)} />}
-      {teamSidebarOpen && <div class="team-sidebar-backdrop" onClick={() => setTeamSidebarOpen(false)} style="display:block" />}
+      <TeamSidebar teamInfo={teamInfo} tasksInfo={tasksInfo} isOpen={teamSidebarOpen} onClose={() => setTeamSidebarOpen(false)} />
+      <div class="team-sidebar-backdrop" onClick={() => setTeamSidebarOpen(false)} style={{ display: teamSidebarOpen ? 'block' : 'none' }} />
       {showSettings && (
         <SettingsModal
           currentSchema={colorSchema}

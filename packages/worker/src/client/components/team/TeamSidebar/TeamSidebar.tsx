@@ -2,7 +2,7 @@ import type { TeamInfo, TeamMember, TasksInfo, TaskItem } from '../../../lib/typ
 import { ensureSenderContrast } from '../../../lib/colors'
 
 type TeamSidebarProps = {
-  teamInfo: TeamInfo
+  teamInfo: TeamInfo | null
   tasksInfo?: TasksInfo | null
   isOpen: boolean
   onClose: () => void
@@ -37,28 +37,25 @@ function TaskRow({ task }: { task: TaskItem }) {
 }
 
 export default function TeamSidebar({ teamInfo, tasksInfo, isOpen, onClose }: TeamSidebarProps) {
-  const active = teamInfo.members.filter(m => m.status === 'active')
-  const inactive = teamInfo.members.filter(m => m.status === 'inactive')
+  const members = teamInfo?.members ?? []
+  const active = members.filter(m => m.status === 'active')
+  const inactive = members.filter(m => m.status === 'inactive')
 
   return (
     <div class={`team-sidebar${isOpen ? ' open' : ''}`}>
       <div class="team-sidebar-header">
         <span>Team</span>
-        <span class="team-sidebar-count">{active.length}/{teamInfo.members.length}</span>
+        <span class="team-sidebar-count">{active.length}/{members.length}</span>
         <button class="team-sidebar-close-btn" onClick={onClose}>&times;</button>
       </div>
-      {active.length > 0 && (
-        <div class="team-section">
-          <div class="team-section-label">Active</div>
-          {active.map(m => <MemberRow key={m.name} member={m} />)}
-        </div>
-      )}
-      {inactive.length > 0 && (
-        <div class="team-section">
-          <div class="team-section-label">Inactive</div>
-          {inactive.map(m => <MemberRow key={m.name} member={m} inactive />)}
-        </div>
-      )}
+      <div class="team-section" style={{ display: active.length > 0 ? '' : 'none' }}>
+        <div class="team-section-label">Active</div>
+        {active.map(m => <MemberRow key={m.name} member={m} />)}
+      </div>
+      <div class="team-section" style={{ display: inactive.length > 0 ? '' : 'none' }}>
+        <div class="team-section-label">Inactive</div>
+        {inactive.map(m => <MemberRow key={m.name} member={m} inactive />)}
+      </div>
       <div class="team-section" style={{ display: tasksInfo && tasksInfo.tasks.length > 0 ? '' : 'none' }}>
         <div class="team-section-label">
           Tasks
