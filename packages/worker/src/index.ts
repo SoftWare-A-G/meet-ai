@@ -54,3 +54,5 @@ export default {
     await queries(env.DB).deleteOldLogs(cutoff)
   },
 }
+
+export type AppType = typeof app
