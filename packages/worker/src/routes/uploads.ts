@@ -1,8 +1,10 @@
+import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 import { queries } from '../db/queries'
 import { requireAuth } from '../middleware/auth'
 import { rateLimitByKey } from '../middleware/rate-limit'
 import type { AppEnv } from '../lib/types'
+import { linkAttachmentSchema } from '../schemas/uploads'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 
@@ -98,15 +100,12 @@ export const uploadsRoute = new Hono<AppEnv>()
   })
 
   // PATCH /api/attachments/:id — link attachment to a message
-  .patch('/attachments/:id', requireAuth, async c => {
+  .patch('/attachments/:id', requireAuth, zValidator('json', linkAttachmentSchema), async c => {
     const keyId = c.get('keyId')
     const attachmentId = c.req.param('id')
     const db = queries(c.env.DB)
 
-    const body = await c.req.json<{ message_id?: string }>()
-    if (!body.message_id) {
-      return c.json({ error: 'message_id is required' }, 400)
-    }
+    const body = c.req.valid('json')
 
     const updated = await db.linkAttachmentToMessage(attachmentId, keyId, body.message_id)
     if (!updated) {
