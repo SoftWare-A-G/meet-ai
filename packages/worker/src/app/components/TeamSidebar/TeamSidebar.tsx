@@ -85,17 +85,17 @@ export default function TeamSidebar({ teamInfo, tasksInfo, isOpen, onClose }: Te
       {/* Mobile backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-[49] bg-black/50 [-webkit-tap-highlight-color:transparent] min-[769px]:hidden"
+          className="fixed inset-0 z-[49] bg-black/50 [-webkit-tap-highlight-color:transparent] min-[981px]:hidden"
           onClick={onClose}
         />
       )}
       <div
         className={clsx(
           'w-[330px] shrink-0 flex flex-col bg-sidebar-bg text-sidebar-text border-l border-sidebar-border overflow-y-auto',
-          'max-[768px]:fixed max-[768px]:top-0 max-[768px]:right-0 max-[768px]:z-50 max-[768px]:h-full',
-          'max-[768px]:transition-transform max-[768px]:duration-[250ms] max-[768px]:ease-out',
-          'max-[768px]:w-[330px] max-[768px]:max-w-[85vw]',
-          isOpen ? 'max-[768px]:translate-x-0' : 'max-[768px]:translate-x-full'
+          'max-[980px]:fixed max-[980px]:top-0 max-[980px]:right-0 max-[980px]:z-50 max-[980px]:h-full',
+          'max-[980px]:transition-transform max-[980px]:duration-[250ms] max-[980px]:ease-out',
+          'max-[980px]:w-[330px] max-[980px]:max-w-[85vw]',
+          isOpen ? 'max-[980px]:translate-x-0' : 'max-[980px]:translate-x-full'
         )}
       >
         <div className="px-4 font-bold text-sm border-b border-sidebar-border flex items-center justify-between h-14 shrink-0">
@@ -103,7 +103,7 @@ export default function TeamSidebar({ teamInfo, tasksInfo, isOpen, onClose }: Te
           <span className="text-xs font-normal opacity-50">{teamInfo ? `${activeCount}/${totalCount}` : ''}</span>
           <button
             onClick={onClose}
-            className="hidden bg-transparent border-none text-sidebar-text cursor-pointer text-[22px] p-1 rounded leading-none opacity-70 hover:opacity-100 hover:bg-hover-item max-[768px]:flex max-[768px]:items-center max-[768px]:justify-center"
+            className="hidden bg-transparent border-none text-sidebar-text cursor-pointer text-[22px] p-1 rounded leading-none opacity-70 hover:opacity-100 hover:bg-hover-item max-[980px]:flex max-[980px]:items-center max-[980px]:justify-center"
           >
             &times;
           </button>
