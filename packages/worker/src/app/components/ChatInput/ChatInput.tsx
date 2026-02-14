@@ -1,9 +1,11 @@
 import React, { useRef, useCallback, useState } from 'react'
 import clsx from 'clsx'
-import FormattingToolbar from '../FormattingToolbar'
+import { IconPaperclip, IconSend } from '../../icons'
 import { useAutoResize } from '../../hooks/useAutoResize'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+
+const preventBlur = (e: { preventDefault: () => void }) => e.preventDefault()
 
 type PendingFile = {
   file: File
@@ -111,38 +113,55 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
 
   return (
     <div className="px-5 pb-[calc(14px+env(safe-area-inset-bottom,0px))] shrink-0">
-      <div className="border border-border rounded-lg bg-input-bg flex flex-col">
-        {pendingFiles.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 px-3 pt-2">
-            {pendingFiles.map((pf) => (
-              <div className={clsx('flex items-center gap-1 bg-white/[0.15] rounded-md px-2 py-1 text-xs max-w-[200px]', pf.status === 'error' && 'bg-[#F85149]/15 text-[#F85149]', pf.status === 'uploading' && 'opacity-70', pf.status === 'done' && 'bg-[#3AD900]/[0.12]')} key={pf.file.name + pf.file.size}>
-                <span className="overflow-hidden text-ellipsis whitespace-nowrap max-w-[120px]">{pf.file.name}</span>
-                {pf.status === 'uploading' && <span className="opacity-60 whitespace-nowrap">uploading...</span>}
-                {pf.status === 'error' && <span className="text-[11px] whitespace-nowrap">{pf.error}</span>}
-                {pf.status === 'done' && <span className="opacity-60 whitespace-nowrap">ready</span>}
-                <button type="button" className="bg-transparent border-none text-msg-text cursor-pointer text-sm px-0.5 opacity-50 leading-none hover:opacity-100" onClick={() => removeFile(pf.file)} title="Remove">×</button>
-              </div>
-            ))}
-          </div>
-        )}
-        <textarea
-          ref={textareaRef}
-          className="w-full border-none outline-none text-base font-[inherit] resize-none min-h-[57px] max-h-[200px] leading-relaxed overflow-y-auto bg-transparent text-msg-text px-3 pt-2 pb-1 placeholder:opacity-50"
-          placeholder={`Message #${roomName}`}
-          rows={1}
-          onInput={resize}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-        />
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          className="hidden"
-          onChange={handleFileChange}
-        />
-        <FormattingToolbar textareaRef={textareaRef} onSend={handleSend} onAttach={handleFileSelect} />
+      {pendingFiles.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 px-12 pb-2">
+          {pendingFiles.map((pf) => (
+            <div className={clsx('flex items-center gap-1 bg-white/[0.15] rounded-md px-2 py-1 text-xs max-w-[200px]', pf.status === 'error' && 'bg-[#F85149]/15 text-[#F85149]', pf.status === 'uploading' && 'opacity-70', pf.status === 'done' && 'bg-[#3AD900]/[0.12]')} key={pf.file.name + pf.file.size}>
+              <span className="overflow-hidden text-ellipsis whitespace-nowrap max-w-[120px]">{pf.file.name}</span>
+              {pf.status === 'uploading' && <span className="opacity-60 whitespace-nowrap">uploading...</span>}
+              {pf.status === 'error' && <span className="text-[11px] whitespace-nowrap">{pf.error}</span>}
+              {pf.status === 'done' && <span className="opacity-60 whitespace-nowrap">ready</span>}
+              <button type="button" className="bg-transparent border-none text-msg-text cursor-pointer text-sm px-0.5 opacity-50 leading-none hover:opacity-100" onClick={() => removeFile(pf.file)} title="Remove">×</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex items-end gap-2">
+        <button
+          type="button"
+          aria-label="Attach file"
+          className="h-12 w-12 shrink-0 rounded-full bg-transparent border-none text-msg-text opacity-50 cursor-pointer flex items-center justify-center hover:opacity-80 hover:bg-white/10 transition-opacity"
+          onMouseDown={preventBlur}
+          onClick={handleFileSelect}
+        >
+          <IconPaperclip size={20} />
+        </button>
+
+        <div className="flex-1 min-w-0 border border-border rounded-2xl bg-input-bg">
+          <textarea
+            ref={textareaRef}
+            className="w-full border-none outline-none text-base font-[inherit] resize-none min-h-[48px] max-h-[200px] leading-relaxed overflow-y-auto bg-transparent text-msg-text px-4 py-2.5 placeholder:opacity-50"
+            placeholder={`Message #${roomName}`}
+            rows={1}
+            onInput={resize}
+            onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
+          />
+        </div>
+
+        <button
+          type="button"
+          aria-label="Send"
+          className="h-12 w-12 shrink-0 rounded-full bg-active text-active-text border-none cursor-pointer flex items-center justify-center hover:brightness-110 transition-all"
+          onMouseDown={preventBlur}
+          onClick={handleSend}
+        >
+          <IconSend size={16} />
+        </button>
       </div>
+
+      <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileChange} />
     </div>
   )
 }
