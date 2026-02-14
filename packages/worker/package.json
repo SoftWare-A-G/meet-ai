@@ -7,6 +7,10 @@
     "deploy": "bun run build:css && bun run build:chat && bun run build:key && wrangler deploy",
     "test": "vitest",
     "typecheck": "tsc --noEmit",
+    "dev:vite": "vite dev",
+    "build:vite": "vite build",
+    "preview": "vite preview",
+    "cf-typegen": "wrangler types",
     "build:chat": "bun build src/client/chat.tsx --outfile public/chat.js --minify --target browser",
     "build:key": "bun build src/client/key.tsx --outfile public/key.js --minify --target browser",
     "build:css": "bunx @tailwindcss/cli -i src/styles/main.css -o public/tailwind.css --minify",
@@ -15,15 +19,26 @@
     "dev:css": "bunx @tailwindcss/cli -i src/styles/main.css -o public/tailwind.css --watch"
   },
   "dependencies": {
+    "@tanstack/react-router": "1.159.6",
+    "@tanstack/react-start": "1.159.8",
     "dayjs": "^1.11.19",
-    "hono": "4.11.8"
+    "hono": "4.11.8",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "1.25.0",
     "@cloudflare/vitest-pool-workers": "0.12.10",
     "@cloudflare/workers-types": "4.20260207.0",
     "@tailwindcss/cli": "4.1.18",
+    "@tailwindcss/postcss": "4.1.18",
+    "@tailwindcss/vite": "4.1.18",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "5.1.4",
     "tailwindcss": "4.1.18",
     "typescript": "catalog:",
+    "vite": "7.3.1",
     "vitest": "3.2.4",
     "wrangler": "4.63.0"
   }

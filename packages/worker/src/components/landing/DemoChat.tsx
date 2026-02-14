@@ -1,3 +1,4 @@
+/** @jsxImportSource hono/jsx */
 export function DemoChat() {
   return (
     <section class="flex scroll-mt-16 flex-col items-center px-6 pb-32" id="demo">

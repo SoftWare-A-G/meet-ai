@@ -1,3 +1,4 @@
+/** @jsxImportSource hono/jsx */
 import { raw } from 'hono/html'
 import { Base } from '../../layouts/Base'
 

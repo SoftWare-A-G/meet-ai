@@ -1,3 +1,4 @@
+/** @jsxImportSource hono/jsx */
 import type { Child } from 'hono/jsx'
 
 type HeaderProps = {

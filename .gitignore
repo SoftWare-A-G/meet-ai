@@ -7,3 +7,4 @@ bun.lock
 .claude/settings.json
 wrangler.toml
 dist/
+packages/worker/src/app/routeTree.gen.ts

@@ -1,3 +1,5 @@
+declare module '*.css?url'
+
 interface Marked {
   parse(text: string, options?: { breaks?: boolean }): string
 }

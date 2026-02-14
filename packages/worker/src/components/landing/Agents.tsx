@@ -1,3 +1,4 @@
+/** @jsxImportSource hono/jsx */
 export function Agents() {
   return (
     <section class="bg-surface px-6 py-20" id="agents">

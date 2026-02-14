@@ -1,3 +1,4 @@
+/** @jsxImportSource hono/jsx */
 export function Footer() {
   return (
     <footer class="border-t border-edge px-6 pt-12 pb-8 text-sm text-text-muted">

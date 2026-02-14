@@ -1,3 +1,4 @@
+/** @jsxImportSource hono/jsx */
 export function Hero() {
   return (
     <section class="flex min-h-screen items-center justify-center px-6 pt-[20vh] pb-[8vh] text-center md:px-6">

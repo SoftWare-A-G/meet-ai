@@ -1,3 +1,4 @@
+/** @jsxImportSource hono/jsx */
 const PROPS = [
   {
     num: '01',
