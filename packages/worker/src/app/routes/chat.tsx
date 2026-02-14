@@ -7,7 +7,7 @@ import SettingsModal from '../components/SettingsModal'
 import Sidebar from '../components/Sidebar'
 import SidebarBackdrop from '../components/SidebarBackdrop'
 import TeamSidebar from '../components/TeamSidebar'
-import Toast from '../components/Toast'
+import { Toast } from '@base-ui/react/toast'
 import TokenScreen from '../components/TokenScreen'
 import { useLobbyWebSocket } from '../hooks/useLobbyWebSocket'
 import { useLocalStorage } from '../hooks/useLocalStorage'
@@ -100,7 +100,7 @@ function ChatLayout({
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [showQRModal, setShowQRModal] = useState(false)
   const [showIOSInstallModal, setShowIOSInstallModal] = useState(false)
-  const [toast, setToast] = useState<string | null>(null)
+  const toastManager = Toast.useToastManager()
   const [teamInfo, setTeamInfo] = useState<TeamInfo | null>(null)
   const [tasksInfo, setTasksInfo] = useState<TasksInfo | null>(null)
   const [teamSidebarOpen, setTeamSidebarOpen] = useState(false)
@@ -226,13 +226,12 @@ function ChatLayout({
         <QRShareModal
           onClose={() => setShowQRModal(false)}
           onToast={text => {
-            setToast(text)
+            toastManager.add({ description: text })
             setShowQRModal(false)
           }}
         />
       )}
       {showIOSInstallModal && <IOSInstallModal onClose={() => setShowIOSInstallModal(false)} />}
-      {toast && <Toast text={toast} onDone={() => setToast(null)} />}
     </ChatContext.Provider>
   )
 }

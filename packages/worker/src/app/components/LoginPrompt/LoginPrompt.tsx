@@ -1,3 +1,4 @@
+import { Field } from '@base-ui/react/field'
 import React, { useState, useCallback, useRef, useEffect } from 'react'
 import * as api from '../../lib/api'
 
@@ -47,21 +48,23 @@ export default function LoginPrompt({ onLogin }: LoginPromptProps) {
       <div className="flex-1 flex items-center justify-center flex-col gap-4 p-6">
         <h2 className="text-xl font-bold text-[#C9D1D9]">Welcome to meet-ai</h2>
         <p className="text-sm text-[#8B949E] text-center max-w-[360px]">Paste a login link from another device or enter your API key to continue.</p>
-        <div className="flex gap-2 w-full max-w-[420px]">
-          <input
-            ref={inputRef}
-            type="text"
-            placeholder="Paste login link or API key"
-            autoComplete="off"
-            spellCheck={false}
-            onKeyDown={handleKeyDown}
-            className="flex-1 min-w-0 h-[42px] px-3 border border-[#30363D] rounded-lg bg-[#161B22] text-[#C9D1D9] text-sm outline-none placeholder:text-[#8B949E] focus:border-primary"
-          />
-          <button type="button" onClick={handleLogin} disabled={loading} className="h-[42px] px-5 border-none rounded-lg bg-primary text-primary-text text-sm font-semibold cursor-pointer shrink-0 hover:brightness-110">
-            {loading ? '...' : 'Go'}
-          </button>
-        </div>
-        <div className="text-[#F85149] text-[13px] min-h-[18px]">{error}</div>
+        <Field.Root className="flex flex-col items-center gap-2 w-full max-w-[420px]">
+          <Field.Label className="sr-only">Login link or API key</Field.Label>
+          <div className="flex gap-2 w-full">
+            <Field.Control
+              ref={inputRef}
+              placeholder="Paste login link or API key"
+              autoComplete="off"
+              spellCheck={false}
+              onKeyDown={handleKeyDown}
+              className="flex-1 min-w-0 h-[42px] px-3 border border-[#30363D] rounded-lg bg-[#161B22] text-[#C9D1D9] text-sm outline-none placeholder:text-[#8B949E] focus:border-primary"
+            />
+            <button type="button" onClick={handleLogin} disabled={loading} className="h-[42px] px-5 border-none rounded-lg bg-primary text-primary-text text-sm font-semibold cursor-pointer shrink-0 hover:brightness-110">
+              {loading ? '...' : 'Go'}
+            </button>
+          </div>
+          <Field.Error className="text-[#F85149] text-[13px] min-h-[18px]" match>{error}</Field.Error>
+        </Field.Root>
         <div className="text-[13px] text-[#8B949E]">or <a href="/" className="text-primary underline cursor-pointer">get an API key</a></div>
       </div>
     </div>

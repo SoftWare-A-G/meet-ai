@@ -1,3 +1,4 @@
+import { Separator } from '@base-ui/react/separator'
 import { useState, useCallback } from 'react'
 import * as api from '../../lib/api'
 
@@ -124,7 +125,7 @@ export default function TokenScreen({ token, onLogin }: TokenScreenProps) {
         ) : (
           <>
             {steps && <div className="w-full max-w-[400px] bg-[#161B22] border border-[#30363D] rounded-xl p-6 flex flex-col gap-4">{steps}</div>}
-            <div className="w-full border-t border-[#30363D] my-1" />
+            <Separator className="w-full border-t border-[#30363D] my-1" />
             <p className="text-[13px] text-[#8B949E] text-center">Or connect directly in this browser:</p>
             <div className="w-full max-w-[400px] bg-[#161B22] border border-[#30363D] rounded-xl p-6 flex flex-col gap-4">
               <button type="button" className="w-full py-3.5 border-none rounded-lg bg-primary text-primary-text text-base font-semibold cursor-pointer transition-[filter] duration-150 hover:brightness-110 disabled:opacity-60 disabled:cursor-wait" onClick={handleConnect} disabled={loading}>

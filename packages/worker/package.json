@@ -20,8 +20,8 @@
     "hono": "4.11.8",
     "marked": "17.0.2",
     "qrcode-generator": "2.0.4",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
+    "react": "catalog:",
+    "react-dom": "catalog:",
     "shiki": "3.22.0"
   },
   "devDependencies": {

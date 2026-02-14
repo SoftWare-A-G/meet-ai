@@ -1,8 +1,10 @@
+import { Separator } from '@base-ui/react/separator'
 import { Link } from '@tanstack/react-router'
 
 export default function LandingFooter() {
   return (
-    <footer className="border-t border-edge px-6 pt-12 pb-8 text-sm text-text-muted">
+    <footer className="px-6 pt-0 pb-8 text-sm text-text-muted">
+      <Separator className="mb-12 border-t border-edge" />
       <div className="mx-auto flex max-w-3xl flex-col gap-6">
         <nav className="flex flex-wrap gap-6">
           <a

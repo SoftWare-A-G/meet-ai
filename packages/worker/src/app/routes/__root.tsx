@@ -1,5 +1,7 @@
+import { Toast } from '@base-ui/react/toast'
 import { createRootRoute, HeadContent, Outlet, Scripts } from '@tanstack/react-router'
 import { useEffect } from 'react'
+import { ToastList } from '../components/Toast'
 import appCss from '../main.css?url'
 
 export const Route = createRootRoute({
@@ -37,9 +39,12 @@ function RootLayout() {
         <HeadContent />
       </head>
       <body>
-        <div className="root">
-          <Outlet />
-        </div>
+        <Toast.Provider timeout={2100}>
+          <div className="root">
+            <Outlet />
+          </div>
+          <ToastList />
+        </Toast.Provider>
         <Scripts />
       </body>
     </html>

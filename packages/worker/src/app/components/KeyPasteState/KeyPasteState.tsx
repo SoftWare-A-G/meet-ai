@@ -1,3 +1,4 @@
+import { Field } from '@base-ui/react/field'
 import { useState, useCallback, useRef, useEffect } from 'react'
 import type React from 'react'
 import KeyHeadline from '../KeyHeadline'
@@ -85,11 +86,11 @@ export default function KeyPasteState({ onConnect, onBack }: KeyPasteStateProps)
         Paste your API key or login link below.
       </p>
       <div className="stagger-in flex flex-col items-center gap-4">
-        <div className="flex w-full max-w-md flex-col gap-3">
+        <Field.Root className="flex w-full max-w-md flex-col gap-3">
+          <Field.Label className="sr-only">API key or login link</Field.Label>
           <div className="relative flex items-center gap-2 max-[520px]:flex-col">
-            <input
+            <Field.Control
               ref={inputRef}
-              type="text"
               placeholder="Paste your API key (mai_...) or login link"
               autoComplete="off"
               autoCapitalize="off"
@@ -106,8 +107,8 @@ export default function KeyPasteState({ onConnect, onBack }: KeyPasteStateProps)
               {loading ? '...' : 'Connect'}
             </button>
           </div>
-          {error && <div className="text-center text-sm text-red-400">{error}</div>}
-        </div>
+          {error && <Field.Error className="text-center text-sm text-red-400" match>{error}</Field.Error>}
+        </Field.Root>
         <button
           type="button"
           className="cursor-pointer border-0 bg-transparent text-sm text-text-muted underline underline-offset-[3px] transition-colors duration-150 hover:text-text-secondary"

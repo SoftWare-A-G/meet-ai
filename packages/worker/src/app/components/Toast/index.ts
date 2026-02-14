@@ -1,1 +1,1 @@
-export { default } from './Toast'
+export { ToastList } from './Toast'

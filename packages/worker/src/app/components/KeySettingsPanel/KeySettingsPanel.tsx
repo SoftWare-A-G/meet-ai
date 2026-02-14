@@ -1,4 +1,5 @@
 import { useState, useCallback, type ReactNode } from 'react'
+import { Tabs } from '@base-ui/react/tabs'
 import clsx from 'clsx'
 
 type Tab = 'user' | 'project' | 'env'
@@ -88,6 +89,37 @@ function EnvCode({ apiKey }: { apiKey: string }) {
   )
 }
 
+function TabPanel({ tabKey, apiKey, cmdCopied, blockCopied, onCmdCopy, onBlockCopy }: { tabKey: Tab; apiKey: string; cmdCopied: boolean; blockCopied: boolean; onCmdCopy: () => void; onBlockCopy: () => void }) {
+  const config = TAB_DATA[tabKey]
+  return (
+    <Tabs.Panel value={tabKey} className="group/settings relative rounded-[0_0.5rem_0.5rem_0.5rem] border border-edge-light bg-edge p-4 transition-[border-color] duration-150 hover:border-edge-hover">
+      <div className="mb-1.5 font-mono text-[11px] text-text-dim">{config.path}</div>
+      <p className="mt-2 mb-1.5 text-xs leading-[1.4] text-text-secondary">{config.hint}</p>
+      {config.cmd && (
+        <div className="relative mb-3 flex items-center gap-2 rounded-md border border-edge-light bg-surface-raised px-3 py-2">
+          <code className="flex-1 break-all font-mono text-xs text-violet-300">{config.cmd}</code>
+          <button
+            type="button"
+            className={clsx('shrink-0 cursor-pointer rounded-md border bg-surface-raised px-2.5 py-1 text-xs transition-[color,border-color] duration-150 hover:border-edge-hover hover:text-text-primary', cmdCopied ? 'border-green-500/25 text-green-500' : 'border-edge-light text-text-secondary')}
+            onClick={onCmdCopy}>
+            {cmdCopied ? '\u2713' : 'Copy'}
+          </button>
+        </div>
+      )}
+      <pre className="m-0 overflow-x-auto whitespace-pre font-mono text-[13px] leading-normal">
+        {tabKey === 'env' ? <EnvCode apiKey={apiKey} /> : <JsonCode apiKey={apiKey} />}
+      </pre>
+      {config.hint2 && <p className="mt-2 mb-1.5 text-xs leading-[1.4] text-text-secondary">{config.hint2}</p>}
+      <button
+        type="button"
+        className={clsx('absolute top-2.5 right-2.5 cursor-pointer rounded-md border bg-surface-raised px-2.5 py-1 text-xs opacity-0 transition-[opacity,color,border-color] duration-150 group-hover/settings:opacity-100 hover:border-edge-hover hover:text-text-primary', blockCopied ? 'border-green-500/25 text-green-500' : 'border-edge-light text-text-secondary')}
+        onClick={onBlockCopy}>
+        {blockCopied ? '\u2713' : 'Copy'}
+      </button>
+    </Tabs.Panel>
+  )
+}
+
 export default function KeySettingsPanel({ apiKey }: { apiKey: string }) {
   const [activeTab, setActiveTab] = useState<Tab>('user')
   const [cmdCopied, setCmdCopied] = useState(false)
@@ -95,8 +127,8 @@ export default function KeySettingsPanel({ apiKey }: { apiKey: string }) {
 
   const config = TAB_DATA[activeTab]
 
-  const handleTabChange = useCallback((tab: Tab) => {
-    setActiveTab(tab)
+  const handleTabChange = useCallback((value: Tab) => {
+    setActiveTab(value)
     setCmdCopied(false)
     setBlockCopied(false)
   }, [])
@@ -121,45 +153,22 @@ export default function KeySettingsPanel({ apiKey }: { apiKey: string }) {
   }, [activeTab, apiKey])
 
   return (
-    <div className="text-left">
+    <Tabs.Root defaultValue="user" value={activeTab} onValueChange={(value: string) => handleTabChange(value as Tab)} className="text-left">
       <h3 className="mb-3 text-sm font-semibold text-text-primary">Add your credentials</h3>
       <p className="mb-3 text-[13px] leading-normal text-text-secondary">Choose where to store your API key:</p>
-      <div className="flex">
+      <Tabs.List className="flex">
         {TABS.map(({ key, label }) => (
-          <button
-            type="button"
+          <Tabs.Tab
             key={key}
-            className={clsx('cursor-pointer rounded-t-lg border border-b-0 border-edge-light px-4 py-2 text-[13px] transition-colors duration-150 hover:text-text-primary', activeTab === key ? 'bg-edge text-text-primary' : 'bg-transparent text-text-secondary')}
-            onClick={() => handleTabChange(key)}>
+            value={key}
+            className={clsx('cursor-pointer rounded-t-lg border border-b-0 border-edge-light px-4 py-2 text-[13px] transition-colors duration-150 hover:text-text-primary bg-transparent text-text-secondary data-[selected]:bg-edge data-[selected]:text-text-primary')}>
             {label}
-          </button>
+          </Tabs.Tab>
         ))}
-      </div>
-      <div className="group/settings relative rounded-[0_0.5rem_0.5rem_0.5rem] border border-edge-light bg-edge p-4 transition-[border-color] duration-150 hover:border-edge-hover">
-        <div className="mb-1.5 font-mono text-[11px] text-text-dim">{config.path}</div>
-        <p className="mt-2 mb-1.5 text-xs leading-[1.4] text-text-secondary">{config.hint}</p>
-        {config.cmd && (
-          <div className="relative mb-3 flex items-center gap-2 rounded-md border border-edge-light bg-surface-raised px-3 py-2">
-            <code className="flex-1 break-all font-mono text-xs text-violet-300">{config.cmd}</code>
-            <button
-              type="button"
-              className={clsx('shrink-0 cursor-pointer rounded-md border bg-surface-raised px-2.5 py-1 text-xs transition-[color,border-color] duration-150 hover:border-edge-hover hover:text-text-primary', cmdCopied ? 'border-green-500/25 text-green-500' : 'border-edge-light text-text-secondary')}
-              onClick={handleCmdCopy}>
-              {cmdCopied ? '\u2713' : 'Copy'}
-            </button>
-          </div>
-        )}
-        <pre className="m-0 overflow-x-auto whitespace-pre font-mono text-[13px] leading-normal">
-          {activeTab === 'env' ? <EnvCode apiKey={apiKey} /> : <JsonCode apiKey={apiKey} />}
-        </pre>
-        {config.hint2 && <p className="mt-2 mb-1.5 text-xs leading-[1.4] text-text-secondary">{config.hint2}</p>}
-        <button
-          type="button"
-          className={clsx('absolute top-2.5 right-2.5 cursor-pointer rounded-md border bg-surface-raised px-2.5 py-1 text-xs opacity-0 transition-[opacity,color,border-color] duration-150 group-hover/settings:opacity-100 hover:border-edge-hover hover:text-text-primary', blockCopied ? 'border-green-500/25 text-green-500' : 'border-edge-light text-text-secondary')}
-          onClick={handleBlockCopy}>
-          {blockCopied ? '\u2713' : 'Copy'}
-        </button>
-      </div>
-    </div>
+      </Tabs.List>
+      {TABS.map(({ key }) => (
+        <TabPanel key={key} tabKey={key} apiKey={apiKey} cmdCopied={cmdCopied} blockCopied={blockCopied} onCmdCopy={handleCmdCopy} onBlockCopy={handleBlockCopy} />
+      ))}
+    </Tabs.Root>
   )
 }
