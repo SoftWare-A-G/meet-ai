@@ -11,8 +11,11 @@
     "hono": "4.11.8"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "4.20260207.0",
+    "@hono/zod-validator": "0.7.6",
     "@types/node": "catalog:",
     "typescript": "catalog:",
-    "vitest": "3.2.4"
+    "vitest": "3.2.4",
+    "zod": "4.3.6"
   }
 }
