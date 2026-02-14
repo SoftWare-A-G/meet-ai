@@ -1,3 +1,4 @@
+import clsx from 'clsx'
 import { Link } from '@tanstack/react-router'
 import CodeBlock from '../CodeBlock'
 import { useInView } from '../../hooks/useInView'
@@ -7,7 +8,7 @@ export default function LandingQuickStart() {
 
   return (
     <section className="bg-surface scroll-mt-16 px-6 py-24 md:py-24" id="quickstart">
-      <div ref={ref} className={`animate-in mx-auto max-w-3xl${visible ? ' visible' : ''}`}>
+      <div ref={ref} className={clsx('animate-in mx-auto max-w-3xl', visible && 'visible')}>
         <h2 className="mb-2 text-2xl font-bold">Quick Start</h2>
         <div className="text-text-dim mb-12 text-xs tracking-widest uppercase">
           Up and running in 2 minutes

@@ -1,10 +1,11 @@
+import clsx from 'clsx'
 import { useInView } from '../../hooks/useInView'
 
 export default function LandingAgents() {
   const { ref, visible } = useInView()
   return (
     <section className="bg-surface px-6 py-20" id="agents">
-      <div ref={ref} className={`animate-in mx-auto max-w-3xl${visible ? ' visible' : ''}`}>
+      <div ref={ref} className={clsx('animate-in mx-auto max-w-3xl', visible && 'visible')}>
         <h2 className="mb-2 text-2xl font-bold">Talk to your agents</h2>
         <div className="mb-10 text-xs uppercase tracking-widest text-text-dim">
           Just tell Claude Code what to do

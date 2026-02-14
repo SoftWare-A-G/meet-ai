@@ -1,3 +1,4 @@
+import clsx from 'clsx'
 import { useInView } from '../../hooks/useInView'
 
 const PROPS = [
@@ -21,7 +22,7 @@ const PROPS = [
 function ValuePropCard({ num, title, desc }: { num: string; title: string; desc: string }) {
   const { ref, visible } = useInView()
   return (
-    <div ref={ref} className={`animate-in border-t border-edge-light pt-6${visible ? ' visible' : ''}`}>
+    <div ref={ref} className={clsx('animate-in border-t border-edge-light pt-6', visible && 'visible')}>
       <div className="mb-4 font-mono text-4xl leading-none text-edge-light">{num}</div>
       <h3 className="mb-2 text-lg font-bold">{title}</h3>
       <p className="text-sm leading-relaxed text-text-secondary">{desc}</p>

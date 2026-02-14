@@ -1,4 +1,5 @@
 import { useState, useCallback, type ReactNode } from 'react'
+import clsx from 'clsx'
 
 type Tab = 'user' | 'project' | 'env'
 
@@ -128,7 +129,7 @@ export default function KeySettingsPanel({ apiKey }: { apiKey: string }) {
           <button
             type="button"
             key={key}
-            className={`cursor-pointer rounded-t-lg border border-b-0 border-edge-light px-4 py-2 text-[13px] transition-colors duration-150 hover:text-text-primary ${activeTab === key ? 'bg-edge text-text-primary' : 'bg-transparent text-text-secondary'}`}
+            className={clsx('cursor-pointer rounded-t-lg border border-b-0 border-edge-light px-4 py-2 text-[13px] transition-colors duration-150 hover:text-text-primary', activeTab === key ? 'bg-edge text-text-primary' : 'bg-transparent text-text-secondary')}
             onClick={() => handleTabChange(key)}>
             {label}
           </button>
@@ -142,7 +143,7 @@ export default function KeySettingsPanel({ apiKey }: { apiKey: string }) {
             <code className="flex-1 break-all font-mono text-xs text-violet-300">{config.cmd}</code>
             <button
               type="button"
-              className={`shrink-0 cursor-pointer rounded-md border bg-surface-raised px-2.5 py-1 text-xs transition-[color,border-color] duration-150 hover:border-edge-hover hover:text-text-primary ${cmdCopied ? 'border-green-500/25 text-green-500' : 'border-edge-light text-text-secondary'}`}
+              className={clsx('shrink-0 cursor-pointer rounded-md border bg-surface-raised px-2.5 py-1 text-xs transition-[color,border-color] duration-150 hover:border-edge-hover hover:text-text-primary', cmdCopied ? 'border-green-500/25 text-green-500' : 'border-edge-light text-text-secondary')}
               onClick={handleCmdCopy}>
               {cmdCopied ? '\u2713' : 'Copy'}
             </button>
@@ -154,7 +155,7 @@ export default function KeySettingsPanel({ apiKey }: { apiKey: string }) {
         {config.hint2 && <p className="mt-2 mb-1.5 text-xs leading-[1.4] text-text-secondary">{config.hint2}</p>}
         <button
           type="button"
-          className={`absolute top-2.5 right-2.5 cursor-pointer rounded-md border bg-surface-raised px-2.5 py-1 text-xs opacity-0 transition-[opacity,color,border-color] duration-150 group-hover/settings:opacity-100 hover:border-edge-hover hover:text-text-primary ${blockCopied ? 'border-green-500/25 text-green-500' : 'border-edge-light text-text-secondary'}`}
+          className={clsx('absolute top-2.5 right-2.5 cursor-pointer rounded-md border bg-surface-raised px-2.5 py-1 text-xs opacity-0 transition-[opacity,color,border-color] duration-150 group-hover/settings:opacity-100 hover:border-edge-hover hover:text-text-primary', blockCopied ? 'border-green-500/25 text-green-500' : 'border-edge-light text-text-secondary')}
           onClick={handleBlockCopy}>
           {blockCopied ? '\u2713' : 'Copy'}
         </button>

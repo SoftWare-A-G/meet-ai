@@ -1,3 +1,4 @@
+import clsx from 'clsx'
 import type { TeamInfo, TeamMember, TasksInfo, TaskItem } from '../../lib/types'
 import { ensureSenderContrast } from '../../lib/colors'
 
@@ -10,7 +11,7 @@ type TeamSidebarProps = {
 
 function MemberRow({ member, inactive }: { member: TeamMember; inactive?: boolean }) {
   return (
-    <div className={`flex items-center gap-2 px-4 py-[5px] text-[13px]${inactive ? ' opacity-40' : ''}`}>
+    <div className={clsx('flex items-center gap-2 px-4 py-[5px] text-[13px]', inactive && 'opacity-40')}>
       <span
         className="w-2 h-2 rounded-full shrink-0"
         style={{ background: inactive ? '#555' : ensureSenderContrast(member.color) }}
@@ -31,7 +32,7 @@ function TaskRow({ task }: { task: TaskItem }) {
 
   return (
     <div className="flex items-center gap-2 px-4 py-1 text-[13px]">
-      <span className={`shrink-0 w-4 text-center text-xs ${statusColor}`}>{statusIcon}</span>
+      <span className={clsx('shrink-0 w-4 text-center text-xs', statusColor)}>{statusIcon}</span>
       <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{task.subject}</span>
       {task.owner && <span className="text-[11px] text-[#6b7280] shrink-0">{task.owner}</span>}
     </div>
@@ -80,7 +81,7 @@ export default function TeamSidebar({ teamInfo, tasksInfo, isOpen, onClose }: Te
   const totalCount = teamInfo?.members.length ?? 0
 
   return (
-    <div className={`w-[330px] shrink-0 flex flex-col bg-sidebar-bg text-sidebar-text border-l border-sidebar-border overflow-y-auto max-[768px]:fixed max-[768px]:right-0 max-[768px]:z-50 max-[768px]:h-full max-[768px]:transition-transform max-[768px]:duration-[250ms] max-[768px]:ease-out max-[768px]:w-[330px] max-[768px]:max-w-[85vw] ${isOpen ? 'max-[768px]:translate-x-0' : 'max-[768px]:translate-x-full'}`}>
+    <div className={clsx('w-[330px] shrink-0 flex flex-col bg-sidebar-bg text-sidebar-text border-l border-sidebar-border overflow-y-auto max-[768px]:fixed max-[768px]:right-0 max-[768px]:z-50 max-[768px]:h-full max-[768px]:transition-transform max-[768px]:duration-[250ms] max-[768px]:ease-out max-[768px]:w-[330px] max-[768px]:max-w-[85vw]', isOpen ? 'max-[768px]:translate-x-0' : 'max-[768px]:translate-x-full')}>
       <div className="px-4 font-bold text-sm border-b border-sidebar-border flex items-center justify-between h-14 shrink-0">
         <span>Team</span>
         <span className="text-xs font-normal opacity-50">{teamInfo ? `${activeCount}/${totalCount}` : ''}</span>

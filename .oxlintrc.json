@@ -210,9 +210,6 @@
       "components": {},
       "attributes": {}
     },
-    "next": {
-      "rootDir": []
-    },
     "react": {
       "formComponents": [],
       "linkComponents": [],
@@ -235,6 +232,5 @@
   "env": {
     "builtin": true
   },
-  "globals": {},
-  "ignorePatterns": ["packages/worker/public/chat.js"]
+  "globals": {}
 }

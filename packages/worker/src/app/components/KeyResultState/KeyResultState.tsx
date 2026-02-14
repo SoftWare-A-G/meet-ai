@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import clsx from 'clsx'
 import { Link } from '@tanstack/react-router'
 import KeySettingsPanel from '../KeySettingsPanel'
 import KeyQuickStartSteps from '../KeyQuickStartSteps'
@@ -26,7 +27,7 @@ export default function KeyResultState({ apiKey }: { apiKey: string }) {
       </div>
 
       <div
-        className={`stagger-in relative flex items-center gap-2 max-[520px]:flex-col${shimmer ? ' shimmer' : ''}`}>
+        className={clsx('stagger-in relative flex items-center gap-2 max-[520px]:flex-col', shimmer && 'shimmer')}>
         <input
           type="text"
           value={apiKey}
@@ -35,7 +36,7 @@ export default function KeyResultState({ apiKey }: { apiKey: string }) {
         />
         <button
           type="button"
-          className={`cursor-pointer whitespace-nowrap rounded-lg border border-edge-light bg-edge px-4 py-3 text-sm text-text-primary transition-[background,transform,border-color] duration-150 hover:border-edge-hover hover:bg-edge-dim max-[520px]:w-full${copied ? ' copied' : ''}`}
+          className={clsx('cursor-pointer whitespace-nowrap rounded-lg border border-edge-light bg-edge px-4 py-3 text-sm text-text-primary transition-[background,transform,border-color] duration-150 hover:border-edge-hover hover:bg-edge-dim max-[520px]:w-full', copied && 'copied')}
           onClick={handleCopy}>
           {copied ? '\u2713' : 'Copy'}
         </button>

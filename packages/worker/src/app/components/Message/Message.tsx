@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import clsx from 'clsx'
 import { hashColor, darkenForAvatar, resolveColor, ensureSenderContrast } from '../../lib/colors'
 import { formatTime } from '../../lib/dates'
 import { contrastRatio } from '../../lib/theme'
@@ -39,7 +40,7 @@ export default function Message({ sender, content, color, timestamp, tempId, sta
   }, [content])
 
   return (
-    <div className={`flex gap-2.5 rounded-md px-2 py-1.5 text-sm break-words hover:bg-white/[0.08] ${status === 'pending' ? 'opacity-50' : ''} ${status === 'failed' ? 'opacity-70' : ''}`} data-temp-id={tempId} data-content={tempId ? content : undefined}>
+    <div className={clsx('flex gap-2.5 rounded-md px-2 py-1.5 text-sm break-words hover:bg-white/[0.08]', status === 'pending' && 'opacity-50', status === 'failed' && 'opacity-70')} data-temp-id={tempId} data-content={tempId ? content : undefined}>
       <div className="w-9 h-9 rounded-md shrink-0 flex items-center justify-center font-bold text-sm mt-0.5" style={{ background: avatarBg, color: avatarText }}>
         {escapeHtml(initials)}
       </div>

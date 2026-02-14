@@ -1,4 +1,5 @@
 import React, { useRef, useCallback, useState } from 'react'
+import clsx from 'clsx'
 import FormattingToolbar from '../FormattingToolbar'
 import { useAutoResize } from '../../hooks/useAutoResize'
 
@@ -114,7 +115,7 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
         {pendingFiles.length > 0 && (
           <div className="flex flex-wrap gap-1.5 px-3 pt-2">
             {pendingFiles.map((pf) => (
-              <div className={`flex items-center gap-1 bg-white/[0.15] rounded-md px-2 py-1 text-xs max-w-[200px] ${pf.status === 'error' ? 'bg-[#F85149]/15 text-[#F85149]' : ''} ${pf.status === 'uploading' ? 'opacity-70' : ''} ${pf.status === 'done' ? 'bg-[#3AD900]/[0.12]' : ''}`} key={pf.file.name + pf.file.size}>
+              <div className={clsx('flex items-center gap-1 bg-white/[0.15] rounded-md px-2 py-1 text-xs max-w-[200px]', pf.status === 'error' && 'bg-[#F85149]/15 text-[#F85149]', pf.status === 'uploading' && 'opacity-70', pf.status === 'done' && 'bg-[#3AD900]/[0.12]')} key={pf.file.name + pf.file.size}>
                 <span className="overflow-hidden text-ellipsis whitespace-nowrap max-w-[120px]">{pf.file.name}</span>
                 {pf.status === 'uploading' && <span className="opacity-60 whitespace-nowrap">uploading...</span>}
                 {pf.status === 'error' && <span className="text-[11px] whitespace-nowrap">{pf.error}</span>}

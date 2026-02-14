@@ -1,3 +1,4 @@
+import clsx from 'clsx'
 import type { Room } from '../../lib/types'
 
 type RoomListProps = {
@@ -14,7 +15,7 @@ export default function RoomList({ rooms, currentRoomId, onSelectRoom }: RoomLis
         {rooms.map(room => (
           <div
             key={room.id}
-            className={`px-4 rounded cursor-pointer h-8 text-sm flex items-center gap-2 mb-px transition-colors duration-100 hover:bg-hover-item${room.id === currentRoomId ? ' bg-active text-active-text font-semibold' : ''}`}
+            className={clsx('px-4 rounded cursor-pointer h-8 text-sm flex items-center gap-2 mb-px transition-colors duration-100 hover:bg-hover-item', room.id === currentRoomId && 'bg-active text-active-text font-semibold')}
             onClick={() => onSelectRoom(room)}
           >
             <span className="opacity-50 text-[13px]">#</span> {room.name}
