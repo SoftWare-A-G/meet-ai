@@ -1,5 +1,5 @@
-import { useEffect } from 'react'
 import { createRootRoute, HeadContent, Outlet, Scripts } from '@tanstack/react-router'
+import { useEffect } from 'react'
 import appCss from '../main.css?url'
 
 export const Route = createRootRoute({

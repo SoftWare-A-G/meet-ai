@@ -1,19 +1,20 @@
 name = "meet-ai"
-main = "src/index.ts"
+main = "src/server.ts"
 compatibility_date = "2025-09-06"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = true
 preview_urls = false
 
-routes = [
-  { pattern = "your-domain.com", custom_domain = true }
-]
+routes = [{ pattern = "your-domain.com", custom_domain = true }]
 
 [assets]
 directory = "./public"
 binding = "ASSETS"
-not_found_handling = "single-page-application"
-run_worker_first = ["/", "/api/*", "/chat/*", "/auth/*"]
+not_found_handling = "none"
+
+[[kv_namespaces]]
+binding = "UPLOADS"
+id = "YOUR_KV_NAMESPACE_ID"
 
 [[d1_databases]]
 binding = "DB"
@@ -21,10 +22,13 @@ database_name = "meet-ai-db"
 database_id = "YOUR_D1_DATABASE_ID"
 migrations_dir = "migrations"
 
+[triggers]
+crons = ["0 3 * * *"]
+
 [durable_objects]
 bindings = [
   { name = "CHAT_ROOM", class_name = "ChatRoom" },
-  { name = "LOBBY", class_name = "Lobby" }
+  { name = "LOBBY", class_name = "Lobby" },
 ]
 
 [[migrations]]
