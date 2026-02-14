@@ -1,5 +1,5 @@
 import { Tooltip } from '@base-ui/react/tooltip'
-import { IconMenu2, IconHash, IconDeviceMobile, IconUsers } from '../../icons'
+import { IconMenu2, IconHash, IconQrcode, IconUsers } from '../../icons'
 
 type MainHeaderProps = {
   roomName: string
@@ -22,7 +22,7 @@ export default function MainHeader({
 }: MainHeaderProps) {
   return (
     <Tooltip.Provider delay={600} closeDelay={0}>
-      <div className="border-border bg-header-bg text-header-text flex h-14 shrink-0 items-center justify-between border-b px-5">
+      <div className="border-border bg-header-bg text-header-text flex h-14 shrink-0 items-center justify-between border-b px-4">
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -39,15 +39,15 @@ export default function MainHeader({
           {showInvite && (
             <Tooltip.Root>
               <Tooltip.Trigger
-                aria-label="Open on phone"
+                aria-label="QR code"
                 className="text-header-text flex! cursor-pointer items-center justify-center gap-1.5 rounded-md border border-white/30 bg-transparent px-2.5 py-1 text-xs font-semibold whitespace-nowrap hover:bg-white/10"
                 onClick={onInviteClick}
               >
-                <IconDeviceMobile size={18} />
+                <IconQrcode size={18} />
               </Tooltip.Trigger>
               <Tooltip.Portal>
                 <Tooltip.Positioner sideOffset={8}>
-                  <Tooltip.Popup className={tooltipPopupClass}>Open on phone</Tooltip.Popup>
+                  <Tooltip.Popup className={tooltipPopupClass}>QR code</Tooltip.Popup>
                 </Tooltip.Positioner>
               </Tooltip.Portal>
             </Tooltip.Root>

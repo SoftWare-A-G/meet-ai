@@ -199,8 +199,8 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
   }, [addFiles])
 
   return (
-    <div className="px-5 pb-[calc(14px+env(safe-area-inset-bottom,0px))] shrink-0">
-      <div className="relative rounded-xl border border-border bg-input-bg">
+    <div className="shrink-0">
+      <div className="relative border-t border-border bg-input-bg">
         {mentionQuery !== null && agents.length > 0 && (
           <MentionPopup
             agents={agents}
@@ -233,7 +233,7 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
           onPaste={handlePaste}
         />
 
-        <div className="flex items-center justify-between p-2 border-t border-border">
+        <div className="flex items-center justify-between px-3 h-[52px] border-t border-border">
           <button
             type="button"
             className="flex items-center gap-1.5 px-3 h-9 rounded-lg border border-border bg-transparent text-msg-text opacity-70 hover:opacity-100 hover:bg-white/5 cursor-pointer text-sm transition-all"

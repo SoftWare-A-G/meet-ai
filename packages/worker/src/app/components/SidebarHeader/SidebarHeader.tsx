@@ -10,7 +10,7 @@ const tooltipPopupClass = "rounded bg-gray-900 px-2 py-1 text-xs text-white shad
 
 export default function SidebarHeader({ onSettingsClick, onCloseClick }: SidebarHeaderProps) {
   return (
-    <div className="px-4 font-bold text-base border-b border-sidebar-border flex items-center justify-between h-14 shrink-0">
+    <div className="pl-4 pr-2 font-bold text-base border-b border-sidebar-border flex items-center justify-between h-14 shrink-0">
       <span>meet-ai</span>
       <Tooltip.Provider delay={600} closeDelay={0}>
         <div className="flex items-center gap-1">
