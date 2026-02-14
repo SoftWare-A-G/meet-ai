@@ -29,22 +29,22 @@ export async function withRetry<T>(
   const baseDelay = options?.baseDelay ?? 1000;
   const shouldRetry = options?.shouldRetry ?? isRetryable;
 
-  let lastError: unknown;
+  let lastError: Error = new Error("withRetry: no attempts made");
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       return await fn();
-    } catch (err) {
-      lastError = err;
-      if (attempt >= maxRetries || !shouldRetry(err)) throw err;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      if (attempt >= maxRetries || !shouldRetry(error)) throw lastError;
 
       const delay = baseDelay * 2 ** attempt;
       console.error(JSON.stringify({
         event: "retry",
         attempt: attempt + 1,
         delay_ms: delay,
-        error: err instanceof Error ? err.message : String(err),
+        error: lastError.message,
       }));
-      await new Promise((r) => setTimeout(r, delay));
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
   throw lastError;
@@ -55,7 +55,7 @@ const MAX_AGE_MS = 5 * 60 * 1000; // 5 minutes
 
 export function cleanupOldAttachments(): void {
   try {
-    const { readdirSync, statSync, unlinkSync } = require("fs") as typeof import("fs");
+    const { readdirSync, statSync, unlinkSync } = require("node:fs") as typeof import("node:fs");
     const now = Date.now();
     for (const entry of readdirSync(ATTACHMENTS_DIR)) {
       try {
@@ -325,7 +325,7 @@ export function createClient(baseUrl: string, apiKey?: string) {
         throw new Error((err as any).error ?? `HTTP ${res.status}`);
       }
 
-      const { mkdirSync, writeFileSync } = await import("fs");
+      const { mkdirSync, writeFileSync } = await import("node:fs");
       const dir = "/tmp/meet-ai-attachments";
       mkdirSync(dir, { recursive: true });
       const localPath = `${dir}/${attachmentId}-${filename}`;

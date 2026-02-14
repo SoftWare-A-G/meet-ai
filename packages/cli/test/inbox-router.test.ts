@@ -1,6 +1,6 @@
 import { test, expect, beforeEach, afterEach } from "bun:test";
-import { mkdirSync, rmSync, readFileSync, writeFileSync } from "fs";
-import { join } from "path";
+import { mkdirSync, rmSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { appendToInbox, getTeamMembers, resolveInboxTargets, checkIdleAgents, IDLE_THRESHOLD_MS } from "../src/inbox-router";
 
 const tmpDir = join(import.meta.dir, ".tmp-test");

@@ -21,7 +21,6 @@
     "import/namespace": "error",
     "import/no-absolute-path": "error",
     "import/no-amd": "error",
-    "import/no-anonymous-default-export": "error",
     "import/no-cycle": "error",
     "import/no-duplicates": "error",
     "import/no-empty-named-blocks": "error",
@@ -211,9 +210,6 @@
       "components": {},
       "attributes": {}
     },
-    "next": {
-      "rootDir": []
-    },
     "react": {
       "formComponents": [],
       "linkComponents": [],
@@ -236,6 +232,5 @@
   "env": {
     "builtin": true
   },
-  "globals": {},
-  "ignorePatterns": []
+  "globals": {}
 }

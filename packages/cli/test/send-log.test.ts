@@ -1,7 +1,7 @@
 import { test, expect, mock, beforeEach } from "bun:test";
 import { createClient } from "../src/client";
 
-const originalFetch = globalThis.fetch;
+const _originalFetch = globalThis.fetch;
 
 let lastRequest: { url: string; method: string; body: Record<string, unknown> } | null = null;
 

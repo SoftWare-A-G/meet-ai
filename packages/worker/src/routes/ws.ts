@@ -1,30 +1,32 @@
 import { Hono } from 'hono'
-import type { AppEnv } from '../lib/types'
-import { requireAuth } from '../middleware/auth'
 import { queries } from '../db/queries'
+import { requireAuth } from '../middleware/auth'
+import type { AppEnv } from '../lib/types'
 
 export const wsRoute = new Hono<AppEnv>()
 
-// GET /api/rooms/:id/ws — WebSocket upgrade, forwarded to Durable Object
-wsRoute.get('/:id/ws', requireAuth, async (c) => {
-  const upgradeHeader = c.req.header('Upgrade')
-  if (upgradeHeader !== 'websocket') {
-    return c.json({ error: 'expected WebSocket upgrade' }, 426)
-  }
+  // GET /api/rooms/:id/ws — WebSocket upgrade, forwarded to Durable Object
+  .get('/:id/ws', requireAuth, async c => {
+    const upgradeHeader = c.req.header('Upgrade')
+    if (upgradeHeader !== 'websocket') {
+      return c.json({ error: 'expected WebSocket upgrade' }, 426)
+    }
 
-  const keyId = c.get('keyId')
-  const roomId = c.req.param('id')
-  const db = queries(c.env.DB)
+    const keyId = c.get('keyId')
+    const roomId = c.req.param('id')
+    const db = queries(c.env.DB)
 
-  const room = await db.findRoom(roomId, keyId)
-  if (!room) {
-    return c.json({ error: 'room not found' }, 404)
-  }
+    const room = await db.findRoom(roomId, keyId)
+    if (!room) {
+      return c.json({ error: 'room not found' }, 404)
+    }
 
-  const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
-  const stub = c.env.CHAT_ROOM.get(doId)
+    const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
+    const stub = c.env.CHAT_ROOM.get(doId)
 
-  return stub.fetch(new Request('http://internal/ws', {
-    headers: c.req.raw.headers,
-  }))
-})
+    return stub.fetch(
+      new Request('http://internal/ws', {
+        headers: c.req.raw.headers,
+      })
+    )
+  })

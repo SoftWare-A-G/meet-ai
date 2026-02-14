@@ -683,14 +683,14 @@ describe('Logs', () => {
   })
 })
 
-describe('Attachments / Uploads', () => {
-  /** Helper: build a FormData with a file field */
-  function buildUpload(content: string, filename: string, contentType: string = 'text/plain'): FormData {
-    const formData = new FormData()
-    formData.append('file', new File([content], filename, { type: contentType }))
-    return formData
-  }
+/** Helper: build a FormData with a file field */
+function buildUpload(content: string, filename: string, contentType = 'text/plain'): FormData {
+  const formData = new FormData()
+  formData.append('file', new File([content], filename, { type: contentType }))
+  return formData
+}
 
+describe('Attachments / Uploads', () => {
   async function uploadFile(key: string, roomId: string, content: string, filename: string, contentType?: string) {
     const formData = buildUpload(content, filename, contentType)
     return SELF.fetch(`http://localhost/api/rooms/${roomId}/upload`, {

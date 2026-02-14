@@ -1,5 +1,5 @@
-import { readFileSync, writeFileSync, mkdirSync, statSync } from "fs";
-import { dirname } from "path";
+import { readFileSync, writeFileSync, mkdirSync, statSync } from "node:fs";
+import { dirname } from "node:path";
 
 export const IDLE_CHECK_INTERVAL_MS = 60_000;
 export const IDLE_THRESHOLD_MS = 5 * 60 * 1000;

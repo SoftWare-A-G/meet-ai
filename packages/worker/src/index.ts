@@ -1,50 +1,51 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import type { AppEnv } from './lib/types'
+import { queries } from './db/queries'
 import { authRoute } from './routes/auth'
 import { keysRoute } from './routes/keys'
-import { roomsRoute } from './routes/rooms'
-import { wsRoute } from './routes/ws'
 import { lobbyRoute } from './routes/lobby'
-import { pagesRoute } from './routes/pages'
+import { roomsRoute } from './routes/rooms'
 import { uploadsRoute } from './routes/uploads'
-import { queries } from './db/queries'
+import { wsRoute } from './routes/ws'
+import type { AppEnv } from './lib/types'
 
 export { ChatRoom } from './durable-objects/chat-room'
 export { Lobby } from './durable-objects/lobby'
 
-const app = new Hono<AppEnv>()
+export const app = new Hono<AppEnv>()
+  .onError((err, c) => {
+    if (err instanceof SyntaxError) {
+      return c.json({ error: 'Invalid JSON' }, 400)
+    }
 
-app.onError((err, c) => {
-  if (err instanceof SyntaxError) {
-    return c.json({ error: 'Invalid JSON' }, 400)
-  }
-  console.error('Unhandled error:', err)
-  return c.json({ error: 'Internal server error' }, 500)
-})
+    console.error('Unhandled error:', err)
 
-app.use('*', cors())
+    return c.json({ error: 'Internal server error' }, 500)
+  })
 
-app.route('/api/auth', authRoute)
-app.route('/api/keys', keysRoute)
-app.route('/api/rooms', roomsRoute)
-app.route('/api/rooms', wsRoute)
-app.route('/api/lobby', lobbyRoute)
-app.route('/api/rooms', uploadsRoute)
-app.route('/api', uploadsRoute)
-app.route('/', pagesRoute)
+  .use('*', cors())
 
-// Auth landing page — claims a share token and redirects to chat
-app.get('/auth/:token', async (c) => {
-  const token = c.req.param('token')
-  return c.redirect(`/chat?token=${encodeURIComponent(token)}`, 302)
-})
+  .route('/api/auth', authRoute)
+  .route('/api/keys', keysRoute)
+  .route('/api/rooms', roomsRoute)
+  .route('/api/rooms', wsRoute)
+  .route('/api/lobby', lobbyRoute)
+  .route('/api/rooms', uploadsRoute)
+  .route('/api', uploadsRoute)
 
+  // Auth landing page — claims a share token and redirects to chat
+  .get('/auth/:token', async c => {
+    const token = c.req.param('token')
+    return c.redirect(`/chat?token=${encodeURIComponent(token)}`, 302)
+  })
 
 export default {
   fetch: app.fetch,
   async scheduled(_event: ScheduledEvent, env: AppEnv['Bindings'], _ctx: ExecutionContext) {
-    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().replace('T', ' ').slice(0, 19)
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000)
+      .toISOString()
+      .replace('T', ' ')
+      .slice(0, 19)
     await queries(env.DB).deleteOldLogs(cutoff)
   },
 }

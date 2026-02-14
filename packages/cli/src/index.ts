@@ -17,8 +17,8 @@ async function downloadMessageAttachments(roomId: string, messageId: string): Pr
       try {
         const localPath = await client.downloadAttachment(att.id, att.filename);
         paths.push(localPath);
-      } catch (err) {
-        console.error(JSON.stringify({ event: "attachment_download_error", attachmentId: att.id, error: err instanceof Error ? err.message : String(err) }));
+      } catch (error) {
+        console.error(JSON.stringify({ event: "attachment_download_error", attachmentId: att.id, error: error instanceof Error ? error.message : String(error) }));
       }
     }
     return paths;
@@ -109,7 +109,7 @@ switch (command) {
     function routeToInbox(msg: { sender: string; content: string }, attachmentPaths?: string[]) {
       if (!inboxDir) return;
       const entry: Record<string, unknown> = {
-        from: "meet-ai:" + msg.sender,
+        from: `meet-ai:${msg.sender}`,
         text: msg.content,
         timestamp: new Date().toISOString(),
         read: false,
@@ -256,15 +256,15 @@ switch (command) {
       const filenameMatch = disposition.match(/filename="(.+?)"/);
       const filename = filenameMatch?.[1] || attachmentId;
 
-      const { mkdirSync, writeFileSync } = await import("fs");
+      const { mkdirSync, writeFileSync } = await import("node:fs");
       const dir = "/tmp/meet-ai-attachments";
       mkdirSync(dir, { recursive: true });
       const localPath = `${dir}/${attachmentId}-${filename}`;
       const buffer = Buffer.from(await res.arrayBuffer());
       writeFileSync(localPath, buffer);
       console.log(localPath);
-    } catch (err) {
-      console.error(err instanceof Error ? err.message : String(err));
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : String(error));
       process.exit(1);
     }
     break;
@@ -277,7 +277,7 @@ switch (command) {
     break;
   }
 
-  default:
+  default: {
     console.log(`meet-ai CLI
 
 Environment variables:
@@ -304,4 +304,5 @@ Commands:
   send-team-info <roomId> '<json>'             Send team info to a room
   send-tasks <roomId> '<json>'                 Send tasks info to a room
   generate-key                                 Generate a new API key`);
+  }
 }

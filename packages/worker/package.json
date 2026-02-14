@@ -3,27 +3,39 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "bun run build:css && bun run build:chat && bun run build:key && wrangler deploy",
+    "dev": "vite dev --force",
+    "build": "vite build",
+    "deploy": "bun run build && wrangler deploy",
     "test": "vitest",
     "typecheck": "tsc --noEmit",
-    "build:chat": "bun build src/client/chat.tsx --outfile public/chat.js --minify --target browser",
-    "build:key": "bun build src/client/key.tsx --outfile public/key.js --minify --target browser",
-    "build:css": "bunx @tailwindcss/cli -i src/styles/main.css -o public/tailwind.css --minify",
-    "dev:chat": "bun build src/client/chat.tsx --outfile public/chat.js --target browser --watch",
-    "dev:key": "bun build src/client/key.tsx --outfile public/key.js --target browser --watch",
-    "dev:css": "bunx @tailwindcss/cli -i src/styles/main.css -o public/tailwind.css --watch"
+    "cf-typegen": "wrangler types"
   },
   "dependencies": {
-    "dayjs": "^1.11.19",
-    "hono": "4.11.8"
+    "@base-ui/react": "1.2.0",
+    "@tanstack/react-router": "1.159.6",
+    "@tanstack/react-start": "1.159.8",
+    "clsx": "2.1.1",
+    "dayjs": "1.11.19",
+    "dompurify": "3.3.1",
+    "hono": "4.11.8",
+    "marked": "17.0.2",
+    "qrcode-generator": "2.0.4",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "shiki": "3.22.0"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "1.25.0",
     "@cloudflare/vitest-pool-workers": "0.12.10",
     "@cloudflare/workers-types": "4.20260207.0",
-    "@tailwindcss/cli": "4.1.18",
-    "tailwindcss": "4.1.18",
+    "@tailwindcss/postcss": "4.1.18",
+    "@types/dompurify": "3.2.0",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "5.1.4",
+    "tailwindcss": "catalog:",
     "typescript": "catalog:",
+    "vite": "7.3.1",
     "vitest": "3.2.4",
     "wrangler": "4.63.0"
   }
