@@ -3,16 +3,12 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "bun run build:chat && wrangler deploy",
+    "dev": "vite dev",
+    "build": "vite build",
+    "deploy": "bun run build && wrangler deploy",
     "test": "vitest",
     "typecheck": "tsc --noEmit",
-    "dev:vite": "vite dev",
-    "build:vite": "vite build",
-    "preview": "vite preview",
-    "cf-typegen": "wrangler types",
-    "build:chat": "bun build src/client/chat.tsx --outfile public/chat.js --minify --target browser",
-    "dev:chat": "bun build src/client/chat.tsx --outfile public/chat.js --target browser --watch"
+    "cf-typegen": "wrangler types"
   },
   "dependencies": {
     "@tanstack/react-router": "1.159.6",
