@@ -1,3 +1,4 @@
+import { Dialog } from '@base-ui/react/dialog'
 import clsx from 'clsx'
 import type { TeamInfo, TeamMember, TasksInfo, TaskItem } from '../../lib/types'
 import { ensureSenderContrast } from '../../lib/colors'
@@ -81,13 +82,28 @@ export default function TeamSidebar({ teamInfo, tasksInfo, isOpen, onClose }: Te
   const totalCount = teamInfo?.members.length ?? 0
 
   return (
-    <div className={clsx('w-[330px] shrink-0 flex flex-col bg-sidebar-bg text-sidebar-text border-l border-sidebar-border overflow-y-auto max-[768px]:fixed max-[768px]:right-0 max-[768px]:z-50 max-[768px]:h-full max-[768px]:transition-transform max-[768px]:duration-[250ms] max-[768px]:ease-out max-[768px]:w-[330px] max-[768px]:max-w-[85vw]', isOpen ? 'max-[768px]:translate-x-0' : 'max-[768px]:translate-x-full')}>
-      <div className="px-4 font-bold text-sm border-b border-sidebar-border flex items-center justify-between h-14 shrink-0">
-        <span>Team</span>
-        <span className="text-xs font-normal opacity-50">{teamInfo ? `${activeCount}/${totalCount}` : ''}</span>
-        <button type="button" className="hidden bg-transparent border-none text-sidebar-text cursor-pointer text-[22px] p-1 rounded leading-none opacity-70 hover:opacity-100 hover:bg-hover-item max-[768px]:flex max-[768px]:items-center max-[768px]:justify-center" onClick={onClose}>&times;</button>
-      </div>
-      {teamInfo && <TeamSidebarContent teamInfo={teamInfo} tasksInfo={tasksInfo} />}
-    </div>
+    <Dialog.Root open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
+      <Dialog.Portal keepMounted>
+        <Dialog.Backdrop className="fixed inset-0 z-49 bg-black/50 min-[769px]:hidden" />
+        <Dialog.Popup
+          className={clsx(
+            'w-[330px] shrink-0 flex flex-col bg-sidebar-bg text-sidebar-text border-l border-sidebar-border overflow-y-auto',
+            'max-[768px]:fixed max-[768px]:right-0 max-[768px]:z-50 max-[768px]:h-full',
+            'max-[768px]:transition-transform max-[768px]:duration-[250ms] max-[768px]:ease-out',
+            'max-[768px]:w-[330px] max-[768px]:max-w-[85vw]',
+            isOpen ? 'max-[768px]:translate-x-0' : 'max-[768px]:translate-x-full'
+          )}
+        >
+          <div className="px-4 font-bold text-sm border-b border-sidebar-border flex items-center justify-between h-14 shrink-0">
+            <span>Team</span>
+            <span className="text-xs font-normal opacity-50">{teamInfo ? `${activeCount}/${totalCount}` : ''}</span>
+            <Dialog.Close className="hidden bg-transparent border-none text-sidebar-text cursor-pointer text-[22px] p-1 rounded leading-none opacity-70 hover:opacity-100 hover:bg-hover-item max-[768px]:flex max-[768px]:items-center max-[768px]:justify-center">
+              &times;
+            </Dialog.Close>
+          </div>
+          {teamInfo && <TeamSidebarContent teamInfo={teamInfo} tasksInfo={tasksInfo} />}
+        </Dialog.Popup>
+      </Dialog.Portal>
+    </Dialog.Root>
   )
 }

@@ -5,7 +5,6 @@ import LoginPrompt from '../components/LoginPrompt'
 import QRShareModal from '../components/QRShareModal'
 import SettingsModal from '../components/SettingsModal'
 import Sidebar from '../components/Sidebar'
-import SidebarBackdrop from '../components/SidebarBackdrop'
 import TeamSidebar from '../components/TeamSidebar'
 import { Toast } from '@base-ui/react/toast'
 import TokenScreen from '../components/TokenScreen'
@@ -202,7 +201,6 @@ function ChatLayout({
           onClose={() => setSidebarOpen(false)}
           onInstallClick={handleInstallClick}
         />
-        {sidebarOpen && <SidebarBackdrop onClick={() => setSidebarOpen(false)} />}
         <Outlet />
         <TeamSidebar
           teamInfo={teamInfo}
@@ -211,10 +209,6 @@ function ChatLayout({
           onClose={() => setTeamSidebarOpen(false)}
         />
       </div>
-      <div
-        className={`fixed inset-0 z-49 bg-black/50 ${teamSidebarOpen ? 'block' : 'hidden'}`}
-        onClick={() => setTeamSidebarOpen(false)}
-      />
       {showSettingsModal && (
         <SettingsModal
           currentSchema={colorSchema}
