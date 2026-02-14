@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach, afterEach } from 'vitest'
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs'
-import { findRoomId } from '../src/find-room'
+import { findRoomId } from '../find-room'
 
 const TEST_DIR = '/tmp/meet-ai-hook-test-teams'
 

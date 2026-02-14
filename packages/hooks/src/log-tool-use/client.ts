@@ -1,5 +1,5 @@
 import { hc } from 'hono/client'
-import type { AppType } from '../../worker/src/index'
+import type { AppType } from '../../../worker/src/index'
 
 const HOOK_COLOR = '#6b7280'
 const HOOK_SENDER = 'hook'

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs'
-import { processHookInput } from '../src/index'
+import { processHookInput } from '../index'
 
 const TEST_DIR = '/tmp/meet-ai-hook-test-teams'
 const MSGID_DIR = '/tmp'

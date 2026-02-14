@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { summarize } from '../src/summarize'
+import { summarize } from '../summarize'
 
 describe('summarize', () => {
   it('summarizes Edit with basename', () => {

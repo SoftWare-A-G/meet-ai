@@ -8,5 +8,5 @@
     "noEmit": true,
     "types": ["node", "@cloudflare/workers-types/2023-07-01"]
   },
-  "include": ["src", "test"]
+  "include": ["src"]
 }

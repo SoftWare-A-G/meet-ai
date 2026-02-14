@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { createHookClient, sendParentMessage, sendLogEntry } from '../src/client'
+import { createHookClient, sendParentMessage, sendLogEntry } from '../client'
 
 const MOCK_URL = 'http://localhost:9999'
 const MOCK_KEY = 'mai_test123'
