@@ -84,11 +84,11 @@ export default function TeamSidebar({ teamInfo, tasksInfo, isOpen, onClose }: Te
   return (
     <Dialog.Root open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
       <Dialog.Portal keepMounted>
-        <Dialog.Backdrop className="fixed inset-0 z-49 bg-black/50 min-[769px]:hidden" />
+        <Dialog.Backdrop className="fixed inset-0 z-[49] bg-black/50 [-webkit-tap-highlight-color:transparent] min-[769px]:hidden" />
         <Dialog.Popup
           className={clsx(
             'w-[330px] shrink-0 flex flex-col bg-sidebar-bg text-sidebar-text border-l border-sidebar-border overflow-y-auto',
-            'max-[768px]:fixed max-[768px]:right-0 max-[768px]:z-50 max-[768px]:h-full',
+            'max-[768px]:fixed max-[768px]:top-0 max-[768px]:right-0 max-[768px]:z-50 max-[768px]:h-full',
             'max-[768px]:transition-transform max-[768px]:duration-[250ms] max-[768px]:ease-out',
             'max-[768px]:w-[330px] max-[768px]:max-w-[85vw]',
             isOpen ? 'max-[768px]:translate-x-0' : 'max-[768px]:translate-x-full'
