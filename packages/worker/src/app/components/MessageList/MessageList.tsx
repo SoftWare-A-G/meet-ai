@@ -86,9 +86,11 @@ export default function MessageList({ messages, attachmentCounts, unreadCount, f
   useEffect(() => {
     if (messages.length > (prevLengthRef.current ?? 0) && wasAtBottomBeforeUpdate.current) {
       scrollToBottom()
+      // Clear unread pill immediately — user was already at bottom when new messages arrived
+      if (unreadCount > 0) onScrollToBottom()
     }
     prevLengthRef.current = messages.length
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- scrollToBottom is stable
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- scrollToBottom/onScrollToBottom are stable
   }, [messages.length])
 
   // Auto-dismiss new messages pill when user scrolls to the bottom

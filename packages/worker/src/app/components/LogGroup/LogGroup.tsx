@@ -30,8 +30,8 @@ export default function LogGroup({ logs }: LogGroupProps) {
   const timeRange = lastTime && lastTime !== firstTime ? `${firstTime} - ${lastTime}` : firstTime
 
   return (
-    <Collapsible.Root defaultOpen={false} className="group/log rounded my-px text-xs font-mono text-msg-text opacity-65">
-      <Collapsible.Trigger className="flex w-full items-center gap-1.5 px-2 py-[3px] cursor-pointer rounded select-none hover:bg-white/[0.08] hover:opacity-100 bg-transparent border-none text-inherit font-inherit text-left">
+    <Collapsible.Root defaultOpen={false} className="rounded my-px text-xs font-mono text-msg-text opacity-65">
+      <Collapsible.Trigger className="group/log flex w-full items-center gap-1.5 px-2 py-[3px] cursor-pointer rounded select-none hover:bg-white/[0.08] hover:opacity-100 bg-transparent border-none text-inherit font-inherit text-left">
         <span className="text-[10px] w-3 text-center shrink-0 inline group-data-[panel-open]/log:hidden">{'\u25B8'}</span>
         <span className="text-[10px] w-3 text-center shrink-0 hidden group-data-[panel-open]/log:inline">{'\u25BE'}</span>
         <span className="flex-1 min-w-0">{summaryText(logs)}</span>
