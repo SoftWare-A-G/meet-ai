@@ -52,11 +52,11 @@ export default function Message({ sender, content, color, timestamp, tempId, sta
             {status === 'failed' && ' \u274C'}
           </span>
           {status === 'sent' && (
-            <span className="inline-flex items-center gap-1 opacity-0 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity">
+            <span className="inline-flex items-center gap-3 opacity-0 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity">
               <button
                 type="button"
                 onClick={handleCopy}
-                className="text-[#8b8fa3]/60 hover:text-[#8b8fa3] transition-colors cursor-pointer"
+                className="p-2 inline-flex items-center justify-center text-[#8b8fa3]/60 hover:text-[#8b8fa3] transition-colors cursor-pointer"
                 title="Copy message"
               >
                 {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
@@ -65,7 +65,7 @@ export default function Message({ sender, content, color, timestamp, tempId, sta
                 <button
                   type="button"
                   onClick={handleShare}
-                  className="text-[#8b8fa3]/60 hover:text-[#8b8fa3] transition-colors cursor-pointer"
+                  className="p-2 inline-flex items-center justify-center text-[#8b8fa3]/60 hover:text-[#8b8fa3] transition-colors cursor-pointer"
                   title="Share message"
                 >
                   <IconShare size={14} />
