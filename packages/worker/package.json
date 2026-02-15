@@ -24,6 +24,7 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "shiki": "3.22.0",
+    "use-stick-to-bottom": "1.1.3",
     "zod": "catalog:"
   },
   "devDependencies": {
