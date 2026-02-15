@@ -73,7 +73,8 @@ function groupMessages(messages: DisplayMessage[]): RenderItem[] {
 
 export default function MessageList({ messages, attachmentCounts, unreadCount, forceScrollCounter, onScrollToBottom, onRetry, connected = true }: MessageListProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const { isAtBottom, atBottom, scrollToBottom } = useScrollAnchor(containerRef)
+  const bottomRef = useRef<HTMLDivElement>(null)
+  const { isAtBottom, atBottom, scrollToBottom } = useScrollAnchor(containerRef, bottomRef)
   const prevLengthRef = useRef<number>(0)
   const wasAtBottomBeforeUpdate = useRef(true)
 
@@ -147,6 +148,7 @@ export default function MessageList({ messages, attachmentCounts, unreadCount, f
           />
         )
       })}
+      <div ref={bottomRef} />
       {!atBottom && (
         <NewMessagesPill
           count={unreadCount}

@@ -1,7 +1,7 @@
 import { useCallback, useRef, useEffect, useState } from 'react'
 import type { RefObject } from 'react'
 
-export function useScrollAnchor(ref: RefObject<HTMLDivElement | null>) {
+export function useScrollAnchor(ref: RefObject<HTMLDivElement | null>, bottomRef?: RefObject<HTMLDivElement | null>) {
   const wasAtBottomRef = useRef(true)
   const [atBottom, setAtBottom] = useState(true)
   const rafId = useRef<number>(0) as { current: number }
@@ -27,14 +27,20 @@ export function useScrollAnchor(ref: RefObject<HTMLDivElement | null>) {
   const scrollToBottom = useCallback(() => {
     cancelAnimationFrame(rafId.current)
     rafId.current = requestAnimationFrame(() => {
-      const el = ref.current
-      if (!el) return
-      el.scrollTop = el.scrollHeight
+      // Prefer scrolling to a sentinel element at the very end of the container,
+      // which ensures bottom padding is fully visible after the last message.
+      if (bottomRef?.current) {
+        bottomRef.current.scrollIntoView({ block: 'end' })
+      } else {
+        const el = ref.current
+        if (!el) return
+        el.scrollTop = el.scrollHeight
+      }
       wasAtBottomRef.current = true
       setAtBottom(true)
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps -- rafId is a stable ref
-  }, [ref])
+  }, [ref, bottomRef])
 
   // Clean up pending animation frame on unmount
   // eslint-disable-next-line react-hooks/exhaustive-deps -- rafId is a stable ref
