@@ -200,7 +200,7 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
 
   return (
     <div className="shrink-0 pb-[env(safe-area-inset-bottom)] bg-input-bg">
-      <div className="relative border-t border-border">
+      <div className="relative border-t border-b border-border">
         {mentionQuery !== null && agents.length > 0 && (
           <MentionPopup
             agents={agents}
