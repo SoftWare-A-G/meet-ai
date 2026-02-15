@@ -54,7 +54,7 @@ export default function Message({ sender, content, color, timestamp, tempId, sta
         </button>
       )}
       <div className="min-w-0">
-        <div className="flex items-baseline gap-2 mb-0.5">
+        <div className="flex items-center gap-2 mb-0.5">
           <span className="font-bold text-sm" style={{ color: senderColor }}>{sender}</span>
           <span className="text-[11px] text-[#8b8fa3]">
             {timeText}
