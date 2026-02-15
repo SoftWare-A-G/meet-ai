@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { useChatContext } from '../../lib/chat-context'
+import { useViewportHeight } from '../../hooks/useViewportHeight'
 import MainHeader from '../../components/MainHeader'
 import ChatView from '../../components/ChatView'
 
@@ -12,6 +13,8 @@ function ChatRoom() {
   const { id } = Route.useParams()
   const { rooms, apiKey, userName, isStandalone, teamInfo, setSidebarOpen, setTeamSidebarOpen, setTeamInfo, setTasksInfo, showQR } = useChatContext()
 
+  useViewportHeight()
+
   const room = rooms.find(r => r.id === id)
   const roomName = room?.name ?? 'Loading...'
 
@@ -21,7 +24,7 @@ function ChatRoom() {
   }, [room])
 
   return (
-    <div className="flex-1 flex flex-col bg-chat-bg text-msg-text min-w-0 h-dvh">
+    <div className="flex-1 flex flex-col bg-chat-bg text-msg-text min-w-0 h-[var(--vh,100dvh)]">
       <MainHeader
         roomName={roomName}
         showInvite={!isStandalone && !!room}
