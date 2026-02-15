@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import clsx from 'clsx'
 import { hashColor, ensureSenderContrast } from '../../lib/colors'
 import { formatTime } from '../../lib/dates'
@@ -21,7 +21,7 @@ export default function Message({ sender, content, color, timestamp, tempId, sta
   const senderColor = color ? ensureSenderContrast(color) : hashColor(sender)
   const [copied, setCopied] = useState(false)
 
-  const timeText = status === 'pending' ? 'sending' : status === 'failed' ? 'failed' : formatTime(timestamp)
+  const timeText = status === 'failed' ? 'failed' : formatTime(timestamp)
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(content).then(() => {
@@ -34,42 +34,46 @@ export default function Message({ sender, content, color, timestamp, tempId, sta
     navigator.share({ text: content })
   }, [content])
 
+  const html = useMemo(() => renderMarkdown(content), [content])
+
   useEffect(() => {
     if (contentRef.current) {
-      contentRef.current.innerHTML = renderMarkdown(content)
       highlightCode(contentRef.current)
     }
   }, [content])
 
+  const canShare = typeof navigator !== 'undefined' && 'share' in navigator
+
   return (
-    <div className={clsx('group relative rounded-md px-2 py-1.5 text-sm break-words hover:bg-white/[0.08]', status === 'pending' && 'opacity-50', status === 'failed' && 'opacity-70')} data-temp-id={tempId} data-content={tempId ? content : undefined}>
-      {status === 'sent' && typeof navigator !== 'undefined' && 'share' in navigator && (
-        <button
-          type="button"
-          onClick={handleShare}
-          className="absolute top-1 right-1 p-2 inline-flex items-center justify-center text-[#8b8fa3]/60 hover:text-[#8b8fa3] opacity-0 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity cursor-pointer"
-          title="Share message"
-        >
-          <IconShare size={14} />
-        </button>
-      )}
+    <div className={clsx('group relative rounded-md px-2 py-1.5 text-sm break-words hover:bg-white/[0.08]', status === 'pending' && 'opacity-50', status === 'failed' && 'border-l-2 border-red-500/50 bg-red-500/[0.04]')} data-temp-id={tempId} data-content={tempId ? content : undefined}>
       <div className="min-w-0">
         <div className="flex items-center gap-2 mb-0.5">
           <span className="font-bold text-sm" style={{ color: senderColor }}>{sender}</span>
-          <span className="text-[11px] text-[#8b8fa3]">
+          <span className={clsx('text-xs', status === 'failed' ? 'text-red-400/80' : 'text-[#8b8fa3]')}>
             {timeText}
-            {status === 'pending' && ' \u23F3'}
             {status === 'failed' && ' \u274C'}
           </span>
-          {status === 'sent' && (
-            <span className="inline-flex items-center gap-3 opacity-0 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity">
+          <span className={clsx('inline-flex items-center opacity-0 transition-opacity', status === 'sent' && 'group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100')}>
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="p-2 inline-flex items-center justify-center text-[#8b8fa3]/60 hover:text-[#8b8fa3] transition-colors cursor-pointer"
+              title="Copy message"
+              tabIndex={status === 'sent' ? 0 : -1}
+            >
+              {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
+            </button>
+          </span>
+          {canShare && (
+            <span className={clsx('ml-auto inline-flex items-center opacity-0 transition-opacity', status === 'sent' && 'group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100')}>
               <button
                 type="button"
-                onClick={handleCopy}
+                onClick={handleShare}
                 className="p-2 inline-flex items-center justify-center text-[#8b8fa3]/60 hover:text-[#8b8fa3] transition-colors cursor-pointer"
-                title="Copy message"
+                title="Share message"
+                tabIndex={status === 'sent' ? 0 : -1}
               >
-                {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
+                <IconShare size={14} />
               </button>
             </span>
           )}
@@ -77,7 +81,7 @@ export default function Message({ sender, content, color, timestamp, tempId, sta
             <span className="inline text-[11px] text-primary cursor-pointer ml-1.5 underline" onClick={onRetry}>retry</span>
           )}
         </div>
-        <div className="msg-content" ref={contentRef} />
+        <div className="msg-content" ref={contentRef} dangerouslySetInnerHTML={{ __html: html }} />
         {attachmentCount && attachmentCount > 0 ? (
           <div className="text-xs opacity-60 mt-1">
             {'\u{1F4CE}'} {attachmentCount} attachment{attachmentCount > 1 ? 's' : ''}

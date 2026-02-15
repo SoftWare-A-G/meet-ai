@@ -91,7 +91,7 @@ export default function TeamSidebar({ teamInfo, tasksInfo, isOpen, onClose }: Te
       )}
       <div
         className={clsx(
-          'w-[330px] shrink-0 flex flex-col bg-sidebar-bg text-sidebar-text border-l border-sidebar-border overflow-y-auto',
+          'w-[330px] shrink-0 flex flex-col bg-sidebar-bg text-sidebar-text border-l border-b border-sidebar-border overflow-y-auto',
           'max-[980px]:fixed max-[980px]:top-0 max-[980px]:right-0 max-[980px]:z-50 max-[980px]:h-full',
           'max-[980px]:transition-transform max-[980px]:duration-[250ms] max-[980px]:ease-out',
           'max-[980px]:w-[330px] max-[980px]:max-w-[85vw]',

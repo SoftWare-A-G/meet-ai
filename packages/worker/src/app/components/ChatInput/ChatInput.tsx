@@ -1,10 +1,9 @@
-import React, { useRef, useCallback, useState, useMemo } from 'react'
+import { useRef, useCallback, useState, useMemo, type RefObject } from 'react'
 import clsx from 'clsx'
+import { MentionsInput, Mention } from 'react-mentions-ts'
+import type { MentionsInputClassNames, MentionsInputChangeEvent } from 'react-mentions-ts'
 import { IconPaperclip, IconSend } from '../../icons'
-import { useAutoResize } from '../../hooks/useAutoResize'
 import { useChatContext } from '../../lib/chat-context'
-import MentionPopup from './MentionPopup'
-import type { TeamMember } from '../../lib/types'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 
@@ -23,60 +22,37 @@ type ChatInputProps = {
   onUploadFile: (file: File) => Promise<{ id: string }>
 }
 
+const mentionsClassNames: MentionsInputClassNames = {
+  control: 'relative border-none',
+  highlighter: 'pointer-events-none whitespace-pre-wrap break-words px-4 py-3 text-transparent leading-relaxed',
+  input: 'w-full border-none outline-none bg-transparent text-msg-text px-4 py-3 min-h-[48px] max-h-[200px] text-base font-[inherit] resize-none leading-relaxed overflow-y-auto placeholder:opacity-50',
+  suggestions: 'rounded-lg border border-border bg-input-bg shadow-xl',
+  suggestionsList: 'max-h-48 overflow-y-auto',
+  suggestionItem: 'px-3 py-2 text-sm text-msg-text cursor-pointer hover:bg-white/10',
+  suggestionItemFocused: 'bg-white/15',
+  suggestionHighlight: 'font-semibold text-active',
+}
+
 export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputProps) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const { resize, reset } = useAutoResize(textareaRef)
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([])
+  const [value, setValue] = useState('')
+  const [plainText, setPlainText] = useState('')
 
-  // Mention autocomplete state
   const { teamInfo } = useChatContext()
-  const [mentionQuery, setMentionQuery] = useState<string | null>(null)
-  const [mentionIndex, setMentionIndex] = useState(0)
-  const [mentionTriggerPos, setMentionTriggerPos] = useState<number | null>(null)
 
-  const agents = useMemo(() => {
-    if (!teamInfo || mentionQuery === null) return []
-    return teamInfo.members.filter(
-      m => m.status === 'active' && m.name.toLowerCase().includes(mentionQuery.toLowerCase())
-    )
-  }, [teamInfo, mentionQuery])
+  const mentionData = useMemo(() => {
+    if (!teamInfo) return []
+    return teamInfo.members
+      .filter(m => m.status === 'active')
+      .map(m => ({ id: m.name, display: m.name }))
+  }, [teamInfo])
 
-  const closeMention = useCallback(() => {
-    setMentionQuery(null)
-    setMentionIndex(0)
-    setMentionTriggerPos(null)
+  const handleMentionsChange = useCallback((event: MentionsInputChangeEvent) => {
+    setValue(event.value)
+    setPlainText(event.plainTextValue)
   }, [])
-
-  const insertMention = useCallback((agent: TeamMember) => {
-    const el = textareaRef.current
-    if (!el || mentionTriggerPos === null) return
-    const before = el.value.slice(0, mentionTriggerPos)
-    const after = el.value.slice(el.selectionStart)
-    const mention = `@${agent.name} `
-    el.value = before + mention + after
-    const cursorPos = before.length + mention.length
-    el.selectionStart = cursorPos
-    el.selectionEnd = cursorPos
-    closeMention()
-    resize()
-    el.focus()
-  }, [mentionTriggerPos, closeMention, resize])
-
-  const detectMention = useCallback((el: HTMLTextAreaElement) => {
-    const pos = el.selectionStart
-    const text = el.value.slice(0, pos)
-    // Find the last @ that could be a trigger (at start or after whitespace)
-    const match = text.match(/(^|[\s])@([^\s]*)$/)
-    if (match) {
-      const triggerStart = match.index! + match[1].length
-      setMentionTriggerPos(triggerStart)
-      setMentionQuery(match[2])
-      setMentionIndex(0)
-    } else {
-      closeMention()
-    }
-  }, [closeMention])
 
   const addFiles = useCallback(async (files: File[]) => {
     const valid: PendingFile[] = []
@@ -113,9 +89,8 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
   }, [])
 
   const handleSend = useCallback(() => {
-    const el = textareaRef.current
-    const content = el?.value.trim()
-    if (!content || !el) return
+    const content = plainText.trim()
+    if (!content) return
 
     const attachmentIds = pendingFiles
       .filter(f => f.status === 'done' && f.attachmentId)
@@ -123,55 +98,21 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
 
     onSend(content, attachmentIds)
     setPendingFiles([])
-    closeMention()
-    reset()
-    el.focus()
+    setValue('')
+    setPlainText('')
+    inputRef.current?.focus()
     requestAnimationFrame(() => {
-      el.focus()
-      requestAnimationFrame(() => el.scrollIntoView({ block: 'nearest' }))
+      inputRef.current?.focus()
+      requestAnimationFrame(() => inputRef.current?.scrollIntoView({ block: 'nearest' }))
     })
-  }, [onSend, reset, pendingFiles, closeMention])
+  }, [onSend, pendingFiles, plainText])
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Handle mention popup keyboard navigation
-    if (mentionQuery !== null && agents.length > 0) {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault()
-        setMentionIndex(i => (i + 1) % agents.length)
-        return
-      }
-      if (e.key === 'ArrowUp') {
-        e.preventDefault()
-        setMentionIndex(i => (i - 1 + agents.length) % agents.length)
-        return
-      }
-      if (e.key === 'Enter') {
-        e.preventDefault()
-        insertMention(agents[mentionIndex])
-        return
-      }
-      if (e.key === 'Tab') {
-        e.preventDefault()
-        insertMention(agents[mentionIndex])
-        return
-      }
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        closeMention()
-        return
-      }
-    }
-
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey && !matchMedia('(pointer: coarse)').matches) {
       e.preventDefault()
       handleSend()
     }
-  }, [handleSend, mentionQuery, agents, mentionIndex, insertMention, closeMention])
-
-  const handleInput = useCallback((e: React.FormEvent<HTMLTextAreaElement>) => {
-    resize()
-    detectMention(e.currentTarget)
-  }, [resize, detectMention])
+  }, [handleSend])
 
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const items = e.clipboardData?.items
@@ -204,14 +145,6 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
   return (
     <div className="shrink-0 pb-[env(safe-area-inset-bottom)] bg-chat-bg">
       <div className="relative border-t border-b border-border bg-input-bg">
-        {mentionQuery !== null && agents.length > 0 && (
-          <MentionPopup
-            agents={agents}
-            selectedIndex={mentionIndex}
-            onSelect={insertMention}
-          />
-        )}
-
         {pendingFiles.length > 0 && (
           <div className="flex flex-wrap gap-1.5 p-3 border-b border-border">
             {pendingFiles.map((pf) => (
@@ -226,15 +159,24 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
           </div>
         )}
 
-        <textarea
-          ref={textareaRef}
-          className="w-full border-none outline-none bg-transparent text-msg-text px-4 py-3 min-h-[48px] max-h-[200px] text-base font-[inherit] resize-none leading-relaxed overflow-y-auto placeholder:opacity-50"
-          placeholder={`Message #${roomName}`}
-          rows={1}
-          onInput={handleInput}
+        <MentionsInput
+          value={value}
+          onMentionsChange={handleMentionsChange}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
-        />
+          placeholder={`Message #${roomName}`}
+          inputRef={inputRef as unknown as RefObject<HTMLTextAreaElement>}
+          autoResize
+          suggestionsPlacement="above"
+          classNames={mentionsClassNames}
+        >
+          <Mention
+            trigger="@"
+            data={mentionData}
+            displayTransform={(_id, display) => `@${display ?? _id}`}
+            appendSpaceOnAdd
+          />
+        </MentionsInput>
 
         <div className="flex items-center justify-between px-3 h-[52px] border-t border-border">
           <button

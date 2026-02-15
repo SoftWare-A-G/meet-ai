@@ -6,17 +6,15 @@ import type { Room } from '../../lib/types'
 
 type SidebarProps = {
   rooms: Room[]
-  currentRoomId: string | null
   userName: string
   isOpen: boolean
-  onSelectRoom: (room: Room) => void
   onNameChange: (name: string) => void
   onSettingsClick: () => void
   onClose: () => void
   onInstallClick: () => void
 }
 
-export default function Sidebar({ rooms, currentRoomId, userName, isOpen, onSelectRoom, onNameChange, onSettingsClick, onClose, onInstallClick }: SidebarProps) {
+export default function Sidebar({ rooms, userName, isOpen, onNameChange, onSettingsClick, onClose, onInstallClick }: SidebarProps) {
   return (
     <>
       {/* Mobile backdrop */}
@@ -28,7 +26,7 @@ export default function Sidebar({ rooms, currentRoomId, userName, isOpen, onSele
       )}
       <aside
         className={clsx(
-          'w-[260px] flex flex-col shrink-0 border-r border-sidebar-border bg-sidebar-bg text-sidebar-text pb-[env(safe-area-inset-bottom,0px)]',
+          'w-[260px] flex flex-col shrink-0 border-r border-b border-sidebar-border bg-sidebar-bg text-sidebar-text pb-[env(safe-area-inset-bottom,0px)]',
           'max-[700px]:fixed max-[700px]:top-0 max-[700px]:left-0 max-[700px]:z-50 max-[700px]:h-full',
           'max-[700px]:transition-transform max-[700px]:duration-[250ms] max-[700px]:ease-out',
           'max-[700px]:-translate-x-full max-[700px]:w-[280px] max-[700px]:max-w-[85vw]',
@@ -36,7 +34,7 @@ export default function Sidebar({ rooms, currentRoomId, userName, isOpen, onSele
         )}
       >
         <SidebarHeader onSettingsClick={onSettingsClick} onCloseClick={onClose} />
-        <RoomList rooms={rooms} currentRoomId={currentRoomId} onSelectRoom={onSelectRoom} />
+        <RoomList rooms={rooms} onLinkClick={onClose} />
         <SidebarFooter userName={userName} onNameChange={onNameChange} onInstallClick={onInstallClick} />
       </aside>
     </>

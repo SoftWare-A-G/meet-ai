@@ -1,4 +1,4 @@
-import { ClientOnly, createFileRoute, Outlet, useNavigate } from '@tanstack/react-router'
+import { ClientOnly, createFileRoute, Outlet } from '@tanstack/react-router'
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import IOSInstallModal from '../components/IOSInstallModal'
 import LoginPrompt from '../components/LoginPrompt'
@@ -93,7 +93,6 @@ function ChatLayout({
   onNameChange,
   onSchemaChange,
 }: ChatLayoutProps) {
-  const navigate = useNavigate()
   const [rooms, setRooms] = useState<Room[]>([])
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
@@ -126,14 +125,6 @@ function ChatLayout({
     setRooms(prev => [...prev, { id, name }])
   }, [])
   useLobbyWebSocket(apiKey, onRoomCreated)
-
-  const handleSelectRoom = useCallback(
-    (room: Room) => {
-      setSidebarOpen(false)
-      navigate({ to: '/chat/$id', params: { id: room.id } })
-    },
-    [navigate]
-  )
 
   const handleInstallClick = useCallback(() => {
     setSidebarOpen(false)
@@ -184,18 +175,13 @@ function ChatLayout({
     ]
   )
 
-  // Find current room ID from URL for sidebar highlight
-  const currentRoomId = location.pathname.match(/^\/chat\/([a-f0-9-]+)$/i)?.[1] ?? null
-
   return (
     <ChatContext.Provider value={ctx}>
       <div className="flex h-dvh">
         <Sidebar
           rooms={rooms}
-          currentRoomId={currentRoomId}
           userName={userName}
           isOpen={sidebarOpen}
-          onSelectRoom={handleSelectRoom}
           onNameChange={onNameChange}
           onSettingsClick={() => setShowSettingsModal(true)}
           onClose={() => setSidebarOpen(false)}

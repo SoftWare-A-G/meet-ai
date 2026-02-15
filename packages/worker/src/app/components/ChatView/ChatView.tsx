@@ -94,8 +94,8 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
         const pendingIdx = prev.findIndex(m => m.tempId && m.content === msg.content)
         if (pendingIdx !== -1) {
           const updated = [...prev]
-          updated.splice(pendingIdx, 1)
-          return [...updated, { ...msg, status: 'sent' as const }]
+          updated[pendingIdx] = { ...msg, tempId: prev[pendingIdx].tempId, status: 'sent' as const }
+          return updated
         }
         return [...prev, { ...msg, status: 'sent' as const }]
       })
