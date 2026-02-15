@@ -5,7 +5,7 @@ export function useAutoResize(ref: RefObject<HTMLTextAreaElement | null>) {
   const resize = useCallback(() => {
     const el = ref.current
     if (!el) return
-    el.style.height = 'auto'
+    el.style.height = '0'
     el.style.height = `${Math.min(el.scrollHeight, 200)}px`
   }, [ref])
 

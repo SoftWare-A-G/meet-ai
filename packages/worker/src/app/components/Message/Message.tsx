@@ -42,7 +42,17 @@ export default function Message({ sender, content, color, timestamp, tempId, sta
   }, [content])
 
   return (
-    <div className={clsx('group rounded-md px-2 py-1.5 text-sm break-words hover:bg-white/[0.08]', status === 'pending' && 'opacity-50', status === 'failed' && 'opacity-70')} data-temp-id={tempId} data-content={tempId ? content : undefined}>
+    <div className={clsx('group relative rounded-md px-2 py-1.5 text-sm break-words hover:bg-white/[0.08]', status === 'pending' && 'opacity-50', status === 'failed' && 'opacity-70')} data-temp-id={tempId} data-content={tempId ? content : undefined}>
+      {status === 'sent' && typeof navigator !== 'undefined' && 'share' in navigator && (
+        <button
+          type="button"
+          onClick={handleShare}
+          className="absolute top-1 right-1 p-2 inline-flex items-center justify-center text-[#8b8fa3]/60 hover:text-[#8b8fa3] opacity-0 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity cursor-pointer"
+          title="Share message"
+        >
+          <IconShare size={14} />
+        </button>
+      )}
       <div className="min-w-0">
         <div className="flex items-baseline gap-2 mb-0.5">
           <span className="font-bold text-sm" style={{ color: senderColor }}>{sender}</span>
@@ -61,16 +71,6 @@ export default function Message({ sender, content, color, timestamp, tempId, sta
               >
                 {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
               </button>
-              {typeof navigator !== 'undefined' && 'share' in navigator && (
-                <button
-                  type="button"
-                  onClick={handleShare}
-                  className="p-2 inline-flex items-center justify-center text-[#8b8fa3]/60 hover:text-[#8b8fa3] transition-colors cursor-pointer"
-                  title="Share message"
-                >
-                  <IconShare size={14} />
-                </button>
-              )}
             </span>
           )}
           {status === 'failed' && onRetry && (
