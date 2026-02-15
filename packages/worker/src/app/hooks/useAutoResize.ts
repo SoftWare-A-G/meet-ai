@@ -13,7 +13,7 @@ export function useAutoResize(ref: RefObject<HTMLTextAreaElement | null>) {
     const el = ref.current
     if (!el) return
     el.value = ''
-    el.style.height = '48px'
+    el.style.height = 'auto'
   }, [ref])
 
   return { resize, reset }
