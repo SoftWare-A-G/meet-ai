@@ -1,5 +1,5 @@
 import { ClientOnly, createFileRoute, Outlet, useNavigate } from '@tanstack/react-router'
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import IOSInstallModal from '../components/IOSInstallModal'
 import LoginPrompt from '../components/LoginPrompt'
 import QRShareModal from '../components/QRShareModal'
@@ -9,7 +9,6 @@ import TeamSidebar from '../components/TeamSidebar'
 import { Toast } from '@base-ui/react/toast'
 import TokenScreen from '../components/TokenScreen'
 import { useLobbyWebSocket } from '../hooks/useLobbyWebSocket'
-import { useSwipeToOpen } from '../hooks/useSwipeToOpen'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import * as api from '../lib/api'
 import { ChatContext } from '../lib/chat-context'
@@ -185,19 +184,12 @@ function ChatLayout({
     ]
   )
 
-  // Swipe gesture to open/close sidebar on mobile
-  const chatContainerRef = useRef<HTMLDivElement>(null)
-  useSwipeToOpen(chatContainerRef, {
-    onOpen: () => setSidebarOpen(true),
-    onClose: () => setSidebarOpen(false),
-  })
-
   // Find current room ID from URL for sidebar highlight
   const currentRoomId = location.pathname.match(/^\/chat\/([a-f0-9-]+)$/i)?.[1] ?? null
 
   return (
     <ChatContext.Provider value={ctx}>
-      <div ref={chatContainerRef} className="flex h-dvh">
+      <div className="flex h-dvh">
         <Sidebar
           rooms={rooms}
           currentRoomId={currentRoomId}
