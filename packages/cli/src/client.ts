@@ -345,5 +345,16 @@ export function createClient(baseUrl: string, apiKey?: string) {
       }
       return res.json() as Promise<{ key: string; prefix: string }>;
     },
+
+    async deleteRoom(roomId: string) {
+      const res = await fetch(`${baseUrl}/api/rooms/${roomId}`, {
+        method: "DELETE",
+        headers: headers(),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as any).error ?? `HTTP ${res.status}`);
+      }
+    },
   };
 }

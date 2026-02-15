@@ -272,3 +272,31 @@ export const roomsRoute = new Hono<AppEnv>()
 
     return c.json({ ok: true })
   })
+
+  // DELETE /api/rooms/:id — delete a room and all its messages, logs, and attachments
+  .delete('/:id', requireAuth, async c => {
+    const keyId = c.get('keyId')
+    const roomId = c.req.param('id')
+    const db = queries(c.env.DB)
+
+    const room = await db.findRoom(roomId, keyId)
+    if (!room) {
+      return c.json({ error: 'room not found' }, 404)
+    }
+
+    await db.deleteRoom(keyId, roomId)
+
+    // Notify lobby subscribers
+    const doId = c.env.LOBBY.idFromName(keyId)
+    const stub = c.env.LOBBY.get(doId)
+    c.executionCtx.waitUntil(
+      stub.fetch(
+        new Request('http://internal/broadcast', {
+          method: 'POST',
+          body: JSON.stringify({ type: 'room_deleted', id: roomId }),
+        })
+      )
+    )
+
+    return c.body(null, 204)
+  })

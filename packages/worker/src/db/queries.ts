@@ -143,5 +143,14 @@ export function queries(db: D1Database) {
       ).bind(roomId).all<{ message_id: string; count: number }>()
       return result.results
     },
+
+    async deleteRoom(keyId: string, roomId: string) {
+      // Delete in order: attachments, logs, messages, then room
+      // This respects the foreign key relationships
+      await db.prepare('DELETE FROM attachments WHERE room_id = ?').bind(roomId).run()
+      await db.prepare('DELETE FROM logs WHERE room_id = ?').bind(roomId).run()
+      await db.prepare('DELETE FROM messages WHERE room_id = ?').bind(roomId).run()
+      await db.prepare('DELETE FROM rooms WHERE id = ? AND key_id = ?').bind(roomId, keyId).run()
+    },
   }
 }

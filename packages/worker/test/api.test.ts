@@ -156,6 +156,99 @@ describe('Rooms', () => {
     const rooms2 = await res2.json()
     expect(rooms2).toEqual([])
   })
+
+  it('DELETE /api/rooms/:id deletes a room', async () => {
+    const key = await createKey()
+    const roomId = await createRoom(key, 'room-to-delete')
+
+    // Verify room exists
+    let res = await SELF.fetch('http://localhost/api/rooms', {
+      headers: { Authorization: `Bearer ${key}` },
+    })
+    let rooms = await res.json() as { id: string }[]
+    expect(rooms).toHaveLength(1)
+    expect(rooms[0].id).toBe(roomId)
+
+    // Delete the room
+    res = await SELF.fetch(`http://localhost/api/rooms/${roomId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${key}` },
+    })
+    expect(res.status).toBe(204)
+
+    // Verify room is gone
+    res = await SELF.fetch('http://localhost/api/rooms', {
+      headers: { Authorization: `Bearer ${key}` },
+    })
+    rooms = await res.json()
+    expect(rooms).toEqual([])
+  })
+
+  it('DELETE /api/rooms/:id deletes messages and logs', async () => {
+    const key = await createKey()
+    const roomId = await createRoom(key, 'room-with-messages')
+
+    // Send a message and log
+    await sendMessage(key, roomId, 'alice', 'test message')
+    await sendLog(key, roomId, 'system', 'test log')
+
+    // Verify they exist
+    let res = await SELF.fetch(`http://localhost/api/rooms/${roomId}/messages`, {
+      headers: { Authorization: `Bearer ${key}` },
+    })
+    let messages = await res.json() as { id: string }[]
+    expect(messages).toHaveLength(1)
+
+    res = await SELF.fetch(`http://localhost/api/rooms/${roomId}/logs`, {
+      headers: { Authorization: `Bearer ${key}` },
+    })
+    let logs = await res.json() as { id: string }[]
+    expect(logs).toHaveLength(1)
+
+    // Delete the room
+    res = await SELF.fetch(`http://localhost/api/rooms/${roomId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${key}` },
+    })
+    expect(res.status).toBe(204)
+
+    // Verify messages and logs are gone
+    res = await SELF.fetch(`http://localhost/api/rooms/${roomId}/messages`, {
+      headers: { Authorization: `Bearer ${key}` },
+    })
+    expect(res.status).toBe(404)
+  })
+
+  it('DELETE /api/rooms/:id returns 404 for non-existent room', async () => {
+    const key = await createKey()
+    const res = await SELF.fetch('http://localhost/api/rooms/nonexistent', {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${key}` },
+    })
+    expect(res.status).toBe(404)
+  })
+
+  it('DELETE /api/rooms/:id cannot delete room from another key', async () => {
+    const key1 = await createKey()
+    const key2 = await createKey()
+
+    const roomId = await createRoom(key1, 'key1-room')
+
+    // Try to delete with key2
+    const res = await SELF.fetch(`http://localhost/api/rooms/${roomId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${key2}` },
+    })
+    expect(res.status).toBe(404)
+
+    // Verify room still exists for key1
+    const listRes = await SELF.fetch('http://localhost/api/rooms', {
+      headers: { Authorization: `Bearer ${key1}` },
+    })
+    const rooms = await listRes.json() as { id: string }[]
+    expect(rooms).toHaveLength(1)
+    expect(rooms[0].id).toBe(roomId)
+  })
 })
 
 describe('Messages', () => {

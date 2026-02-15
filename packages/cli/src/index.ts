@@ -41,24 +41,85 @@ function parseFlags(args: string[]): { positional: string[]; flags: Record<strin
   return { positional, flags };
 }
 
-switch (command) {
-  case "create-room": {
-    const name = args[0];
-    if (!name) {
-      console.error("Usage: cli create-room <name>");
+function rejectFlagLikeArgs(positional: string[], usage: string): void {
+  for (const arg of positional) {
+    if (arg.startsWith("--")) {
+      console.error(`Unknown flag: ${arg}`);
+      console.error(`Usage: ${usage}`);
       process.exit(1);
     }
+  }
+}
+
+switch (command) {
+  case "create-room": {
+    // Check for --help flag early (before parseFlags)
+    if (args.includes("--help")) {
+      console.log("Usage: meet-ai create-room <room-name>");
+      process.exit(0);
+    }
+
+    const { positional, flags } = parseFlags(args);
+
+    // Check for unknown flags
+    const unknownFlags = Object.keys(flags);
+    if (unknownFlags.length > 0) {
+      console.error(`Unknown flag: --${unknownFlags[0]}`);
+      console.error("Usage: meet-ai create-room <room-name>");
+      process.exit(1);
+    }
+
+    // Reject flag-like args
+    rejectFlagLikeArgs(positional, "meet-ai create-room <room-name>");
+
+    const name = positional[0];
+    if (!name) {
+      console.error("Usage: meet-ai create-room <room-name>");
+      process.exit(1);
+    }
+
     const room = await client.createRoom(name);
     console.log(`Room created: ${room.id} (${room.name})`);
     break;
   }
 
+  case "delete-room": {
+    // Check for --help flag
+    if (args.includes("--help")) {
+      console.log("Usage: meet-ai delete-room <roomId>");
+      process.exit(0);
+    }
+
+    // Reject flag-like args
+    rejectFlagLikeArgs(args, "meet-ai delete-room <roomId>");
+
+    const roomId = args[0];
+    if (!roomId) {
+      console.error("Usage: meet-ai delete-room <roomId>");
+      process.exit(1);
+    }
+
+    await client.deleteRoom(roomId);
+    console.log(`Room deleted: ${roomId}`);
+    break;
+  }
+
   case "send-message": {
+    // Check for --help flag
+    if (args.includes("--help")) {
+      console.log("Usage: meet-ai send-message <roomId> <sender> <content> [--color <color>]");
+      process.exit(0);
+    }
+
     const { positional: smPos, flags: smFlags } = parseFlags(args);
+
+    // Reject flag-like args
+    rejectFlagLikeArgs(smPos, "meet-ai send-message <roomId> <sender> <content> [--color <color>]");
+
     const [roomId, sender, ...rest] = smPos;
     const content = rest.join(" ").replace(/\\n/g, '\n');
     if (!roomId || !sender || !content) {
-      console.error("Usage: cli send-message <roomId> <sender> <content> [--color <color>]");
+      console.error("Usage: meet-ai send-message <roomId> <sender> <content> [--color <color>]");
       process.exit(1);
     }
     const msg = await client.sendMessage(roomId, sender, content, smFlags.color);
@@ -67,10 +128,20 @@ switch (command) {
   }
 
   case "poll": {
+    // Check for --help flag
+    if (args.includes("--help")) {
+      console.log("Usage: meet-ai poll <roomId> [--after <messageId>] [--exclude <sender>] [--sender-type <type>]");
+      process.exit(0);
+    }
+
     const { positional, flags } = parseFlags(args);
+
+    // Reject flag-like args
+    rejectFlagLikeArgs(positional, "meet-ai poll <roomId> [--after <messageId>] [--exclude <sender>] [--sender-type <type>]");
+
     const roomId = positional[0];
     if (!roomId) {
-      console.error("Usage: cli poll <roomId> [--after <messageId>] [--exclude <sender>]");
+      console.error("Usage: meet-ai poll <roomId> [--after <messageId>] [--exclude <sender>] [--sender-type <type>]");
       process.exit(1);
     }
     const messages = await client.getMessages(roomId, {
@@ -88,10 +159,20 @@ switch (command) {
   }
 
   case "listen": {
+    // Check for --help flag
+    if (args.includes("--help")) {
+      console.log("Usage: meet-ai listen <roomId> [--exclude <sender>] [--sender-type <type>] [--team <name> --inbox <agent>]");
+      process.exit(0);
+    }
+
     const { positional, flags } = parseFlags(args);
+
+    // Reject flag-like args
+    rejectFlagLikeArgs(positional, "meet-ai listen <roomId> [--exclude <sender>] [--sender-type <type>] [--team <name> --inbox <agent>]");
+
     const roomId = positional[0];
     if (!roomId) {
-      console.error("Usage: cli listen <roomId> [--exclude <sender>] [--sender-type <type>] [--team <name> --inbox <agent>]");
+      console.error("Usage: meet-ai listen <roomId> [--exclude <sender>] [--sender-type <type>] [--team <name> --inbox <agent>]");
       process.exit(1);
     }
 
@@ -186,11 +267,21 @@ switch (command) {
   }
 
   case "send-log": {
+    // Check for --help flag
+    if (args.includes("--help")) {
+      console.log("Usage: meet-ai send-log <roomId> <sender> <content> [--color <color>] [--message-id <id>]");
+      process.exit(0);
+    }
+
     const { positional: slPos, flags: slFlags } = parseFlags(args);
+
+    // Reject flag-like args
+    rejectFlagLikeArgs(slPos, "meet-ai send-log <roomId> <sender> <content> [--color <color>] [--message-id <id>]");
+
     const [slRoomId, slSender, ...slRest] = slPos;
     const slContent = slRest.join(" ").replace(/\\n/g, '\n');
     if (!slRoomId || !slSender || !slContent) {
-      console.error("Usage: cli send-log <roomId> <sender> <content> [--color <color>] [--message-id <id>]");
+      console.error("Usage: meet-ai send-log <roomId> <sender> <content> [--color <color>] [--message-id <id>]");
       process.exit(1);
     }
     const log = await client.sendLog(slRoomId, slSender, slContent, slFlags.color, slFlags['message-id']);
@@ -199,9 +290,18 @@ switch (command) {
   }
 
   case "send-team-info": {
+    // Check for --help flag
+    if (args.includes("--help")) {
+      console.log("Usage: meet-ai send-team-info <roomId> '<json-payload>'");
+      process.exit(0);
+    }
+
+    // Reject flag-like args
+    rejectFlagLikeArgs(args, "meet-ai send-team-info <roomId> '<json-payload>'");
+
     const [tiRoomId, tiPayload] = args;
     if (!tiRoomId || !tiPayload) {
-      console.error("Usage: cli send-team-info <roomId> '<json-payload>'");
+      console.error("Usage: meet-ai send-team-info <roomId> '<json-payload>'");
       process.exit(1);
     }
     // Validate JSON before sending
@@ -217,9 +317,18 @@ switch (command) {
   }
 
   case "send-tasks": {
+    // Check for --help flag
+    if (args.includes("--help")) {
+      console.log("Usage: meet-ai send-tasks <roomId> '<json-payload>'");
+      process.exit(0);
+    }
+
+    // Reject flag-like args
+    rejectFlagLikeArgs(args, "meet-ai send-tasks <roomId> '<json-payload>'");
+
     const [stRoomId, stPayload] = args;
     if (!stRoomId || !stPayload) {
-      console.error("Usage: cli send-tasks <roomId> '<json-payload>'");
+      console.error("Usage: meet-ai send-tasks <roomId> '<json-payload>'");
       process.exit(1);
     }
     // Validate JSON before sending
@@ -235,9 +344,18 @@ switch (command) {
   }
 
   case "download-attachment": {
+    // Check for --help flag
+    if (args.includes("--help")) {
+      console.log("Usage: meet-ai download-attachment <attachmentId>");
+      process.exit(0);
+    }
+
+    // Reject flag-like args
+    rejectFlagLikeArgs(args, "meet-ai download-attachment <attachmentId>");
+
     const attachmentId = args[0];
     if (!attachmentId) {
-      console.error("Usage: cli download-attachment <attachmentId>");
+      console.error("Usage: meet-ai download-attachment <attachmentId>");
       process.exit(1);
     }
     try {
@@ -286,6 +404,7 @@ Environment variables:
 
 Commands:
   create-room <name>                           Create a new chat room
+  delete-room <roomId>                         Delete a room and all its messages
   send-message <roomId> <sender> <content>     Send a message to a room
     --color <color>       Set sender name color (e.g. #ff0000, red)
   send-log <roomId> <sender> <content>        Send a log entry to a room

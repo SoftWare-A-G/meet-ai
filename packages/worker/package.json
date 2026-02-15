@@ -12,24 +12,24 @@
   },
   "dependencies": {
     "@base-ui/react": "1.2.0",
-    "@hono/zod-validator": "0.7.6",
+    "@hono/zod-validator": "catalog:",
     "@tanstack/react-router": "1.159.6",
     "@tanstack/react-start": "1.159.8",
     "clsx": "2.1.1",
     "dayjs": "1.11.19",
     "dompurify": "3.3.1",
-    "hono": "4.11.8",
+    "hono": "catalog:",
     "marked": "17.0.2",
     "qrcode-generator": "2.0.4",
     "react": "catalog:",
     "react-dom": "catalog:",
     "shiki": "3.22.0",
-    "zod": "4.3.6"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.25.0",
     "@cloudflare/vitest-pool-workers": "0.12.10",
-    "@cloudflare/workers-types": "4.20260207.0",
+    "@cloudflare/workers-types": "catalog:",
     "@tailwindcss/postcss": "4.1.18",
     "@types/dompurify": "3.2.0",
     "@types/react": "19.2.14",
@@ -38,7 +38,7 @@
     "tailwindcss": "catalog:",
     "typescript": "catalog:",
     "vite": "7.3.1",
-    "vitest": "3.2.4",
+    "vitest": "catalog:",
     "wrangler": "4.63.0"
   }
 }

@@ -8,14 +8,14 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "hono": "4.11.8"
+    "hono": "catalog:"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "4.20260207.0",
-    "@hono/zod-validator": "0.7.6",
+    "@cloudflare/workers-types": "catalog:",
+    "@hono/zod-validator": "catalog:",
     "@types/node": "catalog:",
     "typescript": "catalog:",
-    "vitest": "3.2.4",
-    "zod": "4.3.6"
+    "vitest": "catalog:",
+    "zod": "catalog:"
   }
 }
