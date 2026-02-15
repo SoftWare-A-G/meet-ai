@@ -2,6 +2,7 @@ import React, { useRef, useCallback, useState, useMemo } from 'react'
 import clsx from 'clsx'
 import { IconPaperclip, IconSend } from '../../icons'
 import { useAutoResize } from '../../hooks/useAutoResize'
+import { useIOSKeyboardFix } from '../../hooks/useIOSKeyboardFix'
 import { useChatContext } from '../../lib/chat-context'
 import MentionPopup from './MentionPopup'
 import type { TeamMember } from '../../lib/types'
@@ -27,6 +28,7 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { resize, reset } = useAutoResize(textareaRef)
+  useIOSKeyboardFix(textareaRef)
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([])
 
   // Mention autocomplete state
