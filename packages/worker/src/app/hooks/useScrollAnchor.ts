@@ -5,6 +5,7 @@ export function useScrollAnchor(ref: RefObject<HTMLDivElement | null>, bottomRef
   const wasAtBottomRef = useRef(true)
   const [atBottom, setAtBottom] = useState(true)
   const rafId = useRef<number>(0) as { current: number }
+  const retryTimerId = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Track scroll position continuously so we know the state *before* new messages arrive
   useEffect(() => {
@@ -26,9 +27,9 @@ export function useScrollAnchor(ref: RefObject<HTMLDivElement | null>, bottomRef
 
   const scrollToBottom = useCallback(() => {
     cancelAnimationFrame(rafId.current)
-    rafId.current = requestAnimationFrame(() => {
-      // Prefer scrolling to a sentinel element at the very end of the container,
-      // which ensures bottom padding is fully visible after the last message.
+    if (retryTimerId.current) clearTimeout(retryTimerId.current)
+
+    const doScroll = () => {
       if (bottomRef?.current) {
         bottomRef.current.scrollIntoView({ block: 'end' })
       } else {
@@ -38,13 +39,22 @@ export function useScrollAnchor(ref: RefObject<HTMLDivElement | null>, bottomRef
       }
       wasAtBottomRef.current = true
       setAtBottom(true)
+    }
+
+    rafId.current = requestAnimationFrame(() => {
+      doScroll()
+      // Retry after a short delay to catch late-rendering content
+      retryTimerId.current = setTimeout(doScroll, 100)
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps -- rafId is a stable ref
   }, [ref, bottomRef])
 
-  // Clean up pending animation frame on unmount
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- rafId is a stable ref
-  useEffect(() => () => cancelAnimationFrame(rafId.current), [])
+  // Clean up pending animation frame and retry timer on unmount
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- rafId/retryTimerId are stable refs
+  useEffect(() => () => {
+    cancelAnimationFrame(rafId.current)
+    if (retryTimerId.current) clearTimeout(retryTimerId.current)
+  }, [])
 
   return { isAtBottom, atBottom, scrollToBottom }
 }

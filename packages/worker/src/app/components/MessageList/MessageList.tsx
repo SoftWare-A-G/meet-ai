@@ -109,12 +109,6 @@ export default function MessageList({ messages, attachmentCounts, unreadCount, f
   // eslint-disable-next-line react-hooks/exhaustive-deps -- scrollToBottom is stable
   }, [forceScrollCounter])
 
-  // Scroll to bottom on initial load
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- scrollToBottom is stable
-  useEffect(() => {
-    scrollToBottom()
-  }, [])
-
   const items = groupMessages(messages)
 
   return (
