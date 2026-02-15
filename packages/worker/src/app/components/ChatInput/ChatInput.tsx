@@ -2,7 +2,6 @@ import React, { useRef, useCallback, useState, useMemo } from 'react'
 import clsx from 'clsx'
 import { IconPaperclip, IconSend } from '../../icons'
 import { useAutoResize } from '../../hooks/useAutoResize'
-import { useIOSKeyboardFix } from '../../hooks/useIOSKeyboardFix'
 import { useChatContext } from '../../lib/chat-context'
 import MentionPopup from './MentionPopup'
 import type { TeamMember } from '../../lib/types'
@@ -28,7 +27,6 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { resize, reset } = useAutoResize(textareaRef)
-  useIOSKeyboardFix(textareaRef)
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([])
 
   // Mention autocomplete state
@@ -225,7 +223,17 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
           </div>
         )}
 
-        <div className="flex items-center justify-between px-3 h-[52px] border-b border-border">
+        <textarea
+          ref={textareaRef}
+          className="w-full border-none outline-none bg-transparent text-msg-text px-4 py-3 min-h-[48px] max-h-[200px] text-base font-[inherit] resize-none leading-relaxed overflow-y-auto placeholder:opacity-50"
+          placeholder={`Message #${roomName}`}
+          rows={1}
+          onInput={handleInput}
+          onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
+        />
+
+        <div className="flex items-center justify-between px-3 h-[52px] border-t border-border">
           <button
             type="button"
             className="flex items-center gap-1.5 px-3 h-9 rounded-lg border border-border bg-transparent text-msg-text opacity-70 hover:opacity-100 hover:bg-white/5 cursor-pointer text-sm transition-all"
@@ -246,16 +254,6 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
             <IconSend size={16} />
           </button>
         </div>
-
-        <textarea
-          ref={textareaRef}
-          className="w-full border-none outline-none bg-transparent text-msg-text px-4 py-3 min-h-[48px] max-h-[200px] text-base font-[inherit] resize-none leading-relaxed overflow-y-auto placeholder:opacity-50"
-          placeholder={`Message #${roomName}`}
-          rows={1}
-          onInput={handleInput}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-        />
       </div>
 
       <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileChange} />
