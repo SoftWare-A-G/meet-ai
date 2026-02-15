@@ -126,7 +126,6 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
     closeMention()
     reset()
     el.focus()
-    requestAnimationFrame(() => el.focus())
   }, [onSend, reset, pendingFiles, closeMention])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
