@@ -196,12 +196,24 @@ const FEATURES = [
   },
 ]
 
+// --- Cookie helpers ---
+
+function getCookie(name: string): string | undefined {
+  if (typeof document === 'undefined') return undefined
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`))
+  return match ? decodeURIComponent(match[1]) : undefined
+}
+
+function setCookie(name: string, value: string) {
+  document.cookie = `${name}=${encodeURIComponent(value)};path=/;max-age=31536000;samesite=lax`
+}
+
 // --- Main component ---
 
 function NeonLanding() {
   const [hasKey, setHasKey] = useState(false)
-  const [pmTab, setPmTab] = useState(() => localStorage.getItem('meet-ai-pm') || 'npm')
-  const [scopeTab, setScopeTab] = useState(() => localStorage.getItem('meet-ai-scope') || 'user')
+  const [pmTab, setPmTab] = useState(() => getCookie('meet-ai-pm') || 'npm')
+  const [scopeTab, setScopeTab] = useState(() => getCookie('meet-ai-scope') || 'user')
 
   useEffect(() => {
     setHasKey(!!localStorage.getItem('meet-ai-key'))
@@ -209,12 +221,12 @@ function NeonLanding() {
 
   const handlePmChange = (tab: string) => {
     setPmTab(tab)
-    localStorage.setItem('meet-ai-pm', tab)
+    setCookie('meet-ai-pm', tab)
   }
 
   const handleScopeChange = (tab: string) => {
     setScopeTab(tab)
-    localStorage.setItem('meet-ai-scope', tab)
+    setCookie('meet-ai-scope', tab)
   }
 
   return (
