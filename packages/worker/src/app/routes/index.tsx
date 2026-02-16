@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import clsx from 'clsx'
+import Cookies from 'js-cookie'
 import { useEffect, useState } from 'react'
 import NeonCard from '../components/NeonCard'
 import TerminalBlock from '../components/TerminalBlock'
@@ -196,24 +197,12 @@ const FEATURES = [
   },
 ]
 
-// --- Cookie helpers ---
-
-function getCookie(name: string): string | undefined {
-  if (typeof document === 'undefined') return undefined
-  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`))
-  return match ? decodeURIComponent(match[1]) : undefined
-}
-
-function setCookie(name: string, value: string) {
-  document.cookie = `${name}=${encodeURIComponent(value)};path=/;max-age=31536000;samesite=lax`
-}
-
 // --- Main component ---
 
 function NeonLanding() {
   const [hasKey, setHasKey] = useState(false)
-  const [pmTab, setPmTab] = useState(() => getCookie('meet-ai-pm') || 'npm')
-  const [scopeTab, setScopeTab] = useState(() => getCookie('meet-ai-scope') || 'user')
+  const [pmTab, setPmTab] = useState(() => Cookies.get('meet-ai-pm') || 'npm')
+  const [scopeTab, setScopeTab] = useState(() => Cookies.get('meet-ai-scope') || 'user')
 
   useEffect(() => {
     setHasKey(!!localStorage.getItem('meet-ai-key'))
@@ -221,12 +210,12 @@ function NeonLanding() {
 
   const handlePmChange = (tab: string) => {
     setPmTab(tab)
-    setCookie('meet-ai-pm', tab)
+    Cookies.set('meet-ai-pm', tab, { expires: 365, sameSite: 'lax' })
   }
 
   const handleScopeChange = (tab: string) => {
     setScopeTab(tab)
-    setCookie('meet-ai-scope', tab)
+    Cookies.set('meet-ai-scope', tab, { expires: 365, sameSite: 'lax' })
   }
 
   return (
@@ -554,12 +543,15 @@ function NeonLanding() {
               >
                 npm
               </a>
-              <Link to="/key" className={NAV_LINK}>
-                Get API Key
-              </Link>
-              <Link to="/chat" className={NAV_LINK_CYAN}>
-                Chat
-              </Link>
+              {hasKey ? (
+                <Link to="/chat" className={NAV_LINK_CYAN}>
+                  Chat
+                </Link>
+              ) : (
+                <Link to="/key" className={NAV_LINK}>
+                  Get API Key
+                </Link>
+              )}
             </div>
             <p className="text-[13px] text-slate-600">
               &copy; 2026 <span className="text-[#00FF8866]">meet-ai.cc</span> &middot;{' '}
