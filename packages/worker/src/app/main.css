@@ -256,23 +256,6 @@ html {
   }
 }
 
-/* --- Landing page: agents section nested styles --- */
-.agents-prompt-text em {
-  color: #86efac;
-  font-style: normal;
-}
-.agents-tip-text strong {
-  color: #ccc;
-}
-.agents-tip-text code {
-  background: rgba(128, 128, 128, 0.15);
-  padding: 1px 5px;
-  border-radius: 3px;
-  font-size: 12px;
-  color: #c4b5fd;
-  font-family: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
-}
-
 /* --- Landing page: scroll animations --- */
 .animate-in {
   opacity: 0;
@@ -284,6 +267,16 @@ html {
 .animate-in.visible {
   opacity: 1;
   transform: translateY(0);
+}
+
+/* --- Neon landing: scanline + pulse --- */
+@keyframes scanline-scroll {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 100vh; }
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
 
 /* --- Reduced motion --- */
@@ -336,6 +329,12 @@ html {
     opacity: 1;
     transform: none;
     transition: none;
+  }
+  .scanlines {
+    animation: none !important;
+  }
+  .pulse-dot {
+    animation: none !important;
   }
 }
 
