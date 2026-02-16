@@ -269,6 +269,16 @@ html {
   transform: translateY(0);
 }
 
+/* --- Neon landing: scanline + pulse --- */
+@keyframes scanline-scroll {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 100vh; }
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
 /* --- Reduced motion --- */
 @media (prefers-reduced-motion: reduce) {
   html {
@@ -319,6 +329,12 @@ html {
     opacity: 1;
     transform: none;
     transition: none;
+  }
+  .scanlines {
+    animation: none !important;
+  }
+  .pulse-dot {
+    animation: none !important;
   }
 }
 
