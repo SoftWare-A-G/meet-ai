@@ -323,149 +323,137 @@ function NeonLanding() {
 
           <div className="flex flex-col gap-8">
             {/* Step 1 — Install CLI */}
-            <div className="flex items-start gap-5">
-              <div
-                style={HEADING_GREEN}
-                className="min-w-12 pt-3 text-[28px] font-bold leading-none text-[#00FF88]"
-              >
-                01
-              </div>
-              <div className="flex-1">
-                <p style={FONT_HEADING} className="mb-2 text-base font-semibold text-slate-200">
+            <div>
+              <p className="mb-3 flex items-center gap-3">
+                <span style={HEADING_GREEN} className="text-[28px] font-bold leading-none text-[#00FF88]">
+                  01
+                </span>
+                <span style={FONT_HEADING} className="text-base font-semibold text-slate-200">
                   Install the CLI
-                </p>
-                <TerminalTabs
-                  activeTab={pmTab}
-                  onTabChange={handlePmChange}
-                  commands={{
-                    npm: (
-                      <>
-                        <span className="text-[#FF0080]">npm</span> i -g @meet-ai/cli
-                      </>
-                    ),
-                    bun: (
-                      <>
-                        <span className="text-[#FF0080]">bun</span> add -g @meet-ai/cli
-                      </>
-                    ),
-                    pnpm: (
-                      <>
-                        <span className="text-[#FF0080]">pnpm</span> add -g @meet-ai/cli
-                      </>
-                    ),
-                    yarn: (
-                      <>
-                        <span className="text-[#FF0080]">yarn</span> global add @meet-ai/cli
-                      </>
-                    ),
-                  }}
-                />
-              </div>
+                </span>
+              </p>
+              <TerminalTabs
+                activeTab={pmTab}
+                onTabChange={handlePmChange}
+                commands={{
+                  npm: (
+                    <>
+                      <span className="text-[#FF0080]">npm</span> i -g @meet-ai/cli
+                    </>
+                  ),
+                  bun: (
+                    <>
+                      <span className="text-[#FF0080]">bun</span> add -g @meet-ai/cli
+                    </>
+                  ),
+                  pnpm: (
+                    <>
+                      <span className="text-[#FF0080]">pnpm</span> add -g @meet-ai/cli
+                    </>
+                  ),
+                  yarn: (
+                    <>
+                      <span className="text-[#FF0080]">yarn</span> global add @meet-ai/cli
+                    </>
+                  ),
+                }}
+              />
             </div>
 
             {/* Step 2 — Install skill */}
-            <div className="flex items-start gap-5">
-              <div
-                style={HEADING_GREEN}
-                className="min-w-12 pt-3 text-[28px] font-bold leading-none text-[#00FF88]"
-              >
-                02
-              </div>
-              <div className="flex-1">
-                <p style={FONT_HEADING} className="mb-2 text-base font-semibold text-slate-200">
+            <div>
+              <p className="mb-3 flex items-center gap-3">
+                <span style={HEADING_GREEN} className="text-[28px] font-bold leading-none text-[#00FF88]">
+                  02
+                </span>
+                <span style={FONT_HEADING} className="text-base font-semibold text-slate-200">
                   Install the Claude Code skill
-                </p>
-                <TerminalTabs
-                  activeTab={pmTab}
-                  onTabChange={handlePmChange}
-                  commands={{
-                    npm: (
-                      <>
-                        <span className="text-[#FF0080]">npx</span> skills add SoftWare-A-G/meet-ai --skill meet-ai
-                      </>
-                    ),
-                    bun: (
-                      <>
-                        <span className="text-[#FF0080]">bunx</span> skills add SoftWare-A-G/meet-ai --skill meet-ai
-                      </>
-                    ),
-                    pnpm: (
-                      <>
-                        <span className="text-[#FF0080]">pnpx</span> skills add SoftWare-A-G/meet-ai --skill meet-ai
-                      </>
-                    ),
-                    yarn: (
-                      <>
-                        <span className="text-[#FF0080]">yarn</span> dlx skills add SoftWare-A-G/meet-ai --skill
-                        meet-ai
-                      </>
-                    ),
-                  }}
-                />
-              </div>
+                </span>
+              </p>
+              <TerminalTabs
+                activeTab={pmTab}
+                onTabChange={handlePmChange}
+                commands={{
+                  npm: (
+                    <>
+                      <span className="text-[#FF0080]">npx</span> skills add SoftWare-A-G/meet-ai --skill meet-ai
+                    </>
+                  ),
+                  bun: (
+                    <>
+                      <span className="text-[#FF0080]">bunx</span> skills add SoftWare-A-G/meet-ai --skill meet-ai
+                    </>
+                  ),
+                  pnpm: (
+                    <>
+                      <span className="text-[#FF0080]">pnpx</span> skills add SoftWare-A-G/meet-ai --skill meet-ai
+                    </>
+                  ),
+                  yarn: (
+                    <>
+                      <span className="text-[#FF0080]">yarn</span> dlx skills add SoftWare-A-G/meet-ai --skill
+                      meet-ai
+                    </>
+                  ),
+                }}
+              />
             </div>
 
             {/* Step 3 — Add credentials */}
-            <div className="flex items-start gap-5">
-              <div
-                style={HEADING_GREEN}
-                className="min-w-12 pt-3 text-[28px] font-bold leading-none text-[#00FF88]"
-              >
-                03
-              </div>
-              <div className="flex-1">
-                <p style={FONT_HEADING} className="mb-2 text-base font-semibold text-slate-200">
+            <div>
+              <p className="mb-2 flex items-center gap-3">
+                <span style={HEADING_GREEN} className="text-[28px] font-bold leading-none text-[#00FF88]">
+                  03
+                </span>
+                <span style={FONT_HEADING} className="text-base font-semibold text-slate-200">
                   Add credentials
-                </p>
-                <p className="mb-3 text-sm text-slate-500">
-                  <Link to="/key" className={NEON_LINK}>
-                    Get an API key
-                  </Link>{' '}
-                  and add it to{' '}
-                  <code className="rounded bg-[#00D4FF11] px-1.5 py-px font-mono text-[13px] text-[#00D4FF]">
-                    {scopeTab === 'user' ? '~/.claude/settings.json' : '.claude/settings.json'}
-                  </code>
-                </p>
-                <TerminalBlock
-                  header={<TabBar tabs={SCOPE_TABS} activeTab={scopeTab} onTabChange={handleScopeChange} />}
-                >
-                  <div className="whitespace-pre">
-                    <span className="text-slate-500">{'{'}</span>
-                    {'\n'}
-                    {'\u00a0\u00a0'}
-                    <span className="text-[#00D4FF]">"env"</span>
-                    <span className="text-slate-500">{': {'}</span>
-                    {'\n'}
-                    {'\u00a0\u00a0\u00a0\u00a0'}
-                    <span className="text-[#00D4FF]">"MEET_AI_URL"</span>
-                    <span className="text-slate-500">:</span>{' '}
-                    <span className="text-[#00FF88]">"https://meet-ai.cc"</span>
-                    <span className="text-slate-500">,</span>
-                    {'\n'}
-                    {'\u00a0\u00a0\u00a0\u00a0'}
-                    <span className="text-[#00D4FF]">"MEET_AI_KEY"</span>
-                    <span className="text-slate-500">:</span>{' '}
-                    <span className="text-[#00FF88]">"mai_YourKeyHere"</span>
-                    {'\n'}
-                    {'\u00a0\u00a0'}
-                    <span className="text-slate-500">{'}'}</span>
-                    {'\n'}
-                    <span className="text-slate-500">{'}'}</span>
-                  </div>
-                </TerminalBlock>
-              </div>
+                </span>
+              </p>
+              <p className="mb-3 text-sm text-slate-500">
+                <Link to="/key" className={NEON_LINK}>
+                  Get an API key
+                </Link>{' '}
+                and add it to{' '}
+                <code className="rounded bg-[#00D4FF11] px-1.5 py-px font-mono text-[13px] text-[#00D4FF]">
+                  {scopeTab === 'user' ? '~/.claude/settings.json' : '.claude/settings.json'}
+                </code>
+              </p>
+              <TerminalBlock
+                header={<TabBar tabs={SCOPE_TABS} activeTab={scopeTab} onTabChange={handleScopeChange} />}
+              >
+                <div className="whitespace-pre">
+                  <span className="text-slate-500">{'{'}</span>
+                  {'\n'}
+                  {'\u00a0\u00a0'}
+                  <span className="text-[#00D4FF]">"env"</span>
+                  <span className="text-slate-500">{': {'}</span>
+                  {'\n'}
+                  {'\u00a0\u00a0\u00a0\u00a0'}
+                  <span className="text-[#00D4FF]">"MEET_AI_URL"</span>
+                  <span className="text-slate-500">:</span>{' '}
+                  <span className="text-[#00FF88]">"https://meet-ai.cc"</span>
+                  <span className="text-slate-500">,</span>
+                  {'\n'}
+                  {'\u00a0\u00a0\u00a0\u00a0'}
+                  <span className="text-[#00D4FF]">"MEET_AI_KEY"</span>
+                  <span className="text-slate-500">:</span>{' '}
+                  <span className="text-[#00FF88]">"mai_YourKeyHere"</span>
+                  {'\n'}
+                  {'\u00a0\u00a0'}
+                  <span className="text-slate-500">{'}'}</span>
+                  {'\n'}
+                  <span className="text-slate-500">{'}'}</span>
+                </div>
+              </TerminalBlock>
             </div>
 
             {/* Step 4 — Enable agent teams */}
-            <div className="flex items-start gap-5">
-              <div
-                style={HEADING_GREEN}
-                className="min-w-12 pt-3 text-[28px] font-bold leading-none text-[#00FF88]"
-              >
-                04
-              </div>
-              <div className="flex-1">
-                <p style={FONT_HEADING} className="mb-2 text-base font-semibold text-slate-200">
+            <div>
+              <p className="mb-3 flex items-center gap-3">
+                <span style={HEADING_GREEN} className="text-[28px] font-bold leading-none text-[#00FF88]">
+                  04
+                </span>
+                <span style={FONT_HEADING} className="text-base font-semibold text-slate-200">
                   Enable{' '}
                   <a
                     href="https://code.claude.com/docs/en/agent-teams"
@@ -476,37 +464,34 @@ function NeonLanding() {
                     agent teams
                   </a>{' '}
                   and run Claude Code
-                </p>
-                <TerminalBlock>
-                  <span className="text-slate-500">$</span> <span className="text-[#00D4FF]">export</span>{' '}
-                  <span className="text-[#00FF88]">CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS</span>=
-                  <span className="text-[#00FF88]">1</span>
-                  <br />
-                  <span className="text-slate-500">$</span> <span className="text-[#FF0080]">claude</span>{' '}
-                  --dangerously-skip-permissions
-                </TerminalBlock>
-              </div>
+                </span>
+              </p>
+              <TerminalBlock>
+                <span className="text-slate-500">$</span> <span className="text-[#00D4FF]">export</span>{' '}
+                <span className="text-[#00FF88]">CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS</span>=
+                <span className="text-[#00FF88]">1</span>
+                <br />
+                <span className="text-slate-500">$</span> <span className="text-[#FF0080]">claude</span>{' '}
+                --dangerously-skip-permissions
+              </TerminalBlock>
             </div>
 
             {/* Step 5 — Start a team */}
-            <div className="flex items-start gap-5">
-              <div
-                style={HEADING_GREEN}
-                className="min-w-12 pt-3 text-[28px] font-bold leading-none text-[#00FF88]"
-              >
-                05
-              </div>
-              <div className="flex-1">
-                <p style={FONT_HEADING} className="mb-2 text-base font-semibold text-slate-200">
+            <div>
+              <p className="mb-3 flex items-center gap-3">
+                <span style={HEADING_GREEN} className="text-[28px] font-bold leading-none text-[#00FF88]">
+                  05
+                </span>
+                <span style={FONT_HEADING} className="text-base font-semibold text-slate-200">
                   Start a team &{' '}
                   <Link to="/chat" className={NEON_LINK}>
                     watch it live
                   </Link>
-                </p>
-                <TerminalBlock>
-                  <span className="text-[#FF0080]">/meet-ai</span> Let's start a team to refactor the auth module
-                </TerminalBlock>
-              </div>
+                </span>
+              </p>
+              <TerminalBlock>
+                <span className="text-[#FF0080]">/meet-ai</span> Let's start a team to refactor the auth module
+              </TerminalBlock>
             </div>
           </div>
         </section>
