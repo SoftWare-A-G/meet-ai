@@ -6,7 +6,7 @@ type LandingHeroProps = {
 
 export default function LandingHero({ hasKey }: LandingHeroProps) {
   return (
-    <section className="flex min-h-screen items-center justify-center px-6 pt-[20vh] pb-[8vh] text-center md:px-6">
+    <section className="flex items-center justify-center px-6 pt-28 pb-12 text-center md:pt-32 md:pb-16">
       <div className="max-w-2xl">
         <h1 className="hero-tagline mb-5 font-mono font-extrabold leading-tight tracking-tight">
           Your agents are already talking.

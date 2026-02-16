@@ -1,12 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import LandingAgents from '../components/LandingAgents'
 import LandingDemoChat from '../components/LandingDemoChat'
+import LandingFeatures from '../components/LandingFeatures'
 import LandingFooter from '../components/LandingFooter'
 import LandingHeader from '../components/LandingHeader'
 import LandingHero from '../components/LandingHero'
 import LandingQuickStart from '../components/LandingQuickStart'
-import LandingValueProps from '../components/LandingValueProps'
 
 export const Route = createFileRoute('/')({
   component: LandingPage,
@@ -51,9 +50,8 @@ function LandingPage() {
       <LandingHeader hasKey={hasKey} />
       <LandingHero hasKey={hasKey} />
       <LandingDemoChat />
-      <LandingValueProps />
+      <LandingFeatures />
       <LandingQuickStart />
-      <LandingAgents />
       <LandingFooter />
     </>
   )

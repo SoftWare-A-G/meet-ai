@@ -256,23 +256,6 @@ html {
   }
 }
 
-/* --- Landing page: agents section nested styles --- */
-.agents-prompt-text em {
-  color: #86efac;
-  font-style: normal;
-}
-.agents-tip-text strong {
-  color: #ccc;
-}
-.agents-tip-text code {
-  background: rgba(128, 128, 128, 0.15);
-  padding: 1px 5px;
-  border-radius: 3px;
-  font-size: 12px;
-  color: #c4b5fd;
-  font-family: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
-}
-
 /* --- Landing page: scroll animations --- */
 .animate-in {
   opacity: 0;
