@@ -26,7 +26,13 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
   const [attachmentCounts, setAttachmentCounts] = useState<Record<string, number>>({})
   const [unreadCount, setUnreadCount] = useState(0)
   const [forceScrollCounter, setForceScrollCounter] = useState(0)
+  const [voiceAvailable, setVoiceAvailable] = useState(false)
   const { queue, remove, getForRoom } = useOfflineQueue()
+
+  // Check TTS availability once on mount
+  useEffect(() => {
+    api.checkTtsAvailable().then(setVoiceAvailable)
+  }, [])
 
   // Load message history + logs + attachment counts
   useEffect(() => {
@@ -208,6 +214,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
         onScrollToBottom={() => setUnreadCount(0)}
         onRetry={handleRetry}
         connected={connected}
+        voiceAvailable={voiceAvailable}
       />
       <ChatInput
         roomName={room.name}

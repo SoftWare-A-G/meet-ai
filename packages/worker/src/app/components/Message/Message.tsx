@@ -3,7 +3,10 @@ import clsx from 'clsx'
 import { hashColor, ensureSenderContrast } from '../../lib/colors'
 import { formatTime } from '../../lib/dates'
 import { renderMarkdown, highlightCode } from '../../lib/markdown'
-import { IconCopy, IconCheck, IconShare } from '../../icons'
+import { textToSpeech } from '../../lib/api'
+import { IconCopy, IconCheck, IconShare, IconVolume, IconPlayerStop, IconLoader } from '../../icons'
+
+type TtsState = 'idle' | 'loading' | 'playing'
 
 type MessageProps = {
   sender: string
@@ -14,12 +17,15 @@ type MessageProps = {
   status?: 'sent' | 'pending' | 'failed'
   onRetry?: () => void
   attachmentCount?: number
+  voiceAvailable?: boolean
 }
 
-export default function Message({ sender, content, color, timestamp, tempId, status = 'sent', onRetry, attachmentCount }: MessageProps) {
+export default function Message({ sender, content, color, timestamp, tempId, status = 'sent', onRetry, attachmentCount, voiceAvailable }: MessageProps) {
   const contentRef = useRef<HTMLDivElement>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
   const senderColor = color ? ensureSenderContrast(color) : hashColor(sender)
   const [copied, setCopied] = useState(false)
+  const [ttsState, setTtsState] = useState<TtsState>('idle')
 
   const timeText = status === 'failed' ? 'failed' : formatTime(timestamp)
 
@@ -33,6 +39,46 @@ export default function Message({ sender, content, color, timestamp, tempId, sta
   const handleShare = useCallback(() => {
     navigator.share({ text: content })
   }, [content])
+
+  const handleTts = useCallback(async () => {
+    if (ttsState === 'loading') return
+
+    if (ttsState === 'playing') {
+      audioRef.current?.pause()
+      audioRef.current = null
+      setTtsState('idle')
+      return
+    }
+
+    setTtsState('loading')
+    try {
+      const audioData = await textToSpeech(content)
+      const blob = new Blob([audioData], { type: 'audio/mpeg' })
+      const url = URL.createObjectURL(blob)
+      const audio = new Audio(url)
+      audioRef.current = audio
+      audio.addEventListener('ended', () => {
+        setTtsState('idle')
+        audioRef.current = null
+        URL.revokeObjectURL(url)
+      })
+      audio.addEventListener('error', () => {
+        setTtsState('idle')
+        audioRef.current = null
+        URL.revokeObjectURL(url)
+      })
+      await audio.play()
+      setTtsState('playing')
+    } catch {
+      setTtsState('idle')
+    }
+  }, [content, ttsState])
+
+  // Cleanup audio on unmount
+  useEffect(() => () => {
+    audioRef.current?.pause()
+    audioRef.current = null
+  }, [])
 
   const html = useMemo(() => renderMarkdown(content), [content])
 
@@ -63,6 +109,21 @@ export default function Message({ sender, content, color, timestamp, tempId, sta
             >
               {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
             </button>
+            {voiceAvailable && (
+              <button
+                type="button"
+                onClick={handleTts}
+                className={clsx(
+                  'p-2 inline-flex items-center justify-center transition-colors cursor-pointer',
+                  ttsState === 'playing' ? 'text-primary' : 'text-[#8b8fa3]/60 hover:text-[#8b8fa3]',
+                  ttsState === 'loading' && 'animate-spin'
+                )}
+                title={ttsState === 'playing' ? 'Stop playback' : 'Read aloud'}
+                tabIndex={status === 'sent' ? 0 : -1}
+              >
+                {ttsState === 'loading' ? <IconLoader size={14} /> : ttsState === 'playing' ? <IconPlayerStop size={14} /> : <IconVolume size={14} />}
+              </button>
+            )}
           </span>
           {canShare && (
             <span className={clsx('ml-auto inline-flex items-center opacity-0 transition-opacity', status === 'sent' && 'group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100')}>

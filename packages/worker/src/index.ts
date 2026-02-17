@@ -6,6 +6,7 @@ import { authRoute } from './routes/auth'
 import { keysRoute } from './routes/keys'
 import { lobbyRoute } from './routes/lobby'
 import { roomsRoute } from './routes/rooms'
+import { ttsRoute } from './routes/tts'
 import { uploadsRoute } from './routes/uploads'
 import { wsRoute } from './routes/ws'
 import type { AppEnv } from './lib/types'
@@ -37,6 +38,7 @@ export const app = new Hono<AppEnv>()
   .route('/api/lobby', lobbyRoute)
   .route('/api/rooms', uploadsRoute)
   .route('/api', uploadsRoute)
+  .route('/api/tts', ttsRoute)
 
   // Auth landing page — claims a share token and redirects to chat
   .get('/auth/:token', async c => {

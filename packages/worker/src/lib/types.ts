@@ -4,6 +4,8 @@ export type Bindings = {
   LOBBY: DurableObjectNamespace
   ASSETS: Fetcher
   UPLOADS: KVNamespace
+  ELEVENLABS_API_KEY: string
+  VOICE_API_AVAILABLE_FOR: string
 }
 
 export type Variables = {

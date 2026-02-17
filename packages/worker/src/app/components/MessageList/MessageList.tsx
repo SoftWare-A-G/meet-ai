@@ -18,6 +18,7 @@ type MessageListProps = {
   onScrollToBottom: () => void
   onRetry?: (tempId: string) => void
   connected?: boolean
+  voiceAvailable?: boolean
 }
 
 type RenderItem =
@@ -71,7 +72,7 @@ function groupMessages(messages: DisplayMessage[]): RenderItem[] {
   return items
 }
 
-export default function MessageList({ messages, attachmentCounts, unreadCount, forceScrollCounter, onScrollToBottom, onRetry, connected = true }: MessageListProps) {
+export default function MessageList({ messages, attachmentCounts, unreadCount, forceScrollCounter, onScrollToBottom, onRetry, connected = true, voiceAvailable }: MessageListProps) {
   const { scrollRef, contentRef, isAtBottom, scrollToBottom } = useStickToBottom({ resize: 'smooth', initial: 'smooth' })
 
   // Auto-dismiss new messages pill when user scrolls to the bottom
@@ -120,6 +121,7 @@ export default function MessageList({ messages, attachmentCounts, unreadCount, f
               status={msg.status}
               onRetry={msg.tempId && onRetry ? () => onRetry(msg.tempId!) : undefined}
               attachmentCount={attCount}
+              voiceAvailable={voiceAvailable}
             />
           )
         })}

@@ -1,17 +1,19 @@
+import type { Context } from 'hono'
 import { createMiddleware } from 'hono/factory'
 import { hashKey } from '../lib/keys'
 import type { AppEnv } from '../lib/types'
 
+export function extractToken(c: Context<AppEnv>): string | undefined {
+  const header = c.req.header('Authorization')
+  if (header?.startsWith('Bearer ')) {
+    return header.slice(7)
+  }
+  return c.req.query('token') ?? undefined
+}
+
 export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
   // 1. Check Authorization header, fall back to query param
-  const header = c.req.header('Authorization')
-  let token: string | undefined
-
-  if (header?.startsWith('Bearer ')) {
-    token = header.slice(7)
-  } else {
-    token = c.req.query('token') ?? undefined
-  }
+  const token = extractToken(c)
 
   if (!token) {
     return c.json({ error: 'Missing API key' }, 401)
