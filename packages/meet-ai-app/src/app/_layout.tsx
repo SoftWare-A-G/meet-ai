@@ -3,6 +3,7 @@ import * as Linking from 'expo-linking'
 import { Slot, useRouter, useSegments } from 'expo-router'
 import React, { useEffect } from 'react'
 import { ActivityIndicator, Alert, View, useColorScheme } from 'react-native'
+import { KeyboardProvider } from 'react-native-keyboard-controller'
 
 import { claimToken } from '@/lib/api'
 import { AuthProvider, useAuth } from '@/lib/auth-context'
@@ -77,10 +78,12 @@ export default function RootLayout() {
   const colorScheme = useColorScheme()
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AuthProvider>
-        <RootLayoutInner />
-      </AuthProvider>
-    </ThemeProvider>
+    <KeyboardProvider>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <AuthProvider>
+          <RootLayoutInner />
+        </AuthProvider>
+      </ThemeProvider>
+    </KeyboardProvider>
   )
 }

@@ -8,7 +8,8 @@
     "scheme": "meetaiapp",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.anonymous.meet-ai-app"
     },
     "android": {
       "adaptiveIcon": {
