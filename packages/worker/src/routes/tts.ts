@@ -6,7 +6,7 @@ import { requireAuth, extractToken } from '../middleware/auth'
 import type { AppEnv } from '../lib/types'
 
 const VOICE_ID = 'JBFqnCBsd6RMkjVDRZzb'
-const MODEL_ID = 'eleven_multilingual_v2'
+const MODEL_ID = 'eleven_flash_v2_5'
 const CACHE_TTL = 604800 // 7 days in seconds
 const API_CALL_LIMIT = 10
 const API_CALL_WINDOW_MS = 60_000
