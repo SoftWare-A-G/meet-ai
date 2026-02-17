@@ -1,5 +1,6 @@
+import * as Haptics from 'expo-haptics'
 import { openBrowserAsync } from 'expo-web-browser'
-import React from 'react'
+import React, { useCallback } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
 import Markdown from '@ronradtke/react-native-markdown-display'
 
@@ -19,40 +20,49 @@ function MessageBubbleInner({ msg, markdownStyles, theme, onRetry }: Props) {
   const isHuman = msg.sender_type === 'human'
   const senderColor = msg.color || hashColor(msg.sender)
 
+  const handleLongPress = useCallback(() => {
+    Haptics.selectionAsync()
+  }, [])
+
   return (
     <View style={[styles.messageRow, msg.status === 'failed' && styles.failedRow]}>
-      <View style={[styles.avatar, { backgroundColor: senderColor }]}>
-        <Text style={styles.avatarText}>
-          {msg.sender.charAt(0).toUpperCase()}
-        </Text>
-      </View>
-      <View style={styles.messageContent}>
-        <View style={styles.messageHeader}>
-          <Text style={[styles.senderName, { color: senderColor }]}>
-            {msg.sender}
+      <Pressable
+        style={styles.longPressArea}
+        onLongPress={handleLongPress}
+      >
+        <View style={[styles.avatar, { backgroundColor: senderColor }]}>
+          <Text style={styles.avatarText}>
+            {msg.sender.charAt(0).toUpperCase()}
           </Text>
-          {isAgent && (
-            <View style={styles.agentBadge}>
-              <Text style={styles.agentBadgeText}>agent</Text>
-            </View>
-          )}
-          <Text style={[styles.timestamp, { color: theme.textSecondary }]}>
-            {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </Text>
-          {isHuman && msg.status && (
-            <MessageStatusIndicator status={msg.status} localId={msg.localId} onRetry={onRetry} />
-          )}
         </View>
-        <Markdown
-          style={markdownStyles}
-          onLinkPress={(url) => {
-            openBrowserAsync(url)
-            return false
-          }}
-        >
-          {msg.content}
-        </Markdown>
-      </View>
+        <View style={styles.messageContent}>
+          <View style={styles.messageHeader}>
+            <Text style={[styles.senderName, { color: senderColor }]}>
+              {msg.sender}
+            </Text>
+            {isAgent && (
+              <View style={styles.agentBadge}>
+                <Text style={styles.agentBadgeText}>agent</Text>
+              </View>
+            )}
+            <Text style={[styles.timestamp, { color: theme.textSecondary }]}>
+              {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </Text>
+            {isHuman && msg.status && (
+              <MessageStatusIndicator status={msg.status} localId={msg.localId} onRetry={onRetry} />
+            )}
+          </View>
+          <Markdown
+            style={markdownStyles}
+            onLinkPress={(url) => {
+              openBrowserAsync(url)
+              return false
+            }}
+          >
+            {msg.content}
+          </Markdown>
+        </View>
+      </Pressable>
     </View>
   )
 }
@@ -86,7 +96,8 @@ function MessageStatusIndicator({ status, localId, onRetry }: StatusProps) {
 export const MessageBubble = React.memo(MessageBubbleInner)
 
 const styles = StyleSheet.create({
-  messageRow: {
+  messageRow: {},
+  longPressArea: {
     flexDirection: 'row',
     gap: 10,
   },

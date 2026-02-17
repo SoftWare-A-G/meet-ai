@@ -1,5 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { FlashList, type FlashListRef } from '@shopify/flash-list'
+import * as Haptics from 'expo-haptics'
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router'
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
@@ -13,6 +14,7 @@ import { ChatInputBar } from '@/components/chat-input-bar'
 import { ConnectionStatus } from '@/components/connection-status'
 import { LogGroup } from '@/components/log-group'
 import { MessageBubble } from '@/components/message-bubble'
+import { NewMessagesPill } from '@/components/new-messages-pill'
 import { useMarkdownStyles } from '@/constants/markdown-styles'
 import { useRoomWebSocket } from '@/hooks/use-room-websocket'
 import { useTheme } from '@/hooks/use-theme'
@@ -60,7 +62,11 @@ function groupMessages(messages: Message[]): RenderItem[] {
       items.push({ kind: 'message', msg, key: msg.localId || msg.id })
     } else {
       flushLogs()
-      items.push({ kind: 'message', msg, key: msg.id })
+      const isHookAnchor = msg.sender === 'hook'
+      // Hook messages never render as bubbles — they only exist as log group anchors
+      if (!isHookAnchor) {
+        items.push({ kind: 'message', msg, key: msg.id })
+      }
       const children = childLogs.get(msg.id)
       if (children && children.length > 0) {
         items.push({ kind: 'log-group', logs: children, key: `lg-${children[0].id}` })
@@ -95,9 +101,11 @@ export default function ChatScreen() {
 
   const listRef = useRef<FlashListRef<RenderItem>>(null)
   const isNearBottomRef = useRef(true)
+  const [newMsgCount, setNewMsgCount] = useState(0)
 
   const scrollToBottom = useCallback(() => {
     listRef.current?.scrollToEnd({ animated: true })
+    setNewMsgCount(0)
   }, [])
 
   useKeyboardHandler(
@@ -201,10 +209,16 @@ export default function ChatScreen() {
   // Auto-scroll to bottom when new messages arrive and user is near bottom
   const prevMessageCountRef = useRef(0)
   useEffect(() => {
-    if (mergedMessages.length > prevMessageCountRef.current && isNearBottomRef.current) {
-      setTimeout(() => {
-        listRef.current?.scrollToEnd({ animated: true })
-      }, 100)
+    const newCount = mergedMessages.length - prevMessageCountRef.current
+    if (newCount > 0 && prevMessageCountRef.current > 0) {
+      if (isNearBottomRef.current) {
+        setTimeout(() => {
+          listRef.current?.scrollToEnd({ animated: true })
+        }, 100)
+        setNewMsgCount(0)
+      } else {
+        setNewMsgCount(prev => prev + newCount)
+      }
     }
     prevMessageCountRef.current = mergedMessages.length
   }, [mergedMessages.length])
@@ -232,6 +246,7 @@ export default function ChatScreen() {
   const handleSend = useCallback(
     async (text: string) => {
       if (!id) return
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
       await sendOptimistic('Mobile User', text)
     },
     [id, sendOptimistic]
@@ -273,7 +288,11 @@ export default function ChatScreen() {
     }) => {
       const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent
       const distanceFromBottom = contentSize.height - contentOffset.y - layoutMeasurement.height
+      const wasNearBottom = isNearBottomRef.current
       isNearBottomRef.current = distanceFromBottom < AUTO_SCROLL_THRESHOLD
+      if (!wasNearBottom && isNearBottomRef.current) {
+        setNewMsgCount(0)
+      }
     },
     []
   )
@@ -323,6 +342,9 @@ export default function ChatScreen() {
             }}
             keyboardDismissMode="interactive"
           />
+        )}
+        {newMsgCount > 0 && (
+          <NewMessagesPill count={newMsgCount} onPress={scrollToBottom} />
         )}
       </Animated.View>
 

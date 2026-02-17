@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
-
+import { LayoutAnimation, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useTheme } from '@/hooks/use-theme'
 import { hashColor } from '@/lib/colors'
 import type { Message } from '@/lib/types'
@@ -8,11 +7,15 @@ import type { Message } from '@/lib/types'
 const monoFont = Platform.OS === 'ios' ? 'Menlo' : 'monospace'
 
 function formatTime(dateStr: string): string {
-  return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  return new Date(dateStr).toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  })
 }
 
 function logSummaryText(logs: Message[]): string {
-  const senders = [...new Set(logs.map((l) => l.sender))]
+  const senders = [...new Set(logs.map(l => l.sender))]
   const count = logs.length
   if (senders.length === 1) {
     return `${count} log ${count === 1 ? 'entry' : 'entries'} from ${senders[0]}`
@@ -38,30 +41,28 @@ function LogGroupInner({ logs, theme }: Props) {
     <View style={logStyles.container}>
       <Pressable
         style={[logStyles.header, { backgroundColor: theme.backgroundElement }]}
-        onPress={() => setExpanded(!expanded)}
-      >
+        onPress={() => {
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
+          setExpanded(!expanded)
+        }}>
         <Text style={[logStyles.toggle, { color: theme.textSecondary }]}>
           {expanded ? '\u25BE' : '\u25B8'}
         </Text>
         <Text style={[logStyles.summary, { color: theme.textSecondary }]} numberOfLines={1}>
           {logSummaryText(logs)}
         </Text>
-        <Text style={[logStyles.time, { color: theme.textSecondary }]}>
-          {timeRange}
-        </Text>
+        <Text style={[logStyles.time, { color: theme.textSecondary }]}>{timeRange}</Text>
       </Pressable>
       {expanded && (
         <View style={logStyles.entries}>
-          {logs.map((log) => {
+          {logs.map(log => {
             const senderColor = log.color || hashColor(log.sender)
             return (
               <View style={logStyles.entry} key={log.id}>
                 <Text style={[logStyles.entryTime, { color: theme.textSecondary }]}>
                   {formatTime(log.created_at)}
                 </Text>
-                <Text style={[logStyles.entrySender, { color: senderColor }]}>
-                  {log.sender}:
-                </Text>
+                <Text style={[logStyles.entrySender, { color: senderColor }]}>{log.sender}:</Text>
                 <Text style={[logStyles.entryContent, { color: theme.text }]} numberOfLines={3}>
                   {log.content}
                 </Text>
@@ -80,7 +81,8 @@ const logStyles = StyleSheet.create({
   container: {
     marginLeft: 42,
     borderRadius: 4,
-    marginVertical: 1,
+    marginTop: 0,
+    marginBottom: 8,
     opacity: 0.65,
   },
   header: {
