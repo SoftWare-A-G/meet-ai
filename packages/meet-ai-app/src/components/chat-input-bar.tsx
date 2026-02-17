@@ -1,12 +1,14 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
-import React, { useCallback, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import {
+  Platform,
   Pressable,
   StyleSheet,
   TextInput,
   TextInputContentSizeChangeEvent,
   View,
 } from 'react-native'
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated'
 import { useTheme } from '@/hooks/use-theme'
 
 const MIN_INPUT_HEIGHT = 40
@@ -26,6 +28,29 @@ export function ChatInputBar({ roomId, onSend }: ChatInputBarProps) {
   const inputRef = useRef<TextInput>(null)
 
   const canSend = input.trim().length > 0 && !sending
+
+  const sendScale = useSharedValue(1)
+  const sendOpacity = useSharedValue(0.35)
+  const wasActive = useRef(false)
+
+  useEffect(() => {
+    const isActive = input.trim().length > 0
+    if (isActive && !wasActive.current) {
+      // Bounce: scale up then back to 1
+      sendScale.value = withSpring(1.15, { damping: 8, stiffness: 300 }, () => {
+        sendScale.value = withSpring(1, { damping: 12, stiffness: 180 })
+      })
+    } else if (!isActive && wasActive.current) {
+      sendScale.value = withSpring(1, { damping: 12, stiffness: 180 })
+    }
+    sendOpacity.value = withSpring(isActive ? 1 : 0.35, { damping: 15, stiffness: 120 })
+    wasActive.current = isActive
+  }, [input, sendScale, sendOpacity])
+
+  const sendButtonAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: sendScale.value }],
+    opacity: sendOpacity.value,
+  }))
 
   const handleContentSizeChange = useCallback((e: TextInputContentSizeChangeEvent) => {
     const contentHeight = e.nativeEvent.contentSize.height
@@ -72,13 +97,24 @@ export function ChatInputBar({ roomId, onSend }: ChatInputBarProps) {
         onContentSizeChange={handleContentSizeChange}
         multiline
         editable={!sending}
+        accessibilityLabel="Type a message"
+        accessibilityHint="Double tap to start typing"
       />
-      <Pressable
-        style={[styles.sendButton, { opacity: canSend ? 1 : 0.35 }]}
-        onPress={handleSend}
-        disabled={!canSend}>
-        <Ionicons name="arrow-up" size={20} color="#fff" />
-      </Pressable>
+      <Animated.View style={sendButtonAnimStyle}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.sendButton,
+            pressed && Platform.OS === 'ios' && { opacity: 0.7 },
+          ]}
+          onPress={handleSend}
+          disabled={!canSend}
+          hitSlop={4}
+          accessibilityRole="button"
+          accessibilityLabel="Send message"
+          android_ripple={{ color: 'rgba(255,255,255,0.3)', borderless: true }}>
+          <Ionicons name="arrow-up" size={20} color="#fff" />
+        </Pressable>
+      </Animated.View>
     </View>
   )
 }
@@ -103,9 +139,9 @@ const styles = StyleSheet.create({
   },
   sendButton: {
     backgroundColor: '#3c87f7',
-    borderRadius: 18,
-    width: 36,
-    height: 36,
+    borderRadius: 22,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },

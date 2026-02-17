@@ -1,6 +1,7 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native'
 import * as Linking from 'expo-linking'
 import { Slot, useRouter, useSegments } from 'expo-router'
+import { StatusBar } from 'expo-status-bar'
 import React, { useEffect } from 'react'
 import { ActivityIndicator, Alert, View, useColorScheme } from 'react-native'
 import { KeyboardProvider } from 'react-native-keyboard-controller'
@@ -80,6 +81,7 @@ export default function RootLayout() {
   return (
     <KeyboardProvider>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <StatusBar style="auto" />
         <AuthProvider>
           <RootLayoutInner />
         </AuthProvider>

@@ -1,12 +1,23 @@
 import * as Haptics from 'expo-haptics'
 import { openBrowserAsync } from 'expo-web-browser'
-import React, { useCallback } from 'react'
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
+import React, { useCallback, useMemo } from 'react'
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import Markdown from '@ronradtke/react-native-markdown-display'
 
 import { useTheme } from '@/hooks/use-theme'
 import { hashColor } from '@/lib/colors'
 import type { Message } from '@/lib/types'
+
+function timeAgo(dateStr: string): string {
+  const seconds = Math.floor((Date.now() - new Date(dateStr).valueOf()) / 1000)
+  if (seconds < 60) return 'just now'
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`
+  const days = Math.floor(hours / 24)
+  return `${days} day${days === 1 ? '' : 's'} ago`
+}
 
 type Props = {
   msg: Message
@@ -24,11 +35,24 @@ function MessageBubbleInner({ msg, markdownStyles, theme, onRetry }: Props) {
     Haptics.selectionAsync()
   }, [])
 
+  const accessibilityLabel = useMemo(() => {
+    const truncated = msg.content.length > 200 ? msg.content.slice(0, 200) + '...' : msg.content
+    return `${msg.sender} said: ${truncated}, ${timeAgo(msg.created_at)}`
+  }, [msg.sender, msg.content, msg.created_at])
+
   return (
-    <View style={[styles.messageRow, msg.status === 'failed' && styles.failedRow]}>
+    <View
+      style={[styles.messageRow, msg.status === 'failed' && styles.failedRow]}
+      accessible
+      accessibilityLabel={accessibilityLabel}
+    >
       <Pressable
-        style={styles.longPressArea}
+        style={({ pressed }) => [
+          styles.longPressArea,
+          pressed && Platform.OS === 'ios' && { opacity: 0.7 },
+        ]}
         onLongPress={handleLongPress}
+        android_ripple={{ color: 'rgba(0,0,0,0.1)', borderless: false }}
       >
         <View style={[styles.avatar, { backgroundColor: senderColor }]}>
           <Text style={styles.avatarText}>
@@ -84,8 +108,10 @@ function MessageStatusIndicator({ status, localId, onRetry }: StatusProps) {
   return (
     <Pressable
       onPress={() => localId && onRetry?.(localId)}
-      hitSlop={8}
+      hitSlop={{ top: 14, bottom: 14, left: 8, right: 8 }}
       style={styles.retryButton}
+      accessibilityRole="button"
+      accessibilityLabel="Retry sending message"
     >
       <Text style={styles.failedIcon}>{'✕'}</Text>
       <Text style={styles.retryText}>Retry</Text>

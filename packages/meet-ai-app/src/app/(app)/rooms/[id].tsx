@@ -3,7 +3,7 @@ import { FlashList, type FlashListRef } from '@shopify/flash-list'
 import * as Haptics from 'expo-haptics'
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router'
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
+import { AccessibilityInfo, ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import {
   useKeyboardHandler,
   useReanimatedKeyboardAnimation,
@@ -161,7 +161,10 @@ export default function ChatScreen() {
             height: 44,
             alignItems: 'center',
             justifyContent: 'center',
-          }}>
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="View agents"
+          android_ripple={{ color: 'rgba(0,0,0,0.1)', borderless: true }}>
           <Ionicons name="people-outline" size={22} color={theme.textSecondary} />
         </Pressable>
       ),
@@ -218,6 +221,9 @@ export default function ChatScreen() {
         setNewMsgCount(0)
       } else {
         setNewMsgCount(prev => prev + newCount)
+        AccessibilityInfo.announceForAccessibility(
+          `${newCount} new ${newCount === 1 ? 'message' : 'messages'} received`
+        )
       }
     }
     prevMessageCountRef.current = mergedMessages.length
@@ -310,7 +316,15 @@ export default function ChatScreen() {
     }
     if (hasOlderMessages) {
       return (
-        <Pressable style={styles.loadOlderButton} onPress={handleLoadOlder}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.loadOlderButton,
+            pressed && Platform.OS === 'ios' && { opacity: 0.6 },
+          ]}
+          onPress={handleLoadOlder}
+          accessibilityRole="button"
+          accessibilityLabel="Load older messages"
+          android_ripple={{ color: 'rgba(59,130,246,0.2)' }}>
           <Text style={[styles.loadOlderText, { color: '#3b82f6' }]}>Load older messages</Text>
         </Pressable>
       )
@@ -341,6 +355,8 @@ export default function ChatScreen() {
               startRenderingFromBottom: true,
             }}
             keyboardDismissMode="interactive"
+            bounces={Platform.OS === 'ios'}
+            overScrollMode={Platform.OS === 'android' ? 'always' : undefined}
           />
         )}
         {newMsgCount > 0 && (

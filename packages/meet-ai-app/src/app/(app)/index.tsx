@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Platform,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -57,11 +58,14 @@ export default function RoomsScreen() {
       <Pressable
         style={({ pressed }) => [
           styles.roomRow,
-          { backgroundColor: pressed ? theme.backgroundSelected : theme.backgroundElement },
+          { backgroundColor: pressed && Platform.OS === 'ios' ? theme.backgroundSelected : theme.backgroundElement },
         ]}
         onPress={() =>
           router.push({ pathname: '/(app)/rooms/[id]', params: { id: item.id, name: item.name } })
         }
+        accessibilityRole="button"
+        accessibilityLabel={`${item.name}, created ${new Date(item.created_at).toLocaleDateString()}`}
+        android_ripple={{ color: 'rgba(0,0,0,0.1)' }}
       >
         <Text style={[styles.roomName, { color: theme.text }]}>{item.name}</Text>
         <Text style={[styles.roomDate, { color: theme.textSecondary }]}>

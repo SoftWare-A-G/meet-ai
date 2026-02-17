@@ -27,7 +27,12 @@ function ConnectionStatusInner({ status }: Props) {
 
   if (status === 'reconnecting') {
     return (
-      <Animated.View style={[styles.bar, styles.reconnecting, { opacity: pulseAnim }]}>
+      <Animated.View
+        style={[styles.bar, styles.reconnecting, { opacity: pulseAnim }]}
+        accessibilityRole="alert"
+        accessibilityLabel="Reconnecting to server"
+        accessibilityLiveRegion="polite"
+      >
         <Text style={styles.dot}>{'●'}</Text>
         <Text style={styles.text}>Reconnecting...</Text>
       </Animated.View>
@@ -36,7 +41,12 @@ function ConnectionStatusInner({ status }: Props) {
 
   // offline
   return (
-    <View style={[styles.bar, styles.offline]}>
+    <View
+      style={[styles.bar, styles.offline]}
+      accessibilityRole="alert"
+      accessibilityLabel="Offline. Messages will be sent when reconnected"
+      accessibilityLiveRegion="polite"
+    >
       <Text style={styles.dot}>{'●'}</Text>
       <Text style={styles.text}>Offline — messages will be sent when reconnected</Text>
     </View>

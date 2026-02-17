@@ -24,7 +24,11 @@ export default function AgentsScreen() {
     const isActive = item.status === 'active'
 
     return (
-      <View style={[styles.agentRow, { backgroundColor: theme.backgroundElement }]}>
+      <View
+        style={[styles.agentRow, { backgroundColor: theme.backgroundElement }]}
+        accessible
+        accessibilityLabel={`${item.name}, ${item.role}, ${isActive ? 'active' : 'inactive'}`}
+      >
         <View style={[styles.avatar, { backgroundColor: item.color }]}>
           <Text style={styles.avatarText}>
             {item.name.charAt(0).toUpperCase()}
@@ -40,6 +44,7 @@ export default function AgentsScreen() {
                 styles.statusDot,
                 { backgroundColor: isActive ? '#22c55e' : '#9ca3af' },
               ]}
+              accessibilityLabel={isActive ? 'Active' : 'Inactive'}
             />
           </View>
           <Text style={[styles.role, { color: theme.textSecondary }]} numberOfLines={1}>

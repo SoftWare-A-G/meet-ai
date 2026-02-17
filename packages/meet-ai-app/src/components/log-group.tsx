@@ -92,6 +92,7 @@ const logStyles = StyleSheet.create({
     paddingVertical: 3,
     paddingHorizontal: 8,
     borderRadius: 4,
+    minHeight: 44,
   },
   toggle: {
     fontFamily: monoFont,

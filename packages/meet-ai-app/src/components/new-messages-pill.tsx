@@ -16,7 +16,12 @@ function NewMessagesPillInner({ count, onPress }: Props) {
       exiting={FadeOut.duration(150)}
       style={styles.wrapper}
     >
-      <Pressable style={styles.pill} onPress={onPress}>
+      <Pressable
+        style={styles.pill}
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={`${count} new ${count === 1 ? 'message' : 'messages'}, tap to scroll down`}
+      >
         <Text style={styles.text}>
           {count} new {count === 1 ? 'message' : 'messages'}
         </Text>
@@ -39,8 +44,9 @@ const styles = StyleSheet.create({
   pill: {
     backgroundColor: '#3b82f6',
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    minHeight: 44,
+    justifyContent: 'center',
+    borderRadius: 22,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
