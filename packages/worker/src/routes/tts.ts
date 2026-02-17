@@ -3,16 +3,34 @@ import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { requireAuth, extractToken } from '../middleware/auth'
-import { rateLimitByKey } from '../middleware/rate-limit'
 import type { AppEnv } from '../lib/types'
 
 const VOICE_ID = 'JBFqnCBsd6RMkjVDRZzb'
 const MODEL_ID = 'eleven_multilingual_v2'
 const CACHE_TTL = 604800 // 7 days in seconds
+const API_CALL_LIMIT = 10
+const API_CALL_WINDOW_MS = 60_000
 
 const ttsSchema = z.object({
   text: z.string().min(1).max(5000),
 })
+
+// Separate rate limit store for TTS API calls only (not cache hits)
+const ttsApiCallStore = new Map<string, { count: number; resetAt: number }>()
+
+function checkTtsApiLimit(keyId: string): boolean {
+  const now = Date.now()
+  const entry = ttsApiCallStore.get(keyId)
+
+  if (!entry || now >= entry.resetAt) {
+    ttsApiCallStore.set(keyId, { count: 1, resetAt: now + API_CALL_WINDOW_MS })
+    return true
+  }
+
+  if (entry.count >= API_CALL_LIMIT) return false
+  entry.count++
+  return true
+}
 
 function isVoiceAuthorized(c: Context<AppEnv>): boolean {
   return extractToken(c) === c.env.VOICE_API_AVAILABLE_FOR
@@ -32,7 +50,7 @@ export const ttsRoute = new Hono<AppEnv>()
   )
 
   // POST /api/tts — generate or return cached TTS audio
-  .post('/', requireAuth, rateLimitByKey(10, 60_000), zValidator('json', ttsSchema), async c => {
+  .post('/', requireAuth, zValidator('json', ttsSchema), async c => {
     if (!isVoiceAuthorized(c)) {
       return c.json({ error: 'Voice API not available for this key' }, 403)
     }
@@ -41,7 +59,7 @@ export const ttsRoute = new Hono<AppEnv>()
     const textHash = await hashText(text)
     const cacheKey = `tts:${textHash}`
 
-    // Check KV cache
+    // Check KV cache — no rate limit for cached responses
     const cached = await c.env.UPLOADS.get(cacheKey, { type: 'arrayBuffer' })
     if (cached) {
       return new Response(cached, {
@@ -51,6 +69,11 @@ export const ttsRoute = new Hono<AppEnv>()
           'X-TTS-Cache': 'hit',
         },
       })
+    }
+
+    // Rate limit only actual ElevenLabs API calls
+    if (!checkTtsApiLimit(c.get('keyId'))) {
+      return c.json({ error: 'rate limit exceeded' }, 429)
     }
 
     // Call ElevenLabs REST API
