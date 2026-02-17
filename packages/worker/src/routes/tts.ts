@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { requireAuth, extractToken } from '../middleware/auth'
 import type { AppEnv } from '../lib/types'
 
-const VOICE_ID = 'JBFqnCBsd6RMkjVDRZzb'
+const VOICE_ID = 'PIGsltMj3gFMR34aFDI3'
 const MODEL_ID = 'eleven_flash_v2_5'
 const CACHE_TTL = 604800 // 7 days in seconds
 const API_CALL_LIMIT = 10
