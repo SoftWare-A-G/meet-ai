@@ -4,6 +4,8 @@ export type Room = {
   created_at: string
 }
 
+export type MessageStatus = 'sending' | 'sent' | 'failed'
+
 export type Message = {
   id: string
   room_id: string
@@ -15,7 +17,11 @@ export type Message = {
   type: 'message' | 'log'
   seq: number | null
   created_at: string
+  status?: MessageStatus
+  localId?: string
 }
+
+export type ConnectionStatus = 'connected' | 'reconnecting' | 'offline'
 
 export type TeamMember = {
   name: string

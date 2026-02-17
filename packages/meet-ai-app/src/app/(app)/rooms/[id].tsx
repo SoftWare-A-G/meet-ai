@@ -10,12 +10,13 @@ import {
 import Animated, { runOnJS, useAnimatedStyle, interpolate } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ChatInputBar } from '@/components/chat-input-bar'
+import { ConnectionStatus } from '@/components/connection-status'
 import { LogGroup } from '@/components/log-group'
 import { MessageBubble } from '@/components/message-bubble'
 import { useMarkdownStyles } from '@/constants/markdown-styles'
 import { useRoomWebSocket } from '@/hooks/use-room-websocket'
 import { useTheme } from '@/hooks/use-theme'
-import { loadLogs, loadMessages, sendMessage } from '@/lib/api'
+import { loadLogs, loadMessages } from '@/lib/api'
 import { useAuth } from '@/lib/auth-context'
 import type { Message } from '@/lib/types'
 
@@ -55,7 +56,8 @@ function groupMessages(messages: Message[]): RenderItem[] {
     if (msg.type === 'log') {
       logBuffer.push(msg)
     } else if (msg.sender_type === 'human') {
-      items.push({ kind: 'message', msg, key: msg.id })
+      flushLogs()
+      items.push({ kind: 'message', msg, key: msg.localId || msg.id })
     } else {
       flushLogs()
       items.push({ kind: 'message', msg, key: msg.id })
@@ -117,7 +119,8 @@ export default function ChatScreen() {
     })
   }, [])
 
-  const { connected, teamInfo } = useRoomWebSocket(id ?? null, apiKey, handleNewMessage)
+  const { connectionStatus, teamInfo, messages: wsMessages, sendOptimistic, retryMessage } =
+    useRoomWebSocket(id ?? null, apiKey, handleNewMessage)
 
   const { height: keyboardHeight, progress } = useReanimatedKeyboardAnimation()
 
@@ -170,24 +173,49 @@ export default function ChatScreen() {
     })
   }, [id])
 
+  // Merge server messages with optimistic messages from ws hook
+  const mergedMessages = useMemo(() => {
+    // Start with all loaded messages
+    const merged = [...allMessages]
+    // Add any optimistic messages from wsMessages that aren't in allMessages
+    for (const wsMsg of wsMessages) {
+      if (wsMsg.localId) {
+        // This is an optimistic or locally-tracked message
+        const existsInAll = merged.some(m => m.id === wsMsg.id || (m.localId && m.localId === wsMsg.localId))
+        if (!existsInAll) {
+          merged.push(wsMsg)
+        } else {
+          // Update existing with latest status from ws
+          const idx = merged.findIndex(m => m.localId === wsMsg.localId)
+          if (idx !== -1) {
+            merged[idx] = wsMsg
+          }
+        }
+      }
+    }
+    return merged.sort(
+      (a, b) => new Date(a.created_at).valueOf() - new Date(b.created_at).valueOf()
+    )
+  }, [allMessages, wsMessages])
+
   // Auto-scroll to bottom when new messages arrive and user is near bottom
   const prevMessageCountRef = useRef(0)
   useEffect(() => {
-    if (allMessages.length > prevMessageCountRef.current && isNearBottomRef.current) {
+    if (mergedMessages.length > prevMessageCountRef.current && isNearBottomRef.current) {
       setTimeout(() => {
         listRef.current?.scrollToEnd({ animated: true })
       }, 100)
     }
-    prevMessageCountRef.current = allMessages.length
-  }, [allMessages.length])
+    prevMessageCountRef.current = mergedMessages.length
+  }, [mergedMessages.length])
 
   // Slice messages for client-side pagination: show only the last `visibleCount`
   const visibleMessages = useMemo(() => {
-    const startIdx = Math.max(0, allMessages.length - visibleCount)
-    return allMessages.slice(startIdx)
-  }, [allMessages, visibleCount])
+    const startIdx = Math.max(0, mergedMessages.length - visibleCount)
+    return mergedMessages.slice(startIdx)
+  }, [mergedMessages, visibleCount])
 
-  const hasOlderMessages = visibleCount < allMessages.length
+  const hasOlderMessages = visibleCount < mergedMessages.length
 
   // Data is in chronological order (oldest first, newest last) — no inverted prop
   const groupedItems = useMemo(() => groupMessages(visibleMessages), [visibleMessages])
@@ -196,17 +224,24 @@ export default function ChatScreen() {
     if (!hasOlderMessages || loadingOlder) return
     setLoadingOlder(true)
     setTimeout(() => {
-      setVisibleCount(prev => Math.min(prev + PAGE_SIZE, allMessages.length))
+      setVisibleCount(prev => Math.min(prev + PAGE_SIZE, mergedMessages.length))
       setLoadingOlder(false)
     }, 300)
-  }, [hasOlderMessages, loadingOlder, allMessages.length])
+  }, [hasOlderMessages, loadingOlder, mergedMessages.length])
 
   const handleSend = useCallback(
     async (text: string) => {
       if (!id) return
-      await sendMessage(id, 'Mobile User', text)
+      await sendOptimistic('Mobile User', text)
     },
-    [id]
+    [id, sendOptimistic]
+  )
+
+  const handleRetry = useCallback(
+    (localId: string) => {
+      retryMessage(localId)
+    },
+    [retryMessage]
   )
 
   const renderItem = useCallback(
@@ -214,9 +249,16 @@ export default function ChatScreen() {
       if (item.kind === 'log-group') {
         return <LogGroup logs={item.logs} theme={theme} />
       }
-      return <MessageBubble msg={item.msg} markdownStyles={markdownStyles} theme={theme} />
+      return (
+        <MessageBubble
+          msg={item.msg}
+          markdownStyles={markdownStyles}
+          theme={theme}
+          onRetry={handleRetry}
+        />
+      )
     },
-    [theme, markdownStyles]
+    [theme, markdownStyles, handleRetry]
   )
 
   const keyExtractor = useCallback((item: RenderItem) => item.key, [])
@@ -259,11 +301,7 @@ export default function ChatScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      {!connected && (
-        <View style={styles.reconnectBar}>
-          <Text style={styles.reconnectText}>Reconnecting...</Text>
-        </View>
-      )}
+      <ConnectionStatus status={connectionStatus} />
 
       <Animated.View style={[styles.listWrapper, listContainerStyle]}>
         {initialLoading ? (
@@ -300,12 +338,6 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   listWrapper: { flex: 1 },
-  reconnectBar: {
-    backgroundColor: '#f59e0b',
-    paddingVertical: 6,
-    alignItems: 'center',
-  },
-  reconnectText: { color: '#fff', fontSize: 12, fontWeight: '600' },
   initialLoading: {
     flex: 1,
     alignItems: 'center',

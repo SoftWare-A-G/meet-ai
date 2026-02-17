@@ -1,6 +1,6 @@
 import { openBrowserAsync } from 'expo-web-browser'
 import React from 'react'
-import { StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
 import Markdown from '@ronradtke/react-native-markdown-display'
 
 import { useTheme } from '@/hooks/use-theme'
@@ -11,14 +11,16 @@ type Props = {
   msg: Message
   markdownStyles: ReturnType<typeof import('@/constants/markdown-styles').useMarkdownStyles>
   theme: ReturnType<typeof useTheme>
+  onRetry?: (localId: string) => void
 }
 
-function MessageBubbleInner({ msg, markdownStyles, theme }: Props) {
+function MessageBubbleInner({ msg, markdownStyles, theme, onRetry }: Props) {
   const isAgent = msg.sender_type === 'agent'
+  const isHuman = msg.sender_type === 'human'
   const senderColor = msg.color || hashColor(msg.sender)
 
   return (
-    <View style={styles.messageRow}>
+    <View style={[styles.messageRow, msg.status === 'failed' && styles.failedRow]}>
       <View style={[styles.avatar, { backgroundColor: senderColor }]}>
         <Text style={styles.avatarText}>
           {msg.sender.charAt(0).toUpperCase()}
@@ -37,6 +39,9 @@ function MessageBubbleInner({ msg, markdownStyles, theme }: Props) {
           <Text style={[styles.timestamp, { color: theme.textSecondary }]}>
             {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </Text>
+          {isHuman && msg.status && (
+            <MessageStatusIndicator status={msg.status} localId={msg.localId} onRetry={onRetry} />
+          )}
         </View>
         <Markdown
           style={markdownStyles}
@@ -52,12 +57,41 @@ function MessageBubbleInner({ msg, markdownStyles, theme }: Props) {
   )
 }
 
+type StatusProps = {
+  status: 'sending' | 'sent' | 'failed'
+  localId?: string
+  onRetry?: (localId: string) => void
+}
+
+function MessageStatusIndicator({ status, localId, onRetry }: StatusProps) {
+  if (status === 'sending') {
+    return <ActivityIndicator size={10} color="#9ca3af" style={styles.statusIndicator} />
+  }
+  if (status === 'sent') {
+    return <Text style={[styles.statusIndicator, styles.sentIcon]}>{'✓'}</Text>
+  }
+  // failed
+  return (
+    <Pressable
+      onPress={() => localId && onRetry?.(localId)}
+      hitSlop={8}
+      style={styles.retryButton}
+    >
+      <Text style={styles.failedIcon}>{'✕'}</Text>
+      <Text style={styles.retryText}>Retry</Text>
+    </Pressable>
+  )
+}
+
 export const MessageBubble = React.memo(MessageBubbleInner)
 
 const styles = StyleSheet.create({
   messageRow: {
     flexDirection: 'row',
     gap: 10,
+  },
+  failedRow: {
+    opacity: 0.7,
   },
   avatar: {
     width: 32,
@@ -78,4 +112,14 @@ const styles = StyleSheet.create({
   },
   agentBadgeText: { color: '#3b82f6', fontSize: 10, fontWeight: '600' },
   timestamp: { fontSize: 11 },
+  statusIndicator: { marginLeft: 2 },
+  sentIcon: { color: '#22c55e', fontSize: 12 },
+  failedIcon: { color: '#ef4444', fontSize: 12, fontWeight: '700' },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginLeft: 2,
+  },
+  retryText: { color: '#ef4444', fontSize: 10, fontWeight: '600' },
 })
