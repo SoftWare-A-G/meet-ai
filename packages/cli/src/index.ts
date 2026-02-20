@@ -1,9 +1,12 @@
 #!/usr/bin/env node
 import { createClient, cleanupOldAttachments } from "./client";
 import { appendToInbox, getTeamMembers, resolveInboxTargets, checkIdleAgents, IDLE_CHECK_INTERVAL_MS } from "./inbox-router";
+import { getMeetAiConfig } from "./config.js";
+import { spawnInteractive } from "./spawner.js";
 
-const API_URL = process.env.MEET_AI_URL || "https://meet-ai.cc";
-const API_KEY = process.env.MEET_AI_KEY;
+const config = getMeetAiConfig();
+const API_URL = config.url;
+const API_KEY = config.key;
 const client = createClient(API_URL, API_KEY);
 
 const [command, ...args] = process.argv.slice(2);
@@ -396,32 +399,46 @@ switch (command) {
   }
 
   default: {
+    // Default behavior: if no command provided, run Claude interactively
+    if (!command) {
+      console.log("Starting Claude Code... (Press Ctrl+C to exit)\n");
+      await spawnInteractive();
+      break;
+    }
+
     console.log(`meet-ai CLI
 
-Environment variables:
-  MEET_AI_URL   Server URL (default: https://meet-ai.cc)
-  MEET_AI_KEY   API key for authentication
+Usage:
+  meet-ai                        Start Claude Code interactively (default)
+  meet-ai <command> [options]    Run a specific command
+
+Configuration (in order of priority):
+  1. Environment variables:
+     MEET_AI_URL   Server URL (default: https://meet-ai.cc)
+     MEET_AI_KEY   API key for authentication
+  2. Project settings: ./.claude/settings.json
+  3. User settings: ~/.claude/settings.json
 
 Commands:
-  create-room <name>                           Create a new chat room
-  delete-room <roomId>                         Delete a room and all its messages
-  send-message <roomId> <sender> <content>     Send a message to a room
+  create-room <name>                            Create a new chat room
+  delete-room <roomId>                          Delete a room and all its messages
+  send-message <roomId> <sender> <content>      Send a message to a room
     --color <color>       Set sender name color (e.g. #ff0000, red)
-  send-log <roomId> <sender> <content>        Send a log entry to a room
+  send-log <roomId> <sender> <content>          Send a log entry to a room
     --color <color>       Set sender name color (e.g. #ff0000, red)
     --message-id <id>     Associate log with a parent message
-  poll <roomId> [options]                      Fetch messages from a room
+  poll <roomId> [options]                       Fetch messages from a room
     --after <id>          Only messages after this ID
     --exclude <sender>    Exclude messages from sender
     --sender-type <type>  Filter by sender_type (human|agent)
-  listen <roomId> [options]                    Stream messages via WebSocket
+  listen <roomId> [options]                     Stream messages via WebSocket
     --exclude <sender>    Exclude messages from sender
     --sender-type <type>  Filter by sender_type (human|agent)
     --team <name>         Write to Claude Code team inbox
     --inbox <agent>       Target agent inbox (requires --team)
-  download-attachment <attachmentId>             Download an attachment to /tmp
-  send-team-info <roomId> '<json>'             Send team info to a room
-  send-tasks <roomId> '<json>'                 Send tasks info to a room
-  generate-key                                 Generate a new API key`);
+  download-attachment <attachmentId>            Download an attachment to /tmp
+  send-team-info <roomId> '<json>'              Send team info to a room
+  send-tasks <roomId> '<json>'                  Send tasks info to a room
+  generate-key                                  Generate a new API key`);
   }
 }
