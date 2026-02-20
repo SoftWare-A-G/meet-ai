@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator'
 import { queries } from '../db/queries'
 import { requireAuth } from '../middleware/auth'
 import { rateLimitByKey } from '../middleware/rate-limit'
-import { createRoomSchema, sendMessageSchema, sendLogSchema, teamInfoSchema } from '../schemas/rooms'
+import { createRoomSchema, sendMessageSchema, sendLogSchema, teamInfoSchema, messagesQuerySchema } from '../schemas/rooms'
 import type { AppEnv } from '../lib/types'
 
 export const roomsRoute = new Hono<AppEnv>()
@@ -41,7 +41,7 @@ export const roomsRoute = new Hono<AppEnv>()
   })
 
   // GET /api/rooms/:id/messages — get message history
-  .get('/:id/messages', requireAuth, async c => {
+  .get('/:id/messages', requireAuth, zValidator('query', messagesQuerySchema), async c => {
     const keyId = c.get('keyId')
     const roomId = c.req.param('id')
     const db = queries(c.env.DB)
@@ -51,16 +51,13 @@ export const roomsRoute = new Hono<AppEnv>()
       return c.json({ error: 'room not found' }, 404)
     }
 
-    const after = c.req.query('after')
-    const sinceSeq = c.req.query('since_seq')
-    const exclude = c.req.query('exclude')
-    const senderType = c.req.query('sender_type')
+    const { after, since_seq: sinceSeq, exclude, sender_type: senderType } = c.req.valid('query')
 
     // Prefer since_seq (cheaper query) over after (rowid subquery)
-    if (sinceSeq) {
+    if (sinceSeq != null) {
       const messages = await db.listMessagesSinceSeq(
         roomId,
-        Number(sinceSeq),
+        sinceSeq,
         exclude || undefined,
         senderType || undefined
       )

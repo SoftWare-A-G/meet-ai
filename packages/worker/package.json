@@ -11,8 +11,8 @@
     "cf-typegen": "wrangler types"
   },
   "dependencies": {
-    "@base-ui/react": "1.2.0",
-    "@elevenlabs/elevenlabs-js": "2.36.0",
+    "@base-ui/react": "catalog:",
+    "@elevenlabs/elevenlabs-js": "catalog:",
     "@hono/zod-validator": "catalog:",
     "@tanstack/react-router": "1.159.6",
     "@tanstack/react-start": "1.159.8",
@@ -36,15 +36,15 @@
     "@cloudflare/vite-plugin": "1.25.0",
     "@cloudflare/vitest-pool-workers": "0.12.10",
     "@cloudflare/workers-types": "catalog:",
-    "@tailwindcss/postcss": "4.1.18",
+    "@tailwindcss/postcss": "catalog:",
     "@types/dompurify": "3.2.0",
     "@types/js-cookie": "3.0.6",
-    "@types/react": "19.2.14",
-    "@types/react-dom": "19.2.3",
-    "@vitejs/plugin-react": "5.1.4",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
     "tailwindcss": "catalog:",
     "typescript": "catalog:",
-    "vite": "7.3.1",
+    "vite": "catalog:",
     "vitest": "catalog:",
     "wrangler": "4.63.0"
   }

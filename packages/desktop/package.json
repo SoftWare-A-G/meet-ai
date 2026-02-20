@@ -1,0 +1,29 @@
+{
+  "name": "@meet-ai/desktop",
+  "version": "1.0.0",
+  "description": "Electrobun app with React, Tailwind CSS, and Vite HMR",
+  "scripts": {
+    "dev": "bun run build && electrobun dev",
+    "dev:hmr": "bun run --parallel hmr dev",
+    "hmr": "vite --port 5173",
+    "build": "vite build && electrobun build",
+    "build:prod": "vite build && electrobun build --channel prod"
+  },
+  "dependencies": {
+    "@base-ui/react": "catalog:",
+    "@elevenlabs/elevenlabs-js": "catalog:",
+    "electrobun": "1.13.1",
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "catalog:",
+    "@types/bun": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "tailwindcss": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:"
+  }
+}

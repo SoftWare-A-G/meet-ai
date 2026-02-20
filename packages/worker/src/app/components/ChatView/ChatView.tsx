@@ -213,6 +213,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
         forceScrollCounter={forceScrollCounter}
         onScrollToBottom={() => setUnreadCount(0)}
         onRetry={handleRetry}
+        onSend={handleSend}
         connected={connected}
         voiceAvailable={voiceAvailable}
       />

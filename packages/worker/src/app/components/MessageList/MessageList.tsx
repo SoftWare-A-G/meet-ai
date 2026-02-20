@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useStickToBottom } from 'use-stick-to-bottom'
 import Message from '../Message'
 import LogGroup from '../LogGroup'
+import QuestionCard from '../QuestionCard'
 import NewMessagesPill from '../NewMessagesPill'
 import type { Message as MessageType } from '../../lib/types'
 
@@ -17,12 +18,14 @@ type MessageListProps = {
   forceScrollCounter: number
   onScrollToBottom: () => void
   onRetry?: (tempId: string) => void
+  onSend?: (content: string) => void
   connected?: boolean
   voiceAvailable?: boolean
 }
 
 type RenderItem =
   | { kind: 'message'; msg: DisplayMessage; index: number }
+  | { kind: 'question'; msg: DisplayMessage; index: number }
   | { kind: 'log-group'; logs: DisplayMessage[] }
 
 function groupMessages(messages: DisplayMessage[]): RenderItem[] {
@@ -57,9 +60,12 @@ function groupMessages(messages: DisplayMessage[]): RenderItem[] {
     } else {
       flushLogs()
       const children = msg.id ? childLogs.get(msg.id) : undefined
-      const isHookAnchor = msg.sender === 'hook'
-      // Hook messages never render as bubbles — they only exist as log group anchors
-      if (!isHookAnchor) {
+      const isQuestion = msg.sender === 'hook' && msg.color === '#f59e0b'
+      const isHookAnchor = msg.sender === 'hook' && !isQuestion
+      // Hook anchor messages never render as bubbles — they only exist as log group anchors
+      if (isQuestion) {
+        items.push({ kind: 'question', msg, index })
+      } else if (!isHookAnchor) {
         items.push({ kind: 'message', msg, index })
       }
       if (children && children.length > 0) {
@@ -72,7 +78,7 @@ function groupMessages(messages: DisplayMessage[]): RenderItem[] {
   return items
 }
 
-export default function MessageList({ messages, attachmentCounts, unreadCount, forceScrollCounter, onScrollToBottom, onRetry, connected = true, voiceAvailable }: MessageListProps) {
+export default function MessageList({ messages, attachmentCounts, unreadCount, forceScrollCounter, onScrollToBottom, onRetry, onSend, connected = true, voiceAvailable }: MessageListProps) {
   const { scrollRef, contentRef, isAtBottom, scrollToBottom } = useStickToBottom({ resize: 'smooth', initial: 'smooth' })
 
   // Auto-dismiss new messages pill when user scrolls to the bottom
@@ -105,6 +111,21 @@ export default function MessageList({ messages, attachmentCounts, unreadCount, f
               <LogGroup
                 key={`log-group-${first.sender}-${first.created_at}-${i}`}
                 logs={item.logs}
+              />
+            )
+          }
+          if (item.kind === 'question' && onSend) {
+            const msg = item.msg
+            // Look for a human answer after this question
+            const nextHuman = messages.slice(item.index + 1).find(m => m.type !== 'log' && m.sender !== 'hook')
+            const answeredWith = nextHuman?.content
+            return (
+              <QuestionCard
+                key={`question-${msg.id || msg.created_at}-${item.index}`}
+                content={msg.content}
+                timestamp={msg.created_at}
+                onSend={onSend}
+                answeredWith={answeredWith}
               />
             )
           }
