@@ -79,6 +79,19 @@ export type PlanDecision = {
   created_at: string
 }
 
+export type QuestionReview = {
+  id: string
+  message_id: string
+  room_id: string
+  key_id: string
+  questions_json: string
+  status: 'pending' | 'answered' | 'expired'
+  answers_json: string | null
+  answered_by: string | null
+  answered_at: string | null
+  created_at: string
+}
+
 export type TeamMember = {
   name: string
   color: string

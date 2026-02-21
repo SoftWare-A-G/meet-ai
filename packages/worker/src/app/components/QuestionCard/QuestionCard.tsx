@@ -18,6 +18,10 @@ type QuestionCardProps = {
   timestamp?: string
   onSend: (answer: string) => void
   answeredWith?: string
+  questionReviewId?: string
+  questionReviewStatus?: 'pending' | 'answered' | 'expired'
+  questionReviewAnswers?: Record<string, string>
+  onQuestionAnswer?: (reviewId: string, answers: Record<string, string>) => void
 }
 
 // Answers stored as arrays to support multiSelect
@@ -116,11 +120,28 @@ function isSelected(answers: Answers, qi: number, label: string): boolean {
   return answers[qi]?.includes(label) ?? false
 }
 
-export default function QuestionCard({ content, timestamp, onSend, answeredWith }: QuestionCardProps) {
+function deriveFromReviewAnswers(reviewAnswers: Record<string, string> | undefined, questions: ParsedQuestion[]): Answers {
+  if (!reviewAnswers || questions.length === 0) return {}
+  const result: Answers = {}
+  for (let qi = 0; qi < questions.length; qi++) {
+    const q = questions[qi]
+    const answer = reviewAnswers[q.question]
+    if (answer) {
+      result[qi] = q.multiSelect ? answer.split(', ').map(s => s.trim()) : [answer]
+    }
+  }
+  return result
+}
+
+export default function QuestionCard({ content, timestamp, onSend, answeredWith, questionReviewId, questionReviewStatus, questionReviewAnswers, onQuestionAnswer }: QuestionCardProps) {
   const questions = useMemo(() => parseQuestions(content), [content])
-  const derived = useMemo(() => deriveAnswers(answeredWith, questions), [answeredWith, questions])
+  const reviewDerived = useMemo(() => deriveFromReviewAnswers(questionReviewAnswers, questions), [questionReviewAnswers, questions])
+  const textDerived = useMemo(() => deriveAnswers(answeredWith, questions), [answeredWith, questions])
+  const derived = Object.keys(reviewDerived).length > 0 ? reviewDerived : textDerived
   const [answers, setAnswers] = useState<Answers>(derived)
-  const [submitted, setSubmitted] = useState(Object.keys(derived).length > 0)
+  const isExpired = questionReviewStatus === 'expired'
+  const isAnsweredViaReview = questionReviewStatus === 'answered'
+  const [submitted, setSubmitted] = useState(Object.keys(derived).length > 0 || isExpired || isAnsweredViaReview)
 
   // Sync state when answeredWith arrives late (e.g. async message load)
   useEffect(() => {
@@ -162,19 +183,33 @@ export default function QuestionCard({ content, timestamp, onSend, answeredWith 
   const handleSubmit = useCallback(() => {
     if (!allAnswered || submitted) return
     setSubmitted(true)
+
+    // If we have a question review, submit via the review API
+    if (questionReviewId && onQuestionAnswer) {
+      const answersMap: Record<string, string> = {}
+      for (let i = 0; i < questions.length; i++) {
+        answersMap[questions[i].question] = answers[i].join(', ')
+      }
+      onQuestionAnswer(questionReviewId, answersMap)
+      return
+    }
+
+    // Fallback: send as plain text message
     const formatAnswer = (qi: number) => answers[qi].join(', ')
     const response = questions.length === 1
       ? formatAnswer(0)
       : questions.map((q, i) => `${q.question}: ${formatAnswer(i)}`).join('\n')
     onSend(response)
-  }, [allAnswered, submitted, questions, answers, onSend])
+  }, [allAnswered, submitted, questions, answers, onSend, questionReviewId, onQuestionAnswer])
 
   if (questions.length === 0) return null
 
   return (
-    <div className="rounded-md border-l-2 border-[#f59e0b] bg-[#f59e0b]/[0.06] px-3 py-2.5 text-sm">
+    <div className={clsx('rounded-md border-l-2 px-3 py-2.5 text-sm', isExpired ? 'border-[#6b7280] bg-[#6b7280]/[0.06]' : 'border-[#f59e0b] bg-[#f59e0b]/[0.06]')}>
       <div className="flex items-center gap-2 mb-2">
-        <span className="font-bold text-[#f59e0b] text-sm">Agent question</span>
+        <span className={clsx('font-bold text-sm', isExpired ? 'text-[#6b7280]' : 'text-[#f59e0b]')}>
+          {isExpired ? 'Question expired' : 'Agent question'}
+        </span>
         {timestamp && (
           <span className="text-xs text-[#8b8fa3]">{formatTime(timestamp)}</span>
         )}
@@ -185,7 +220,7 @@ export default function QuestionCard({ content, timestamp, onSend, answeredWith 
           <div key={qi}>
             <p className="text-msg-text mb-2">{q.question}</p>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col gap-2">
               {q.options.map((opt) => {
                 const selected = isSelected(answers, qi, opt.label)
                 return (
@@ -195,7 +230,7 @@ export default function QuestionCard({ content, timestamp, onSend, answeredWith 
                     disabled={submitted}
                     onClick={() => handleSelect(qi, opt.label, q.multiSelect)}
                     className={clsx(
-                      'rounded-lg border px-3 py-1.5 text-sm transition-all',
+                      'rounded-lg border px-3 py-2.5 text-left transition-all',
                       submitted
                         ? selected
                           ? 'border-[#f59e0b] bg-[#f59e0b]/20 text-[#f59e0b] cursor-default'
@@ -204,11 +239,10 @@ export default function QuestionCard({ content, timestamp, onSend, answeredWith 
                           ? 'border-[#f59e0b] bg-[#f59e0b]/20 text-[#f59e0b] cursor-pointer'
                           : 'border-border text-msg-text hover:border-[#f59e0b]/60 hover:bg-[#f59e0b]/[0.08] cursor-pointer',
                     )}
-                    title={opt.description}
                   >
-                    {opt.label}
+                    <span className="text-sm font-bold">{opt.label}</span>
                     {opt.description && (
-                      <span className="ml-1.5 text-xs opacity-60">— {opt.description}</span>
+                      <span className={clsx('block text-xs mt-0.5', selected ? 'opacity-80' : 'opacity-60')}>{opt.description}</span>
                     )}
                   </button>
                 )

@@ -38,7 +38,9 @@ describe('summarize', () => {
   })
 
   it('summarizes WebFetch with url', () => {
-    expect(summarize('WebFetch', { url: 'https://example.com' })).toBe('WebFetch: https://example.com')
+    expect(summarize('WebFetch', { url: 'https://example.com' })).toBe(
+      'WebFetch: https://example.com'
+    )
   })
 
   it('summarizes WebSearch with query', () => {

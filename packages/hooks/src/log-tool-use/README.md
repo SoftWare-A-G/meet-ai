@@ -24,19 +24,20 @@ Claude Code tool call
 
 ### Summary formats
 
-| Tool | Format | Example |
-|------|--------|---------|
-| Edit, Read, Write | `ToolName: basename` | `Edit: foo.ts` |
-| Bash, Task | `ToolName: first_60_chars` | `Bash: bun run test` |
-| Grep | `Grep: "pattern" in glob` | `Grep: "TODO" in *.ts` |
-| Glob | `Glob: pattern` | `Glob: **/*.tsx` |
-| WebFetch | `WebFetch: url` | `WebFetch: https://...` |
-| WebSearch | `WebSearch: query` | `WebSearch: hono zod` |
-| Other | Tool name only | `AskUserQuestion` |
+| Tool              | Format                     | Example                 |
+| ----------------- | -------------------------- | ----------------------- |
+| Edit, Read, Write | `ToolName: basename`       | `Edit: foo.ts`          |
+| Bash, Task        | `ToolName: first_60_chars` | `Bash: bun run test`    |
+| Grep              | `Grep: "pattern" in glob`  | `Grep: "TODO" in *.ts`  |
+| Glob              | `Glob: pattern`            | `Glob: **/*.tsx`        |
+| WebFetch          | `WebFetch: url`            | `WebFetch: https://...` |
+| WebSearch         | `WebSearch: query`         | `WebSearch: hono zod`   |
+| Other             | Tool name only             | `AskUserQuestion`       |
 
 ### Skip rules
 
 These tool calls are silently ignored:
+
 - **SendMessage** — internal agent-to-agent communication, not useful as logs
 - **Bash: cd ...** — trivial directory changes
 - **Bash: meet-ai ...** — CLI calls from the hook itself (avoid infinite recursion)
@@ -52,14 +53,18 @@ In `.claude/settings.json`:
 ```json
 {
   "hooks": {
-    "PostToolUse": [{
-      "matcher": ".*",
-      "hooks": [{
-        "type": "command",
-        "command": ".claude/hooks/log-tool-use",
-        "timeout": 10
-      }]
-    }]
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/log-tool-use",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
   }
 }
 ```

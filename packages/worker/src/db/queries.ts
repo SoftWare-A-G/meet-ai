@@ -1,4 +1,4 @@
-import type { ApiKey, Room, Message, Log, Attachment, PlanDecision } from '../lib/types'
+import type { ApiKey, Room, Message, Log, Attachment, PlanDecision, QuestionReview } from '../lib/types'
 
 export function queries(db: D1Database) {
   return {
@@ -40,7 +40,7 @@ export function queries(db: D1Database) {
     },
 
     async listMessages(roomId: string, afterId?: string, exclude?: string, senderType?: string) {
-      let sql = 'SELECT m.id, m.room_id, m.sender, m.sender_type, m.content, m.color, m.type, m.seq, m.created_at, pd.id AS plan_review_id, pd.status AS plan_review_status, pd.feedback AS plan_review_feedback FROM messages m LEFT JOIN plan_decisions pd ON pd.message_id = m.id WHERE m.room_id = ?'
+      let sql = 'SELECT m.id, m.room_id, m.sender, m.sender_type, m.content, m.color, m.type, m.seq, m.created_at, pd.id AS plan_review_id, pd.status AS plan_review_status, pd.feedback AS plan_review_feedback, qr.id AS question_review_id, qr.status AS question_review_status, qr.answers_json AS question_review_answers FROM messages m LEFT JOIN plan_decisions pd ON pd.message_id = m.id LEFT JOIN question_reviews qr ON qr.message_id = m.id WHERE m.room_id = ?'
       const params: string[] = [roomId]
 
       if (afterId) {
@@ -75,7 +75,7 @@ export function queries(db: D1Database) {
     },
 
     async listMessagesSinceSeq(roomId: string, sinceSeq: number, exclude?: string, senderType?: string) {
-      let sql = 'SELECT m.id, m.room_id, m.sender, m.sender_type, m.content, m.color, m.type, m.seq, m.created_at, pd.id AS plan_review_id, pd.status AS plan_review_status, pd.feedback AS plan_review_feedback FROM messages m LEFT JOIN plan_decisions pd ON pd.message_id = m.id WHERE m.room_id = ? AND m.seq > ?'
+      let sql = 'SELECT m.id, m.room_id, m.sender, m.sender_type, m.content, m.color, m.type, m.seq, m.created_at, pd.id AS plan_review_id, pd.status AS plan_review_status, pd.feedback AS plan_review_feedback, qr.id AS question_review_id, qr.status AS question_review_status, qr.answers_json AS question_review_answers FROM messages m LEFT JOIN plan_decisions pd ON pd.message_id = m.id LEFT JOIN question_reviews qr ON qr.message_id = m.id WHERE m.room_id = ? AND m.seq > ?'
       const params: (string | number)[] = [roomId, sinceSeq]
 
       if (exclude) {
@@ -171,8 +171,35 @@ export function queries(db: D1Database) {
       return result.meta.changes > 0
     },
 
+    async createQuestionReview(id: string, messageId: string, roomId: string, keyId: string, questionsJson: string) {
+      await db.prepare(
+        'INSERT INTO question_reviews (id, message_id, room_id, key_id, questions_json) VALUES (?, ?, ?, ?, ?)'
+      ).bind(id, messageId, roomId, keyId, questionsJson).run()
+    },
+
+    async getQuestionReview(id: string, roomId: string, keyId: string) {
+      return db.prepare(
+        'SELECT id, message_id, room_id, key_id, questions_json, status, answers_json, answered_by, answered_at, created_at FROM question_reviews WHERE id = ? AND room_id = ? AND key_id = ?'
+      ).bind(id, roomId, keyId).first<QuestionReview>()
+    },
+
+    async answerQuestionReview(id: string, roomId: string, keyId: string, answersJson: string, answeredBy: string) {
+      const result = await db.prepare(
+        'UPDATE question_reviews SET status = "answered", answers_json = ?, answered_by = ?, answered_at = datetime("now") WHERE id = ? AND room_id = ? AND key_id = ? AND status = "pending"'
+      ).bind(answersJson, answeredBy, id, roomId, keyId).run()
+      return result.meta.changes > 0
+    },
+
+    async expireQuestionReview(id: string, roomId: string, keyId: string) {
+      const result = await db.prepare(
+        'UPDATE question_reviews SET status = "expired", answered_at = datetime("now") WHERE id = ? AND room_id = ? AND key_id = ? AND status = "pending"'
+      ).bind(id, roomId, keyId).run()
+      return result.meta.changes > 0
+    },
+
     async deleteRoom(keyId: string, roomId: string) {
-      // Delete in order: plan_decisions, attachments, logs, messages, then room
+      // Delete in order: question_reviews, plan_decisions, attachments, logs, messages, then room
+      await db.prepare('DELETE FROM question_reviews WHERE room_id = ?').bind(roomId).run()
       await db.prepare('DELETE FROM plan_decisions WHERE room_id = ?').bind(roomId).run()
       await db.prepare('DELETE FROM attachments WHERE room_id = ?').bind(roomId).run()
       await db.prepare('DELETE FROM logs WHERE room_id = ?').bind(roomId).run()

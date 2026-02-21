@@ -7,6 +7,7 @@ import { keysRoute } from './routes/keys'
 import { lobbyRoute } from './routes/lobby'
 import { roomsRoute } from './routes/rooms'
 import { planReviewsRoute } from './routes/plan-reviews'
+import { questionReviewsRoute } from './routes/question-reviews'
 import { ttsRoute } from './routes/tts'
 import { uploadsRoute } from './routes/uploads'
 import { wsRoute } from './routes/ws'
@@ -36,6 +37,7 @@ export const app = new Hono<AppEnv>()
   .route('/api/keys', keysRoute)
   .route('/api/rooms', roomsRoute)
   .route('/api/rooms', planReviewsRoute)
+  .route('/api/rooms', questionReviewsRoute)
   .route('/api/rooms', wsRoute)
   .route('/api/lobby', lobbyRoute)
   .route('/api/rooms', uploadsRoute)

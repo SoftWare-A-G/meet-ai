@@ -12,16 +12,20 @@ type DisplayMessage = MessageType & {
   status?: 'sent' | 'pending' | 'failed'
 }
 
+type QuestionAnswerState = { status: 'pending' | 'answered' | 'expired'; answers?: Record<string, string> }
+
 type MessageListProps = {
   messages: DisplayMessage[]
   attachmentCounts?: Record<string, number>
   planDecisions?: Record<string, { status: 'pending' | 'approved' | 'denied' | 'expired'; feedback?: string }>
+  questionAnswers?: Record<string, QuestionAnswerState>
   unreadCount: number
   forceScrollCounter: number
   onScrollToBottom: () => void
   onRetry?: (tempId: string) => void
   onSend?: (content: string) => void
   onPlanDecide?: (reviewId: string, approved: boolean, feedback?: string) => void
+  onQuestionAnswer?: (reviewId: string, answers: Record<string, string>) => void
   connected?: boolean
   voiceAvailable?: boolean
 }
@@ -85,7 +89,7 @@ function groupMessages(messages: DisplayMessage[]): RenderItem[] {
   return items
 }
 
-export default function MessageList({ messages, attachmentCounts, planDecisions, unreadCount, forceScrollCounter, onScrollToBottom, onRetry, onSend, onPlanDecide, connected = true, voiceAvailable }: MessageListProps) {
+export default function MessageList({ messages, attachmentCounts, planDecisions, questionAnswers, unreadCount, forceScrollCounter, onScrollToBottom, onRetry, onSend, onPlanDecide, onQuestionAnswer, connected = true, voiceAvailable }: MessageListProps) {
   const { scrollRef, contentRef, isAtBottom, scrollToBottom } = useStickToBottom({ resize: 'smooth', initial: 'smooth' })
 
   // Auto-dismiss new messages pill when user scrolls to the bottom
@@ -139,9 +143,15 @@ export default function MessageList({ messages, attachmentCounts, planDecisions,
           }
           if (item.kind === 'question' && onSend) {
             const msg = item.msg
-            // Look for a human answer after this question
-            const nextHuman = messages.slice(item.index + 1).find(m => m.type !== 'log' && m.sender !== 'hook')
+            const reviewId = msg.question_review_id || ''
+            const qState = reviewId && questionAnswers ? questionAnswers[reviewId] : undefined
+
+            // Fall back to old text-based detection when no review ID
+            const nextHuman = !reviewId
+              ? messages.slice(item.index + 1).find(m => m.type !== 'log' && m.sender !== 'hook')
+              : undefined
             const answeredWith = nextHuman?.content
+
             return (
               <QuestionCard
                 key={`question-${msg.id || msg.created_at}-${item.index}`}
@@ -149,6 +159,10 @@ export default function MessageList({ messages, attachmentCounts, planDecisions,
                 timestamp={msg.created_at}
                 onSend={onSend}
                 answeredWith={answeredWith}
+                questionReviewId={reviewId || undefined}
+                questionReviewStatus={qState?.status}
+                questionReviewAnswers={qState?.answers}
+                onQuestionAnswer={onQuestionAnswer}
               />
             )
           }

@@ -28,6 +28,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
   const [forceScrollCounter, setForceScrollCounter] = useState(0)
   const [voiceAvailable, setVoiceAvailable] = useState(false)
   const [planDecisions, setPlanDecisions] = useState<Record<string, { status: 'pending' | 'approved' | 'denied' | 'expired'; feedback?: string }>>({})
+  const [questionAnswers, setQuestionAnswers] = useState<Record<string, { status: 'pending' | 'answered' | 'expired'; answers?: Record<string, string> }>>({})
   const { queue, remove, getForRoom } = useOfflineQueue()
 
   // Check TTS availability once on mount
@@ -63,6 +64,20 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
       }
       if (Object.keys(decisions).length > 0) {
         setPlanDecisions(prev => ({ ...prev, ...decisions }))
+      }
+
+      // Populate question answers from loaded messages
+      const qAnswers: Record<string, { status: 'pending' | 'answered' | 'expired'; answers?: Record<string, string> }> = {}
+      for (const msg of history) {
+        if (msg.question_review_id && msg.question_review_status) {
+          qAnswers[msg.question_review_id] = {
+            status: msg.question_review_status,
+            answers: msg.question_review_answers ? JSON.parse(msg.question_review_answers) : undefined,
+          }
+        }
+      }
+      if (Object.keys(qAnswers).length > 0) {
+        setQuestionAnswers(prev => ({ ...prev, ...qAnswers }))
       }
 
       // Restore queued offline messages
@@ -217,6 +232,23 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
     }
   }, [room.id])
 
+  const handleQuestionAnswer = useCallback(async (reviewId: string, answers: Record<string, string>) => {
+    // Optimistic update
+    setQuestionAnswers(prev => ({
+      ...prev,
+      [reviewId]: { status: 'answered', answers },
+    }))
+    try {
+      await api.answerQuestionReview(room.id, reviewId, answers, userName)
+    } catch {
+      // Revert on failure
+      setQuestionAnswers(prev => ({
+        ...prev,
+        [reviewId]: { status: 'pending' },
+      }))
+    }
+  }, [room.id, userName])
+
   const handleRetry = useCallback(async (tempId: string) => {
     const msg = messages.find(m => m.tempId === tempId)
     if (!msg) return
@@ -242,12 +274,14 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
         messages={messages}
         attachmentCounts={attachmentCounts}
         planDecisions={planDecisions}
+        questionAnswers={questionAnswers}
         unreadCount={unreadCount}
         forceScrollCounter={forceScrollCounter}
         onScrollToBottom={() => setUnreadCount(0)}
         onRetry={handleRetry}
         onSend={handleSend}
         onPlanDecide={handlePlanDecide}
+        onQuestionAnswer={handleQuestionAnswer}
         connected={connected}
         voiceAvailable={voiceAvailable}
       />

@@ -128,6 +128,21 @@ export async function textToSpeech(text: string): Promise<ArrayBuffer> {
   return res.arrayBuffer()
 }
 
+export async function answerQuestionReview(
+  roomId: string,
+  reviewId: string,
+  answers: Record<string, string>,
+  answeredBy?: string,
+): Promise<{ ok: boolean }> {
+  const res = await fetch(`/api/rooms/${roomId}/question-reviews/${reviewId}/answer`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ answers, answered_by: answeredBy || 'anonymous' }),
+  })
+  if (!res.ok) throw new Error(`Question review answer failed: HTTP ${res.status}`)
+  return res.json()
+}
+
 export async function decidePlanReview(
   roomId: string,
   reviewId: string,

@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Thin wrapper — runs the question-review hook via bun
+exec bun run "$(dirname "$0")/../../packages/hooks/src/question-review/index.ts"

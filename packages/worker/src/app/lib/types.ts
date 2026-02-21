@@ -16,6 +16,9 @@ export type Message = {
   plan_review_id?: string
   plan_review_status?: 'pending' | 'approved' | 'denied' | 'expired'
   plan_review_feedback?: string
+  question_review_id?: string
+  question_review_status?: 'pending' | 'answered' | 'expired'
+  question_review_answers?: string
 }
 
 export type PendingMessage = {
