@@ -16,6 +16,7 @@ type Question = {
 
 type AskUserInput = {
   session_id: string
+  hook_event_name: string
   tool_name: string
   tool_input: {
     questions: Question[]
@@ -25,11 +26,13 @@ type AskUserInput = {
 
 type HookOutput = {
   hookSpecificOutput: {
-    hookEventName: 'PreToolUse'
-    permissionDecision: 'allow'
-    updatedInput: {
-      questions: Question[]
-      answers: Record<string, string>
+    hookEventName: 'PermissionRequest'
+    decision: {
+      behavior: 'allow'
+      updatedInput: {
+        questions: Question[]
+        answers: Record<string, string>
+      }
     }
   }
 }
@@ -90,8 +93,8 @@ async function createQuestionReview(
       return null
     }
     return (await res.json()) as QuestionReviewResponse
-  } catch (err) {
-    process.stderr.write(`[question-review] create error: ${err}\n`)
+  } catch (error) {
+    process.stderr.write(`[question-review] create error: ${error}\n`)
     return null
   }
 }
@@ -116,10 +119,10 @@ async function pollForAnswer(
           return data
         }
       }
-    } catch (err) {
-      process.stderr.write(`[question-review] poll error: ${err}\n`)
+    } catch (error) {
+      process.stderr.write(`[question-review] poll error: ${error}\n`)
     }
-    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS))
+    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
   }
 
   return null
@@ -128,11 +131,13 @@ async function pollForAnswer(
 function buildOutput(questions: Question[], answers: Record<string, string>): HookOutput {
   return {
     hookSpecificOutput: {
-      hookEventName: 'PreToolUse',
-      permissionDecision: 'allow',
-      updatedInput: {
-        questions,
-        answers,
+      hookEventName: 'PermissionRequest',
+      decision: {
+        behavior: 'allow',
+        updatedInput: {
+          questions,
+          answers,
+        },
       },
     },
   }
@@ -180,11 +185,13 @@ export async function processQuestionReview(rawInput: string, teamsDir?: string)
     return
   }
 
-  const { session_id: sessionId, tool_input: toolInput } = input
+  const { session_id: sessionId, hook_event_name: hookEventName, tool_input: toolInput } = input
   if (!sessionId || !toolInput?.questions?.length) {
     process.stderr.write('[question-review] missing session_id or questions\n')
     return
   }
+
+  process.stderr.write(`[question-review] triggered by ${hookEventName} event\n`)
 
   const roomId = findRoomId(sessionId, teamsDir)
   if (!roomId) {
@@ -236,8 +243,8 @@ async function main() {
 
 const isDirectExecution = process.argv[1]?.includes('/hooks/')
 if (isDirectExecution && !process.argv[1]?.includes('vitest')) {
-  main().catch((err) => {
-    process.stderr.write(`[question-review] fatal: ${err}\n`)
+  main().catch((error) => {
+    process.stderr.write(`[question-review] fatal: ${error}\n`)
     process.exit(0)
   })
 }
