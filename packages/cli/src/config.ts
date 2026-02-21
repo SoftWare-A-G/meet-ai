@@ -9,11 +9,19 @@
 import { readFileSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { homedir } from "node:os";
+import { z } from "zod";
 
 interface ClaudeSettings {
   env?: Record<string, string>;
   [key: string]: unknown;
 }
+
+export const configSchema = z.object({
+  url: z.string().url("MEET_AI_URL must be a valid URL"),
+  key: z.string().optional(),
+});
+
+export type MeetAiConfig = z.infer<typeof configSchema>;
 
 /**
  * Load settings from a specific path
@@ -31,13 +39,10 @@ function loadSettingsFromPath(path: string): ClaudeSettings | null {
 }
 
 /**
- * Get meet-ai configuration from all sources
+ * Resolve raw config values from all sources (before validation).
  * Priority: process.env > project settings > user settings > defaults
  */
-export function getMeetAiConfig(): {
-  url: string;
-  key: string | undefined;
-} {
+export function resolveRawConfig(): { url: string; key: string | undefined } {
   // Highest priority: process.env
   if (process.env.MEET_AI_URL) {
     return {
@@ -49,7 +54,7 @@ export function getMeetAiConfig(): {
   // Next: project-level settings (.claude/settings.json in current directory)
   const projectSettingsPath = resolve("./.claude/settings.json");
   const projectSettings = loadSettingsFromPath(projectSettingsPath);
-  
+
   if (projectSettings?.env?.MEET_AI_URL) {
     return {
       url: projectSettings.env.MEET_AI_URL,
@@ -60,7 +65,7 @@ export function getMeetAiConfig(): {
   // Next: user-level settings (~/.claude/settings.json)
   const userSettingsPath = join(homedir(), ".claude/settings.json");
   const userSettings = loadSettingsFromPath(userSettingsPath);
-  
+
   if (userSettings?.env?.MEET_AI_URL) {
     return {
       url: userSettings.env.MEET_AI_URL,
@@ -76,32 +81,18 @@ export function getMeetAiConfig(): {
 }
 
 /**
- * Check if meet-ai is configured
+ * Get meet-ai configuration from all sources, validated with zod.
+ * Priority: process.env > project settings > user settings > defaults
  */
-export function isConfigured(): boolean {
-  const config = getMeetAiConfig();
-  return Boolean(config.url && config.key);
-}
+export function getMeetAiConfig(): MeetAiConfig {
+  const raw = resolveRawConfig();
+  const config = configSchema.parse(raw);
 
-/**
- * Get config source for debugging
- */
-export function getConfigSource(): string {
-  if (process.env.MEET_AI_URL) {
-    return "process.env";
+  if (config.key && !config.key.startsWith("mai_")) {
+    console.warn(
+      "Warning: MEET_AI_KEY does not start with 'mai_' — this may not be a valid key",
+    );
   }
 
-  const projectSettingsPath = resolve("./.claude/settings.json");
-  const projectSettings = loadSettingsFromPath(projectSettingsPath);
-  if (projectSettings?.env?.MEET_AI_URL) {
-    return `./.claude/settings.json`;
-  }
-
-  const userSettingsPath = join(homedir(), ".claude/settings.json");
-  const userSettings = loadSettingsFromPath(userSettingsPath);
-  if (userSettings?.env?.MEET_AI_URL) {
-    return `~/.claude/settings.json`;
-  }
-
-  return "default";
+  return config;
 }

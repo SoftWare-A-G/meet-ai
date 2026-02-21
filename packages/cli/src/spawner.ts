@@ -42,7 +42,7 @@ function findClaudeCli(): string {
 Claude Code is not installed
 
 Please install Claude Code:
-  npm install -g @anthropic-ai/claude-code
+  bun add -g @anthropic-ai/claude-code
 
 Or set MEET_AI_CLAUDE_PATH to the Claude Code CLI path.
     `.trim()
