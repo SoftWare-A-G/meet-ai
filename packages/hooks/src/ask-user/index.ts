@@ -25,10 +25,14 @@ type AskUserInput = {
 
 type HookOutput = {
   hookSpecificOutput: {
-    hookEventName: 'PreToolUse'
-    permissionDecision: 'allow' | 'deny'
-    permissionDecisionReason?: string
-    additionalContext?: string
+    hookEventName: 'PermissionRequest'
+    decision: {
+      behavior: 'allow'
+      updatedInput: {
+        questions: Question[]
+        answers: Record<string, string>
+      }
+    }
   }
 }
 
@@ -39,11 +43,12 @@ function formatQuestions(questions: Question[]): string {
   return questions
     .map((q) => {
       let text = `**${q.question}**\n`
-      q.options.forEach((opt, i) => {
+      for (let i = 0; i < q.options.length; i++) {
+        const opt = q.options[i]
         text += `${i + 1}. **${opt.label}**`
         if (opt.description) text += ` — ${opt.description}`
         text += '\n'
-      })
+      }
       if (q.multiSelect) {
         text += '\n_Multiple choices allowed. Reply with numbers or labels separated by commas._'
       } else {
@@ -92,29 +97,50 @@ async function pollForAnswer(
           return messages[0].content
         }
       }
-    } catch (err) {
-      process.stderr.write(`[ask-user] poll error: ${err}\n`)
+    } catch (error) {
+      process.stderr.write(`[ask-user] poll error: ${error}\n`)
     }
-    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS))
+    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
   }
 
   return null
 }
 
+function resolveAnswer(answer: string, question: Question): string {
+  const trimmed = answer.trim()
+
+  // Try to match by number (1-indexed)
+  const num = Number.parseInt(trimmed, 10)
+  if (!Number.isNaN(num) && num >= 1 && num <= question.options.length) {
+    return question.options[num - 1].label
+  }
+
+  // Try to match by label (case-insensitive)
+  const match = question.options.find(
+    (opt) => opt.label.toLowerCase() === trimmed.toLowerCase(),
+  )
+  if (match) return match.label
+
+  // Fallback: return the raw answer
+  return trimmed
+}
+
 function buildOutput(answer: string, questions: Question[]): HookOutput {
-  const context = questions
-    .map((q) => {
-      return `Question: "${q.question}"\nUser answered: ${answer}`
-    })
-    .join('\n\n')
+  const answers: Record<string, string> = {}
+  for (const q of questions) {
+    answers[q.question] = resolveAnswer(answer, q)
+  }
 
   return {
     hookSpecificOutput: {
-      hookEventName: 'PreToolUse',
-      permissionDecision: 'deny',
-      permissionDecisionReason:
-        'Question was answered by the user via meet-ai chat UI. Do NOT ask again. Use the answer from additionalContext.',
-      additionalContext: context,
+      hookEventName: 'PermissionRequest',
+      decision: {
+        behavior: 'allow',
+        updatedInput: {
+          questions,
+          answers,
+        },
+      },
     },
   }
 }
@@ -168,8 +194,8 @@ async function main() {
 
 const isDirectExecution = process.argv[1]?.includes('/hooks/')
 if (isDirectExecution && !process.argv[1]?.includes('vitest')) {
-  main().catch((err) => {
-    process.stderr.write(`[ask-user] fatal: ${err}\n`)
+  main().catch((error) => {
+    process.stderr.write(`[ask-user] fatal: ${error}\n`)
     process.exit(0)
   })
 }
