@@ -27,7 +27,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
   const [unreadCount, setUnreadCount] = useState(0)
   const [forceScrollCounter, setForceScrollCounter] = useState(0)
   const [voiceAvailable, setVoiceAvailable] = useState(false)
-  const [planDecisions, setPlanDecisions] = useState<Record<string, { status: 'pending' | 'approved' | 'denied'; feedback?: string }>>({})
+  const [planDecisions, setPlanDecisions] = useState<Record<string, { status: 'pending' | 'approved' | 'denied' | 'expired'; feedback?: string }>>({})
   const { queue, remove, getForRoom } = useOfflineQueue()
 
   // Check TTS availability once on mount
@@ -52,7 +52,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
       setAttachmentCounts(counts)
 
       // Populate plan decisions from loaded messages
-      const decisions: Record<string, { status: 'pending' | 'approved' | 'denied'; feedback?: string }> = {}
+      const decisions: Record<string, { status: 'pending' | 'approved' | 'denied' | 'expired'; feedback?: string }> = {}
       for (const msg of history) {
         if (msg.plan_review_id && msg.plan_review_status) {
           decisions[msg.plan_review_id] = {

@@ -138,3 +138,39 @@ export const planReviewsRoute = new Hono<AppEnv>()
 
     return c.json({ ok: true })
   })
+
+  // POST /api/rooms/:id/plan-reviews/:reviewId/expire — mark a plan review as expired (hook timeout)
+  .post('/:id/plan-reviews/:reviewId/expire', requireAuth, async c => {
+    const keyId = c.get('keyId')
+    const roomId = c.req.param('id')
+    const reviewId = c.req.param('reviewId')
+    const db = queries(c.env.DB)
+
+    const room = await db.findRoom(roomId, keyId)
+    if (!room) {
+      return c.json({ error: 'room not found' }, 404)
+    }
+
+    const updated = await db.expirePlanReview(reviewId, roomId, keyId)
+    if (!updated) {
+      return c.json({ error: 'plan review not found or already decided' }, 404)
+    }
+
+    // Broadcast the expiry via Durable Object
+    const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
+    const stub = c.env.CHAT_ROOM.get(doId)
+    c.executionCtx.waitUntil(
+      stub.fetch(
+        new Request('http://internal/broadcast', {
+          method: 'POST',
+          body: JSON.stringify({
+            type: 'plan_decision',
+            plan_review_id: reviewId,
+            status: 'expired',
+          }),
+        })
+      )
+    )
+
+    return c.json({ ok: true })
+  })

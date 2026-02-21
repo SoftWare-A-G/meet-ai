@@ -14,7 +14,7 @@ export type Message = {
   seq?: number | null
   attachment_count?: number
   plan_review_id?: string
-  plan_review_status?: 'pending' | 'approved' | 'denied'
+  plan_review_status?: 'pending' | 'approved' | 'denied' | 'expired'
   plan_review_feedback?: string
 }
 

@@ -15,7 +15,7 @@ type DisplayMessage = MessageType & {
 type MessageListProps = {
   messages: DisplayMessage[]
   attachmentCounts?: Record<string, number>
-  planDecisions?: Record<string, { status: 'pending' | 'approved' | 'denied'; feedback?: string }>
+  planDecisions?: Record<string, { status: 'pending' | 'approved' | 'denied' | 'expired'; feedback?: string }>
   unreadCount: number
   forceScrollCounter: number
   onScrollToBottom: () => void

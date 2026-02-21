@@ -6,7 +6,7 @@ type PlanReviewCardProps = {
   content: string
   timestamp?: string
   reviewId: string
-  status?: 'pending' | 'approved' | 'denied'
+  status?: 'pending' | 'approved' | 'denied' | 'expired'
   feedback?: string
   onDecide: (reviewId: string, approved: boolean, feedback?: string) => void
 }
@@ -69,7 +69,7 @@ export default function PlanReviewCard({
 
   const renderedHtml = useMemo(() => renderMarkdown(visibleContent), [visibleContent])
 
-  const decided = status === 'approved' || status === 'denied'
+  const decided = status === 'approved' || status === 'denied' || status === 'expired'
 
   const handleApprove = useCallback(() => {
     if (decided || submitting) return
@@ -92,13 +92,17 @@ export default function PlanReviewCard({
     ? '#22c55e'
     : status === 'denied'
       ? '#ef4444'
-      : PURPLE
+      : status === 'expired'
+        ? '#8b8fa3'
+        : PURPLE
 
   const bgColor = status === 'approved'
     ? 'rgba(34, 197, 94, 0.06)'
     : status === 'denied'
       ? 'rgba(239, 68, 68, 0.06)'
-      : `${PURPLE}0F`
+      : status === 'expired'
+        ? 'rgba(139, 143, 163, 0.06)'
+        : `${PURPLE}0F`
 
   return (
     <div
@@ -118,7 +122,7 @@ export default function PlanReviewCard({
           </svg>
         )}
         <span className="font-bold text-sm" style={{ color: borderColor }}>
-          {status === 'approved' ? 'Plan approved' : status === 'denied' ? 'Changes requested' : 'Plan review'}
+          {status === 'approved' ? 'Plan approved' : status === 'denied' ? 'Changes requested' : status === 'expired' ? 'Plan review expired' : 'Plan review'}
         </span>
         {timestamp && (
           <span className="text-xs text-[#8b8fa3]">{formatTime(timestamp)}</span>

@@ -72,7 +72,7 @@ export type PlanDecision = {
   message_id: string
   room_id: string
   key_id: string
-  status: 'pending' | 'approved' | 'denied'
+  status: 'pending' | 'approved' | 'denied' | 'expired'
   feedback: string | null
   decided_by: string | null
   decided_at: string | null

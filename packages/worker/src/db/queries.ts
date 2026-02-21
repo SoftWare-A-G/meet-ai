@@ -164,6 +164,13 @@ export function queries(db: D1Database) {
       return result.meta.changes > 0
     },
 
+    async expirePlanReview(id: string, roomId: string, keyId: string) {
+      const result = await db.prepare(
+        'UPDATE plan_decisions SET status = "expired", decided_at = datetime("now") WHERE id = ? AND room_id = ? AND key_id = ? AND status = "pending"'
+      ).bind(id, roomId, keyId).run()
+      return result.meta.changes > 0
+    },
+
     async deleteRoom(keyId: string, roomId: string) {
       // Delete in order: plan_decisions, attachments, logs, messages, then room
       await db.prepare('DELETE FROM plan_decisions WHERE room_id = ?').bind(roomId).run()

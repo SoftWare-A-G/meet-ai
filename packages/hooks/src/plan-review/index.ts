@@ -108,6 +108,20 @@ function buildDenyOutput(feedback: string): HookOutput {
   }
 }
 
+async function expirePlanReview(
+  client: ReturnType<typeof createHookClient>,
+  roomId: string,
+  reviewId: string,
+): Promise<void> {
+  try {
+    await (client.api.rooms[':id']['plan-reviews'][':reviewId'].expire as any).$post({
+      param: { id: roomId, reviewId },
+    })
+  } catch {
+    // Never throw — hook must not block the agent
+  }
+}
+
 async function sendTimeoutMessage(
   client: ReturnType<typeof createHookClient>,
   roomId: string,
@@ -166,6 +180,7 @@ export async function processPlanReview(rawInput: string, teamsDir?: string): Pr
 
   if (!decision) {
     process.stderr.write('[plan-review] timed out waiting for decision\n')
+    await expirePlanReview(client, roomId, review.id)
     await sendTimeoutMessage(client, roomId)
     return
   }
