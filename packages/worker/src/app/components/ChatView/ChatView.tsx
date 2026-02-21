@@ -27,6 +27,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
   const [unreadCount, setUnreadCount] = useState(0)
   const [forceScrollCounter, setForceScrollCounter] = useState(0)
   const [voiceAvailable, setVoiceAvailable] = useState(false)
+  const [planDecisions, setPlanDecisions] = useState<Record<string, { status: 'pending' | 'approved' | 'denied' | 'expired'; feedback?: string }>>({})
   const { queue, remove, getForRoom } = useOfflineQueue()
 
   // Check TTS availability once on mount
@@ -49,6 +50,20 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
       )
       setMessages(all.map(m => ({ ...m, status: 'sent' as const })))
       setAttachmentCounts(counts)
+
+      // Populate plan decisions from loaded messages
+      const decisions: Record<string, { status: 'pending' | 'approved' | 'denied' | 'expired'; feedback?: string }> = {}
+      for (const msg of history) {
+        if (msg.plan_review_id && msg.plan_review_status) {
+          decisions[msg.plan_review_id] = {
+            status: msg.plan_review_status,
+            feedback: msg.plan_review_feedback,
+          }
+        }
+      }
+      if (Object.keys(decisions).length > 0) {
+        setPlanDecisions(prev => ({ ...prev, ...decisions }))
+      }
 
       // Restore queued offline messages
       try {
@@ -185,6 +200,23 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
     }
   }, [room.id, userName, apiKey])
 
+  const handlePlanDecide = useCallback(async (reviewId: string, approved: boolean, feedback?: string) => {
+    // Optimistically update the decision state
+    setPlanDecisions(prev => ({
+      ...prev,
+      [reviewId]: { status: approved ? 'approved' : 'denied', feedback },
+    }))
+    try {
+      await api.decidePlanReview(room.id, reviewId, approved, feedback, userName)
+    } catch {
+      // Revert on failure
+      setPlanDecisions(prev => ({
+        ...prev,
+        [reviewId]: { status: 'pending' },
+      }))
+    }
+  }, [room.id])
+
   const handleRetry = useCallback(async (tempId: string) => {
     const msg = messages.find(m => m.tempId === tempId)
     if (!msg) return
@@ -209,10 +241,13 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
       <MessageList
         messages={messages}
         attachmentCounts={attachmentCounts}
+        planDecisions={planDecisions}
         unreadCount={unreadCount}
         forceScrollCounter={forceScrollCounter}
         onScrollToBottom={() => setUnreadCount(0)}
         onRetry={handleRetry}
+        onSend={handleSend}
+        onPlanDecide={handlePlanDecide}
         connected={connected}
         voiceAvailable={voiceAvailable}
       />

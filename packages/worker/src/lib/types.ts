@@ -67,6 +67,18 @@ export type Attachment = {
   created_at: string
 }
 
+export type PlanDecision = {
+  id: string
+  message_id: string
+  room_id: string
+  key_id: string
+  status: 'pending' | 'approved' | 'denied' | 'expired'
+  feedback: string | null
+  decided_by: string | null
+  decided_at: string | null
+  created_at: string
+}
+
 export type TeamMember = {
   name: string
   color: string

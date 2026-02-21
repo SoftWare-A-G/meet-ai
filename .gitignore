@@ -8,3 +8,4 @@ bun.lock
 wrangler.toml
 dist/
 packages/worker/src/app/routeTree.gen.ts
+.obsidian/

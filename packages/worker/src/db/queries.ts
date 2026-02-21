@@ -1,4 +1,4 @@
-import type { ApiKey, Room, Message, Log, Attachment } from '../lib/types'
+import type { ApiKey, Room, Message, Log, Attachment, PlanDecision } from '../lib/types'
 
 export function queries(db: D1Database) {
   return {
@@ -40,22 +40,22 @@ export function queries(db: D1Database) {
     },
 
     async listMessages(roomId: string, afterId?: string, exclude?: string, senderType?: string) {
-      let sql = 'SELECT id, room_id, sender, sender_type, content, color, type, seq, created_at FROM messages WHERE room_id = ?'
+      let sql = 'SELECT m.id, m.room_id, m.sender, m.sender_type, m.content, m.color, m.type, m.seq, m.created_at, pd.id AS plan_review_id, pd.status AS plan_review_status, pd.feedback AS plan_review_feedback FROM messages m LEFT JOIN plan_decisions pd ON pd.message_id = m.id WHERE m.room_id = ?'
       const params: string[] = [roomId]
 
       if (afterId) {
-        sql += ' AND rowid > (SELECT rowid FROM messages WHERE id = ?)'
+        sql += ' AND m.rowid > (SELECT rowid FROM messages WHERE id = ?)'
         params.push(afterId)
       }
       if (exclude) {
-        sql += ' AND sender != ?'
+        sql += ' AND m.sender != ?'
         params.push(exclude)
       }
       if (senderType) {
-        sql += ' AND sender_type = ?'
+        sql += ' AND m.sender_type = ?'
         params.push(senderType)
       }
-      sql += ' ORDER BY rowid'
+      sql += ' ORDER BY m.rowid'
 
       const result = await db.prepare(sql).bind(...params).all<Message>()
       return result.results
@@ -75,18 +75,18 @@ export function queries(db: D1Database) {
     },
 
     async listMessagesSinceSeq(roomId: string, sinceSeq: number, exclude?: string, senderType?: string) {
-      let sql = 'SELECT id, room_id, sender, sender_type, content, color, type, seq, created_at FROM messages WHERE room_id = ? AND seq > ?'
+      let sql = 'SELECT m.id, m.room_id, m.sender, m.sender_type, m.content, m.color, m.type, m.seq, m.created_at, pd.id AS plan_review_id, pd.status AS plan_review_status, pd.feedback AS plan_review_feedback FROM messages m LEFT JOIN plan_decisions pd ON pd.message_id = m.id WHERE m.room_id = ? AND m.seq > ?'
       const params: (string | number)[] = [roomId, sinceSeq]
 
       if (exclude) {
-        sql += ' AND sender != ?'
+        sql += ' AND m.sender != ?'
         params.push(exclude)
       }
       if (senderType) {
-        sql += ' AND sender_type = ?'
+        sql += ' AND m.sender_type = ?'
         params.push(senderType)
       }
-      sql += ' ORDER BY seq'
+      sql += ' ORDER BY m.seq'
 
       const result = await db.prepare(sql).bind(...params).all<Message>()
       return result.results
@@ -144,9 +144,36 @@ export function queries(db: D1Database) {
       return result.results
     },
 
+    async createPlanDecision(id: string, messageId: string, roomId: string, keyId: string) {
+      await db.prepare(
+        'INSERT INTO plan_decisions (id, message_id, room_id, key_id) VALUES (?, ?, ?, ?)'
+      ).bind(id, messageId, roomId, keyId).run()
+    },
+
+    async getPlanDecision(id: string, roomId: string, keyId: string) {
+      return db.prepare(
+        'SELECT id, message_id, room_id, key_id, status, feedback, decided_by, decided_at, created_at FROM plan_decisions WHERE id = ? AND room_id = ? AND key_id = ?'
+      ).bind(id, roomId, keyId).first<PlanDecision>()
+    },
+
+    async decidePlanReview(id: string, roomId: string, keyId: string, approved: boolean, feedback: string | undefined, decidedBy: string) {
+      const status = approved ? 'approved' : 'denied'
+      const result = await db.prepare(
+        'UPDATE plan_decisions SET status = ?, feedback = ?, decided_by = ?, decided_at = datetime("now") WHERE id = ? AND room_id = ? AND key_id = ? AND status = "pending"'
+      ).bind(status, feedback ?? null, decidedBy, id, roomId, keyId).run()
+      return result.meta.changes > 0
+    },
+
+    async expirePlanReview(id: string, roomId: string, keyId: string) {
+      const result = await db.prepare(
+        'UPDATE plan_decisions SET status = "expired", decided_at = datetime("now") WHERE id = ? AND room_id = ? AND key_id = ? AND status = "pending"'
+      ).bind(id, roomId, keyId).run()
+      return result.meta.changes > 0
+    },
+
     async deleteRoom(keyId: string, roomId: string) {
-      // Delete in order: attachments, logs, messages, then room
-      // This respects the foreign key relationships
+      // Delete in order: plan_decisions, attachments, logs, messages, then room
+      await db.prepare('DELETE FROM plan_decisions WHERE room_id = ?').bind(roomId).run()
       await db.prepare('DELETE FROM attachments WHERE room_id = ?').bind(roomId).run()
       await db.prepare('DELETE FROM logs WHERE room_id = ?').bind(roomId).run()
       await db.prepare('DELETE FROM messages WHERE room_id = ?').bind(roomId).run()

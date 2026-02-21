@@ -140,6 +140,8 @@ export function createClient(baseUrl: string, apiKey?: string) {
       },
     ) {
       const wsUrl = baseUrl.replace(/^http/, "ws");
+      // TODO: Migrate API key from URL query param to WebSocket subprotocol
+      // This requires coordinated changes in packages/worker. See docs/research/04-code-audit.md
       const tokenParam = apiKey ? `?token=${apiKey}` : "";
       let pingInterval: ReturnType<typeof setInterval> | null = null;
       let reconnectAttempt = 0;
@@ -280,7 +282,8 @@ export function createClient(baseUrl: string, apiKey?: string) {
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
-          throw new Error((err as any).error ?? `HTTP ${res.status}`);
+          const msg = (err as any).error;
+          throw new Error(typeof msg === 'string' ? msg : msg ? JSON.stringify(msg) : `HTTP ${res.status}`);
         }
         return res.text();
       });
@@ -313,7 +316,7 @@ export function createClient(baseUrl: string, apiKey?: string) {
       return res.json() as Promise<AttachmentMeta[]>;
     },
 
-    async downloadAttachment(attachmentId: string, filename: string): Promise<string> {
+    async downloadAttachment(attachmentId: string): Promise<string> {
       // Clean up old files before downloading new ones
       cleanupOldAttachments();
 
@@ -328,7 +331,9 @@ export function createClient(baseUrl: string, apiKey?: string) {
       const { mkdirSync, writeFileSync } = await import("node:fs");
       const dir = "/tmp/meet-ai-attachments";
       mkdirSync(dir, { recursive: true });
-      const localPath = `${dir}/${attachmentId}-${filename}`;
+      // Sanitize ID to prevent path traversal (strip everything except alphanumeric, dash, underscore)
+      const safeId = attachmentId.replace(/[^a-zA-Z0-9_-]/g, "") || "unknown";
+      const localPath = `${dir}/${safeId}.bin`;
       const buffer = Buffer.from(await res.arrayBuffer());
       writeFileSync(localPath, buffer);
       return localPath;

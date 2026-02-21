@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator'
 import { queries } from '../db/queries'
 import { requireAuth } from '../middleware/auth'
 import { rateLimitByKey } from '../middleware/rate-limit'
-import { createRoomSchema, sendMessageSchema, sendLogSchema, teamInfoSchema } from '../schemas/rooms'
+import { createRoomSchema, sendMessageSchema, sendLogSchema, teamInfoSchema, messagesQuerySchema } from '../schemas/rooms'
 import type { AppEnv } from '../lib/types'
 
 export const roomsRoute = new Hono<AppEnv>()
@@ -41,7 +41,7 @@ export const roomsRoute = new Hono<AppEnv>()
   })
 
   // GET /api/rooms/:id/messages — get message history
-  .get('/:id/messages', requireAuth, async c => {
+  .get('/:id/messages', requireAuth, zValidator('query', messagesQuerySchema), async c => {
     const keyId = c.get('keyId')
     const roomId = c.req.param('id')
     const db = queries(c.env.DB)
@@ -51,16 +51,13 @@ export const roomsRoute = new Hono<AppEnv>()
       return c.json({ error: 'room not found' }, 404)
     }
 
-    const after = c.req.query('after')
-    const sinceSeq = c.req.query('since_seq')
-    const exclude = c.req.query('exclude')
-    const senderType = c.req.query('sender_type')
+    const { after, since_seq: sinceSeq, exclude, sender_type: senderType } = c.req.valid('query')
 
     // Prefer since_seq (cheaper query) over after (rowid subquery)
-    if (sinceSeq) {
+    if (sinceSeq != null) {
       const messages = await db.listMessagesSinceSeq(
         roomId,
-        Number(sinceSeq),
+        sinceSeq,
         exclude || undefined,
         senderType || undefined
       )
@@ -271,6 +268,35 @@ export const roomsRoute = new Hono<AppEnv>()
     )
 
     return c.json({ ok: true })
+  })
+
+  // POST /api/rooms/:id/spawn — request to spawn an orchestrator for this room
+  .post('/:id/spawn', requireAuth, async c => {
+    const keyId = c.get('keyId')
+    const roomId = c.req.param('id')
+    const db = queries(c.env.DB)
+
+    const room = await db.findRoom(roomId, keyId)
+    if (!room) {
+      return c.json({ error: 'room not found' }, 404)
+    }
+
+    // Generate a unique spawn token
+    const spawnToken = crypto.randomUUID()
+
+    // Return spawn configuration
+    // The actual spawning happens client-side or on a separate service
+    // that has Claude Code installed
+    return c.json({
+      roomId,
+      spawnToken,
+      ready: true,
+      config: {
+        roomId,
+        roomName: room.name,
+        apiUrl: `${c.req.url.split('/api')[0]}`,
+      }
+    })
   })
 
   // DELETE /api/rooms/:id — delete a room and all its messages, logs, and attachments

@@ -19,6 +19,13 @@ export const sendLogSchema = z.object({
   message_id: z.string().optional(),
 })
 
+export const messagesQuerySchema = z.object({
+  after: z.string().optional(),
+  since_seq: z.coerce.number().int().optional(),
+  exclude: z.string().optional(),
+  sender_type: z.enum(['agent', 'human']).optional(),
+})
+
 export const teamInfoMemberSchema = z.object({
   name: z.string(),
   color: z.string(),
