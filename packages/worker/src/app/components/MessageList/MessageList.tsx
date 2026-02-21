@@ -3,6 +3,7 @@ import { useStickToBottom } from 'use-stick-to-bottom'
 import Message from '../Message'
 import LogGroup from '../LogGroup'
 import QuestionCard from '../QuestionCard'
+import PlanReviewCard from '../PlanReviewCard'
 import NewMessagesPill from '../NewMessagesPill'
 import type { Message as MessageType } from '../../lib/types'
 
@@ -14,11 +15,13 @@ type DisplayMessage = MessageType & {
 type MessageListProps = {
   messages: DisplayMessage[]
   attachmentCounts?: Record<string, number>
+  planDecisions?: Record<string, { status: 'pending' | 'approved' | 'denied'; feedback?: string }>
   unreadCount: number
   forceScrollCounter: number
   onScrollToBottom: () => void
   onRetry?: (tempId: string) => void
   onSend?: (content: string) => void
+  onPlanDecide?: (reviewId: string, approved: boolean, feedback?: string) => void
   connected?: boolean
   voiceAvailable?: boolean
 }
@@ -26,6 +29,7 @@ type MessageListProps = {
 type RenderItem =
   | { kind: 'message'; msg: DisplayMessage; index: number }
   | { kind: 'question'; msg: DisplayMessage; index: number }
+  | { kind: 'plan-review'; msg: DisplayMessage; index: number }
   | { kind: 'log-group'; logs: DisplayMessage[] }
 
 function groupMessages(messages: DisplayMessage[]): RenderItem[] {
@@ -61,10 +65,13 @@ function groupMessages(messages: DisplayMessage[]): RenderItem[] {
       flushLogs()
       const children = msg.id ? childLogs.get(msg.id) : undefined
       const isQuestion = msg.sender === 'hook' && msg.color === '#f59e0b'
-      const isHookAnchor = msg.sender === 'hook' && !isQuestion
+      const isPlanReview = msg.sender === 'hook' && msg.color === '#8b5cf6'
+      const isHookAnchor = msg.sender === 'hook' && !isQuestion && !isPlanReview
       // Hook anchor messages never render as bubbles — they only exist as log group anchors
       if (isQuestion) {
         items.push({ kind: 'question', msg, index })
+      } else if (isPlanReview) {
+        items.push({ kind: 'plan-review', msg, index })
       } else if (!isHookAnchor) {
         items.push({ kind: 'message', msg, index })
       }
@@ -78,7 +85,7 @@ function groupMessages(messages: DisplayMessage[]): RenderItem[] {
   return items
 }
 
-export default function MessageList({ messages, attachmentCounts, unreadCount, forceScrollCounter, onScrollToBottom, onRetry, onSend, connected = true, voiceAvailable }: MessageListProps) {
+export default function MessageList({ messages, attachmentCounts, planDecisions, unreadCount, forceScrollCounter, onScrollToBottom, onRetry, onSend, onPlanDecide, connected = true, voiceAvailable }: MessageListProps) {
   const { scrollRef, contentRef, isAtBottom, scrollToBottom } = useStickToBottom({ resize: 'smooth', initial: 'smooth' })
 
   // Auto-dismiss new messages pill when user scrolls to the bottom
@@ -111,6 +118,22 @@ export default function MessageList({ messages, attachmentCounts, unreadCount, f
               <LogGroup
                 key={`log-group-${first.sender}-${first.created_at}-${i}`}
                 logs={item.logs}
+              />
+            )
+          }
+          if (item.kind === 'plan-review' && onPlanDecide) {
+            const msg = item.msg
+            const reviewId = msg.plan_review_id || ''
+            const decision = reviewId && planDecisions ? planDecisions[reviewId] : undefined
+            return (
+              <PlanReviewCard
+                key={`plan-review-${msg.id || msg.created_at}-${item.index}`}
+                content={msg.content}
+                timestamp={msg.created_at}
+                reviewId={reviewId}
+                status={decision?.status}
+                feedback={decision?.feedback}
+                onDecide={onPlanDecide}
               />
             )
           }

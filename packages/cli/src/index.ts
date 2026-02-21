@@ -295,18 +295,19 @@ switch (command) {
   case "send-team-info": {
     // Check for --help flag
     if (args.includes("--help")) {
-      console.log("Usage: meet-ai send-team-info <roomId> '<json-payload>'");
+      console.log("Usage: meet-ai send-team-info <roomId> '<json>'");
       process.exit(0);
     }
 
     // Reject flag-like args
-    rejectFlagLikeArgs(args, "meet-ai send-team-info <roomId> '<json-payload>'");
+    rejectFlagLikeArgs(args, "meet-ai send-team-info <roomId> '<json>'");
 
     const [tiRoomId, tiPayload] = args;
     if (!tiRoomId || !tiPayload) {
-      console.error("Usage: meet-ai send-team-info <roomId> '<json-payload>'");
+      console.error("Usage: meet-ai send-team-info <roomId> '<json>'");
       process.exit(1);
     }
+
     // Validate JSON before sending
     try {
       JSON.parse(tiPayload);
@@ -314,6 +315,7 @@ switch (command) {
       console.error("Error: payload must be valid JSON");
       process.exit(1);
     }
+
     await client.sendTeamInfo(tiRoomId, tiPayload);
     console.log("Team info sent");
     break;
@@ -437,7 +439,7 @@ Commands:
     --team <name>         Write to Claude Code team inbox
     --inbox <agent>       Target agent inbox (requires --team)
   download-attachment <attachmentId>            Download an attachment to /tmp
-  send-team-info <roomId> '<json>'              Send team info to a room
+  send-team-info <roomId> '<json>'                Send team info to a room
   send-tasks <roomId> '<json>'                  Send tasks info to a room
   generate-key                                  Generate a new API key`);
   }

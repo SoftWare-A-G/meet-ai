@@ -280,7 +280,8 @@ export function createClient(baseUrl: string, apiKey?: string) {
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
-          throw new Error((err as any).error ?? `HTTP ${res.status}`);
+          const msg = (err as any).error;
+          throw new Error(typeof msg === 'string' ? msg : msg ? JSON.stringify(msg) : `HTTP ${res.status}`);
         }
         return res.text();
       });

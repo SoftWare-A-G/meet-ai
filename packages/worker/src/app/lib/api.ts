@@ -127,3 +127,19 @@ export async function textToSpeech(text: string): Promise<ArrayBuffer> {
   if (!res.ok) throw new Error(`TTS failed: HTTP ${res.status}`)
   return res.arrayBuffer()
 }
+
+export async function decidePlanReview(
+  roomId: string,
+  reviewId: string,
+  approved: boolean,
+  feedback?: string,
+  decidedBy?: string,
+): Promise<{ ok: boolean }> {
+  const res = await fetch(`/api/rooms/${roomId}/plan-reviews/${reviewId}/decide`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ approved, decided_by: decidedBy || 'anonymous', ...(feedback && { feedback }) }),
+  })
+  if (!res.ok) throw new Error(`Plan review decide failed: HTTP ${res.status}`)
+  return res.json()
+}
