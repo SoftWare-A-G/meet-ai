@@ -147,7 +147,31 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
     onTeamInfo?.(info)
   }, [onTeamInfo])
 
-  const { connected, tasksInfo } = useRoomWebSocket(room.id, apiKey, onWsMessage, { onTeamInfo: onTeamInfoWs })
+  const onPlanDecisionWs = useCallback((event: { plan_review_id: string; status: 'approved' | 'denied' | 'expired'; feedback?: string | null }) => {
+    setPlanDecisions(prev => ({
+      ...prev,
+      [event.plan_review_id]: {
+        status: event.status,
+        feedback: event.feedback ?? undefined,
+      },
+    }))
+  }, [])
+
+  const onQuestionAnswerWs = useCallback((event: { question_review_id: string; status: 'answered' | 'expired'; answers?: Record<string, string> }) => {
+    setQuestionAnswers(prev => ({
+      ...prev,
+      [event.question_review_id]: {
+        status: event.status,
+        answers: event.answers,
+      },
+    }))
+  }, [])
+
+  const { connected, tasksInfo } = useRoomWebSocket(room.id, apiKey, onWsMessage, {
+    onTeamInfo: onTeamInfoWs,
+    onPlanDecision: onPlanDecisionWs,
+    onQuestionAnswer: onQuestionAnswerWs,
+  })
 
   useEffect(() => {
     onTasksInfo?.(tasksInfo)

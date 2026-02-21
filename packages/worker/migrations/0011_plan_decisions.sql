@@ -1,5 +1,5 @@
 -- Plan decisions table for plan review workflow
-CREATE TABLE plan_decisions (
+CREATE TABLE IF NOT EXISTS plan_decisions (
   id TEXT PRIMARY KEY,
   message_id TEXT NOT NULL,
   room_id TEXT NOT NULL,
@@ -11,4 +11,4 @@ CREATE TABLE plan_decisions (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX idx_plan_decisions_room ON plan_decisions (room_id, key_id);
+CREATE INDEX IF NOT EXISTS idx_plan_decisions_room ON plan_decisions (room_id, key_id);

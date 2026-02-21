@@ -2,8 +2,26 @@ import { useEffect, useRef, useState } from 'react'
 import { loadMessagesSinceSeq } from '../lib/api'
 import type { Message, TeamInfo, TasksInfo } from '../lib/types'
 
+type PlanDecisionEvent = {
+  type: 'plan_decision'
+  plan_review_id: string
+  status: 'approved' | 'denied' | 'expired'
+  feedback?: string | null
+  decided_by?: string
+}
+
+type QuestionAnswerEvent = {
+  type: 'question_answer'
+  question_review_id: string
+  status: 'answered' | 'expired'
+  answers?: Record<string, string>
+  answered_by?: string
+}
+
 type UseRoomWebSocketOptions = {
   onTeamInfo?: (info: TeamInfo) => void
+  onPlanDecision?: (event: PlanDecisionEvent) => void
+  onQuestionAnswer?: (event: QuestionAnswerEvent) => void
 }
 
 const MIN_BACKOFF = 1000
@@ -20,6 +38,10 @@ export function useRoomWebSocket(
   onMessageRef.current = onMessage
   const onTeamInfoRef = useRef(options?.onTeamInfo)
   onTeamInfoRef.current = options?.onTeamInfo
+  const onPlanDecisionRef = useRef(options?.onPlanDecision)
+  onPlanDecisionRef.current = options?.onPlanDecision
+  const onQuestionAnswerRef = useRef(options?.onQuestionAnswer)
+  onQuestionAnswerRef.current = options?.onQuestionAnswer
   const lastSeqRef = useRef<number>(0) as { current: number }
   const backoffRef = useRef<number>(MIN_BACKOFF) as { current: number }
   const [connected, setConnected] = useState(true)
@@ -65,6 +87,14 @@ export function useRoomWebSocket(
           }
           if (data.type === 'tasks_info') {
             setTasksInfo(data as TasksInfo)
+            return
+          }
+          if (data.type === 'plan_decision') {
+            onPlanDecisionRef.current?.(data as PlanDecisionEvent)
+            return
+          }
+          if (data.type === 'question_answer') {
+            onQuestionAnswerRef.current?.(data as QuestionAnswerEvent)
             return
           }
           const msg = data as Message

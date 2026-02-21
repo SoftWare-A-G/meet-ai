@@ -1,6 +1,12 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useRef } from 'react'
 import clsx from 'clsx'
 import { formatTime } from '../../lib/dates'
+import { useAnnotations } from '../../hooks/useAnnotations'
+import { useHighlighter, type SelectionInfo } from '../../hooks/useHighlighter'
+import type { AnnotationType } from './annotations'
+import AnnotationToolbar from './AnnotationToolbar'
+import AnnotationPanel from './AnnotationPanel'
+import { exportDiff } from './exportDiff'
 
 type PlanReviewCardProps = {
   content: string
@@ -14,26 +20,34 @@ type PlanReviewCardProps = {
 const COLLAPSE_LINE_COUNT = 10
 const PURPLE = '#8b5cf6'
 
+let blockCounter = 0
+
 function renderMarkdown(md: string): string {
+  blockCounter = 0
+
+  const nextBlockId = () => `block-${blockCounter++}`
+
   let html = md
     // Code blocks (fenced)
-    .replace(/```(\w*)\n([\s\S]*?)```/g, (_m, _lang, code) =>
-      `<pre class="plan-code-block"><code>${code.replace(/</g, '&lt;').replace(/>/g, '&gt;').trimEnd()}</code></pre>`)
+    .replace(/```(\w*)\n([\s\S]*?)```/g, (_m, _lang, code) => {
+      const id = nextBlockId()
+      return `<pre class="plan-code-block" data-block-id="${id}"><code>${code.replace(/</g, '&lt;').replace(/>/g, '&gt;').trimEnd()}</code></pre>`
+    })
     // Inline code
     .replace(/`([^`]+)`/g, '<code class="plan-inline-code">$1</code>')
     // Headings
-    .replace(/^#### (.+)$/gm, '<h4 class="plan-h4">$1</h4>')
-    .replace(/^### (.+)$/gm, '<h3 class="plan-h3">$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2 class="plan-h2">$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1 class="plan-h1">$1</h1>')
+    .replace(/^#### (.+)$/gm, (_m, text) => `<h4 class="plan-h4" data-block-id="${nextBlockId()}">${text}</h4>`)
+    .replace(/^### (.+)$/gm, (_m, text) => `<h3 class="plan-h3" data-block-id="${nextBlockId()}">${text}</h3>`)
+    .replace(/^## (.+)$/gm, (_m, text) => `<h2 class="plan-h2" data-block-id="${nextBlockId()}">${text}</h2>`)
+    .replace(/^# (.+)$/gm, (_m, text) => `<h1 class="plan-h1" data-block-id="${nextBlockId()}">${text}</h1>`)
     // Bold
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     // Italic
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     // Unordered lists
-    .replace(/^[-*] (.+)$/gm, '<li class="plan-li">$1</li>')
+    .replace(/^[-*] (.+)$/gm, (_m, text) => `<li class="plan-li" data-block-id="${nextBlockId()}">${text}</li>`)
     // Ordered lists
-    .replace(/^\d+\. (.+)$/gm, '<li class="plan-li-ordered">$1</li>')
+    .replace(/^\d+\. (.+)$/gm, (_m, text) => `<li class="plan-li-ordered" data-block-id="${nextBlockId()}">${text}</li>`)
     // Horizontal rules
     .replace(/^---$/gm, '<hr class="plan-hr" />')
     // Paragraphs: wrap remaining non-tag lines
@@ -42,11 +56,30 @@ function renderMarkdown(md: string): string {
       const trimmed = line.trim()
       if (!trimmed) return ''
       if (trimmed.startsWith('<')) return line
-      return `<p class="plan-p">${line}</p>`
+      return `<p class="plan-p" data-block-id="${nextBlockId()}">${line}</p>`
     })
     .join('\n')
   return html
 }
+
+function findBlockId(node: Node): string {
+  let el: Element | null = node instanceof Element ? node : node.parentElement
+  while (el) {
+    const blockId = el.getAttribute('data-block-id')
+    if (blockId) return blockId
+    el = el.parentElement
+  }
+  return 'block-unknown'
+}
+
+type SelectionState = {
+  info: SelectionInfo
+  rect: DOMRect
+  blockId: string
+}
+
+// Store highlight metadata keyed by annotation ID
+type HighlightMetaMap = Map<string, SelectionInfo['meta']>
 
 export default function PlanReviewCard({
   content,
@@ -60,6 +93,90 @@ export default function PlanReviewCard({
   const [showFeedbackInput, setShowFeedbackInput] = useState(false)
   const [feedbackText, setFeedbackText] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [selection, setSelection] = useState<SelectionState | null>(null)
+  const [showAnnotationPanel, setShowAnnotationPanel] = useState(false)
+
+  const contentRef = useRef<HTMLDivElement>(null)
+  const highlightMetaRef = useRef<HighlightMetaMap>(new Map())
+
+  const {
+    annotations,
+    addAnnotation,
+    updateAnnotation,
+    removeAnnotation,
+  } = useAnnotations()
+
+  const isPending = status === 'pending'
+
+  const handleSelect = useCallback((info: SelectionInfo) => {
+    if (!isPending) return
+    const range = info.range
+    const blockId = findBlockId(range.startContainer)
+    const rect = range.getBoundingClientRect()
+    setSelection({ info, rect, blockId })
+  }, [isPending])
+
+  const { addHighlight, removeHighlight } = useHighlighter({
+    containerRef: contentRef,
+    onSelect: handleSelect,
+    enabled: isPending,
+  })
+
+  const handleToolbarClose = useCallback(() => {
+    setSelection(null)
+    window.getSelection()?.removeAllRanges()
+  }, [])
+
+  const handleToolbarSubmit = useCallback(
+    (type: AnnotationType, text?: string) => {
+      if (!selection) return
+
+      const annotation = addAnnotation({
+        blockId: selection.blockId,
+        startOffset: selection.info.range.startOffset,
+        endOffset: selection.info.range.endOffset,
+        type,
+        originalText: selection.info.text,
+        text,
+      })
+
+      // Store meta for highlight rendering and add visual highlight
+      highlightMetaRef.current.set(annotation.id, selection.info.meta)
+      addHighlight(annotation.id, selection.info.meta, type)
+
+      // Auto-show annotation panel when first annotation is created
+      if (annotations.length === 0) {
+        setShowAnnotationPanel(true)
+      }
+
+      handleToolbarClose()
+    },
+    [selection, addAnnotation, addHighlight, annotations.length, handleToolbarClose],
+  )
+
+  const handleAnnotationEdit = useCallback(
+    (id: string, updates: { text?: string; type?: AnnotationType }) => {
+      updateAnnotation(id, updates)
+      // If type changed, update highlight styling
+      if (updates.type) {
+        const meta = highlightMetaRef.current.get(id)
+        if (meta) {
+          removeHighlight(id)
+          addHighlight(id, meta, updates.type)
+        }
+      }
+    },
+    [updateAnnotation, removeHighlight, addHighlight],
+  )
+
+  const handleAnnotationDelete = useCallback(
+    (id: string) => {
+      removeAnnotation(id)
+      removeHighlight(id)
+      highlightMetaRef.current.delete(id)
+    },
+    [removeAnnotation, removeHighlight],
+  )
 
   const lines = content.split('\n')
   const needsCollapse = lines.length > COLLAPSE_LINE_COUNT
@@ -79,8 +196,16 @@ export default function PlanReviewCard({
 
   const handleRequestChanges = useCallback(() => {
     if (decided || submitting) return
+    // If there are annotations, submit structured feedback immediately
+    if (annotations.length > 0) {
+      const feedback = exportDiff(annotations)
+      setSubmitting(true)
+      onDecide(reviewId, false, feedback)
+      return
+    }
+    // Otherwise, show the textarea for manual feedback
     setShowFeedbackInput(true)
-  }, [decided, submitting])
+  }, [decided, submitting, annotations, onDecide, reviewId])
 
   const handleSubmitFeedback = useCallback(() => {
     if (decided || submitting || !feedbackText.trim()) return
@@ -103,6 +228,8 @@ export default function PlanReviewCard({
       : status === 'expired'
         ? 'rgba(139, 143, 163, 0.06)'
         : `${PURPLE}0F`
+
+  const containerRect = contentRef.current?.getBoundingClientRect() ?? null
 
   return (
     <div
@@ -127,13 +254,47 @@ export default function PlanReviewCard({
         {timestamp && (
           <span className="text-xs text-[#8b8fa3]">{formatTime(timestamp)}</span>
         )}
+        {/* Annotation panel toggle — only show for pending plans */}
+        {isPending && (
+          <button
+            type="button"
+            onClick={() => setShowAnnotationPanel(s => !s)}
+            className="ml-auto flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-zinc-400 hover:text-purple-400 hover:bg-zinc-700/50 cursor-pointer transition-colors"
+            title={showAnnotationPanel ? 'Hide annotations' : 'Show annotations'}
+          >
+            <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
+              <path
+                fillRule="evenodd"
+                d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zm-4 0H9v2h2V9z"
+                clipRule="evenodd"
+              />
+            </svg>
+            {annotations.length > 0 && (
+              <span className="rounded-full bg-purple-600/30 px-1 text-[10px] text-purple-400 font-medium">
+                {annotations.length}
+              </span>
+            )}
+          </button>
+        )}
       </div>
 
-      {/* Plan content */}
-      <div
-        className="plan-markdown text-msg-text"
-        dangerouslySetInnerHTML={{ __html: renderedHtml }}
-      />
+      {/* Plan content — relative for toolbar positioning */}
+      <div className="relative" ref={contentRef}>
+        <div
+          className="plan-markdown text-msg-text"
+          dangerouslySetInnerHTML={{ __html: renderedHtml }}
+        />
+
+        {/* Floating annotation toolbar */}
+        {selection && isPending && (
+          <AnnotationToolbar
+            selectionRect={selection.rect}
+            containerRect={containerRect}
+            onSubmit={handleToolbarSubmit}
+            onClose={handleToolbarClose}
+          />
+        )}
+      </div>
 
       {/* Show more / less toggle */}
       {needsCollapse && (
@@ -147,6 +308,15 @@ export default function PlanReviewCard({
         </button>
       )}
 
+      {/* Annotation panel */}
+      {showAnnotationPanel && isPending && (
+        <AnnotationPanel
+          annotations={annotations}
+          onEdit={handleAnnotationEdit}
+          onDelete={handleAnnotationDelete}
+        />
+      )}
+
       {/* Feedback display for denied plans */}
       {status === 'denied' && existingFeedback && (
         <div className="mt-2 rounded border border-[#ef4444]/20 bg-[#ef4444]/[0.06] px-2.5 py-2 text-sm text-msg-text">
@@ -155,7 +325,7 @@ export default function PlanReviewCard({
         </div>
       )}
 
-      {/* Feedback textarea for request changes */}
+      {/* Feedback textarea for request changes (only when no annotations) */}
       {showFeedbackInput && !decided && (
         <div className="mt-2">
           <textarea
@@ -208,7 +378,9 @@ export default function PlanReviewCard({
                     : 'border-[#ef4444]/40 text-[#ef4444] cursor-pointer hover:bg-[#ef4444]/[0.08] hover:border-[#ef4444]/60',
                 )}
               >
-                Request changes
+                {annotations.length > 0
+                  ? `Request changes (${annotations.length})`
+                  : 'Request changes'}
               </button>
               <button
                 type="button"
@@ -228,7 +400,7 @@ export default function PlanReviewCard({
         </div>
       )}
 
-      {/* Markdown styles */}
+      {/* Markdown + highlight styles */}
       <style>{`
         .plan-markdown .plan-h1 { font-size: 1.25rem; font-weight: 700; margin: 0.75rem 0 0.5rem; }
         .plan-markdown .plan-h2 { font-size: 1.1rem; font-weight: 700; margin: 0.625rem 0 0.375rem; }
@@ -252,6 +424,19 @@ export default function PlanReviewCard({
           border-radius: 3px;
           padding: 0.125rem 0.375rem;
           font-size: 0.85em;
+        }
+        .highlight-deletion {
+          background-color: rgba(239, 68, 68, 0.2);
+          text-decoration: line-through;
+          text-decoration-color: #ef4444;
+        }
+        .highlight-replacement {
+          background-color: rgba(234, 179, 8, 0.2);
+          border-bottom: 2px solid #eab308;
+        }
+        .highlight-comment {
+          background-color: rgba(139, 92, 246, 0.2);
+          border-bottom: 2px solid #8b5cf6;
         }
       `}</style>
     </div>
