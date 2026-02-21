@@ -122,7 +122,7 @@ function ChatLayout({
 
   // Lobby WebSocket for new room events
   const onRoomCreated = useCallback((id: string, name: string) => {
-    setRooms(prev => [...prev, { id, name }])
+    setRooms(prev => prev.some(r => r.id === id) ? prev : [{ id, name }, ...prev])
   }, [])
   useLobbyWebSocket(apiKey, onRoomCreated)
 
