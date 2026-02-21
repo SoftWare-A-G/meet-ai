@@ -4,6 +4,5 @@ declare module '*.css?url' {
 }
 
 interface Window {
-  highlightAllCode?: (container: HTMLElement) => void
   retryMessage?: (retryEl: HTMLElement) => void
 }
