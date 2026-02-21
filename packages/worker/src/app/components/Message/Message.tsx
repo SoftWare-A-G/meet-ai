@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import clsx from 'clsx'
 import { hashColor, ensureSenderContrast } from '../../lib/colors'
 import { formatTime } from '../../lib/dates'
-import { renderMarkdown, highlightCode } from '../../lib/markdown'
 import { textToSpeech } from '../../lib/api'
 import { IconCopy, IconCheck, IconShare, IconVolume, IconPlayerStop, IconLoader } from '../../icons'
+import MarkdownContent from '../MarkdownContent'
 
 type TtsState = 'idle' | 'loading' | 'playing'
 
@@ -21,7 +21,6 @@ type MessageProps = {
 }
 
 export default function Message({ sender, content, color, timestamp, tempId, status = 'sent', onRetry, attachmentCount, voiceAvailable }: MessageProps) {
-  const contentRef = useRef<HTMLDivElement>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const senderColor = color ? ensureSenderContrast(color) : hashColor(sender)
   const [copied, setCopied] = useState(false)
@@ -80,14 +79,6 @@ export default function Message({ sender, content, color, timestamp, tempId, sta
     audioRef.current = null
   }, [])
 
-  const html = useMemo(() => renderMarkdown(content), [content])
-
-  useEffect(() => {
-    if (contentRef.current) {
-      highlightCode(contentRef.current)
-    }
-  }, [content])
-
   const canShare = typeof navigator !== 'undefined' && 'share' in navigator
 
   return (
@@ -142,7 +133,7 @@ export default function Message({ sender, content, color, timestamp, tempId, sta
             <span className="inline text-[11px] text-primary cursor-pointer ml-1.5 underline" onClick={onRetry}>retry</span>
           )}
         </div>
-        <div className="msg-content" ref={contentRef} dangerouslySetInnerHTML={{ __html: html }} />
+        <MarkdownContent content={content} className="msg-content" />
         {attachmentCount && attachmentCount > 0 ? (
           <div className="text-xs opacity-60 mt-1">
             {'\u{1F4CE}'} {attachmentCount} attachment{attachmentCount > 1 ? 's' : ''}
