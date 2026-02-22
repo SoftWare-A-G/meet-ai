@@ -49,9 +49,3 @@ export const ANNOTATION_COLORS: Record<AnnotationType, { bg: string; border: str
   REPLACEMENT: { bg: 'rgba(234, 179, 8, 0.15)', border: '#eab308', text: '#ca8a04' },
   COMMENT: { bg: 'rgba(139, 92, 246, 0.15)', border: '#8b5cf6', text: '#8b5cf6' },
 }
-
-export const HIGHLIGHT_CLASSES: Record<AnnotationType, string> = {
-  DELETION: 'highlight-deletion',
-  REPLACEMENT: 'highlight-replacement',
-  COMMENT: 'highlight-comment',
-}

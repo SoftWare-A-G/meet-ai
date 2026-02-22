@@ -1,11 +1,15 @@
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect, memo } from 'react'
 import clsx from 'clsx'
+import DOMPurify from 'dompurify'
+import { Renderer, parse } from 'marked'
 import { formatTime } from '../../lib/dates'
 import { useAnnotations } from '../../hooks/useAnnotations'
-import { useHighlighter, type SelectionInfo } from '../../hooks/useHighlighter'
+import { useHighlighter } from '../../hooks/useHighlighter'
+import type { SelectionInfo } from '../../hooks/useHighlighter'
 import type { AnnotationType } from './annotations'
 import AnnotationToolbar from './AnnotationToolbar'
 import AnnotationPanel from './AnnotationPanel'
+import ShikiCode from '../ShikiCode'
 import { exportDiff } from './exportDiff'
 
 type PlanReviewCardProps = {
@@ -17,69 +21,76 @@ type PlanReviewCardProps = {
   onDecide: (reviewId: string, approved: boolean, feedback?: string, permissionMode?: string) => void
 }
 
-const COLLAPSE_LINE_COUNT = 10
 const PURPLE = '#8b5cf6'
+const MARKER_ATTR = 'data-shiki-idx'
 
-let blockCounter = 0
+type Segment =
+  | { type: 'html'; html: string }
+  | { type: 'code'; code: string; lang: string; blockId: string }
 
-function renderMarkdown(md: string): string {
-  blockCounter = 0
-
+function parsePlanMarkdown(md: string): Segment[] {
+  let blockCounter = 0
   const nextBlockId = () => `block-${blockCounter++}`
+  const codeBlocks: { code: string; lang: string; blockId: string }[] = []
 
-  let html = md
-    // Code blocks (fenced)
-    .replace(/```(\w*)\n([\s\S]*?)```/g, (_m, _lang, code) => {
-      const id = nextBlockId()
-      return `<pre class="plan-code-block" data-block-id="${id}"><code>${code.replace(/</g, '&lt;').replace(/>/g, '&gt;').trimEnd()}</code></pre>`
-    })
-    // Inline code
-    .replace(/`([^`]+)`/g, '<code class="plan-inline-code">$1</code>')
-    // Headings
-    .replace(/^#### (.+)$/gm, (_m, text) => `<h4 class="plan-h4" data-block-id="${nextBlockId()}">${text}</h4>`)
-    .replace(/^### (.+)$/gm, (_m, text) => `<h3 class="plan-h3" data-block-id="${nextBlockId()}">${text}</h3>`)
-    .replace(/^## (.+)$/gm, (_m, text) => `<h2 class="plan-h2" data-block-id="${nextBlockId()}">${text}</h2>`)
-    .replace(/^# (.+)$/gm, (_m, text) => `<h1 class="plan-h1" data-block-id="${nextBlockId()}">${text}</h1>`)
-    // Bold
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    // Italic
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    // Unordered lists
-    .replace(/^[-*] (.+)$/gm, (_m, text) => `<li class="plan-li" data-block-id="${nextBlockId()}">${text}</li>`)
-    // Ordered lists
-    .replace(/^\d+\. (.+)$/gm, (_m, text) => `<li class="plan-li-ordered" data-block-id="${nextBlockId()}">${text}</li>`)
-    // Horizontal rules
-    .replace(/^---$/gm, '<hr class="plan-hr" />')
-    // Paragraphs: wrap remaining non-tag lines
-    .split('\n')
-    .map(line => {
-      const trimmed = line.trim()
-      if (!trimmed) return ''
-      if (trimmed.startsWith('<')) return line
-      return `<p class="plan-p" data-block-id="${nextBlockId()}">${line}</p>`
-    })
-    .join('\n')
-  return html
-}
+  const renderer = new Renderer()
 
-function findBlockId(node: Node): string {
-  let el: Element | null = node instanceof Element ? node : node.parentElement
-  while (el) {
-    const blockId = el.getAttribute('data-block-id')
-    if (blockId) return blockId
-    el = el.parentElement
+  renderer.heading = ({ text, depth }) => {
+    return `<h${depth} class="plan-h${depth}" data-block-id="${nextBlockId()}">${text}</h${depth}>\n`
   }
-  return 'block-unknown'
-}
 
-type SelectionState = {
-  info: SelectionInfo
-  rect: DOMRect
-  blockId: string
-}
+  renderer.paragraph = ({ text }) => {
+    return `<p class="plan-p" data-block-id="${nextBlockId()}">${text}</p>\n`
+  }
 
-// Store highlight metadata keyed by annotation ID
-type HighlightMetaMap = Map<string, SelectionInfo['meta']>
+  renderer.listitem = ({ text }) => {
+    return `<li data-block-id="${nextBlockId()}">${text}</li>\n`
+  }
+
+  renderer.code = ({ text, lang }) => {
+    const idx = codeBlocks.length
+    const blockId = nextBlockId()
+    codeBlocks.push({ code: text, lang: lang || 'text', blockId })
+    return `<pre ${MARKER_ATTR}="${idx}"></pre>`
+  }
+
+  renderer.hr = () => '<hr class="plan-hr" />\n'
+
+  const rawHtml = parse(md, { breaks: true, renderer }).toString()
+
+  const html = DOMPurify.sanitize(rawHtml, {
+    ADD_ATTR: [MARKER_ATTR, 'data-block-id'],
+  })
+
+  if (codeBlocks.length === 0) {
+    return [{ type: 'html', html }]
+  }
+
+  const markerRegex = new RegExp(
+    `<pre\\s+${MARKER_ATTR}="(\\d+)"\\s*>\\s*</pre>`,
+    'g',
+  )
+
+  const segments: Segment[] = []
+  let lastIndex = 0
+
+  for (const match of html.matchAll(markerRegex)) {
+    const before = html.slice(lastIndex, match.index)
+    if (before) {
+      segments.push({ type: 'html', html: before })
+    }
+    const idx = parseInt(match[1], 10)
+    segments.push({ type: 'code', ...codeBlocks[idx] })
+    lastIndex = (match.index ?? 0) + match[0].length
+  }
+
+  const after = html.slice(lastIndex)
+  if (after) {
+    segments.push({ type: 'html', html: after })
+  }
+
+  return segments
+}
 
 function simpleHash(str: string): string {
   let hash = 0
@@ -91,6 +102,23 @@ function simpleHash(str: string): string {
   return hash.toString(36)
 }
 
+/** Memoised so that dangerouslySetInnerHTML DOM nodes survive parent re-renders. */
+const PlanMarkdownContent = memo(function PlanMarkdownContent({ segments }: { segments: Segment[] }) {
+  return (
+    <div className="plan-markdown text-msg-text">
+      {segments.map((seg, i) =>
+        seg.type === 'code' ? (
+          <div key={i} className="plan-code-block" data-block-id={seg.blockId}>
+            <ShikiCode code={seg.code} lang={seg.lang} />
+          </div>
+        ) : (
+          <div key={i} dangerouslySetInnerHTML={{ __html: seg.html }} />
+        ),
+      )}
+    </div>
+  )
+})
+
 export default function PlanReviewCard({
   content,
   timestamp,
@@ -99,19 +127,16 @@ export default function PlanReviewCard({
   feedback: existingFeedback,
   onDecide,
 }: PlanReviewCardProps) {
-  const [expanded, setExpanded] = useState(false)
   const [showFeedbackInput, setShowFeedbackInput] = useState(false)
   const [feedbackText, setFeedbackText] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [selection, setSelection] = useState<SelectionState | null>(null)
+  const [selection, setSelection] = useState<SelectionInfo | null>(null)
   const [showAnnotationPanel, setShowAnnotationPanel] = useState(false)
   const [permissionMode, setPermissionMode] = useState<'default' | 'acceptEdits' | 'bypassPermissions'>('default')
 
   const contentRef = useRef<HTMLDivElement>(null)
-  const highlightMetaRef = useRef<HighlightMetaMap>(new Map())
 
   const contentHash = useMemo(() => simpleHash(content), [content])
-  const STORAGE_KEY = `plan-annotations:${reviewId}`
 
   const {
     annotations,
@@ -126,10 +151,7 @@ export default function PlanReviewCard({
 
   const handleSelect = useCallback((info: SelectionInfo) => {
     if (!isPending) return
-    const range = info.range
-    const blockId = findBlockId(range.startContainer)
-    const rect = range.getBoundingClientRect()
-    setSelection({ info, rect, blockId })
+    setSelection(info)
   }, [isPending])
 
   const { addHighlight, removeHighlight } = useHighlighter({
@@ -138,44 +160,24 @@ export default function PlanReviewCard({
     enabled: isPending,
   })
 
-  // Save highlight meta to sessionStorage alongside annotations
-  const saveHighlightMeta = useCallback(() => {
-    try {
-      const stored = sessionStorage.getItem(`annotations:${reviewId}`)
-      const data = stored ? JSON.parse(stored) : { annotations: [], contentHash }
-      const metaEntries = Array.from(highlightMetaRef.current.entries())
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
-        ...data,
-        highlightMeta: metaEntries,
-        contentHash,
-      }))
-    } catch { /* ignore */ }
-  }, [reviewId, contentHash, STORAGE_KEY])
-
-  // Restore highlight meta and re-apply highlights on mount
+  // Re-apply highlights from persisted annotations on mount
   useEffect(() => {
-    try {
-      const stored = sessionStorage.getItem(STORAGE_KEY)
-      if (!stored) return
-      const data = JSON.parse(stored)
-      if (data.contentHash !== contentHash) return
-      if (!Array.isArray(data.highlightMeta) || !Array.isArray(data.annotations)) return
-      // Restore highlight meta map
-      highlightMetaRef.current = new Map(data.highlightMeta)
-      // Re-apply highlights after a tick so DOM is ready
-      requestAnimationFrame(() => {
-        for (const ann of data.annotations) {
-          const meta = highlightMetaRef.current.get(ann.id)
-          if (meta) addHighlight(ann.id, meta, ann.type)
-        }
-      })
-    } catch { /* ignore */ }
+    if (annotations.length === 0) return
+    requestAnimationFrame(() => {
+      for (const ann of annotations) {
+        addHighlight(ann.id, ann.type, ann.blockId, ann.startOffset, ann.endOffset)
+      }
+    })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // only on mount
 
   const handleToolbarClose = useCallback(() => {
     setSelection(null)
-    window.getSelection()?.removeAllRanges()
+    // Defer clearing the browser selection so it doesn't interfere with a
+    // new selection that may already be starting (mousedown fires before mouseup).
+    requestAnimationFrame(() => {
+      window.getSelection()?.removeAllRanges()
+    })
   }, [])
 
   const handleToolbarSubmit = useCallback(
@@ -184,17 +186,14 @@ export default function PlanReviewCard({
 
       const annotation = addAnnotation({
         blockId: selection.blockId,
-        startOffset: selection.info.range.startOffset,
-        endOffset: selection.info.range.endOffset,
+        startOffset: selection.startOffset,
+        endOffset: selection.endOffset,
         type,
-        originalText: selection.info.text,
+        originalText: selection.text,
         text,
       })
 
-      // Store meta for highlight rendering and add visual highlight
-      highlightMetaRef.current.set(annotation.id, selection.info.meta)
-      addHighlight(annotation.id, selection.info.meta, type)
-      saveHighlightMeta()
+      addHighlight(annotation.id, type, selection.blockId, selection.startOffset, selection.endOffset)
 
       // Auto-show annotation panel when first annotation is created
       if (annotations.length === 0) {
@@ -203,7 +202,7 @@ export default function PlanReviewCard({
 
       handleToolbarClose()
     },
-    [selection, addAnnotation, addHighlight, annotations.length, handleToolbarClose, saveHighlightMeta],
+    [selection, addAnnotation, addHighlight, annotations.length, handleToolbarClose],
   )
 
   const handleAnnotationEdit = useCallback(
@@ -211,22 +210,20 @@ export default function PlanReviewCard({
       updateAnnotation(id, updates)
       // If type changed, update highlight styling
       if (updates.type) {
-        const meta = highlightMetaRef.current.get(id)
-        if (meta) {
+        const ann = annotations.find(a => a.id === id)
+        if (ann) {
           removeHighlight(id)
-          addHighlight(id, meta, updates.type)
-          saveHighlightMeta()
+          addHighlight(id, updates.type, ann.blockId, ann.startOffset, ann.endOffset)
         }
       }
     },
-    [updateAnnotation, removeHighlight, addHighlight, saveHighlightMeta],
+    [updateAnnotation, annotations, removeHighlight, addHighlight],
   )
 
   const handleAnnotationDelete = useCallback(
     (id: string) => {
       removeAnnotation(id)
       removeHighlight(id)
-      // Keep meta in highlightMetaRef — needed to restore the highlight on undo
     },
     [removeAnnotation, removeHighlight],
   )
@@ -237,22 +234,13 @@ export default function PlanReviewCard({
       if (!pending) return
 
       undoRemoval(id)
-      // Re-add the highlight using stored meta
-      const meta = highlightMetaRef.current.get(id)
-      if (meta) {
-        addHighlight(id, meta, pending.annotation.type)
-      }
+      const { annotation: ann } = pending
+      addHighlight(id, ann.type, ann.blockId, ann.startOffset, ann.endOffset)
     },
     [undoRemoval, pendingRemovals, addHighlight],
   )
 
-  const lines = content.split('\n')
-  const needsCollapse = lines.length > COLLAPSE_LINE_COUNT
-  const visibleContent = expanded || !needsCollapse
-    ? content
-    : lines.slice(0, COLLAPSE_LINE_COUNT).join('\n')
-
-  const renderedHtml = useMemo(() => renderMarkdown(visibleContent), [visibleContent])
+  const segments = useMemo(() => parsePlanMarkdown(content), [content])
 
   const decided = status === 'approved' || status === 'denied' || status === 'expired'
 
@@ -348,10 +336,7 @@ export default function PlanReviewCard({
 
       {/* Plan content — relative for toolbar positioning */}
       <div className="relative" ref={contentRef}>
-        <div
-          className="plan-markdown text-msg-text"
-          dangerouslySetInnerHTML={{ __html: renderedHtml }}
-        />
+        <PlanMarkdownContent segments={segments} />
 
         {/* Floating annotation toolbar */}
         {selection && isPending && (
@@ -363,18 +348,6 @@ export default function PlanReviewCard({
           />
         )}
       </div>
-
-      {/* Show more / less toggle */}
-      {needsCollapse && (
-        <button
-          type="button"
-          onClick={() => setExpanded(e => !e)}
-          className="mt-1 text-xs cursor-pointer hover:underline"
-          style={{ color: PURPLE }}
-        >
-          {expanded ? 'Show less' : `Show more (${lines.length - COLLAPSE_LINE_COUNT} more lines)`}
-        </button>
-      )}
 
       {/* Annotation panel */}
       {showAnnotationPanel && isPending && (
@@ -488,36 +461,48 @@ export default function PlanReviewCard({
         .plan-markdown .plan-h3 { font-size: 1rem; font-weight: 600; margin: 0.5rem 0 0.25rem; }
         .plan-markdown .plan-h4 { font-size: 0.9rem; font-weight: 600; margin: 0.375rem 0 0.25rem; }
         .plan-markdown .plan-p { margin: 0.25rem 0; line-height: 1.5; }
-        .plan-markdown .plan-li { margin-left: 1.25rem; list-style-type: disc; display: list-item; line-height: 1.5; }
-        .plan-markdown .plan-li-ordered { margin-left: 1.25rem; list-style-type: decimal; display: list-item; line-height: 1.5; }
+        .plan-markdown ul { margin-left: 1.25rem; list-style-type: disc; }
+        .plan-markdown ol { margin-left: 1.25rem; list-style-type: decimal; }
+        .plan-markdown li { line-height: 1.5; }
         .plan-markdown .plan-hr { border: none; border-top: 1px solid rgba(139, 143, 163, 0.2); margin: 0.5rem 0; }
         .plan-markdown .plan-code-block {
-          background: rgba(0, 0, 0, 0.2);
-          border-radius: 6px;
-          padding: 0.75rem;
           margin: 0.5rem 0;
-          overflow-x: auto;
+          border-radius: 6px;
+          overflow: hidden;
+        }
+        .plan-markdown .plan-code-block .shiki {
+          padding: 0.75rem;
+          margin: 0;
           font-size: 0.8rem;
           line-height: 1.4;
+          overflow-x: auto;
         }
-        .plan-markdown .plan-inline-code {
+        .plan-markdown .plan-code-block pre:not(.shiki) {
+          background: rgba(0, 0, 0, 0.2);
+          padding: 0.75rem;
+          font-size: 0.8rem;
+          line-height: 1.4;
+          overflow-x: auto;
+        }
+        .plan-markdown code:not(pre code) {
           background: rgba(0, 0, 0, 0.15);
           border-radius: 3px;
           padding: 0.125rem 0.375rem;
           font-size: 0.85em;
         }
-        .highlight-deletion {
+        ::highlight(plan-highlight-deletion) {
           background-color: rgba(239, 68, 68, 0.2);
           text-decoration: line-through;
           text-decoration-color: #ef4444;
         }
-        .highlight-replacement {
+        ::highlight(plan-highlight-replacement) {
           background-color: rgba(234, 179, 8, 0.2);
-          border-bottom: 2px solid #eab308;
         }
-        .highlight-comment {
+        ::highlight(plan-highlight-comment) {
           background-color: rgba(139, 92, 246, 0.2);
-          border-bottom: 2px solid #8b5cf6;
+        }
+        .plan-markdown ::selection {
+          background-color: rgba(139, 92, 246, 0.35);
         }
       `}</style>
     </div>
