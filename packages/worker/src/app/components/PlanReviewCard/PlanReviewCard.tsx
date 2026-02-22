@@ -35,18 +35,9 @@ function parsePlanMarkdown(md: string): Segment[] {
 
   const renderer = new Renderer()
 
-  renderer.heading = ({ text, depth }) => {
-    return `<h${depth} class="plan-h${depth}" data-block-id="${nextBlockId()}">${text}</h${depth}>\n`
-  }
-
-  renderer.paragraph = ({ text }) => {
-    return `<p class="plan-p" data-block-id="${nextBlockId()}">${text}</p>\n`
-  }
-
-  renderer.listitem = ({ text }) => {
-    return `<li data-block-id="${nextBlockId()}">${text}</li>\n`
-  }
-
+  // Only override code blocks — they need special handling for ShikiCode.
+  // All other block types use marked's default renderers so inline formatting
+  // (bold, italic, links, etc.) is processed correctly via parseInline().
   renderer.code = ({ text, lang }) => {
     const idx = codeBlocks.length
     const blockId = nextBlockId()
@@ -54,11 +45,20 @@ function parsePlanMarkdown(md: string): Segment[] {
     return `<pre ${MARKER_ATTR}="${idx}"></pre>`
   }
 
-  renderer.hr = () => '<hr class="plan-hr" />\n'
-
   const rawHtml = parse(md, { breaks: true, renderer }).toString()
 
-  const html = DOMPurify.sanitize(rawHtml, {
+  // Post-process: add data-block-id and plan CSS classes to block elements.
+  // This preserves marked's inline rendering while enabling annotation targeting.
+  const processedHtml = rawHtml
+    .replace(/<(h([1-6]))(\s|>)/g, (_m, tag, d, rest) =>
+      `<${tag} class="plan-h${d}" data-block-id="${nextBlockId()}"${rest}`)
+    .replace(/<p(\s|>)/g, (_m, rest) =>
+      `<p class="plan-p" data-block-id="${nextBlockId()}"${rest}`)
+    .replace(/<li(\s|>)/g, (_m, rest) =>
+      `<li data-block-id="${nextBlockId()}"${rest}`)
+    .replace(/<hr\s*\/?>/g, '<hr class="plan-hr" />')
+
+  const html = DOMPurify.sanitize(processedHtml, {
     ADD_ATTR: [MARKER_ATTR, 'data-block-id'],
   })
 
