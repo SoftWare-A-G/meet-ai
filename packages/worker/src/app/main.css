@@ -63,6 +63,11 @@ body {
   isolation: isolate;
 }
 
+/* --- iOS keyboard: remove safe-area bottom padding when virtual keyboard is open --- */
+.chat-input-wrapper:has(textarea:focus, input:focus) {
+  padding-bottom: 0;
+}
+
 /* --- Keyframes --- */
 @keyframes toast-fade {
   0% {

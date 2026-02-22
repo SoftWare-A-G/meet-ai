@@ -143,7 +143,7 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
   }, [addFiles])
 
   return (
-    <div className="shrink-0 pb-[env(safe-area-inset-bottom)] bg-chat-bg">
+    <div className="chat-input-wrapper shrink-0 pb-[env(safe-area-inset-bottom)] bg-chat-bg">
       <div className="relative border-t border-b border-border bg-input-bg">
         {pendingFiles.length > 0 && (
           <div className="flex flex-wrap gap-1.5 p-3 border-b border-border">
