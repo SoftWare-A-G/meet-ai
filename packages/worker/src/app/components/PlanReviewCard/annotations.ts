@@ -1,4 +1,4 @@
-export type AnnotationType = 'DELETION' | 'REPLACEMENT' | 'COMMENT'
+export type AnnotationType = 'DELETION' | 'REPLACEMENT' | 'COMMENT' | 'INSERTION' | 'GLOBAL_COMMENT'
 
 export type Annotation = {
   id: string
@@ -48,4 +48,6 @@ export const ANNOTATION_COLORS: Record<AnnotationType, { bg: string; border: str
   DELETION: { bg: 'rgba(239, 68, 68, 0.15)', border: '#ef4444', text: '#ef4444' },
   REPLACEMENT: { bg: 'rgba(234, 179, 8, 0.15)', border: '#eab308', text: '#ca8a04' },
   COMMENT: { bg: 'rgba(139, 92, 246, 0.15)', border: '#8b5cf6', text: '#8b5cf6' },
+  INSERTION: { bg: 'rgba(16, 185, 129, 0.15)', border: '#10b981', text: '#10b981' },
+  GLOBAL_COMMENT: { bg: 'rgba(59, 130, 246, 0.15)', border: '#3b82f6', text: '#3b82f6' },
 }

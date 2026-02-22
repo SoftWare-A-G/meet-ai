@@ -131,6 +131,36 @@ describe('createAnnotation', () => {
     expect(ann.createdAt).toBeLessThanOrEqual(after)
   })
 
+  it('creates an INSERTION annotation with text', () => {
+    const ann = createAnnotation({
+      blockId: 'block-3',
+      startOffset: 10,
+      endOffset: 20,
+      type: 'INSERTION',
+      originalText: 'existing code',
+      text: 'add this after',
+    })
+    expect(ann.type).toBe('INSERTION')
+    expect(ann.originalText).toBe('existing code')
+    expect(ann.text).toBe('add this after')
+    expect(ann.id).toMatch(/^ann-/)
+  })
+
+  it('creates a GLOBAL_COMMENT annotation with blockId __global__', () => {
+    const ann = createAnnotation({
+      blockId: '__global__',
+      startOffset: 0,
+      endOffset: 0,
+      type: 'GLOBAL_COMMENT',
+      originalText: '',
+      text: 'Overall this plan looks good',
+    })
+    expect(ann.type).toBe('GLOBAL_COMMENT')
+    expect(ann.blockId).toBe('__global__')
+    expect(ann.text).toBe('Overall this plan looks good')
+    expect(ann.id).toMatch(/^ann-/)
+  })
+
   it('spreads all provided params onto the annotation', () => {
     const ann = createAnnotation({
       blockId: 'block-5',
@@ -251,6 +281,33 @@ describe('exportDiff', () => {
       const ann = makeAnnotation({ type: 'COMMENT', originalText: 'use `code`', text: 'note' })
       const result = exportDiff([ann])
       expect(result).toContain('Feedback on: "use \\`code\\`"')
+    })
+  })
+
+  describe('GLOBAL_COMMENT', () => {
+    it('renders General feedback heading with blockquote', () => {
+      const ann = makeAnnotation({ type: 'GLOBAL_COMMENT', originalText: '', text: 'Overall looks good' })
+      const result = exportDiff([ann])
+      expect(result).toContain('## 1. General feedback')
+      expect(result).toContain('> Overall looks good')
+    })
+  })
+
+  describe('INSERTION', () => {
+    it('renders Add after this heading with code block and blockquote', () => {
+      const ann = makeAnnotation({ type: 'INSERTION', originalText: 'existing line', text: 'add this content' })
+      const result = exportDiff([ann])
+      expect(result).toContain('## 1. Add after this')
+      expect(result).toContain('```\nexisting line\n```')
+      expect(result).toContain('> add this content')
+    })
+
+    it('renders code block with empty blockquote when text is absent', () => {
+      const ann = makeAnnotation({ type: 'INSERTION', originalText: 'existing line' })
+      const result = exportDiff([ann])
+      expect(result).toContain('## 1. Add after this')
+      expect(result).toContain('```\nexisting line\n```')
+      expect(result).toContain('>')
     })
   })
 

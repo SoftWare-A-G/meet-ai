@@ -57,6 +57,21 @@ export function exportDiff(annotations: Annotation[]): string {
         lines.push(`> ${escapeMarkdown(ann.text ?? '')}`)
         break
       }
+
+      case 'GLOBAL_COMMENT': {
+        lines.push(`## ${num}. General feedback`)
+        lines.push(`> ${escapeMarkdown(ann.text ?? '')}`)
+        break
+      }
+
+      case 'INSERTION': {
+        lines.push(`## ${num}. Add after this`)
+        lines.push('```')
+        lines.push(escapeCodeBlock(ann.originalText))
+        lines.push('```')
+        lines.push(`> ${escapeMarkdown(ann.text ?? '')}`)
+        break
+      }
     }
 
     lines.push('')

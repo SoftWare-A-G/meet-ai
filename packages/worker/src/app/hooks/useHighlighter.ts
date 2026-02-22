@@ -69,6 +69,8 @@ const HIGHLIGHT_NAMES: Record<AnnotationType, string> = {
   DELETION: 'plan-highlight-deletion',
   REPLACEMENT: 'plan-highlight-replacement',
   COMMENT: 'plan-highlight-comment',
+  INSERTION: 'plan-highlight-insertion',
+  GLOBAL_COMMENT: 'plan-highlight-global-comment',
 }
 
 type StoredHighlight = {
@@ -152,12 +154,10 @@ export function useHighlighter({ containerRef, onSelect, enabled = true }: UseHi
   }, [containerRef, enabled])
 
   // Clean up CSS highlights on unmount
-  useEffect(() => {
-    return () => {
-      if (typeof CSS === 'undefined' || !('highlights' in CSS)) return
-      for (const name of Object.values(HIGHLIGHT_NAMES)) {
-        ;(CSS as any).highlights.delete(name)
-      }
+  useEffect(() => () => {
+    if (typeof CSS === 'undefined' || !('highlights' in CSS)) return
+    for (const name of Object.values(HIGHLIGHT_NAMES)) {
+      ;(CSS as any).highlights.delete(name)
     }
   }, [])
 
