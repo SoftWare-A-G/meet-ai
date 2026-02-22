@@ -465,6 +465,12 @@ export default function PlanReviewCard({
         .plan-markdown ol { margin-left: 1.25rem; list-style-type: decimal; }
         .plan-markdown li { line-height: 1.5; }
         .plan-markdown .plan-hr { border: none; border-top: 1px solid rgba(139, 143, 163, 0.2); margin: 0.5rem 0; }
+        .plan-markdown table { width: 100%; border-collapse: collapse; margin: 0.5rem 0; font-size: 0.85em; }
+        .plan-markdown th { text-align: left; font-weight: 600; padding: 0.375rem 0.75rem; border-bottom: 1px solid rgba(139, 143, 163, 0.3); }
+        .plan-markdown td { padding: 0.375rem 0.75rem; border-bottom: 1px solid rgba(139, 143, 163, 0.1); }
+        .plan-markdown tr:last-child td { border-bottom: none; }
+        .plan-markdown th[align="right"], .plan-markdown td[align="right"] { text-align: right; }
+        .plan-markdown th[align="center"], .plan-markdown td[align="center"] { text-align: center; }
         .plan-markdown .plan-code-block {
           margin: 0.5rem 0;
           border-radius: 6px;

@@ -12,7 +12,7 @@ let highlighterPromise: ReturnType<typeof createHighlighterLazy> | null = null
 async function createHighlighterLazy() {
   const { createHighlighter } = await import('shiki/bundle/web')
   return createHighlighter({
-    themes: ['vitesse-dark'],
+    themes: ['rose-pine-moon'],
     langs: [],
   })
 }
@@ -56,7 +56,7 @@ export default function ShikiCode({ code, lang }: ShikiCodeProps) {
 
         const hast = highlighter.codeToHast(code, {
           lang,
-          theme: 'vitesse-dark',
+          theme: 'rose-pine-moon',
         })
 
         const jsxElement = toJsxRuntime(hast, {
@@ -82,7 +82,7 @@ export default function ShikiCode({ code, lang }: ShikiCodeProps) {
   // Fallback: plain code block while shiki loads (or if lang fails)
   if (!element) {
     return (
-      <pre className="shiki" style={{ background: '#121212' }}>
+      <pre className="shiki" style={{ background: '#232136' }}>
         <code>{code}</code>
       </pre>
     )

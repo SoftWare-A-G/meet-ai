@@ -27,7 +27,7 @@ type PlanReviewResponse = {
 }
 
 const POLL_INTERVAL_MS = 2000
-const POLL_TIMEOUT_MS = 1_800_000 // 30 minutes
+const POLL_TIMEOUT_MS = 2_592_000_000 // 30 days
 
 async function createPlanReview(
   client: ReturnType<typeof createHookClient>,
@@ -135,25 +135,6 @@ async function expirePlanReview(
   }
 }
 
-async function sendTimeoutMessage(
-  client: ReturnType<typeof createHookClient>,
-  roomId: string
-): Promise<void> {
-  try {
-    await client.api.rooms[':id'].messages.$post({
-      param: { id: roomId },
-      json: {
-        sender: 'hook',
-        content: '_Plan review timed out — approve/deny in terminal instead._',
-        sender_type: 'agent',
-        color: '#8b5cf6',
-      },
-    })
-  } catch {
-    // Never throw — hook must not block the agent
-  }
-}
-
 async function processPlanReview(rawInput: string, teamsDir?: string): Promise<void> {
   let input: PlanReviewInput
   try {
@@ -200,7 +181,6 @@ async function processPlanReview(rawInput: string, teamsDir?: string): Promise<v
   if (!decision) {
     process.stderr.write('[plan-review] timed out waiting for decision\n')
     await expirePlanReview(client, roomId, review.id)
-    await sendTimeoutMessage(client, roomId)
     return
   }
 
