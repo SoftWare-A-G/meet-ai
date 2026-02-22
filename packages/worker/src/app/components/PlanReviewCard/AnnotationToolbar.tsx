@@ -9,6 +9,7 @@ type AnnotationToolbarProps = {
   containerRect: DOMRect | null
   onSubmit: (type: AnnotationType, text?: string) => void
   onClose: () => void
+  editorMode?: 'selection' | 'comment' | 'redline'
 }
 
 export default function AnnotationToolbar({
@@ -16,6 +17,7 @@ export default function AnnotationToolbar({
   containerRect,
   onSubmit,
   onClose,
+  editorMode = 'selection',
 }: AnnotationToolbarProps) {
   const [mode, setMode] = useState<ToolbarMode>('menu')
   const [inputType, setInputType] = useState<AnnotationType>('COMMENT')
@@ -37,6 +39,22 @@ export default function AnnotationToolbar({
     setInputType('COMMENT')
     setInputText('')
   }, [selectionRect])
+
+  // Comment mode: skip menu and go straight to comment input
+  useEffect(() => {
+    if (editorMode === 'comment' && selectionRect) {
+      setInputType('COMMENT')
+      setMode('input')
+    }
+  }, [editorMode, selectionRect])
+
+  // Redline mode: immediately submit DELETION
+  useEffect(() => {
+    if (editorMode === 'redline' && selectionRect) {
+      onSubmit('DELETION')
+      onClose()
+    }
+  }, [editorMode, selectionRect, onSubmit, onClose])
 
   // Focus textarea when entering input mode
   useEffect(() => {
@@ -113,6 +131,7 @@ export default function AnnotationToolbar({
   )
 
   if (!selectionRect || !containerRect) return null
+  if (editorMode === 'redline') return null
 
   // Position the toolbar centered horizontally over the selection.
   // Clamp using half-width so the toolbar never clips the left or right edge.
@@ -134,7 +153,9 @@ export default function AnnotationToolbar({
       ? 'Add a comment...'
       : inputType === 'DELETION'
         ? 'Why remove this? (optional)'
-        : 'Suggest replacement text...'
+        : inputType === 'INSERTION'
+          ? 'What should be added here?'
+          : 'Suggest replacement text...'
 
   return (
     <div
@@ -190,6 +211,18 @@ export default function AnnotationToolbar({
               <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
             </svg>
           </button>
+
+          {/* Insert After */}
+          <button
+            type="button"
+            onClick={() => handleAction('INSERTION')}
+            className="rounded p-1.5 text-zinc-300 hover:bg-zinc-700 hover:text-emerald-400 cursor-pointer transition-colors"
+            title="Suggest insertion"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+            </svg>
+          </button>
         </div>
       ) : (
         <div className="w-64 rounded-lg border border-zinc-600 bg-zinc-800 shadow-lg">
@@ -201,10 +234,12 @@ export default function AnnotationToolbar({
                   ? 'bg-purple-500/20 text-purple-400'
                   : inputType === 'DELETION'
                     ? 'bg-red-500/20 text-red-400'
-                    : 'bg-yellow-500/20 text-yellow-400',
+                    : inputType === 'INSERTION'
+                      ? 'bg-emerald-500/20 text-emerald-400'
+                      : 'bg-yellow-500/20 text-yellow-400',
               )}
             >
-              {inputType === 'COMMENT' ? 'Comment' : inputType === 'DELETION' ? 'Delete' : 'Replace'}
+              {inputType === 'COMMENT' ? 'Comment' : inputType === 'DELETION' ? 'Delete' : inputType === 'INSERTION' ? 'Insert' : 'Replace'}
             </span>
           </div>
           <div className="p-2">

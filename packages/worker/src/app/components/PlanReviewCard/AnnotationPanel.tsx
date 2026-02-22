@@ -19,6 +19,8 @@ const TYPE_LABELS: Record<AnnotationType, string> = {
   DELETION: 'Delete',
   REPLACEMENT: 'Replace',
   COMMENT: 'Comment',
+  INSERTION: 'Insert',
+  GLOBAL_COMMENT: 'Global',
 }
 
 function relativeTime(timestamp: number): string {
@@ -83,10 +85,12 @@ function AnnotationCard({
         </span>
       </div>
 
-      {/* Original text */}
-      <div className="rounded bg-zinc-900 px-2 py-1.5 text-xs font-mono text-zinc-300 break-words mb-1.5">
-        {annotation.originalText}
-      </div>
+      {/* Original text — skip for global comments */}
+      {annotation.blockId !== '__global__' && (
+        <div className="rounded bg-zinc-900 px-2 py-1.5 text-xs font-mono text-zinc-300 break-words mb-1.5">
+          {annotation.originalText}
+        </div>
+      )}
 
       {/* Comment / replacement text */}
       {editing ? (

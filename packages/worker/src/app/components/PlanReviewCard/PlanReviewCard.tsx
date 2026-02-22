@@ -7,6 +7,8 @@ import { useAnnotations } from '../../hooks/useAnnotations'
 import { useHighlighter } from '../../hooks/useHighlighter'
 import type { SelectionInfo } from '../../hooks/useHighlighter'
 import type { AnnotationType } from './annotations'
+import ModeSwitcher from './ModeSwitcher'
+import type { EditorMode } from './ModeSwitcher'
 import AnnotationToolbar from './AnnotationToolbar'
 import AnnotationPanel from './AnnotationPanel'
 import ShikiCode from '../ShikiCode'
@@ -95,9 +97,7 @@ function parsePlanMarkdown(md: string): Segment[] {
 function simpleHash(str: string): string {
   let hash = 0
   for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i)
-    hash = ((hash << 5) - hash) + char
-    hash |= 0
+    hash = (hash * 31 + str.charCodeAt(i)) % 0x7fffffff
   }
   return hash.toString(36)
 }
@@ -132,7 +132,10 @@ export default function PlanReviewCard({
   const [submitting, setSubmitting] = useState(false)
   const [selection, setSelection] = useState<SelectionInfo | null>(null)
   const [showAnnotationPanel, setShowAnnotationPanel] = useState(false)
+  const [showGlobalInput, setShowGlobalInput] = useState(false)
+  const [globalText, setGlobalText] = useState('')
   const [permissionMode, setPermissionMode] = useState<'default' | 'acceptEdits' | 'bypassPermissions'>('default')
+  const [editorMode, setEditorMode] = useState<EditorMode>('selection')
 
   const contentRef = useRef<HTMLDivElement>(null)
 
@@ -179,6 +182,27 @@ export default function PlanReviewCard({
       window.getSelection()?.removeAllRanges()
     })
   }, [])
+
+  const handleGlobalSubmit = useCallback(() => {
+    const trimmed = globalText.trim()
+    if (!trimmed) return
+
+    addAnnotation({
+      blockId: '__global__',
+      startOffset: 0,
+      endOffset: 0,
+      type: 'GLOBAL_COMMENT',
+      originalText: '',
+      text: trimmed,
+    })
+
+    setGlobalText('')
+    setShowGlobalInput(false)
+
+    if (!showAnnotationPanel) {
+      setShowAnnotationPanel(true)
+    }
+  }, [globalText, addAnnotation, showAnnotationPanel])
 
   const handleToolbarSubmit = useCallback(
     (type: AnnotationType, text?: string) => {
@@ -250,6 +274,21 @@ export default function PlanReviewCard({
     onDecide(reviewId, true, undefined, permissionMode)
   }, [decided, submitting, onDecide, reviewId, permissionMode])
 
+  // Keyboard shortcuts: Cmd+Enter to approve
+  useEffect(() => {
+    if (!isPending) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        handleApprove()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isPending, handleApprove])
+
   const handleRequestChanges = useCallback(() => {
     if (decided || submitting) return
     // If there are annotations, submit structured feedback immediately
@@ -310,12 +349,26 @@ export default function PlanReviewCard({
         {timestamp && (
           <span className="text-xs text-[#8b8fa3]">{formatTime(timestamp)}</span>
         )}
+        {/* Global comment button */}
+        {isPending && (
+          <button
+            type="button"
+            onClick={() => setShowGlobalInput(s => !s)}
+            className="ml-auto flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-zinc-400 hover:text-blue-400 hover:bg-zinc-700/50 cursor-pointer transition-colors"
+            title="Add global comment"
+          >
+            <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z" />
+              <path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z" />
+            </svg>
+          </button>
+        )}
         {/* Annotation panel toggle — only show for pending plans */}
         {isPending && (
           <button
             type="button"
             onClick={() => setShowAnnotationPanel(s => !s)}
-            className="ml-auto flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-zinc-400 hover:text-purple-400 hover:bg-zinc-700/50 cursor-pointer transition-colors"
+            className="flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-zinc-400 hover:text-purple-400 hover:bg-zinc-700/50 cursor-pointer transition-colors"
             title={showAnnotationPanel ? 'Hide annotations' : 'Show annotations'}
           >
             <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
@@ -334,6 +387,63 @@ export default function PlanReviewCard({
         )}
       </div>
 
+      {/* Global comment input */}
+      {showGlobalInput && isPending && (
+        <div className="mb-2 rounded-md border border-blue-500/30 bg-blue-500/[0.06] p-2">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase bg-blue-500/20 text-blue-400">
+              Global
+            </span>
+            <span className="text-[10px] text-zinc-500">Comment on the entire plan</span>
+          </div>
+          <textarea
+            className="w-full resize-none rounded border border-zinc-600 bg-zinc-900 px-2 py-1.5 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500/50 focus:outline-none"
+            placeholder="Add feedback about the overall plan..."
+            value={globalText}
+            onChange={(e) => setGlobalText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                handleGlobalSubmit()
+              }
+              if (e.key === 'Escape') {
+                setShowGlobalInput(false)
+                setGlobalText('')
+              }
+            }}
+            rows={2}
+            autoFocus
+          />
+          <div className="mt-1.5 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => { setShowGlobalInput(false); setGlobalText('') }}
+              className="text-xs text-zinc-500 hover:text-zinc-300 cursor-pointer transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={!globalText.trim()}
+              onClick={handleGlobalSubmit}
+              className={clsx(
+                'rounded px-2.5 py-1 text-xs font-medium transition-colors',
+                globalText.trim()
+                  ? 'bg-blue-600 text-white cursor-pointer hover:bg-blue-500'
+                  : 'bg-zinc-700 text-zinc-500 cursor-not-allowed',
+              )}
+            >
+              Add
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Mode switcher */}
+      {isPending && (
+        <ModeSwitcher mode={editorMode} onChange={setEditorMode} />
+      )}
+
       {/* Plan content — relative for toolbar positioning */}
       <div className="relative" ref={contentRef}>
         <PlanMarkdownContent segments={segments} />
@@ -345,6 +455,7 @@ export default function PlanReviewCard({
             containerRect={containerRect}
             onSubmit={handleToolbarSubmit}
             onClose={handleToolbarClose}
+            editorMode={editorMode}
           />
         )}
       </div>
@@ -506,6 +617,9 @@ export default function PlanReviewCard({
         }
         ::highlight(plan-highlight-comment) {
           background-color: rgba(139, 92, 246, 0.2);
+        }
+        ::highlight(plan-highlight-insertion) {
+          background-color: rgba(16, 185, 129, 0.2);
         }
         .plan-markdown ::selection {
           background-color: rgba(139, 92, 246, 0.35);
