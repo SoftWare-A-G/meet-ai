@@ -1,3 +1,0 @@
-#!/usr/bin/env bash
-# Thin wrapper — runs the plan-review hook via bun
-exec bun run "$(dirname "$0")/../../packages/hooks/src/plan-review/index.ts"

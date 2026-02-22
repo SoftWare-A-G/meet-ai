@@ -1,3 +1,0 @@
-#!/usr/bin/env bash
-# Thin wrapper — runs the Node.js hook via bun
-exec bun run "$(dirname "$0")/../../packages/hooks/src/log-tool-use/index.ts"

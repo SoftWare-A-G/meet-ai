@@ -1,6 +1,5 @@
 #!/usr/bin/env node
-import { readdirSync, readFileSync, statSync } from 'node:fs'
-import { join } from 'node:path'
+import { setTimeout as delay } from 'node:timers/promises'
 import { createHookClient } from '../log-tool-use/client'
 import { findRoomId } from '../log-tool-use/find-room'
 
@@ -17,14 +16,8 @@ type HookOutput = {
   hookSpecificOutput: {
     hookEventName: 'PermissionRequest'
     decision:
-      | {
-          behavior: 'allow'
-          allowedPrompts?: AllowedPrompt[]
-        }
-      | {
-          behavior: 'deny'
-          message: string
-        }
+      | { behavior: 'allow'; allowedPrompts?: AllowedPrompt[] }
+      | { behavior: 'deny'; message: string }
   }
 }
 
@@ -33,43 +26,8 @@ type PlanReviewResponse = {
   message_id?: string
 }
 
-type PlanReviewStatus = {
-  status: 'pending' | 'approved' | 'denied'
-  feedback?: string
-  decided_by?: string
-  decided_at?: string
-  permission_mode?: string
-}
-
 const POLL_INTERVAL_MS = 2000
 const POLL_TIMEOUT_MS = 1_800_000 // 30 minutes
-
-function findLatestPlanFile(): string | null {
-  const plansDir = join(process.env.HOME || '', '.claude', 'plans')
-  let entries: string[]
-  try {
-    entries = readdirSync(plansDir)
-  } catch {
-    return null
-  }
-
-  let latest: { path: string; mtime: number } | null = null
-  for (const entry of entries) {
-    if (!entry.endsWith('.md')) continue
-    const fullPath = join(plansDir, entry)
-    try {
-      const mtime = statSync(fullPath).mtimeMs
-      if (!latest || mtime > latest.mtime) {
-        latest = { path: fullPath, mtime }
-      }
-    } catch {
-      continue
-    }
-  }
-
-  if (!latest) return null
-  return readFileSync(latest.path, 'utf-8')
-}
 
 async function createPlanReview(
   client: ReturnType<typeof createHookClient>,
@@ -80,15 +38,15 @@ async function createPlanReview(
     const res = await client.api.rooms[':id']['plan-reviews'].$post({
       param: { id: roomId },
       json: { plan_content: planContent },
-    } as any)
+    })
     if (!res.ok) {
       const text = await res.text()
       process.stderr.write(`[plan-review] create failed: ${res.status} ${text}\n`)
       return null
     }
-    return (await res.json()) as PlanReviewResponse
-  } catch (err) {
-    process.stderr.write(`[plan-review] create error: ${err}\n`)
+    return await res.json()
+  } catch (error) {
+    process.stderr.write(`[plan-review] create error: ${error}\n`)
     return null
   }
 }
@@ -97,24 +55,25 @@ async function pollForDecision(
   client: ReturnType<typeof createHookClient>,
   roomId: string,
   reviewId: string
-): Promise<PlanReviewStatus | null> {
+) {
   const deadline = Date.now() + POLL_TIMEOUT_MS
 
   while (Date.now() < deadline) {
     try {
       const res = await client.api.rooms[':id']['plan-reviews'][':reviewId'].$get({
         param: { id: roomId, reviewId },
-      } as any)
+      })
       if (res.ok) {
-        const data = (await res.json()) as PlanReviewStatus
+        const data = await res.json()
         if (data.status !== 'pending') {
           return data
         }
       }
-    } catch (err) {
-      process.stderr.write(`[plan-review] poll error: ${err}\n`)
+    } catch (error) {
+      process.stderr.write(`[plan-review] poll error: ${error}\n`)
     }
-    await new Promise(r => setTimeout(r, POLL_INTERVAL_MS))
+
+    await delay(POLL_INTERVAL_MS)
   }
 
   return null
@@ -122,7 +81,7 @@ async function pollForDecision(
 
 function getPromptsByMode(mode?: string): AllowedPrompt[] | undefined {
   switch (mode) {
-    case 'acceptEdits':
+    case 'acceptEdits': {
       return [
         { tool: 'Bash', prompt: 'install dependencies' },
         { tool: 'Bash', prompt: 'run tests' },
@@ -130,12 +89,13 @@ function getPromptsByMode(mode?: string): AllowedPrompt[] | undefined {
         { tool: 'Bash', prompt: 'run typecheck' },
         { tool: 'Bash', prompt: 'run linter' },
       ]
-    case 'bypassPermissions':
-      return [
-        { tool: 'Bash', prompt: 'run any command' },
-      ]
-    default:
+    }
+    case 'bypassPermissions': {
+      return [{ tool: 'Bash', prompt: 'run any command' }]
+    }
+    default: {
       return undefined
+    }
   }
 }
 
@@ -144,9 +104,7 @@ function buildAllowOutput(permissionMode?: string): HookOutput {
   return {
     hookSpecificOutput: {
       hookEventName: 'PermissionRequest',
-      decision: allowedPrompts
-        ? { behavior: 'allow', allowedPrompts }
-        : { behavior: 'allow' },
+      decision: allowedPrompts ? { behavior: 'allow', allowedPrompts } : { behavior: 'allow' },
     },
   }
 }
@@ -169,7 +127,7 @@ async function expirePlanReview(
   reviewId: string
 ): Promise<void> {
   try {
-    await (client.api.rooms[':id']['plan-reviews'][':reviewId'].expire as any).$post({
+    await client.api.rooms[':id']['plan-reviews'][':reviewId'].expire.$post({
       param: { id: roomId, reviewId },
     })
   } catch {
@@ -187,7 +145,7 @@ async function sendTimeoutMessage(
       json: {
         sender: 'hook',
         content: '_Plan review timed out — approve/deny in terminal instead._',
-        sender_type: 'agent' as const,
+        sender_type: 'agent',
         color: '#8b5cf6',
       },
     })
@@ -196,7 +154,7 @@ async function sendTimeoutMessage(
   }
 }
 
-export async function processPlanReview(rawInput: string, teamsDir?: string): Promise<void> {
+async function processPlanReview(rawInput: string, teamsDir?: string): Promise<void> {
   let input: PlanReviewInput
   try {
     input = JSON.parse(rawInput)
@@ -211,9 +169,9 @@ export async function processPlanReview(rawInput: string, teamsDir?: string): Pr
     return
   }
 
-  const planContent = findLatestPlanFile()
+  const planContent = input.tool_input?.plan as string | undefined
   if (!planContent) {
-    process.stderr.write('[plan-review] no plan file found in ~/.claude/plans/\n')
+    process.stderr.write('[plan-review] no plan content in tool_input\n')
     return
   }
 
@@ -263,13 +221,14 @@ async function main() {
   for await (const chunk of process.stdin) {
     input += chunk
   }
+
   await processPlanReview(input)
 }
 
 const isDirectExecution = process.argv[1]?.includes('/hooks/')
 if (isDirectExecution && !process.argv[1]?.includes('vitest')) {
-  main().catch(err => {
-    process.stderr.write(`[plan-review] fatal: ${err}\n`)
+  main().catch(error => {
+    process.stderr.write(`[plan-review] fatal: ${error}\n`)
     process.exit(0)
   })
 }

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { readFileSync, writeFileSync, statSync, rmSync } from 'node:fs'
+import { createHookClient, sendParentMessage, sendLogEntry } from './client'
 import { findRoomId } from './find-room'
 import { summarize } from './summarize'
-import { createHookClient, sendParentMessage, sendLogEntry } from './client'
 import type { HookInput } from './types'
 
 const PARENT_MSG_TTL_SEC = 120
@@ -25,7 +25,10 @@ function saveParentId(sessionId: string, msgId: string) {
   writeFileSync(`/tmp/meet-ai-hook-${sessionId}.msgid`, msgId)
 }
 
-export async function processHookInput(rawInput: string, teamsDir?: string): Promise<'sent' | 'skip'> {
+export async function processHookInput(
+  rawInput: string,
+  teamsDir?: string
+): Promise<'sent' | 'skip'> {
   let input: HookInput
   try {
     input = JSON.parse(rawInput)
@@ -77,6 +80,7 @@ async function main() {
     input += chunk
   }
   await processHookInput(input)
+
   process.exit(0)
 }
 
