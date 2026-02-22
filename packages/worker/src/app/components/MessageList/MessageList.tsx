@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useStickToBottom } from 'use-stick-to-bottom'
 import Message from '../Message'
 import LogGroup from '../LogGroup'
@@ -107,6 +107,27 @@ export default function MessageList({ messages, attachmentCounts, planDecisions,
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps -- scrollToBottom is stable
   }, [forceScrollCounter])
+
+  // iOS keyboard dismiss: scroll to bottom when viewport height increases (keyboard closing)
+  const prevHeightRef = useRef(0)
+  const isAtBottomRef = useRef(isAtBottom)
+  isAtBottomRef.current = isAtBottom
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    prevHeightRef.current = vv.height
+    const onResize = () => {
+      const grew = vv.height > prevHeightRef.current
+      prevHeightRef.current = vv.height
+      // Viewport grew = keyboard closed; re-stick if we were at the bottom
+      if (grew && isAtBottomRef.current) {
+        scrollToBottom()
+      }
+    }
+    vv.addEventListener('resize', onResize)
+    return () => vv.removeEventListener('resize', onResize)
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- scrollToBottom is stable, isAtBottomRef is a ref
+  }, [])
 
   const items = groupMessages(messages)
 
