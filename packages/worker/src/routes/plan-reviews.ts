@@ -88,6 +88,7 @@ export const planReviewsRoute = new Hono<AppEnv>()
       feedback: decision.feedback,
       decided_by: decision.decided_by,
       decided_at: decision.decided_at,
+      permission_mode: decision.permission_mode ?? 'default',
     })
   })
 
@@ -111,7 +112,8 @@ export const planReviewsRoute = new Hono<AppEnv>()
       keyId,
       body.approved,
       body.feedback,
-      body.decided_by
+      body.decided_by,
+      body.permission_mode
     )
 
     if (!updated) {
@@ -131,6 +133,7 @@ export const planReviewsRoute = new Hono<AppEnv>()
             status: body.approved ? 'approved' : 'denied',
             feedback: body.feedback ?? null,
             decided_by: body.decided_by,
+            permission_mode: body.permission_mode ?? 'default',
           }),
         })
       )

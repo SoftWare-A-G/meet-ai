@@ -76,6 +76,7 @@ export type PlanDecision = {
   feedback: string | null
   decided_by: string | null
   decided_at: string | null
+  permission_mode: string | null
   created_at: string
 }
 

@@ -8,6 +8,7 @@ type PlanDecisionEvent = {
   status: 'approved' | 'denied' | 'expired'
   feedback?: string | null
   decided_by?: string
+  permission_mode?: string
 }
 
 type QuestionAnswerEvent = {

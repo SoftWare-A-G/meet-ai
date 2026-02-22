@@ -152,15 +152,15 @@ export function queries(db: D1Database) {
 
     async getPlanDecision(id: string, roomId: string, keyId: string) {
       return db.prepare(
-        'SELECT id, message_id, room_id, key_id, status, feedback, decided_by, decided_at, created_at FROM plan_decisions WHERE id = ? AND room_id = ? AND key_id = ?'
+        'SELECT id, message_id, room_id, key_id, status, feedback, decided_by, decided_at, permission_mode, created_at FROM plan_decisions WHERE id = ? AND room_id = ? AND key_id = ?'
       ).bind(id, roomId, keyId).first<PlanDecision>()
     },
 
-    async decidePlanReview(id: string, roomId: string, keyId: string, approved: boolean, feedback: string | undefined, decidedBy: string) {
+    async decidePlanReview(id: string, roomId: string, keyId: string, approved: boolean, feedback: string | undefined, decidedBy: string, permissionMode?: string) {
       const status = approved ? 'approved' : 'denied'
       const result = await db.prepare(
-        'UPDATE plan_decisions SET status = ?, feedback = ?, decided_by = ?, decided_at = datetime("now") WHERE id = ? AND room_id = ? AND key_id = ? AND status = "pending"'
-      ).bind(status, feedback ?? null, decidedBy, id, roomId, keyId).run()
+        'UPDATE plan_decisions SET status = ?, feedback = ?, decided_by = ?, decided_at = datetime("now"), permission_mode = ? WHERE id = ? AND room_id = ? AND key_id = ? AND status = "pending"'
+      ).bind(status, feedback ?? null, decidedBy, permissionMode ?? 'default', id, roomId, keyId).run()
       return result.meta.changes > 0
     },
 

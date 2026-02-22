@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
-import { findRoomId } from '../log-tool-use/find-room'
 import { createHookClient } from '../log-tool-use/client'
+import { findRoomId } from '../log-tool-use/find-room'
 
 type PlanReviewInput = {
   session_id: string
@@ -11,15 +11,20 @@ type PlanReviewInput = {
   permission_mode?: string
 }
 
+type AllowedPrompt = { tool: string; prompt: string }
+
 type HookOutput = {
   hookSpecificOutput: {
     hookEventName: 'PermissionRequest'
-    decision: {
-      behavior: 'allow'
-    } | {
-      behavior: 'deny'
-      message: string
-    }
+    decision:
+      | {
+          behavior: 'allow'
+          allowedPrompts?: AllowedPrompt[]
+        }
+      | {
+          behavior: 'deny'
+          message: string
+        }
   }
 }
 
@@ -33,6 +38,7 @@ type PlanReviewStatus = {
   feedback?: string
   decided_by?: string
   decided_at?: string
+  permission_mode?: string
 }
 
 const POLL_INTERVAL_MS = 2000
@@ -68,7 +74,7 @@ function findLatestPlanFile(): string | null {
 async function createPlanReview(
   client: ReturnType<typeof createHookClient>,
   roomId: string,
-  planContent: string,
+  planContent: string
 ): Promise<PlanReviewResponse | null> {
   try {
     const res = await client.api.rooms[':id']['plan-reviews'].$post({
@@ -90,7 +96,7 @@ async function createPlanReview(
 async function pollForDecision(
   client: ReturnType<typeof createHookClient>,
   roomId: string,
-  reviewId: string,
+  reviewId: string
 ): Promise<PlanReviewStatus | null> {
   const deadline = Date.now() + POLL_TIMEOUT_MS
 
@@ -108,17 +114,39 @@ async function pollForDecision(
     } catch (err) {
       process.stderr.write(`[plan-review] poll error: ${err}\n`)
     }
-    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS))
+    await new Promise(r => setTimeout(r, POLL_INTERVAL_MS))
   }
 
   return null
 }
 
-function buildAllowOutput(): HookOutput {
+function getPromptsByMode(mode?: string): AllowedPrompt[] | undefined {
+  switch (mode) {
+    case 'acceptEdits':
+      return [
+        { tool: 'Bash', prompt: 'install dependencies' },
+        { tool: 'Bash', prompt: 'run tests' },
+        { tool: 'Bash', prompt: 'run build' },
+        { tool: 'Bash', prompt: 'run typecheck' },
+        { tool: 'Bash', prompt: 'run linter' },
+      ]
+    case 'bypassPermissions':
+      return [
+        { tool: 'Bash', prompt: 'run any command' },
+      ]
+    default:
+      return undefined
+  }
+}
+
+function buildAllowOutput(permissionMode?: string): HookOutput {
+  const allowedPrompts = getPromptsByMode(permissionMode)
   return {
     hookSpecificOutput: {
       hookEventName: 'PermissionRequest',
-      decision: { behavior: 'allow' },
+      decision: allowedPrompts
+        ? { behavior: 'allow', allowedPrompts }
+        : { behavior: 'allow' },
     },
   }
 }
@@ -138,7 +166,7 @@ function buildDenyOutput(feedback: string): HookOutput {
 async function expirePlanReview(
   client: ReturnType<typeof createHookClient>,
   roomId: string,
-  reviewId: string,
+  reviewId: string
 ): Promise<void> {
   try {
     await (client.api.rooms[':id']['plan-reviews'][':reviewId'].expire as any).$post({
@@ -151,7 +179,7 @@ async function expirePlanReview(
 
 async function sendTimeoutMessage(
   client: ReturnType<typeof createHookClient>,
-  roomId: string,
+  roomId: string
 ): Promise<void> {
   try {
     await client.api.rooms[':id'].messages.$post({
@@ -221,9 +249,10 @@ export async function processPlanReview(rawInput: string, teamsDir?: string): Pr
   process.stderr.write(`[plan-review] decision: ${decision.status}\n`)
 
   if (decision.status === 'approved') {
-    process.stdout.write(JSON.stringify(buildAllowOutput()))
+    process.stdout.write(JSON.stringify(buildAllowOutput(decision.permission_mode)))
   } else if (decision.status === 'denied') {
-    const feedback = decision.feedback || 'Plan was rejected. Please revise the plan based on the feedback.'
+    const feedback =
+      decision.feedback || 'Plan was rejected. Please revise the plan based on the feedback.'
     process.stdout.write(JSON.stringify(buildDenyOutput(feedback)))
   }
 }
@@ -239,7 +268,7 @@ async function main() {
 
 const isDirectExecution = process.argv[1]?.includes('/hooks/')
 if (isDirectExecution && !process.argv[1]?.includes('vitest')) {
-  main().catch((err) => {
+  main().catch(err => {
     process.stderr.write(`[plan-review] fatal: ${err}\n`)
     process.exit(0)
   })

@@ -17,14 +17,14 @@ type QuestionAnswerState = { status: 'pending' | 'answered' | 'expired'; answers
 type MessageListProps = {
   messages: DisplayMessage[]
   attachmentCounts?: Record<string, number>
-  planDecisions?: Record<string, { status: 'pending' | 'approved' | 'denied' | 'expired'; feedback?: string }>
+  planDecisions?: Record<string, { status: 'pending' | 'approved' | 'denied' | 'expired'; feedback?: string; permissionMode?: string }>
   questionAnswers?: Record<string, QuestionAnswerState>
   unreadCount: number
   forceScrollCounter: number
   onScrollToBottom: () => void
   onRetry?: (tempId: string) => void
   onSend?: (content: string) => void
-  onPlanDecide?: (reviewId: string, approved: boolean, feedback?: string) => void
+  onPlanDecide?: (reviewId: string, approved: boolean, feedback?: string, permissionMode?: string) => void
   onQuestionAnswer?: (reviewId: string, answers: Record<string, string>) => void
   connected?: boolean
   voiceAvailable?: boolean

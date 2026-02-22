@@ -27,7 +27,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
   const [unreadCount, setUnreadCount] = useState(0)
   const [forceScrollCounter, setForceScrollCounter] = useState(0)
   const [voiceAvailable, setVoiceAvailable] = useState(false)
-  const [planDecisions, setPlanDecisions] = useState<Record<string, { status: 'pending' | 'approved' | 'denied' | 'expired'; feedback?: string }>>({})
+  const [planDecisions, setPlanDecisions] = useState<Record<string, { status: 'pending' | 'approved' | 'denied' | 'expired'; feedback?: string; permissionMode?: string }>>({})
   const [questionAnswers, setQuestionAnswers] = useState<Record<string, { status: 'pending' | 'answered' | 'expired'; answers?: Record<string, string> }>>({})
   const { queue, remove, getForRoom } = useOfflineQueue()
 
@@ -147,12 +147,13 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
     onTeamInfo?.(info)
   }, [onTeamInfo])
 
-  const onPlanDecisionWs = useCallback((event: { plan_review_id: string; status: 'approved' | 'denied' | 'expired'; feedback?: string | null }) => {
+  const onPlanDecisionWs = useCallback((event: { plan_review_id: string; status: 'approved' | 'denied' | 'expired'; feedback?: string | null; permission_mode?: string }) => {
     setPlanDecisions(prev => ({
       ...prev,
       [event.plan_review_id]: {
         status: event.status,
         feedback: event.feedback ?? undefined,
+        permissionMode: event.permission_mode,
       },
     }))
   }, [])
@@ -239,14 +240,14 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
     }
   }, [room.id, userName, apiKey])
 
-  const handlePlanDecide = useCallback(async (reviewId: string, approved: boolean, feedback?: string) => {
+  const handlePlanDecide = useCallback(async (reviewId: string, approved: boolean, feedback?: string, permissionMode?: string) => {
     // Optimistically update the decision state
     setPlanDecisions(prev => ({
       ...prev,
-      [reviewId]: { status: approved ? 'approved' : 'denied', feedback },
+      [reviewId]: { status: approved ? 'approved' : 'denied', feedback, permissionMode },
     }))
     try {
-      await api.decidePlanReview(room.id, reviewId, approved, feedback, userName)
+      await api.decidePlanReview(room.id, reviewId, approved, feedback, userName, permissionMode)
     } catch {
       // Revert on failure
       setPlanDecisions(prev => ({
@@ -254,7 +255,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
         [reviewId]: { status: 'pending' },
       }))
     }
-  }, [room.id])
+  }, [room.id, userName])
 
   const handleQuestionAnswer = useCallback(async (reviewId: string, answers: Record<string, string>) => {
     // Optimistic update

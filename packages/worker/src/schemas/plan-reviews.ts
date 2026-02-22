@@ -9,4 +9,5 @@ export const decidePlanReviewSchema = z.object({
   approved: z.boolean(),
   feedback: z.string().optional(),
   decided_by: z.string().min(1),
+  permission_mode: z.enum(['default', 'acceptEdits', 'bypassPermissions']).optional().default('default'),
 })

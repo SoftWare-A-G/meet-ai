@@ -14,7 +14,7 @@ type PlanReviewCardProps = {
   reviewId: string
   status?: 'pending' | 'approved' | 'denied' | 'expired'
   feedback?: string
-  onDecide: (reviewId: string, approved: boolean, feedback?: string) => void
+  onDecide: (reviewId: string, approved: boolean, feedback?: string, permissionMode?: string) => void
 }
 
 const COLLAPSE_LINE_COUNT = 10
@@ -105,6 +105,7 @@ export default function PlanReviewCard({
   const [submitting, setSubmitting] = useState(false)
   const [selection, setSelection] = useState<SelectionState | null>(null)
   const [showAnnotationPanel, setShowAnnotationPanel] = useState(false)
+  const [permissionMode, setPermissionMode] = useState<'default' | 'acceptEdits' | 'bypassPermissions'>('default')
 
   const contentRef = useRef<HTMLDivElement>(null)
   const highlightMetaRef = useRef<HighlightMetaMap>(new Map())
@@ -258,8 +259,8 @@ export default function PlanReviewCard({
   const handleApprove = useCallback(() => {
     if (decided || submitting) return
     setSubmitting(true)
-    onDecide(reviewId, true)
-  }, [decided, submitting, onDecide, reviewId])
+    onDecide(reviewId, true, undefined, permissionMode)
+  }, [decided, submitting, onDecide, reviewId, permissionMode])
 
   const handleRequestChanges = useCallback(() => {
     if (decided || submitting) return
@@ -267,18 +268,18 @@ export default function PlanReviewCard({
     if (annotations.length > 0) {
       const feedback = exportDiff(annotations)
       setSubmitting(true)
-      onDecide(reviewId, false, feedback)
+      onDecide(reviewId, false, feedback, permissionMode)
       return
     }
     // Otherwise, show the textarea for manual feedback
     setShowFeedbackInput(true)
-  }, [decided, submitting, annotations, onDecide, reviewId])
+  }, [decided, submitting, annotations, onDecide, reviewId, permissionMode])
 
   const handleSubmitFeedback = useCallback(() => {
     if (decided || submitting || !feedbackText.trim()) return
     setSubmitting(true)
-    onDecide(reviewId, false, feedbackText.trim())
-  }, [decided, submitting, feedbackText, onDecide, reviewId])
+    onDecide(reviewId, false, feedbackText.trim(), permissionMode)
+  }, [decided, submitting, feedbackText, onDecide, reviewId, permissionMode])
 
   const borderColor = status === 'approved'
     ? '#22c55e'
@@ -436,6 +437,17 @@ export default function PlanReviewCard({
             </>
           ) : (
             <>
+              {!decided && !showFeedbackInput && (
+                <select
+                  value={permissionMode}
+                  onChange={(e) => setPermissionMode(e.target.value as typeof permissionMode)}
+                  className="rounded-lg border border-zinc-600 bg-zinc-800 px-2 py-1.5 text-xs text-zinc-300 cursor-pointer focus:outline-none focus:border-purple-500/50"
+                >
+                  <option value="default">Default mode</option>
+                  <option value="acceptEdits">Accept edits</option>
+                  <option value="bypassPermissions">Full auto</option>
+                </select>
+              )}
               <button
                 type="button"
                 disabled={submitting}
