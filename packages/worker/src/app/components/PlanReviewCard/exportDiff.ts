@@ -1,5 +1,22 @@
 import { sortByPosition, type Annotation } from './annotations'
 
+function escapeMarkdown(text: string): string {
+  return text
+    .replace(/`/g, '\\`')
+    .replace(/</g, '\\<')
+    .replace(/>/g, '\\>')
+    .replace(/\|/g, '\\|')
+    .replace(/\[/g, '\\[')
+    .replace(/\]/g, '\\]')
+    .replace(/\*\*/g, '\\*\\*')
+    .replace(/(?<!\*)\*(?!\*)/g, '\\*')
+    .replace(/(?<!_)_(?!_)/g, '\\_')
+}
+
+function escapeCodeBlock(text: string): string {
+  return text.replace(/```/g, '\\`\\`\\`')
+}
+
 export function exportDiff(annotations: Annotation[]): string {
   const sorted = sortByPosition(annotations)
   if (sorted.length === 0) return ''
@@ -16,26 +33,30 @@ export function exportDiff(annotations: Annotation[]): string {
     const num = i + 1
 
     switch (ann.type) {
-      case 'DELETION':
+      case 'DELETION': {
         lines.push(`## ${num}. Remove this`)
         lines.push('```')
-        lines.push(ann.originalText)
+        lines.push(escapeCodeBlock(ann.originalText))
         lines.push('```')
         if (ann.text) {
           lines.push(`> ${ann.text}`)
         }
         break
+      }
 
-      case 'REPLACEMENT':
+      case 'REPLACEMENT': {
         lines.push(`## ${num}. Change this`)
-        lines.push(`**From:** ${ann.originalText}`)
-        lines.push(`**To:** ${ann.text ?? ''}`)
+        lines.push(`**From:** ${escapeMarkdown(ann.originalText)}`)
+        lines.push(`**To:** ${escapeMarkdown(ann.text ?? '')}`)
         break
+      }
 
-      case 'COMMENT':
-        lines.push(`## ${num}. Feedback on: "${ann.originalText}"`)
-        lines.push(`> ${ann.text ?? ''}`)
+      case 'COMMENT': {
+        const escapedOriginal = escapeMarkdown(ann.originalText).replace(/"/g, '\\"')
+        lines.push(`## ${num}. Feedback on: "${escapedOriginal}"`)
+        lines.push(`> ${escapeMarkdown(ann.text ?? '')}`)
         break
+      }
     }
 
     lines.push('')

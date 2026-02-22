@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import clsx from 'clsx'
 import { formatTime } from '../../lib/dates'
 import { useAnnotations } from '../../hooks/useAnnotations'
@@ -81,6 +81,16 @@ type SelectionState = {
 // Store highlight metadata keyed by annotation ID
 type HighlightMetaMap = Map<string, SelectionInfo['meta']>
 
+function simpleHash(str: string): string {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash |= 0
+  }
+  return hash.toString(36)
+}
+
 export default function PlanReviewCard({
   content,
   timestamp,
@@ -99,12 +109,17 @@ export default function PlanReviewCard({
   const contentRef = useRef<HTMLDivElement>(null)
   const highlightMetaRef = useRef<HighlightMetaMap>(new Map())
 
+  const contentHash = useMemo(() => simpleHash(content), [content])
+  const STORAGE_KEY = `plan-annotations:${reviewId}`
+
   const {
     annotations,
+    pendingRemovals,
     addAnnotation,
     updateAnnotation,
     removeAnnotation,
-  } = useAnnotations()
+    undoRemoval,
+  } = useAnnotations(reviewId, contentHash)
 
   const isPending = status === 'pending'
 
@@ -121,6 +136,41 @@ export default function PlanReviewCard({
     onSelect: handleSelect,
     enabled: isPending,
   })
+
+  // Save highlight meta to sessionStorage alongside annotations
+  const saveHighlightMeta = useCallback(() => {
+    try {
+      const stored = sessionStorage.getItem(`annotations:${reviewId}`)
+      const data = stored ? JSON.parse(stored) : { annotations: [], contentHash }
+      const metaEntries = Array.from(highlightMetaRef.current.entries())
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+        ...data,
+        highlightMeta: metaEntries,
+        contentHash,
+      }))
+    } catch { /* ignore */ }
+  }, [reviewId, contentHash, STORAGE_KEY])
+
+  // Restore highlight meta and re-apply highlights on mount
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem(STORAGE_KEY)
+      if (!stored) return
+      const data = JSON.parse(stored)
+      if (data.contentHash !== contentHash) return
+      if (!Array.isArray(data.highlightMeta) || !Array.isArray(data.annotations)) return
+      // Restore highlight meta map
+      highlightMetaRef.current = new Map(data.highlightMeta)
+      // Re-apply highlights after a tick so DOM is ready
+      requestAnimationFrame(() => {
+        for (const ann of data.annotations) {
+          const meta = highlightMetaRef.current.get(ann.id)
+          if (meta) addHighlight(ann.id, meta, ann.type)
+        }
+      })
+    } catch { /* ignore */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // only on mount
 
   const handleToolbarClose = useCallback(() => {
     setSelection(null)
@@ -143,6 +193,7 @@ export default function PlanReviewCard({
       // Store meta for highlight rendering and add visual highlight
       highlightMetaRef.current.set(annotation.id, selection.info.meta)
       addHighlight(annotation.id, selection.info.meta, type)
+      saveHighlightMeta()
 
       // Auto-show annotation panel when first annotation is created
       if (annotations.length === 0) {
@@ -151,7 +202,7 @@ export default function PlanReviewCard({
 
       handleToolbarClose()
     },
-    [selection, addAnnotation, addHighlight, annotations.length, handleToolbarClose],
+    [selection, addAnnotation, addHighlight, annotations.length, handleToolbarClose, saveHighlightMeta],
   )
 
   const handleAnnotationEdit = useCallback(
@@ -163,19 +214,35 @@ export default function PlanReviewCard({
         if (meta) {
           removeHighlight(id)
           addHighlight(id, meta, updates.type)
+          saveHighlightMeta()
         }
       }
     },
-    [updateAnnotation, removeHighlight, addHighlight],
+    [updateAnnotation, removeHighlight, addHighlight, saveHighlightMeta],
   )
 
   const handleAnnotationDelete = useCallback(
     (id: string) => {
       removeAnnotation(id)
       removeHighlight(id)
-      highlightMetaRef.current.delete(id)
+      // Keep meta in highlightMetaRef — needed to restore the highlight on undo
     },
     [removeAnnotation, removeHighlight],
+  )
+
+  const handleAnnotationUndo = useCallback(
+    (id: string) => {
+      const pending = pendingRemovals.get(id)
+      if (!pending) return
+
+      undoRemoval(id)
+      // Re-add the highlight using stored meta
+      const meta = highlightMetaRef.current.get(id)
+      if (meta) {
+        addHighlight(id, meta, pending.annotation.type)
+      }
+    },
+    [undoRemoval, pendingRemovals, addHighlight],
   )
 
   const lines = content.split('\n')
@@ -312,8 +379,10 @@ export default function PlanReviewCard({
       {showAnnotationPanel && isPending && (
         <AnnotationPanel
           annotations={annotations}
+          pendingRemovals={pendingRemovals}
           onEdit={handleAnnotationEdit}
           onDelete={handleAnnotationDelete}
+          onUndo={handleAnnotationUndo}
         />
       )}
 

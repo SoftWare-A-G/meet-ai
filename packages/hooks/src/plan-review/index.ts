@@ -1,13 +1,13 @@
 #!/usr/bin/env node
+import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { join } from 'node:path'
 import { findRoomId } from '../log-tool-use/find-room'
 import { createHookClient } from '../log-tool-use/client'
 
 type PlanReviewInput = {
   session_id: string
   tool_name: string
-  tool_input: {
-    plan: string
-  }
+  tool_input?: Record<string, unknown>
   permission_mode?: string
 }
 
@@ -37,6 +37,33 @@ type PlanReviewStatus = {
 
 const POLL_INTERVAL_MS = 2000
 const POLL_TIMEOUT_MS = 1_800_000 // 30 minutes
+
+function findLatestPlanFile(): string | null {
+  const plansDir = join(process.env.HOME || '', '.claude', 'plans')
+  let entries: string[]
+  try {
+    entries = readdirSync(plansDir)
+  } catch {
+    return null
+  }
+
+  let latest: { path: string; mtime: number } | null = null
+  for (const entry of entries) {
+    if (!entry.endsWith('.md')) continue
+    const fullPath = join(plansDir, entry)
+    try {
+      const mtime = statSync(fullPath).mtimeMs
+      if (!latest || mtime > latest.mtime) {
+        latest = { path: fullPath, mtime }
+      }
+    } catch {
+      continue
+    }
+  }
+
+  if (!latest) return null
+  return readFileSync(latest.path, 'utf-8')
+}
 
 async function createPlanReview(
   client: ReturnType<typeof createHookClient>,
@@ -150,9 +177,15 @@ export async function processPlanReview(rawInput: string, teamsDir?: string): Pr
     return
   }
 
-  const { session_id: sessionId, tool_input: toolInput } = input
-  if (!sessionId || !toolInput?.plan) {
-    process.stderr.write('[plan-review] missing session_id or plan\n')
+  const { session_id: sessionId } = input
+  if (!sessionId) {
+    process.stderr.write('[plan-review] missing session_id\n')
+    return
+  }
+
+  const planContent = findLatestPlanFile()
+  if (!planContent) {
+    process.stderr.write('[plan-review] no plan file found in ~/.claude/plans/\n')
     return
   }
 
@@ -172,7 +205,7 @@ export async function processPlanReview(rawInput: string, teamsDir?: string): Pr
   const client = createHookClient(url, key)
 
   process.stderr.write(`[plan-review] sending plan to room ${roomId} via ${url}\n`)
-  const review = await createPlanReview(client, roomId, toolInput.plan)
+  const review = await createPlanReview(client, roomId, planContent)
   if (!review) return
 
   process.stderr.write(`[plan-review] plan review created: ${review.id}, polling for decision...\n`)

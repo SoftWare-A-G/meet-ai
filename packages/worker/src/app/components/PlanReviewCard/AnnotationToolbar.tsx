@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react'
 import clsx from 'clsx'
 import type { AnnotationType } from './annotations'
 
@@ -20,8 +20,16 @@ export default function AnnotationToolbar({
   const [mode, setMode] = useState<ToolbarMode>('menu')
   const [inputType, setInputType] = useState<AnnotationType>('COMMENT')
   const [inputText, setInputText] = useState('')
+  const [toolbarWidth, setToolbarWidth] = useState(80)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const toolbarRef = useRef<HTMLDivElement>(null)
+
+  // Re-measure toolbar width when mode changes (menu ~80px, input ~256px)
+  useLayoutEffect(() => {
+    if (toolbarRef.current) {
+      setToolbarWidth(toolbarRef.current.offsetWidth)
+    }
+  }, [mode])
 
   // Reset state when selection changes
   useEffect(() => {
@@ -70,18 +78,18 @@ export default function AnnotationToolbar({
 
   const handleAction = useCallback(
     (type: AnnotationType) => {
-      if (type === 'DELETION') {
-        onSubmit('DELETION')
-        return
-      }
       setInputType(type)
       setMode('input')
     },
-    [onSubmit],
+    [],
   )
 
   const handleSubmitInput = useCallback(() => {
     const trimmed = inputText.trim()
+    if (inputType === 'DELETION') {
+      onSubmit('DELETION', trimmed || undefined)
+      return
+    }
     if (!trimmed) return
     onSubmit(inputType, trimmed)
   }, [inputText, inputType, onSubmit])
@@ -106,25 +114,35 @@ export default function AnnotationToolbar({
 
   if (!selectionRect || !containerRect) return null
 
-  // Position the toolbar above the selection, centered horizontally
+  // Position the toolbar centered horizontally over the selection.
+  // Clamp using half-width so the toolbar never clips the left or right edge.
   const left = Math.max(
-    0,
+    toolbarWidth / 2,
     Math.min(
       selectionRect.left - containerRect.left + selectionRect.width / 2,
-      containerRect.width - 80,
+      containerRect.width - toolbarWidth / 2,
     ),
   )
-  const top = selectionRect.top - containerRect.top - 8
+
+  // Flip the toolbar below the selection when it would go above the container top
+  const rawTop = selectionRect.top - containerRect.top - 8
+  const flipped = rawTop < 0
+  const top = flipped ? selectionRect.bottom - containerRect.top + 8 : rawTop
 
   const placeholder =
     inputType === 'COMMENT'
       ? 'Add a comment...'
-      : 'Suggest replacement text...'
+      : inputType === 'DELETION'
+        ? 'Why remove this? (optional)'
+        : 'Suggest replacement text...'
 
   return (
     <div
       ref={toolbarRef}
-      className="absolute z-50 -translate-x-1/2 -translate-y-full"
+      className={clsx(
+        'absolute z-50 -translate-x-1/2',
+        flipped ? 'translate-y-0' : '-translate-y-full',
+      )}
       style={{ left, top }}
     >
       {mode === 'menu' ? (
@@ -181,10 +199,12 @@ export default function AnnotationToolbar({
                 'rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase',
                 inputType === 'COMMENT'
                   ? 'bg-purple-500/20 text-purple-400'
-                  : 'bg-yellow-500/20 text-yellow-400',
+                  : inputType === 'DELETION'
+                    ? 'bg-red-500/20 text-red-400'
+                    : 'bg-yellow-500/20 text-yellow-400',
               )}
             >
-              {inputType === 'COMMENT' ? 'Comment' : 'Replace'}
+              {inputType === 'COMMENT' ? 'Comment' : inputType === 'DELETION' ? 'Delete' : 'Replace'}
             </span>
           </div>
           <div className="p-2">
@@ -208,19 +228,30 @@ export default function AnnotationToolbar({
               >
                 Back
               </button>
-              <button
-                type="button"
-                disabled={!inputText.trim()}
-                onClick={handleSubmitInput}
-                className={clsx(
-                  'rounded px-2.5 py-1 text-xs font-medium transition-colors',
-                  inputText.trim()
-                    ? 'bg-purple-600 text-white cursor-pointer hover:bg-purple-500'
-                    : 'bg-zinc-700 text-zinc-500 cursor-not-allowed',
+              <div className="flex items-center gap-1.5">
+                {inputType === 'DELETION' && (
+                  <button
+                    type="button"
+                    onClick={() => onSubmit('DELETION')}
+                    className="rounded px-2.5 py-1 text-xs font-medium text-zinc-400 hover:text-zinc-200 cursor-pointer transition-colors"
+                  >
+                    Skip
+                  </button>
                 )}
-              >
-                Add
-              </button>
+                <button
+                  type="button"
+                  disabled={inputType !== 'DELETION' && !inputText.trim()}
+                  onClick={handleSubmitInput}
+                  className={clsx(
+                    'rounded px-2.5 py-1 text-xs font-medium transition-colors',
+                    inputType === 'DELETION' || inputText.trim()
+                      ? 'bg-purple-600 text-white cursor-pointer hover:bg-purple-500'
+                      : 'bg-zinc-700 text-zinc-500 cursor-not-allowed',
+                  )}
+                >
+                  Add
+                </button>
+              </div>
             </div>
           </div>
         </div>

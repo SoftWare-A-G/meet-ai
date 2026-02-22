@@ -9,8 +9,10 @@ import {
 
 type AnnotationPanelProps = {
   annotations: Annotation[]
+  pendingRemovals: Map<string, { annotation: Annotation }>
   onEdit: (id: string, updates: { text?: string; type?: AnnotationType }) => void
   onDelete: (id: string) => void
+  onUndo: (id: string) => void
 }
 
 const TYPE_LABELS: Record<AnnotationType, string> = {
@@ -159,8 +161,10 @@ function AnnotationCard({
 
 export default function AnnotationPanel({
   annotations,
+  pendingRemovals,
   onEdit,
   onDelete,
+  onUndo,
 }: AnnotationPanelProps) {
   const [collapsed, setCollapsed] = useState(false)
   const sorted = sortByPosition(annotations)
@@ -199,7 +203,7 @@ export default function AnnotationPanel({
 
       {!collapsed && (
         <div className="px-3 pb-3 space-y-2">
-          {sorted.length === 0 ? (
+          {sorted.length === 0 && pendingRemovals.size === 0 ? (
             <p className="py-3 text-center text-xs text-zinc-500">
               Select text in the plan to add annotations
             </p>
@@ -213,6 +217,30 @@ export default function AnnotationPanel({
               />
             ))
           )}
+
+          {/* Undo toasts for pending removals */}
+          {Array.from(pendingRemovals).map(([id, { annotation }]) => (
+            <div
+              key={id}
+              className="flex items-center justify-between rounded-md border border-zinc-700 bg-zinc-800/80 px-3 py-2"
+            >
+              <span className="text-xs text-zinc-400">
+                Annotation removed
+                <span className="ml-1 font-mono text-zinc-500 text-[10px]">
+                  &ldquo;{annotation.originalText.length > 20
+                    ? `${annotation.originalText.slice(0, 20)}…`
+                    : annotation.originalText}&rdquo;
+                </span>
+              </span>
+              <button
+                type="button"
+                onClick={() => onUndo(id)}
+                className="text-xs font-medium text-purple-400 hover:text-purple-300 cursor-pointer transition-colors"
+              >
+                Undo
+              </button>
+            </div>
+          ))}
         </div>
       )}
     </div>
