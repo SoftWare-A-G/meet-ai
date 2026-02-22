@@ -14,6 +14,8 @@
     "@base-ui/react": "catalog:",
     "@elevenlabs/elevenlabs-js": "catalog:",
     "@hono/zod-validator": "catalog:",
+    "@shikijs/langs": "3.22.0",
+    "@shikijs/themes": "3.22.0",
     "@tanstack/react-router": "1.159.6",
     "@tanstack/react-start": "1.159.8",
     "class-variance-authority": "0.7.1",

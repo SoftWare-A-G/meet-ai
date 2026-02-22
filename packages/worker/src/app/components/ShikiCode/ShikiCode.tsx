@@ -1,4 +1,8 @@
 import { useState, useEffect } from 'react'
+import { createHighlighterCore } from 'shiki/core'
+import { createJavaScriptRegexEngine } from 'shiki/engine/javascript'
+import { bundledLanguages } from 'shiki/langs'
+import type { HighlighterCore } from 'shiki/core'
 import type { JSX } from 'react'
 
 type ShikiCodeProps = {
@@ -6,20 +10,17 @@ type ShikiCodeProps = {
   lang: string
 }
 
-// Lazy-loaded shiki highlighter singleton
-let highlighterPromise: ReturnType<typeof createHighlighterLazy> | null = null
-
-async function createHighlighterLazy() {
-  const { createHighlighter } = await import('shiki/bundle/web')
-  return createHighlighter({
-    themes: ['rose-pine-moon'],
-    langs: [],
-  })
-}
+// Singleton highlighter — created once with only the rose-pine-moon theme.
+// Languages are loaded on demand per code block.
+let highlighterPromise: Promise<HighlighterCore> | null = null
 
 function getHighlighter() {
   if (!highlighterPromise) {
-    highlighterPromise = createHighlighterLazy()
+    highlighterPromise = createHighlighterCore({
+      themes: [import('@shikijs/themes/rose-pine-moon')],
+      langs: [],
+      engine: createJavaScriptRegexEngine(),
+    })
   }
   return highlighterPromise
 }
@@ -44,7 +45,9 @@ export default function ShikiCode({ code, lang }: ShikiCodeProps) {
         const loadedLangs = highlighter.getLoadedLanguages()
         if (!loadedLangs.includes(lang)) {
           try {
-            await highlighter.loadLanguage(lang as Parameters<typeof highlighter.loadLanguage>[0])
+            const loader = bundledLanguages[lang as keyof typeof bundledLanguages]
+            if (!loader) throw new Error(`Unknown language: ${lang}`)
+            await highlighter.loadLanguage(await loader())
           } catch {
             // Language not available - render as plain text
             if (!cancelled) setElement(null)
