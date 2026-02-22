@@ -186,7 +186,7 @@ async function processPlanReview(rawInput: string, teamsDir?: string): Promise<v
 
   process.stderr.write(`[plan-review] decision: ${decision.status}\n`)
 
-  if (decision.status === 'approved') {
+  if (decision.status === 'approved' || decision.status === 'expired') {
     process.stdout.write(JSON.stringify(buildAllowOutput(decision.permission_mode)))
   } else if (decision.status === 'denied') {
     const feedback =

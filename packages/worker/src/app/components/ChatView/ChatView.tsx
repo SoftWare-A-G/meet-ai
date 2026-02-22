@@ -257,6 +257,21 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
     }
   }, [room.id, userName])
 
+  const handlePlanDismiss = useCallback(async (reviewId: string) => {
+    setPlanDecisions(prev => ({
+      ...prev,
+      [reviewId]: { status: 'expired' },
+    }))
+    try {
+      await api.expirePlanReview(room.id, reviewId)
+    } catch {
+      setPlanDecisions(prev => ({
+        ...prev,
+        [reviewId]: { status: 'pending' },
+      }))
+    }
+  }, [room.id])
+
   const handleQuestionAnswer = useCallback(async (reviewId: string, answers: Record<string, string>) => {
     // Optimistic update
     setQuestionAnswers(prev => ({
@@ -306,6 +321,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
         onRetry={handleRetry}
         onSend={handleSend}
         onPlanDecide={handlePlanDecide}
+        onPlanDismiss={handlePlanDismiss}
         onQuestionAnswer={handleQuestionAnswer}
         connected={connected}
         voiceAvailable={voiceAvailable}

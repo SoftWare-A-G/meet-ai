@@ -164,3 +164,15 @@ export async function decidePlanReview(
   if (!res.ok) throw new Error(`Plan review decide failed: HTTP ${res.status}`)
   return res.json()
 }
+
+export async function expirePlanReview(
+  roomId: string,
+  reviewId: string,
+): Promise<{ ok: boolean }> {
+  const res = await fetch(`/api/rooms/${roomId}/plan-reviews/${reviewId}/expire`, {
+    method: 'POST',
+    headers: authHeaders(),
+  })
+  if (!res.ok) throw new Error(`Plan review expire failed: HTTP ${res.status}`)
+  return res.json()
+}

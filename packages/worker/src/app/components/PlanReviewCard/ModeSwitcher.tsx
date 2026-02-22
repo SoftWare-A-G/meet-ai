@@ -13,8 +13,8 @@ const modes: { value: EditorMode; label: string; icon: ReactNode }[] = [
     value: 'selection',
     label: 'Select',
     icon: (
-      <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
-        <path fillRule="evenodd" d="M6.672 1.911a1 1 0 10-1.932.518l.259.963a5.5 5.5 0 00-.358 7.2l-2.06 2.06a1 1 0 001.414 1.414l2.06-2.06a5.5 5.5 0 007.2-.358l.963.259a1 1 0 10.518-1.932l-.963-.259a5.5 5.5 0 00.358-7.2l2.06-2.06a1 1 0 00-1.414-1.414l-2.06 2.06a5.5 5.5 0 00-7.2.358l-.963-.259zm3.328 2.2a3.5 3.5 0 100 7 3.5 3.5 0 000-7z" clipRule="evenodd" />
+      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M7.904 17.563a1.2 1.2 0 0 0 2.228 .308l2.09 -3.093l4.907 4.907a1.067 1.067 0 0 0 1.509 0l1.047 -1.047a1.067 1.067 0 0 0 0 -1.509l-4.907 -4.907l3.113 -2.09a1.2 1.2 0 0 0 -.309 -2.228l-13.582 -3.904l3.904 13.563" />
       </svg>
     ),
   },
@@ -22,8 +22,10 @@ const modes: { value: EditorMode; label: string; icon: ReactNode }[] = [
     value: 'comment',
     label: 'Comment',
     icon: (
-      <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
-        <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zm-4 0H9v2h2V9z" clipRule="evenodd" />
+      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M8 9h8" />
+        <path d="M8 13h6" />
+        <path d="M18 4a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-5l-5 3v-3h-2a3 3 0 0 1 -3 -3v-8a3 3 0 0 1 3 -3h12" />
       </svg>
     ),
   },
@@ -31,8 +33,9 @@ const modes: { value: EditorMode; label: string; icon: ReactNode }[] = [
     value: 'redline',
     label: 'Redline',
     icon: (
-      <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
-        <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l6.921 6.922c.05.062.105.118.168.167l6.91 6.911a1 1 0 001.415-1.414l-.675-.675A9.001 9.001 0 003.707 2.293zM15.894 13.48l-1.431-1.432A7 7 0 008.95 5.537L7.519 4.106A8.96 8.96 0 0110 3.5c4.142 0 7.5 2.91 7.5 6.5 0 1.254-.43 2.44-1.194 3.43l-.412.05zM4.106 7.52C3.43 8.559 3 9.755 3 11c0 1.434.493 2.767 1.338 3.877L2 17l3.917-1.02A8.841 8.841 0 0010 17c.69 0 1.36-.072 2-.208l-1.431-1.431A7.08 7.08 0 0110 15.5c-3.314 0-6-2.239-6-5 0-.683.15-1.34.42-1.952l-.314-.028z" clipRule="evenodd" />
+      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M5 12l14 0" />
+        <path d="M16 6.5a4 2 0 0 0 -4 -1.5h-1a3.5 3.5 0 0 0 0 7h2a3.5 3.5 0 0 1 0 7h-1.5a4 2 0 0 1 -4 -1.5" />
       </svg>
     ),
   },

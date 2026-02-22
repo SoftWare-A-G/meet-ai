@@ -25,6 +25,7 @@ type MessageListProps = {
   onRetry?: (tempId: string) => void
   onSend?: (content: string) => void
   onPlanDecide?: (reviewId: string, approved: boolean, feedback?: string, permissionMode?: string) => void
+  onPlanDismiss?: (reviewId: string) => void
   onQuestionAnswer?: (reviewId: string, answers: Record<string, string>) => void
   connected?: boolean
   voiceAvailable?: boolean
@@ -89,7 +90,7 @@ function groupMessages(messages: DisplayMessage[]): RenderItem[] {
   return items
 }
 
-export default function MessageList({ messages, attachmentCounts, planDecisions, questionAnswers, unreadCount, forceScrollCounter, onScrollToBottom, onRetry, onSend, onPlanDecide, onQuestionAnswer, connected = true, voiceAvailable }: MessageListProps) {
+export default function MessageList({ messages, attachmentCounts, planDecisions, questionAnswers, unreadCount, forceScrollCounter, onScrollToBottom, onRetry, onSend, onPlanDecide, onPlanDismiss, onQuestionAnswer, connected = true, voiceAvailable }: MessageListProps) {
   const { scrollRef, contentRef, isAtBottom, scrollToBottom } = useStickToBottom({ resize: 'smooth', initial: 'smooth' })
 
   // Auto-dismiss new messages pill when user scrolls to the bottom
@@ -138,6 +139,7 @@ export default function MessageList({ messages, attachmentCounts, planDecisions,
                 status={decision?.status}
                 feedback={decision?.feedback}
                 onDecide={onPlanDecide}
+                onDismiss={onPlanDismiss}
               />
             )
           }

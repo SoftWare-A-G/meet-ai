@@ -21,6 +21,7 @@ type PlanReviewCardProps = {
   status?: 'pending' | 'approved' | 'denied' | 'expired'
   feedback?: string
   onDecide: (reviewId: string, approved: boolean, feedback?: string, permissionMode?: string) => void
+  onDismiss?: (reviewId: string) => void
 }
 
 const PURPLE = '#8b5cf6'
@@ -126,6 +127,7 @@ export default function PlanReviewCard({
   status = 'pending',
   feedback: existingFeedback,
   onDecide,
+  onDismiss,
 }: PlanReviewCardProps) {
   const [showFeedbackInput, setShowFeedbackInput] = useState(false)
   const [feedbackText, setFeedbackText] = useState('')
@@ -495,73 +497,87 @@ export default function PlanReviewCard({
 
       {/* Action buttons */}
       {!decided && (
-        <div className="mt-3 flex items-center gap-2 justify-end">
-          {showFeedbackInput ? (
-            <>
-              <button
-                type="button"
-                onClick={() => { setShowFeedbackInput(false); setFeedbackText('') }}
-                className="rounded-lg px-3 py-1.5 text-sm text-[#8b8fa3] hover:text-msg-text cursor-pointer transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={!feedbackText.trim() || submitting}
-                onClick={handleSubmitFeedback}
-                className={clsx(
-                  'rounded-lg px-4 py-1.5 text-sm font-medium transition-all',
-                  feedbackText.trim() && !submitting
-                    ? 'bg-[#ef4444] text-white cursor-pointer hover:brightness-110'
-                    : 'bg-[#ef4444]/20 text-[#ef4444]/40 cursor-not-allowed',
-                )}
-              >
-                {submitting ? 'Submitting...' : 'Submit feedback'}
-              </button>
-            </>
-          ) : (
-            <>
-              {!decided && !showFeedbackInput && (
-                <select
-                  value={permissionMode}
-                  onChange={(e) => setPermissionMode(e.target.value as typeof permissionMode)}
-                  className="rounded-lg border border-zinc-600 bg-zinc-800 px-2 py-1.5 text-xs text-zinc-300 cursor-pointer focus:outline-none focus:border-purple-500/50"
-                >
-                  <option value="default">Default mode</option>
-                  <option value="acceptEdits">Accept edits</option>
-                  <option value="bypassPermissions">Full auto</option>
-                </select>
-              )}
-              <button
-                type="button"
-                disabled={submitting}
-                onClick={handleRequestChanges}
-                className={clsx(
-                  'rounded-lg border px-3 py-1.5 text-sm font-medium transition-all',
-                  submitting
-                    ? 'border-border text-[#8b8fa3] cursor-not-allowed opacity-40'
-                    : 'border-[#ef4444]/40 text-[#ef4444] cursor-pointer hover:bg-[#ef4444]/[0.08] hover:border-[#ef4444]/60',
-                )}
-              >
-                {annotations.length > 0
-                  ? `Request changes (${annotations.length})`
-                  : 'Request changes'}
-              </button>
-              <button
-                type="button"
-                disabled={submitting}
-                onClick={handleApprove}
-                className={clsx(
-                  'rounded-lg px-4 py-1.5 text-sm font-medium transition-all',
-                  submitting
-                    ? 'bg-[#22c55e]/20 text-[#22c55e]/40 cursor-not-allowed'
-                    : 'bg-[#22c55e] text-white cursor-pointer hover:brightness-110',
-                )}
-              >
-                {submitting ? 'Approving...' : 'Approve'}
-              </button>
-            </>
+        <div className="mt-3 flex items-center gap-2 justify-between">
+          {/* Dismiss — left side */}
+          {onDismiss && (
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={() => { setSubmitting(true); onDismiss(reviewId) }}
+              className="text-xs text-[#8b8fa3] hover:text-msg-text cursor-pointer transition-colors"
+            >
+              Dismiss
+            </button>
           )}
+          {!onDismiss && <div />}
+          <div className="flex items-center gap-2">
+            {showFeedbackInput ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => { setShowFeedbackInput(false); setFeedbackText('') }}
+                  className="rounded-lg px-3 py-1.5 text-sm text-[#8b8fa3] hover:text-msg-text cursor-pointer transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={!feedbackText.trim() || submitting}
+                  onClick={handleSubmitFeedback}
+                  className={clsx(
+                    'rounded-lg px-4 py-1.5 text-sm font-medium transition-all',
+                    feedbackText.trim() && !submitting
+                      ? 'bg-[#ef4444] text-white cursor-pointer hover:brightness-110'
+                      : 'bg-[#ef4444]/20 text-[#ef4444]/40 cursor-not-allowed',
+                  )}
+                >
+                  {submitting ? 'Submitting...' : 'Submit feedback'}
+                </button>
+              </>
+            ) : (
+              <>
+                {!decided && !showFeedbackInput && (
+                  <select
+                    value={permissionMode}
+                    onChange={(e) => setPermissionMode(e.target.value as typeof permissionMode)}
+                    className="rounded-lg border border-zinc-600 bg-zinc-800 px-2 py-1.5 text-xs text-zinc-300 cursor-pointer focus:outline-none focus:border-purple-500/50"
+                  >
+                    <option value="default">Default mode</option>
+                    <option value="acceptEdits">Accept edits</option>
+                    <option value="bypassPermissions">Full auto</option>
+                  </select>
+                )}
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={handleRequestChanges}
+                  className={clsx(
+                    'rounded-lg border px-3 py-1.5 text-sm font-medium transition-all',
+                    submitting
+                      ? 'border-border text-[#8b8fa3] cursor-not-allowed opacity-40'
+                      : 'border-[#ef4444]/40 text-[#ef4444] cursor-pointer hover:bg-[#ef4444]/[0.08] hover:border-[#ef4444]/60',
+                  )}
+                >
+                  {annotations.length > 0
+                    ? `Request changes (${annotations.length})`
+                    : 'Request changes'}
+                </button>
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={handleApprove}
+                  className={clsx(
+                    'rounded-lg px-4 py-1.5 text-sm font-medium transition-all',
+                    submitting
+                      ? 'bg-[#22c55e]/20 text-[#22c55e]/40 cursor-not-allowed'
+                      : 'bg-[#22c55e] text-white cursor-pointer hover:brightness-110',
+                  )}
+                >
+                  {submitting ? 'Approving...' : 'Approve'}
+                </button>
+              </>
+            )}
+          </div>
         </div>
       )}
 
