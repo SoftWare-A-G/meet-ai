@@ -111,10 +111,11 @@ export default function MessageList({ messages, attachmentCounts, planDecisions,
   const items = groupMessages(messages)
 
   return (
-    <div className="flex-1 overflow-y-auto px-2 py-4 min-h-0 relative" ref={scrollRef}>
+    <div className="flex-1 overflow-y-auto px-2 py-4 min-h-0 relative flex flex-col" ref={scrollRef}>
       {!connected && (
         <div className="absolute top-0 left-0 right-0 z-10 px-3 py-1 text-xs text-center bg-[#eab308]/15 text-[#eab308] border-b border-[#eab308]/25 backdrop-blur-sm">Reconnecting...</div>
       )}
+      <div className="flex-1" />
       <div className="flex flex-col gap-0.5" ref={contentRef}>
         {items.map((item, i) => {
           if (item.kind === 'log-group') {
