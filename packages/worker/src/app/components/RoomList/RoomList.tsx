@@ -25,23 +25,23 @@ export default function RoomList({ rooms, onLinkClick, onDeleteRoom }: RoomListP
           {({ isActive }) => (
             <>
               <span className="truncate">{room.name}</span>
-              <span className="shrink-0 ml-2 flex items-center">
-                <IconChevronRight
-                  size={16}
-                  className={`transition-opacity duration-100 group-hover:hidden ${isActive ? 'opacity-50' : 'opacity-25'}`}
-                />
+              <span className="shrink-0 ml-2 flex items-center gap-1">
                 {onDeleteRoom && (
                   <DeleteConfirmPopover roomName={room.name} onConfirm={() => onDeleteRoom(room.id)}>
                     <button
                       type="button"
                       aria-label={`Delete ${room.name}`}
-                      className="hidden group-hover:flex h-6 w-6 cursor-pointer items-center justify-center rounded border-none bg-transparent text-gray-400 hover:text-red-400"
-                      onClick={(e) => e.preventDefault()}
+                      className="flex h-6 w-6 cursor-pointer items-center justify-center rounded border-none bg-transparent text-gray-500 opacity-0 transition-opacity duration-100 group-hover:opacity-100 group-has-data-popup-open:opacity-100 hover:text-red-400"
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
                     >
                       <IconTrash size={14} />
                     </button>
                   </DeleteConfirmPopover>
                 )}
+                <IconChevronRight
+                  size={16}
+                  className={`transition-opacity duration-100 ${isActive ? 'opacity-50' : 'opacity-25 group-hover:opacity-40'}`}
+                />
               </span>
             </>
           )}
