@@ -267,12 +267,12 @@ meet-ai send-log "<ROOM_ID>" "<sender>" "<content>" [--color <color>] [--message
 ## Rules
 
 1. **The orchestrator NEVER does implementation work.** Always delegate to a teammate. If a suitable agent exists, forward the task via SendMessage. If not, spawn a new agent for it. The orchestrator's job is coordination only -- creating rooms, spawning agents, routing messages, and managing the team lifecycle.
-2. **Every outbound message must be relayed** via the CLI. No exceptions. This includes status updates, acknowledgments, and progress reports -- if you would say it to the user in the CC terminal, also relay it to the chat room so the human sees it in the web UI.
+2. **Every text message visible to the user in the CLI must also be sent to meet-ai.** No exceptions. Every line of text you output in the CC terminal — status updates, acknowledgments, progress reports, results, answers — must also be sent via `meet-ai send-message`. The human may only be watching the web UI. If they can't see it there, it doesn't exist.
 3. **Use the agent's CC team name as sender.** The orchestrator uses its team name (e.g. `team-lead`), not a separate display name.
 4. **The orchestrator creates exactly one room per team session.**
 5. **The orchestrator MUST start the inbox listener** as a background process immediately after creating the room. Use `listen --sender-type human --team <name> --inbox team-lead`. This writes human messages directly to the orchestrator's Claude Code inbox.
 6. **Teammate agents should idle between tasks.** The orchestrator wakes them via SendMessage when new work arrives (e.g., a human message in the chat room).
-7. **Send via CC first, then relay to chat.** Always deliver messages through CC's SendMessage first. After successful delivery, relay to the chat room via CLI for human visibility. If the CLI relay fails, the message is still delivered internally.
+7. **Identical messages in CLI and chat room.** The text you output in the CC terminal and the text you send via `meet-ai send-message` must be exactly the same. Do NOT add extra lines, summaries, or filler in one channel that isn't in the other. Write the message once, send it to both places.
 8. **Pass `--exclude` with your own name** when polling/listening to skip your own messages.
 9. **NEVER stop background listeners, teams, or teammates yourself.** Only the human decides when to stop. Let everything run until the user explicitly asks to stop or Claude Code exits.
 10. **Teardown:** When the user asks to stop, shut down all teammate agents via `shutdown_request`, then stop the background listener via `TaskStop`, then call `TeamDelete`.

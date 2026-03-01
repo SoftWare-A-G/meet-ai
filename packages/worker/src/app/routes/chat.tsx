@@ -4,6 +4,7 @@ import IOSInstallModal from '../components/IOSInstallModal'
 import LoginPrompt from '../components/LoginPrompt'
 import QRShareModal from '../components/QRShareModal'
 import SettingsModal from '../components/SettingsModal'
+import SpawnTeamModal from '../components/SpawnTeamModal'
 import Sidebar from '../components/Sidebar'
 import TeamSidebar from '../components/TeamSidebar'
 import { Toast } from '@base-ui/react/toast'
@@ -96,6 +97,7 @@ function ChatLayout({
   const [rooms, setRooms] = useState<Room[]>([])
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [showSpawnModal, setShowSpawnModal] = useState(false)
   const [showQRModal, setShowQRModal] = useState(false)
   const [showIOSInstallModal, setShowIOSInstallModal] = useState(false)
   const toastManager = Toast.useToastManager()
@@ -125,6 +127,11 @@ function ChatLayout({
     setRooms(prev => prev.some(r => r.id === id) ? prev : [{ id, name }, ...prev])
   }, [])
   useLobbyWebSocket(apiKey, onRoomCreated)
+
+  const refreshRooms = useCallback(async () => {
+    const loaded = await api.loadRooms()
+    setRooms(loaded)
+  }, [])
 
   const handleInstallClick = useCallback(() => {
     setSidebarOpen(false)
@@ -184,6 +191,7 @@ function ChatLayout({
           isOpen={sidebarOpen}
           onNameChange={onNameChange}
           onSettingsClick={() => setShowSettingsModal(true)}
+          onSpawnClick={() => setShowSpawnModal(true)}
           onClose={() => setSidebarOpen(false)}
           onInstallClick={handleInstallClick}
         />
@@ -209,6 +217,12 @@ function ChatLayout({
             toastManager.add({ description: text })
             setShowQRModal(false)
           }}
+        />
+      )}
+      {showSpawnModal && (
+        <SpawnTeamModal
+          onClose={() => setShowSpawnModal(false)}
+          onRoomCreated={refreshRooms}
         />
       )}
       {showIOSInstallModal && <IOSInstallModal onClose={() => setShowIOSInstallModal(false)} />}

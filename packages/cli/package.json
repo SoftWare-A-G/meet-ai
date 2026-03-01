@@ -35,14 +35,18 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "@types/react": "catalog:",
     "typescript": "catalog:"
   },
   "engines": {
     "node": ">=22"
   },
   "dependencies": {
+    "@xterm/headless": "6.0.0",
     "citty": "0.2.1",
+    "ink": "6.8.0",
     "picocolors": "1.1.1",
+    "react": "catalog:",
     "zod": "catalog:"
   }
 }

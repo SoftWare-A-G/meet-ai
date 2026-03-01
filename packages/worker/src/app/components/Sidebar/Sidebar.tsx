@@ -10,11 +10,12 @@ type SidebarProps = {
   isOpen: boolean
   onNameChange: (name: string) => void
   onSettingsClick: () => void
+  onSpawnClick: () => void
   onClose: () => void
   onInstallClick: () => void
 }
 
-export default function Sidebar({ rooms, userName, isOpen, onNameChange, onSettingsClick, onClose, onInstallClick }: SidebarProps) {
+export default function Sidebar({ rooms, userName, isOpen, onNameChange, onSettingsClick, onSpawnClick, onClose, onInstallClick }: SidebarProps) {
   return (
     <>
       {/* Mobile backdrop */}
@@ -33,7 +34,7 @@ export default function Sidebar({ rooms, userName, isOpen, onNameChange, onSetti
           isOpen && 'max-[700px]:translate-x-0'
         )}
       >
-        <SidebarHeader onSettingsClick={onSettingsClick} onCloseClick={onClose} />
+        <SidebarHeader onSettingsClick={onSettingsClick} onSpawnClick={onSpawnClick} onCloseClick={onClose} />
         <RoomList rooms={rooms} onLinkClick={onClose} />
         <SidebarFooter userName={userName} onNameChange={onNameChange} onInstallClick={onInstallClick} />
       </aside>
