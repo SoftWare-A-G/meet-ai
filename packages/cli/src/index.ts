@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import { defineCommand, runMain } from "citty";
-import { spawnInteractive } from "./spawner.js";
 import { err } from "./lib/output.js";
 
 const main = defineCommand({
@@ -9,6 +8,14 @@ const main = defineCommand({
     version: "0.0.13",
     description:
       "CLI for meet-ai chat rooms — create rooms, send messages, and stream via WebSocket",
+  },
+  args: {
+    debug: {
+      type: "boolean",
+      description:
+        "Show debug output in panes (spawn commands, raw chunks, exit codes)",
+      default: false,
+    },
   },
   subCommands: {
     "create-room": () =>
@@ -32,13 +39,17 @@ const main = defineCommand({
     dashboard: () =>
       import("./commands/dashboard/command").then((m) => m.default),
   },
-  async run() {
-    // Only spawn interactive mode when no subcommand was given
-    const hasSubcommand = process.argv.length > 2;
-    if (hasSubcommand) return;
-
+  async run({ args }) {
+    // No subcommand given — launch the TUI dashboard as default
     try {
-      await spawnInteractive();
+      const { getClient } = await import("./lib/client-factory.js");
+      const { getMeetAiConfig } = await import("./config.js");
+      const { startDashboard } = await import(
+        "./commands/dashboard/usecase.js"
+      );
+      const client = getClient();
+      const config = getMeetAiConfig();
+      startDashboard(client, config, { debug: args.debug });
     } catch (error) {
       err(error instanceof Error ? error.message : String(error));
       process.exit(1);
