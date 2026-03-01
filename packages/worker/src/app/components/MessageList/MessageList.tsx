@@ -4,6 +4,7 @@ import Message from '../Message'
 import LogGroup from '../LogGroup'
 import QuestionCard from '../QuestionCard'
 import PlanReviewCard from '../PlanReviewCard'
+import SpawnRequestCard from '../SpawnRequestCard'
 import NewMessagesPill from '../NewMessagesPill'
 import type { Message as MessageType } from '../../lib/types'
 
@@ -35,6 +36,7 @@ type RenderItem =
   | { kind: 'message'; msg: DisplayMessage; index: number }
   | { kind: 'question'; msg: DisplayMessage; index: number }
   | { kind: 'plan-review'; msg: DisplayMessage; index: number }
+  | { kind: 'spawn-request'; msg: DisplayMessage; index: number; roomName: string }
   | { kind: 'log-group'; logs: DisplayMessage[] }
 
 function groupMessages(messages: DisplayMessage[]): RenderItem[] {
@@ -72,8 +74,20 @@ function groupMessages(messages: DisplayMessage[]): RenderItem[] {
       const isQuestion = msg.sender === 'hook' && msg.color === '#f59e0b'
       const isPlanReview = msg.sender === 'hook' && msg.color === '#8b5cf6'
       const isHookAnchor = msg.sender === 'hook' && !isQuestion && !isPlanReview
+
+      // Detect spawn_request messages by content
+      let spawnRoomName: string | null = null
+      try {
+        const parsed = JSON.parse(msg.content)
+        if (parsed?.type === 'spawn_request' && parsed?.room_name) {
+          spawnRoomName = parsed.room_name
+        }
+      } catch { /* not JSON */ }
+
       // Hook anchor messages never render as bubbles — they only exist as log group anchors
-      if (isQuestion) {
+      if (spawnRoomName) {
+        items.push({ kind: 'spawn-request', msg, index, roomName: spawnRoomName })
+      } else if (isQuestion) {
         items.push({ kind: 'question', msg, index })
       } else if (isPlanReview) {
         items.push({ kind: 'plan-review', msg, index })
@@ -145,6 +159,16 @@ export default function MessageList({ messages, attachmentCounts, planDecisions,
               <LogGroup
                 key={`log-group-${first.sender}-${first.created_at}-${i}`}
                 logs={item.logs}
+              />
+            )
+          }
+          if (item.kind === 'spawn-request') {
+            return (
+              <SpawnRequestCard
+                key={`spawn-${item.msg.id || item.msg.created_at}-${item.index}`}
+                roomName={item.roomName}
+                sender={item.msg.sender}
+                timestamp={item.msg.created_at}
               />
             )
           }

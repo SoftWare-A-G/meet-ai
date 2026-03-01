@@ -5,11 +5,7 @@ import { StatusBar } from "./status-bar";
 import { SpawnDialog } from "./spawn-dialog";
 import { ProcessManager } from "../lib/process-manager";
 import type { MeetAiClient } from "../types";
-import {
-  ensureControlRoom,
-  parseControlMessage,
-  sendStatus,
-} from "../lib/control-room";
+import { parseControlMessage } from "../lib/control-room";
 
 interface AppProps {
   processManager: ProcessManager;
@@ -22,7 +18,6 @@ export function App({ processManager, client }: AppProps) {
   const [teams, setTeams] = useState(processManager.list());
   const [focusedIndex, setFocusedIndex] = useState(0);
   const [showSpawn, setShowSpawn] = useState(false);
-  const controlRoomIdRef = useRef<string | null>(null);
 
   const terminalHeight = stdout?.rows ?? 24;
   const dashboardHeight = terminalHeight - 2;
@@ -31,23 +26,29 @@ export function App({ processManager, client }: AppProps) {
     setTeams([...processManager.list()]);
   }, [processManager]);
 
+  // Spawn into an existing room (room already created)
+  const handleSpawnForRoom = useCallback(
+    (roomId: string, roomName: string) => {
+      // Don't spawn if we're already managing this room
+      if (processManager.list().some((t) => t.roomId === roomId)) return;
+      processManager.spawn(roomId, roomName);
+      refreshTeams();
+    },
+    [processManager, refreshTeams],
+  );
+
+  // Create a new room then spawn
   const handleSpawn = useCallback(
-    async (roomName: string, prompt: string, _model?: string) => {
+    async (roomName: string) => {
       try {
         const room = await client.createRoom(roomName);
-        processManager.spawn(room.id, roomName, prompt);
+        processManager.spawn(room.id, roomName);
         refreshTeams();
-
-        const controlRoomId = controlRoomIdRef.current;
-        if (controlRoomId) {
-          sendStatus(client, controlRoomId, {
-            type: "team_started",
-            room_id: room.id,
-            room_name: roomName,
-          });
-        }
-      } catch {
-        // Room creation failed -- silently ignore in TUI
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        const errorId = `error-${Date.now()}`;
+        processManager.addError(errorId, roomName, msg);
+        refreshTeams();
       }
     },
     [client, processManager, refreshTeams],
@@ -57,50 +58,37 @@ export function App({ processManager, client }: AppProps) {
     (roomId: string) => {
       processManager.kill(roomId);
       refreshTeams();
-      const controlRoomId = controlRoomIdRef.current;
-      if (controlRoomId) {
-        sendStatus(client, controlRoomId, {
-          type: "team_killed",
-          room_id: roomId,
-        });
-      }
     },
-    [processManager, refreshTeams, client],
+    [processManager, refreshTeams],
   );
 
   // Keep stable refs for use in the mount effect
-  const handleSpawnRef = useRef(handleSpawn);
-  handleSpawnRef.current = handleSpawn;
+  const handleSpawnForRoomRef = useRef(handleSpawnForRoom);
+  handleSpawnForRoomRef.current = handleSpawnForRoom;
   const handleKillByIdRef = useRef(handleKillById);
   handleKillByIdRef.current = handleKillById;
 
-  // Set up control room WebSocket on mount
+  // Listen on the lobby WS for new rooms, then check for spawn_request messages
   useEffect(() => {
-    let cleanup: (() => void) | null = null;
-
-    ensureControlRoom(client).then((roomId) => {
-      controlRoomIdRef.current = roomId;
-
-      const ws = client.listen(roomId, {
-        onMessage: (msg) => {
-          const cmd = parseControlMessage(msg.content);
-          if (!cmd) return;
-
-          if (cmd.type === "spawn_request") {
-            handleSpawnRef.current(cmd.room_name, cmd.prompt, cmd.model);
-          } else if (cmd.type === "kill_request") {
-            handleKillByIdRef.current(cmd.room_id);
+    const ws = client.listenLobby({
+      onRoomCreated: async (roomId, _roomName) => {
+        try {
+          const messages = await client.getMessages(roomId);
+          for (const msg of messages) {
+            const cmd = parseControlMessage(msg.content);
+            if (cmd?.type === "spawn_request") {
+              handleSpawnForRoomRef.current(roomId, cmd.room_name);
+              return;
+            }
           }
-        },
-      });
-
-      cleanup = () => {
-        ws.close();
-      };
+        } catch {
+          // Room may have been deleted or inaccessible
+        }
+      },
     });
 
     return () => {
-      cleanup?.();
+      ws.close();
     };
   }, [client]);
 
@@ -150,9 +138,9 @@ export function App({ processManager, client }: AppProps) {
       />
       {showSpawn ? (
         <SpawnDialog
-          onSubmit={(name, prompt) => {
+          onSubmit={(name) => {
             setShowSpawn(false);
-            handleSpawn(name, prompt);
+            handleSpawn(name);
           }}
           onCancel={() => setShowSpawn(false)}
         />

@@ -2,14 +2,13 @@ import React, { useState } from "react";
 import { Box, Text, useInput } from "ink";
 
 interface SpawnDialogProps {
-  onSubmit: (roomName: string, prompt: string) => void;
+  onSubmit: (roomName: string) => void;
   onCancel: () => void;
 }
 
 export function SpawnDialog({ onSubmit, onCancel }: SpawnDialogProps) {
-  const [step, setStep] = useState<"name" | "prompt">("name");
   const [roomName, setRoomName] = useState("");
-  const [prompt, setPrompt] = useState("");
+  const [cursor, setCursor] = useState(0);
 
   useInput((input, key) => {
     if (key.escape) {
@@ -17,26 +16,38 @@ export function SpawnDialog({ onSubmit, onCancel }: SpawnDialogProps) {
       return;
     }
 
-    if (key.return) {
-      if (step === "name" && roomName.trim()) {
-        setStep("prompt");
-      } else if (step === "prompt" && prompt.trim()) {
-        onSubmit(roomName.trim(), prompt.trim());
-      }
+    if (key.return && roomName.trim()) {
+      onSubmit(roomName.trim());
+      return;
+    }
+
+    if (key.leftArrow) {
+      setCursor((c) => Math.max(0, c - 1));
+      return;
+    }
+
+    if (key.rightArrow) {
+      setCursor((c) => Math.min(roomName.length, c + 1));
       return;
     }
 
     if (key.backspace || key.delete) {
-      if (step === "name") setRoomName((v) => v.slice(0, -1));
-      else setPrompt((v) => v.slice(0, -1));
+      if (cursor > 0) {
+        setRoomName((v) => v.slice(0, cursor - 1) + v.slice(cursor));
+        setCursor((c) => c - 1);
+      }
       return;
     }
 
-    if (input && !key.ctrl && !key.meta) {
-      if (step === "name") setRoomName((v) => v + input);
-      else setPrompt((v) => v + input);
+    if (input && !key.ctrl && !key.meta && !key.upArrow && !key.downArrow) {
+      setRoomName((v) => v.slice(0, cursor) + input + v.slice(cursor));
+      setCursor((c) => c + input.length);
     }
   });
+
+  const before = roomName.slice(0, cursor);
+  const at = roomName[cursor] ?? " ";
+  const after = roomName.slice(cursor + 1);
 
   return (
     <Box
@@ -50,16 +61,10 @@ export function SpawnDialog({ onSubmit, onCancel }: SpawnDialogProps) {
       </Text>
       <Box>
         <Text>Room name: </Text>
-        <Text color={step === "name" ? "cyan" : "white"}>{roomName}</Text>
-        {step === "name" && <Text color="cyan">{"█"}</Text>}
+        <Text color="cyan">{before}</Text>
+        <Text backgroundColor="cyan" color="black">{at}</Text>
+        <Text color="cyan">{after}</Text>
       </Box>
-      {step === "prompt" && (
-        <Box>
-          <Text>Prompt: </Text>
-          <Text color="cyan">{prompt}</Text>
-          <Text color="cyan">{"█"}</Text>
-        </Box>
-      )}
     </Box>
   );
 }

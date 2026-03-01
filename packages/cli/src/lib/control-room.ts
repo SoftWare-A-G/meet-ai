@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { MeetAiClient } from "../types";
 
 const SpawnRequestSchema = z.object({
   type: z.literal("spawn_request"),
@@ -17,9 +16,9 @@ export type ControlMessage =
   | z.infer<typeof SpawnRequestSchema>
   | z.infer<typeof KillRequestSchema>;
 
-export function parseControlMessage(raw: string): ControlMessage | null {
+export function parseControlMessage(raw: unknown): ControlMessage | null {
   try {
-    const data = JSON.parse(raw);
+    const data = typeof raw === "string" ? JSON.parse(raw) : raw;
     if (!data?.type) return null;
 
     if (data.type === "spawn_request") {
@@ -35,25 +34,4 @@ export function parseControlMessage(raw: string): ControlMessage | null {
   } catch {
     return null;
   }
-}
-
-const CONTROL_ROOM_NAME = "__control";
-
-export async function ensureControlRoom(
-  client: MeetAiClient,
-): Promise<string> {
-  const room = await client.createRoom(CONTROL_ROOM_NAME);
-  return room.id;
-}
-
-export function sendStatus(
-  client: MeetAiClient,
-  controlRoomId: string,
-  status: Record<string, unknown>,
-): void {
-  client
-    .sendMessage(controlRoomId, "dashboard", JSON.stringify(status))
-    .catch(() => {
-      // Best-effort — don't crash the TUI if status send fails
-    });
 }
