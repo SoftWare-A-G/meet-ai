@@ -1,13 +1,15 @@
 import { Tooltip } from '@base-ui/react/tooltip'
-import { IconMenu2, IconQrcode, IconUsers } from '../../icons'
+import { IconMenu2, IconQrcode, IconTrash, IconUsers } from '../../icons'
 
 type MainHeaderProps = {
   roomName: string
   showInvite: boolean
   showTeamToggle: boolean
+  showDelete: boolean
   onMobileToggle: () => void
   onTeamToggle: () => void
   onInviteClick: () => void
+  onDeleteClick: () => void
 }
 
 const tooltipPopupClass = "rounded bg-gray-900 px-2 py-1 text-xs text-white shadow-lg"
@@ -16,9 +18,11 @@ export default function MainHeader({
   roomName,
   showInvite,
   showTeamToggle,
+  showDelete,
   onMobileToggle,
   onTeamToggle,
   onInviteClick,
+  onDeleteClick,
 }: MainHeaderProps) {
   return (
     <Tooltip.Provider delay={600} closeDelay={0}>
@@ -30,6 +34,22 @@ export default function MainHeader({
             onClick={onMobileToggle}>
             <IconMenu2 size={20} />
           </button>
+          {showDelete && (
+            <Tooltip.Root>
+              <Tooltip.Trigger
+                aria-label="Delete room"
+                className="text-header-text flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-lg hover:bg-white/10 hover:text-red-400"
+                onClick={onDeleteClick}
+              >
+                <IconTrash size={18} />
+              </Tooltip.Trigger>
+              <Tooltip.Portal>
+                <Tooltip.Positioner sideOffset={8}>
+                  <Tooltip.Popup className={tooltipPopupClass}>Delete room</Tooltip.Popup>
+                </Tooltip.Positioner>
+              </Tooltip.Portal>
+            </Tooltip.Root>
+          )}
           <span className="text-base font-bold">{roomName}</span>
         </div>
         <div className="flex items-center gap-3">

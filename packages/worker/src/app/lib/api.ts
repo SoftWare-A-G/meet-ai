@@ -33,6 +33,14 @@ export async function loadRooms(): Promise<Room[]> {
   return res.json()
 }
 
+export async function deleteRoom(roomId: string): Promise<void> {
+  const res = await fetch(`/api/rooms/${roomId}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  if (!res.ok) throw new Error(`Delete room failed: HTTP ${res.status}`)
+}
+
 export async function loadMessages(roomId: string): Promise<Message[]> {
   const res = await fetch(`/api/rooms/${roomId}/messages`, { headers: authHeaders() })
   if (!res.ok) return []

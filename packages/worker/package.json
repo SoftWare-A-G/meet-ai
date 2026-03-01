@@ -31,6 +31,7 @@
     "react-dom": "catalog:",
     "react-mentions-ts": "5.4.7",
     "shiki": "3.22.0",
+    "sonner": "2.0.7",
     "tailwind-merge": "3.4.1",
     "use-stick-to-bottom": "1.1.3",
     "zod": "catalog:"

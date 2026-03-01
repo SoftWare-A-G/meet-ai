@@ -26,9 +26,11 @@ function ChatLobby() {
         roomName="Select a channel"
         showInvite={false}
         showTeamToggle={false}
+        showDelete={false}
         onMobileToggle={() => setSidebarOpen(prev => !prev)}
         onTeamToggle={() => {}}
         onInviteClick={() => {}}
+        onDeleteClick={() => {}}
       />
       <LobbyView rooms={rooms} onSelectRoom={handleSelectRoom} />
     </div>
