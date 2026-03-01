@@ -30,7 +30,19 @@ export class Lobby extends DurableObject {
     return new Response('not found', { status: 404 })
   }
 
-  async webSocketMessage() {}
+  async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer) {
+    try {
+      const text = typeof message === 'string' ? message : new TextDecoder().decode(message)
+      const data = JSON.parse(text)
+      // Relay known control messages to all OTHER lobby clients
+      if (data.type === 'spawn_request' && data.room_name) {
+        for (const client of this.ctx.getWebSockets()) {
+          if (client === ws) continue
+          try { client.send(text) } catch { /* closed */ }
+        }
+      }
+    } catch { /* ignore malformed messages */ }
+  }
   async webSocketClose() {}
   async webSocketError(ws: WebSocket) {
     try { ws.close(1011, 'unexpected error') } catch { /* already closed */ }

@@ -1,13 +1,13 @@
+import { Toast } from '@base-ui/react/toast'
 import { ClientOnly, createFileRoute, Outlet } from '@tanstack/react-router'
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import IOSInstallModal from '../components/IOSInstallModal'
 import LoginPrompt from '../components/LoginPrompt'
 import QRShareModal from '../components/QRShareModal'
 import SettingsModal from '../components/SettingsModal'
-import SpawnTeamModal from '../components/SpawnTeamModal'
 import Sidebar from '../components/Sidebar'
+import SpawnTeamModal from '../components/SpawnTeamModal'
 import TeamSidebar from '../components/TeamSidebar'
-import { Toast } from '@base-ui/react/toast'
 import TokenScreen from '../components/TokenScreen'
 import { useLobbyWebSocket } from '../hooks/useLobbyWebSocket'
 import { useLocalStorage } from '../hooks/useLocalStorage'
@@ -124,14 +124,9 @@ function ChatLayout({
 
   // Lobby WebSocket for new room events
   const onRoomCreated = useCallback((id: string, name: string) => {
-    setRooms(prev => prev.some(r => r.id === id) ? prev : [{ id, name }, ...prev])
+    setRooms(prev => (prev.some(r => r.id === id) ? prev : [{ id, name }, ...prev]))
   }, [])
-  useLobbyWebSocket(apiKey, onRoomCreated)
-
-  const refreshRooms = useCallback(async () => {
-    const loaded = await api.loadRooms()
-    setRooms(loaded)
-  }, [])
+  const { send: lobbySend } = useLobbyWebSocket(apiKey, onRoomCreated)
 
   const handleInstallClick = useCallback(() => {
     setSidebarOpen(false)
@@ -220,10 +215,7 @@ function ChatLayout({
         />
       )}
       {showSpawnModal && (
-        <SpawnTeamModal
-          onClose={() => setShowSpawnModal(false)}
-          onRoomCreated={refreshRooms}
-        />
+        <SpawnTeamModal onClose={() => setShowSpawnModal(false)} onSend={lobbySend} />
       )}
       {showIOSInstallModal && <IOSInstallModal onClose={() => setShowIOSInstallModal(false)} />}
     </ChatContext.Provider>

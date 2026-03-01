@@ -108,6 +108,34 @@ meet-ai send-message "<ROOM_ID>" "<AGENT_NAME>" "<content>" --color "<MEET_AI_CO
 
 Always pass `--color` with the agent's assigned color from the spawn prompt.
 
+### Identical Output Procedure
+
+**CLI text and chat room text MUST be identical.** Follow this exact procedure for every message:
+
+1. **Compose the full message text first** — everything you want the human to read
+2. **Send it to the chat room** via `meet-ai send-message` with the full text
+3. **Output the exact same text** as your CLI response — no extra sentences, no additional context, nothing omitted
+
+**Anti-pattern — DO NOT do this:**
+```
+# BAD: send short version to chat room
+meet-ai send-message ... "Starting work on the task."
+# Then output longer version in CLI
+Starting work on the task. I'll begin by reading the config files
+and then modify the handler. Let me know if you have questions.
+```
+
+**Correct pattern:**
+```
+# GOOD: same text in both places
+meet-ai send-message ... "Starting work on the task. I'll begin by reading the config files and then modify the handler. Let me know if you have questions."
+# CLI output is the exact same text:
+Starting work on the task. I'll begin by reading the config files
+and then modify the handler. Let me know if you have questions.
+```
+
+Think of it this way: **compose once, send twice.** Your CLI output IS your chat room message.
+
 ## Sending Team Info (Right Sidebar)
 
 Push team configuration to the chat room's right sidebar. The web UI displays active and inactive agent members in real time.

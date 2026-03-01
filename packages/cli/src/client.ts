@@ -365,17 +365,29 @@ export function createClient(baseUrl: string, apiKey?: string) {
       return localPath
     },
 
-    listenLobby(options?: { onRoomCreated?: (id: string, name: string) => void; silent?: boolean }) {
+    listenLobby(options?: { onRoomCreated?: (id: string, name: string) => void; onSpawnRequest?: (roomName: string) => void; silent?: boolean }) {
       const wsUrl = baseUrl.replace(/^http/, 'ws')
       const tokenParam = apiKey ? `?token=${apiKey}` : ''
       let pingInterval: ReturnType<typeof setInterval> | null = null
       let reconnectAttempt = 0
+      let reconnectScheduled = false
       const log = options?.silent ? () => {} : wsLog
 
       function getReconnectDelay() {
         const delay = Math.min(1000 * 2 ** Math.min(reconnectAttempt, 4), 15_000)
         reconnectAttempt++
         return delay + delay * 0.5 * Math.random()
+      }
+
+      function scheduleReconnect() {
+        if (reconnectScheduled) return
+        reconnectScheduled = true
+        const delay = getReconnectDelay()
+        log({ event: 'reconnecting', attempt: reconnectAttempt, delay_ms: Math.round(delay) })
+        setTimeout(() => {
+          reconnectScheduled = false
+          connect()
+        }, delay)
       }
 
       function connect(): WebSocket {
@@ -386,9 +398,7 @@ export function createClient(baseUrl: string, apiKey?: string) {
             try {
               ws.close(4000, 'connect timeout')
             } catch {}
-            const delay = getReconnectDelay()
-            log({ event: 'reconnecting', attempt: reconnectAttempt, delay_ms: Math.round(delay) })
-            setTimeout(connect, delay)
+            scheduleReconnect()
           }
         }, 30_000)
 
@@ -416,6 +426,9 @@ export function createClient(baseUrl: string, apiKey?: string) {
             if (data.type === 'room_created' && data.id && data.name) {
               options?.onRoomCreated?.(data.id, data.name)
             }
+            if (data.type === 'spawn_request' && data.room_name) {
+              options?.onSpawnRequest?.(data.room_name)
+            }
           } catch {
             // Ignore malformed messages
           }
@@ -427,9 +440,7 @@ export function createClient(baseUrl: string, apiKey?: string) {
 
           if (event.code === 1000) return
 
-          const delay = getReconnectDelay()
-          log({ event: 'reconnecting', attempt: reconnectAttempt, delay_ms: Math.round(delay) })
-          setTimeout(connect, delay)
+          scheduleReconnect()
         }
 
         ws.onerror = () => {}

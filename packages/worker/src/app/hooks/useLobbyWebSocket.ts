@@ -1,14 +1,12 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 
-type LobbyEvent = {
-  type: 'room_created'
-  id: string
-  name: string
-}
+type LobbyEvent =
+  | { type: 'room_created'; id: string; name: string }
+  | { type: 'room_deleted'; id: string }
 
 export function useLobbyWebSocket(
   apiKey: string | null,
-  onRoomCreated: (id: string, name: string) => void,
+  onRoomCreated: (id: string, name: string) => void
 ) {
   const wsRef = useRef<WebSocket | null>(null)
   const onRoomCreatedRef = useRef(onRoomCreated)
@@ -22,13 +20,15 @@ export function useLobbyWebSocket(
       const tokenParam = `?token=${encodeURIComponent(apiKey as string)}`
       const ws = new WebSocket(`${protocol}//${location.host}/api/lobby/ws${tokenParam}`)
 
-      ws.onmessage = (e) => {
+      ws.onmessage = e => {
         try {
           const evt = JSON.parse(e.data) as LobbyEvent
           if (evt.type === 'room_created') {
             onRoomCreatedRef.current?.(evt.id, evt.name)
           }
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
 
       ws.onclose = () => {
@@ -50,4 +50,13 @@ export function useLobbyWebSocket(
       }
     }
   }, [apiKey])
+
+  const send = useCallback((data: object) => {
+    const ws = wsRef.current
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(data))
+    }
+  }, [])
+
+  return { send }
 }
