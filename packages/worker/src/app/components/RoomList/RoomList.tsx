@@ -17,7 +17,7 @@ export default function RoomList({ rooms, onLinkClick, onDeleteRoom }: RoomListP
           key={room.id}
           to="/chat/$id"
           params={{ id: room.id }}
-          className="group flex items-center justify-between px-4 py-2.5 cursor-pointer text-sm transition-colors duration-100 hover:bg-hover-item"
+          className="group flex items-center justify-between px-4 py-2.5 cursor-pointer text-sm transition-colors duration-100 hover:bg-hover-item has-data-popup-open:bg-hover-item"
           activeProps={{ className: 'bg-active text-active-text font-semibold' }}
           inactiveProps={{ className: 'text-sidebar-text' }}
           onClick={onLinkClick}
@@ -31,7 +31,7 @@ export default function RoomList({ rooms, onLinkClick, onDeleteRoom }: RoomListP
                     <button
                       type="button"
                       aria-label={`Delete ${room.name}`}
-                      className="flex h-6 w-6 cursor-pointer items-center justify-center rounded border-none bg-transparent text-gray-500 opacity-0 transition-opacity duration-100 group-hover:opacity-100 group-has-data-popup-open:opacity-100 hover:text-red-400"
+                      className="flex h-6 w-6 cursor-pointer items-center justify-center rounded border-none bg-transparent text-gray-500 opacity-0 transition-opacity duration-100 group-hover:opacity-100 group-has-data-popup-open:opacity-100 hover:text-red-400 data-[popup-open]:text-red-400"
                       onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
                     >
                       <IconTrash size={14} />
