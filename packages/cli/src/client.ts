@@ -365,11 +365,12 @@ export function createClient(baseUrl: string, apiKey?: string) {
       return localPath
     },
 
-    listenLobby(options?: { onRoomCreated?: (id: string, name: string) => void }) {
+    listenLobby(options?: { onRoomCreated?: (id: string, name: string) => void; silent?: boolean }) {
       const wsUrl = baseUrl.replace(/^http/, 'ws')
       const tokenParam = apiKey ? `?token=${apiKey}` : ''
       let pingInterval: ReturnType<typeof setInterval> | null = null
       let reconnectAttempt = 0
+      const log = options?.silent ? () => {} : wsLog
 
       function getReconnectDelay() {
         const delay = Math.min(1000 * 2 ** Math.min(reconnectAttempt, 4), 15_000)
@@ -386,6 +387,7 @@ export function createClient(baseUrl: string, apiKey?: string) {
               ws.close(4000, 'connect timeout')
             } catch {}
             const delay = getReconnectDelay()
+            log({ event: 'reconnecting', attempt: reconnectAttempt, delay_ms: Math.round(delay) })
             setTimeout(connect, delay)
           }
         }, 30_000)
@@ -393,7 +395,7 @@ export function createClient(baseUrl: string, apiKey?: string) {
         ws.onopen = () => {
           clearTimeout(connectTimeout)
           reconnectAttempt = 0
-          wsLog({ event: 'lobby_connected' })
+          log({ event: 'lobby_connected' })
 
           if (pingInterval) clearInterval(pingInterval)
           pingInterval = setInterval(() => {
@@ -426,6 +428,7 @@ export function createClient(baseUrl: string, apiKey?: string) {
           if (event.code === 1000) return
 
           const delay = getReconnectDelay()
+          log({ event: 'reconnecting', attempt: reconnectAttempt, delay_ms: Math.round(delay) })
           setTimeout(connect, delay)
         }
 

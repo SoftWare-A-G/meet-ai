@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useEffect, useRef } from "react";
-import { Box, useInput, useApp, useStdout } from "ink";
+import React, { useState, useCallback, useEffect, useRef, Component, type ReactNode } from "react";
+import { Box, Text, useInput, useApp, useStdout } from "ink";
 import { Dashboard } from "./dashboard";
 import { StatusBar } from "./status-bar";
 import { SpawnDialog } from "./spawn-dialog";
@@ -7,12 +7,28 @@ import { ProcessManager } from "../lib/process-manager";
 import type { MeetAiClient } from "../types";
 import { parseControlMessage } from "../lib/control-room";
 
+class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <Box flexDirection="column" paddingX={1}>
+          <Text color="red" bold>TUI crashed: {this.state.error.message}</Text>
+          <Text dimColor>Press Ctrl+C to exit</Text>
+        </Box>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 interface AppProps {
   processManager: ProcessManager;
   client: MeetAiClient;
 }
 
-export function App({ processManager, client }: AppProps) {
+function AppInner({ processManager, client }: AppProps) {
   const { exit } = useApp();
   const { stdout } = useStdout();
   const [teams, setTeams] = useState(processManager.list());
@@ -70,25 +86,31 @@ export function App({ processManager, client }: AppProps) {
 
   // Listen on the lobby WS for new rooms, then check for spawn_request messages
   useEffect(() => {
-    const ws = client.listenLobby({
-      onRoomCreated: async (roomId, _roomName) => {
-        try {
-          const messages = await client.getMessages(roomId);
-          for (const msg of messages) {
-            const cmd = parseControlMessage(msg.content);
-            if (cmd?.type === "spawn_request") {
-              handleSpawnForRoomRef.current(roomId, cmd.room_name);
-              return;
+    let ws: WebSocket | null = null;
+    try {
+      ws = client.listenLobby({
+        silent: true,
+        onRoomCreated: async (roomId, _roomName) => {
+          try {
+            const messages = await client.getMessages(roomId);
+            for (const msg of messages) {
+              const cmd = parseControlMessage(msg.content);
+              if (cmd?.type === "spawn_request") {
+                handleSpawnForRoomRef.current(roomId, cmd.room_name);
+                return;
+              }
             }
+          } catch {
+            // Room may have been deleted or inaccessible
           }
-        } catch {
-          // Room may have been deleted or inaccessible
-        }
-      },
-    });
+        },
+      });
+    } catch {
+      // WebSocket creation failed — will not listen for lobby events
+    }
 
     return () => {
-      ws.close();
+      ws?.close();
     };
   }, [client]);
 
@@ -152,5 +174,13 @@ export function App({ processManager, client }: AppProps) {
         />
       )}
     </Box>
+  );
+}
+
+export function App(props: AppProps) {
+  return (
+    <ErrorBoundary>
+      <AppInner {...props} />
+    </ErrorBoundary>
   );
 }

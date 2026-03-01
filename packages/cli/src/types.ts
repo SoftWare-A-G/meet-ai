@@ -36,6 +36,7 @@ export interface MeetAiClient {
   downloadAttachment(attachmentId: string): Promise<string>;
   listenLobby(options?: {
     onRoomCreated?: (id: string, name: string) => void;
+    silent?: boolean;
   }): WebSocket;
   generateKey(): Promise<{ key: string; prefix: string }>;
   deleteRoom(roomId: string): Promise<void>;

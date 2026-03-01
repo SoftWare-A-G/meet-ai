@@ -10,11 +10,11 @@ interface DashboardOptions {
   debug?: boolean;
 }
 
-export function startDashboard(
+export async function startDashboard(
   client: MeetAiClient,
   config: MeetAiConfig,
   options?: DashboardOptions,
-): void {
+): Promise<void> {
   const claudePath = findClaudeCli();
 
   const processManager = new ProcessManager({
@@ -35,5 +35,6 @@ export function startDashboard(
   process.on("SIGTERM", cleanup);
 
   const element = React.createElement(App, { processManager, client });
-  render(element);
+  const instance = render(element);
+  await instance.waitUntilExit();
 }

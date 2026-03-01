@@ -40,6 +40,10 @@ const main = defineCommand({
       import("./commands/dashboard/command").then((m) => m.default),
   },
   async run({ args }) {
+    // Only spawn interactive mode when no subcommand was given
+    const hasSubcommand = process.argv.length > 2;
+    if (hasSubcommand) return;
+
     // No subcommand given — launch the TUI dashboard as default
     try {
       const { getClient } = await import("./lib/client-factory.js");
@@ -49,7 +53,7 @@ const main = defineCommand({
       );
       const client = getClient();
       const config = getMeetAiConfig();
-      startDashboard(client, config, { debug: args.debug });
+      await startDashboard(client, config, { debug: args.debug });
     } catch (error) {
       err(error instanceof Error ? error.message : String(error));
       process.exit(1);
