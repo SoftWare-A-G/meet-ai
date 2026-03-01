@@ -29,6 +29,8 @@ const main = defineCommand({
       import("./commands/download-attachment/command").then((m) => m.default),
     "generate-key": () =>
       import("./commands/generate-key/command").then((m) => m.default),
+    dashboard: () =>
+      import("./commands/dashboard/command").then((m) => m.default),
   },
   async run() {
     // Only spawn interactive mode when no subcommand was given

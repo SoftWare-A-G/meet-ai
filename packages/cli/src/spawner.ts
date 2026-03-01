@@ -6,7 +6,7 @@ import { homedir, platform } from "node:os";
 /**
  * Find Claude Code CLI installation
  */
-function findClaudeCli(): string {
+export function findClaudeCli(): string {
   try {
     const command = platform() === "win32" ? "where claude" : "which claude";
     const result = execSync(command, { encoding: "utf8", stdio: ["pipe", "pipe", "ignore"] }).trim();
