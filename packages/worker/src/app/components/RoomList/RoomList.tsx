@@ -1,13 +1,15 @@
 import { Link } from '@tanstack/react-router'
-import { IconChevronRight } from '../../icons'
+import { IconChevronRight, IconTrash } from '../../icons'
+import DeleteConfirmPopover from '../DeleteConfirmPopover'
 import type { Room } from '../../lib/types'
 
 type RoomListProps = {
   rooms: Room[]
   onLinkClick?: () => void
+  onDeleteRoom?: (id: string) => void
 }
 
-export default function RoomList({ rooms, onLinkClick }: RoomListProps) {
+export default function RoomList({ rooms, onLinkClick, onDeleteRoom }: RoomListProps) {
   return (
     <div className="flex-1 min-h-0 overflow-y-auto">
       {rooms.map((room) => (
@@ -23,10 +25,24 @@ export default function RoomList({ rooms, onLinkClick }: RoomListProps) {
           {({ isActive }) => (
             <>
               <span className="truncate">{room.name}</span>
-              <IconChevronRight
-                size={16}
-                className={`shrink-0 ml-2 transition-opacity duration-100 ${isActive ? 'opacity-50' : 'opacity-25 group-hover:opacity-40'}`}
-              />
+              <span className="shrink-0 ml-2 flex items-center">
+                <IconChevronRight
+                  size={16}
+                  className={`transition-opacity duration-100 group-hover:hidden ${isActive ? 'opacity-50' : 'opacity-25'}`}
+                />
+                {onDeleteRoom && (
+                  <DeleteConfirmPopover roomName={room.name} onConfirm={() => onDeleteRoom(room.id)}>
+                    <button
+                      type="button"
+                      aria-label={`Delete ${room.name}`}
+                      className="hidden group-hover:flex h-6 w-6 cursor-pointer items-center justify-center rounded border-none bg-transparent text-gray-400 hover:text-red-400"
+                      onClick={(e) => e.preventDefault()}
+                    >
+                      <IconTrash size={14} />
+                    </button>
+                  </DeleteConfirmPopover>
+                )}
+              </span>
             </>
           )}
         </Link>

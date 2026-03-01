@@ -1,6 +1,7 @@
 import { Toast } from '@base-ui/react/toast'
-import { ClientOnly, createFileRoute, Outlet } from '@tanstack/react-router'
+import { ClientOnly, createFileRoute, Outlet, useNavigate, useParams } from '@tanstack/react-router'
 import { useState, useCallback, useEffect, useMemo } from 'react'
+import { toast } from 'sonner'
 import IOSInstallModal from '../components/IOSInstallModal'
 import LoginPrompt from '../components/LoginPrompt'
 import QRShareModal from '../components/QRShareModal'
@@ -126,6 +127,23 @@ function ChatLayout({
     setRooms(prev => prev.filter(r => r.id !== id))
   }, [])
 
+  const navigate = useNavigate()
+  const params = useParams({ strict: false }) as { id?: string }
+
+  const handleDeleteRoom = useCallback(async (id: string) => {
+    const room = rooms.find(r => r.id === id)
+    try {
+      await api.deleteRoom(id)
+      removeRoom(id)
+      toast.success(`"${room?.name}" deleted`)
+      if (params.id === id) {
+        navigate({ to: '/chat' })
+      }
+    } catch {
+      toast.error('Failed to delete room. Please try again.')
+    }
+  }, [rooms, removeRoom, navigate, params.id])
+
   // Lobby WebSocket for new room events
   const onRoomCreated = useCallback((id: string, name: string) => {
     setRooms(prev => (prev.some(r => r.id === id) ? prev : [{ id, name }, ...prev]))
@@ -195,6 +213,7 @@ function ChatLayout({
           onSpawnClick={() => setShowSpawnModal(true)}
           onClose={() => setSidebarOpen(false)}
           onInstallClick={handleInstallClick}
+          onDeleteRoom={handleDeleteRoom}
         />
         <Outlet />
         <TeamSidebar

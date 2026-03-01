@@ -23,30 +23,16 @@ function ChatRoom() {
     return () => { document.title = 'Meet AI' }
   }, [room])
 
-  const handleDelete = useCallback(() => {
+  const handleDeleteConfirm = useCallback(async () => {
     if (!room) return
-    toast(`Delete "${room.name}"?`, {
-      description: 'This will remove all messages and cannot be undone.',
-      actionButtonStyle: { backgroundColor: '#dc2626', color: '#fff' },
-      action: {
-        label: 'Delete',
-        onClick: async () => {
-          try {
-            await deleteRoom(room.id)
-            removeRoom(room.id)
-            toast.success(`"${room.name}" deleted`)
-            navigate({ to: '/chat' })
-          } catch {
-            toast.error('Failed to delete room. Please try again.')
-          }
-        },
-      },
-      cancel: {
-        label: 'Cancel',
-        onClick: () => {},
-      },
-      duration: 10000,
-    })
+    try {
+      await deleteRoom(room.id)
+      removeRoom(room.id)
+      toast.success(`"${room.name}" deleted`)
+      navigate({ to: '/chat' })
+    } catch {
+      toast.error('Failed to delete room. Please try again.')
+    }
   }, [room, removeRoom, navigate])
 
   return (
@@ -59,7 +45,7 @@ function ChatRoom() {
         onMobileToggle={() => setSidebarOpen(prev => !prev)}
         onTeamToggle={() => setTeamSidebarOpen(prev => !prev)}
         onInviteClick={() => showQR()}
-        onDeleteClick={handleDelete}
+        onDeleteConfirm={handleDeleteConfirm}
       />
       {room && (
         <ChatView
