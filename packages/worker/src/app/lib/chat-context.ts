@@ -3,6 +3,7 @@ import type { Room, TeamInfo, TasksInfo } from './types'
 
 export type ChatContextValue = {
   rooms: Room[]
+  removeRoom: (id: string) => void
   apiKey: string
   userName: string
   colorSchema: string

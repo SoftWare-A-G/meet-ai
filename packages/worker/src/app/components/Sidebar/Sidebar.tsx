@@ -13,9 +13,10 @@ type SidebarProps = {
   onSpawnClick: () => void
   onClose: () => void
   onInstallClick: () => void
+  onDeleteRoom?: (id: string) => void
 }
 
-export default function Sidebar({ rooms, userName, isOpen, onNameChange, onSettingsClick, onSpawnClick, onClose, onInstallClick }: SidebarProps) {
+export default function Sidebar({ rooms, userName, isOpen, onNameChange, onSettingsClick, onSpawnClick, onClose, onInstallClick, onDeleteRoom }: SidebarProps) {
   return (
     <>
       {/* Mobile backdrop */}
@@ -35,7 +36,7 @@ export default function Sidebar({ rooms, userName, isOpen, onNameChange, onSetti
         )}
       >
         <SidebarHeader onSettingsClick={onSettingsClick} onSpawnClick={onSpawnClick} onCloseClick={onClose} />
-        <RoomList rooms={rooms} onLinkClick={onClose} />
+        <RoomList rooms={rooms} onLinkClick={onClose} onDeleteRoom={onDeleteRoom} />
         <SidebarFooter userName={userName} onNameChange={onNameChange} onInstallClick={onInstallClick} />
       </aside>
     </>

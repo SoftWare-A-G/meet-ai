@@ -13,7 +13,7 @@ export const Route = createFileRoute('/chat/$id')({
 function ChatRoom() {
   const { id } = Route.useParams()
   const navigate = useNavigate()
-  const { rooms, apiKey, userName, isStandalone, teamInfo, setSidebarOpen, setTeamSidebarOpen, setTeamInfo, setTasksInfo, showQR } = useChatContext()
+  const { rooms, removeRoom, apiKey, userName, isStandalone, teamInfo, setSidebarOpen, setTeamSidebarOpen, setTeamInfo, setTasksInfo, showQR } = useChatContext()
 
   const room = rooms.find(r => r.id === id)
   const roomName = room?.name ?? 'Loading...'
@@ -23,29 +23,17 @@ function ChatRoom() {
     return () => { document.title = 'Meet AI' }
   }, [room])
 
-  const handleDelete = useCallback(() => {
+  const handleDeleteConfirm = useCallback(async () => {
     if (!room) return
-    toast(`Delete "${room.name}"?`, {
-      description: 'This will remove all messages and cannot be undone.',
-      action: {
-        label: 'Delete',
-        onClick: async () => {
-          try {
-            await deleteRoom(room.id)
-            toast.success(`"${room.name}" deleted`)
-            navigate({ to: '/chat' })
-          } catch {
-            toast.error('Failed to delete room. Please try again.')
-          }
-        },
-      },
-      cancel: {
-        label: 'Cancel',
-        onClick: () => {},
-      },
-      duration: 10000,
-    })
-  }, [room, navigate])
+    try {
+      await deleteRoom(room.id)
+      removeRoom(room.id)
+      toast.success(`"${room.name}" deleted`)
+      navigate({ to: '/chat' })
+    } catch {
+      toast.error('Failed to delete room. Please try again.')
+    }
+  }, [room, removeRoom, navigate])
 
   return (
     <div className="flex-1 flex flex-col bg-chat-bg text-msg-text min-w-0 h-dvh">
@@ -57,7 +45,7 @@ function ChatRoom() {
         onMobileToggle={() => setSidebarOpen(prev => !prev)}
         onTeamToggle={() => setTeamSidebarOpen(prev => !prev)}
         onInviteClick={() => showQR()}
-        onDeleteClick={handleDelete}
+        onDeleteConfirm={handleDeleteConfirm}
       />
       {room && (
         <ChatView

@@ -30,7 +30,7 @@ function ChatLobby() {
         onMobileToggle={() => setSidebarOpen(prev => !prev)}
         onTeamToggle={() => {}}
         onInviteClick={() => {}}
-        onDeleteClick={() => {}}
+        onDeleteConfirm={() => {}}
       />
       <LobbyView rooms={rooms} onSelectRoom={handleSelectRoom} />
     </div>
