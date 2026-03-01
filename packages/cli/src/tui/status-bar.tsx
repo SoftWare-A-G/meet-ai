@@ -25,24 +25,26 @@ export function StatusBar({
   return (
     <Box justifyContent="space-between">
       <Box gap={2}>
-        <Text dimColor>[</Text>
-        <Text bold color="green">
-          n
+        <Text>
+          <Text dimColor>[</Text>
+          <Text bold color="green">n</Text>
+          <Text dimColor>]ew</Text>
         </Text>
-        <Text dimColor>]ew</Text>
-        <Text dimColor>[</Text>
-        <Text bold color="red">
-          k
+        <Text>
+          <Text dimColor>[</Text>
+          <Text bold color="red">k</Text>
+          <Text dimColor>]ill</Text>
         </Text>
-        <Text dimColor>]ill</Text>
-        <Text dimColor>[</Text>
-        <Text bold>{"<->"}</Text>
-        <Text dimColor>]focus</Text>
-        <Text dimColor>[</Text>
-        <Text bold color="yellow">
-          q
+        <Text>
+          <Text dimColor>[</Text>
+          <Text bold>{"<->"}</Text>
+          <Text dimColor>]focus</Text>
         </Text>
-        <Text dimColor>]uit</Text>
+        <Text>
+          <Text dimColor>[</Text>
+          <Text bold color="yellow">q</Text>
+          <Text dimColor>]uit</Text>
+        </Text>
       </Box>
       <Box gap={2}>
         {focusedRoom && <Text color="cyan">{focusedRoom}</Text>}
