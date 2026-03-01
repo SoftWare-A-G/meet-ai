@@ -13,7 +13,7 @@ export const Route = createFileRoute('/chat/$id')({
 function ChatRoom() {
   const { id } = Route.useParams()
   const navigate = useNavigate()
-  const { rooms, apiKey, userName, isStandalone, teamInfo, setSidebarOpen, setTeamSidebarOpen, setTeamInfo, setTasksInfo, showQR } = useChatContext()
+  const { rooms, removeRoom, apiKey, userName, isStandalone, teamInfo, setSidebarOpen, setTeamSidebarOpen, setTeamInfo, setTasksInfo, showQR } = useChatContext()
 
   const room = rooms.find(r => r.id === id)
   const roomName = room?.name ?? 'Loading...'
@@ -27,11 +27,13 @@ function ChatRoom() {
     if (!room) return
     toast(`Delete "${room.name}"?`, {
       description: 'This will remove all messages and cannot be undone.',
+      actionButtonStyle: { backgroundColor: '#dc2626', color: '#fff' },
       action: {
         label: 'Delete',
         onClick: async () => {
           try {
             await deleteRoom(room.id)
+            removeRoom(room.id)
             toast.success(`"${room.name}" deleted`)
             navigate({ to: '/chat' })
           } catch {
@@ -45,7 +47,7 @@ function ChatRoom() {
       },
       duration: 10000,
     })
-  }, [room, navigate])
+  }, [room, removeRoom, navigate])
 
   return (
     <div className="flex-1 flex flex-col bg-chat-bg text-msg-text min-w-0 h-dvh">

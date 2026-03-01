@@ -122,6 +122,10 @@ function ChatLayout({
     }
   }, [])
 
+  const removeRoom = useCallback((id: string) => {
+    setRooms(prev => prev.filter(r => r.id !== id))
+  }, [])
+
   // Lobby WebSocket for new room events
   const onRoomCreated = useCallback((id: string, name: string) => {
     setRooms(prev => (prev.some(r => r.id === id) ? prev : [{ id, name }, ...prev]))
@@ -144,6 +148,7 @@ function ChatLayout({
   const ctx = useMemo(
     () => ({
       rooms,
+      removeRoom,
       apiKey,
       userName,
       colorSchema,
@@ -164,6 +169,7 @@ function ChatLayout({
     }),
     [
       rooms,
+      removeRoom,
       apiKey,
       userName,
       colorSchema,
