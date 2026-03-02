@@ -38,6 +38,10 @@ function parsePlanMarkdown(md: string): Segment[] {
 
   const renderer = new Renderer()
 
+  renderer.link = ({ href, text }: { href: string; text: string }) => {
+    return `<a href="${href}" target="_blank" rel="noopener noreferrer">${text}</a>`
+  }
+
   // Only override code blocks — they need special handling for ShikiCode.
   // All other block types use marked's default renderers so inline formatting
   // (bold, italic, links, etc.) is processed correctly via parseInline().
@@ -62,7 +66,7 @@ function parsePlanMarkdown(md: string): Segment[] {
     .replace(/<hr\s*\/?>/g, '<hr class="plan-hr" />')
 
   const html = DOMPurify.sanitize(processedHtml, {
-    ADD_ATTR: [MARKER_ATTR, 'data-block-id'],
+    ADD_ATTR: [MARKER_ATTR, 'data-block-id', 'target', 'rel'],
   })
 
   if (codeBlocks.length === 0) {

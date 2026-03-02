@@ -18,6 +18,10 @@ function parseContent(content: string): Segment[] {
   const codeBlocks: { code: string; lang: string }[] = []
 
   const renderer = new Renderer()
+  renderer.link = function ({ href, text }: { href: string; text: string }) {
+    return `<a href="${href}" target="_blank" rel="noopener noreferrer">${text}</a>`
+  }
+
   renderer.code = function ({ text, lang }: { text: string; lang?: string }) {
     const idx = codeBlocks.length
     codeBlocks.push({ code: text, lang: lang || 'text' })
@@ -29,7 +33,7 @@ function parseContent(content: string): Segment[] {
 
   // Allow the data attribute through DOMPurify
   const html = DOMPurify.sanitize(rawHtml, {
-    ADD_ATTR: [MARKER_ATTR],
+    ADD_ATTR: [MARKER_ATTR, 'target', 'rel'],
   })
 
   // If no code blocks, return the whole thing as HTML
