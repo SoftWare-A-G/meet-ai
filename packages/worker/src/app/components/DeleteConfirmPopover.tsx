@@ -12,7 +12,15 @@ export default function DeleteConfirmPopover({ roomName, onConfirm, children }: 
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
-      <Popover.Trigger render={children} />
+      <span className="contents" onClickCapture={(e) => {
+        if (e.shiftKey) {
+          e.stopPropagation()
+          e.preventDefault()
+          onConfirm()
+        }
+      }}>
+        <Popover.Trigger render={children} />
+      </span>
       <Popover.Portal>
         <Popover.Positioner sideOffset={8}>
           <Popover.Popup className="z-50 w-64 rounded-lg border border-white/10 bg-[#1a1a2e] p-4 shadow-xl">
