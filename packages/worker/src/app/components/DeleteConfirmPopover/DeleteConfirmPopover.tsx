@@ -1,7 +1,7 @@
 import { Popover } from '@base-ui/react/popover'
 import { useState } from 'react'
 
-type DeleteConfirmPopoverProps = {
+interface DeleteConfirmPopoverProps {
   roomName: string
   onConfirm: () => void | Promise<void>
   children: React.ReactElement
