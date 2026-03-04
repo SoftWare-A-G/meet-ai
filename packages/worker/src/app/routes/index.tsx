@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import clsx from 'clsx'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import NeonCard from '../components/NeonCard'
 import QuickStartSteps from '../components/QuickStartSteps'
 
@@ -189,11 +189,7 @@ const FEATURES = [
 // --- Main component ---
 
 function NeonLanding() {
-  const [hasKey, setHasKey] = useState(false)
-
-  useEffect(() => {
-    setHasKey(!!localStorage.getItem('meet-ai-key'))
-  }, [])
+  const [hasKey] = useState(() => typeof window !== 'undefined' && !!window.localStorage.getItem('meet-ai-key'))
 
   return (
     <>
