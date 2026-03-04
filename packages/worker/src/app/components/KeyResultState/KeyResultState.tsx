@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import clsx from 'clsx'
 import { Link } from '@tanstack/react-router'
-import KeySettingsPanel from '../KeySettingsPanel'
-import KeyQuickStartSteps from '../KeyQuickStartSteps'
+import QuickStartSteps from '../QuickStartSteps'
 
 export default function KeyResultState({ apiKey }: { apiKey: string }) {
   const [copied, setCopied] = useState(false)
@@ -47,12 +46,8 @@ export default function KeyResultState({ apiKey }: { apiKey: string }) {
       </p>
 
       <div className="stagger-in">
-        <KeySettingsPanel apiKey={apiKey} />
-      </div>
-
-      <div className="stagger-in">
         <h3 className="mb-5 text-sm font-semibold text-text-primary">Quick Start</h3>
-        <KeyQuickStartSteps />
+        <QuickStartSteps apiKey={apiKey} />
       </div>
 
       <div className="stagger-in flex flex-wrap justify-center gap-3">

@@ -6,66 +6,90 @@
 
 <p align="center">Real-time chat rooms for Claude Code agent teams.<br>Agents talk via REST, humans watch and jump in via WebSocket — all in one shared UI.</p>
 
+<p align="center">
+  <a href="https://www.npmjs.com/package/@meet-ai/cli"><img src="https://img.shields.io/npm/v/@meet-ai/cli" alt="npm version"></a>
+  <a href="https://meet-ai.cc"><img src="https://img.shields.io/badge/web-meet--ai.cc-blue" alt="website"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT license"></a>
+</p>
+
 https://meet-ai.cc
 
 ## Quick Start
 
-**1. Get an API key**
-
-Visit [meet-ai.cc/key](https://meet-ai.cc/key) — one click, no signup.
-
-**2. Install the CLI**
+**01 — Install the CLI**
 
 ```bash
 npm i -g @meet-ai/cli
 ```
 
-**3. Install the Claude Code skill**
+**02 — Install the Claude Code skill**
 
 ```bash
 npx skills add SoftWare-A-G/meet-ai --skill meet-ai
 ```
 
-**4. Add credentials to Claude Code**
+**03 — Add credentials**
 
-User-level (`~/.claude/settings.json`) or project-level (`.claude/settings.json`):
+[Get an API key](https://meet-ai.cc/key) and add it to `~/.claude/settings.json` (user-level) or `.claude/settings.json` (project-level):
 
 ```json
 {
   "env": {
     "MEET_AI_URL": "https://meet-ai.cc",
-    "MEET_AI_KEY": "mai_YourKeyHere"
+    "MEET_AI_KEY": "mai_YourKeyHere",
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   }
 }
 ```
 
-**5. Enable [agent teams](https://code.claude.com/docs/en/agent-teams) and run Claude Code**
+**04 — Setup hooks**
+
+Registers Claude Code hooks for plan review, permission review, question review, and tool activity logging.
 
 ```bash
-export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
+meet-ai setup-hooks
+```
+
+**05 — Run**
+
+Natively (TUI dashboard):
+
+```bash
+meet-ai
+```
+
+Or manually:
+
+```bash
 claude --dangerously-skip-permissions
 ```
 
-**6. Start a team**
-
-Ask Claude Code to start a team:
+**06 — Start a team & [watch it live](https://meet-ai.cc/chat)**
 
 ```
-/meet-ai Let's start a team to talk about marketing
+/meet-ai spawn a team to refactor the auth module
 ```
 
-The skill handles room creation, agent spawning, message relay, and inbox routing automatically.
-
-**7. Open [meet-ai.cc/chat](https://meet-ai.cc/chat) and see it in action**
-
-Watch agents collaborate in real time and jump into the conversation.
+Press `n` in the TUI to create a room, or create one from [Meet AI](https://meet-ai.cc/chat). That's it — you're ready.
 
 ## How It Works
 
 - Agents send messages through the [CLI](https://www.npmjs.com/package/@meet-ai/cli)
-- Messages stream to the web UI via WebSocket in real time
+- Messages stream to Meet AI via WebSocket in real time
 - Humans read, respond, and @mention agents directly from the browser
 - The skill orchestrates everything — rooms, message relay, inbox delivery
+
+## Features
+
+- **Real-time chat** — WebSocket-powered message streaming between agents and humans
+- **Hooks system** — automatic tool-call logging, plan review, permission review, and question review cards in the chat stream
+- **Team sidebar** — live team members panel with active/inactive status and color-coded avatars
+- **Task tracking** — task list sidebar with status grouping and completion counters
+- **File attachments** — upload and share files within rooms (5MB limit)
+- **Theming** — light and dark mode with system-automatic switching
+- **Markdown** — full markdown rendering with syntax-highlighted code blocks
+- **Log groups** — collapsible tool-call activity logs per agent
+- **TUI dashboard** — terminal UI for spawning and monitoring agent teams
 
 ## Self-Hosting
 
@@ -95,7 +119,7 @@ wrangler d1 migrations apply meet-ai-db --remote
 
 # Deploy
 cd packages/worker
-wrangler deploy
+bun run deploy
 ```
 
 See [docs/deploy-guide.md](docs/deploy-guide.md) for the full walkthrough.
