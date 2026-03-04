@@ -68,11 +68,33 @@ describe('plan-review usecase', () => {
     expect(stdoutCapture).toBe('')
   })
 
-  it('skips when no plan content in tool_input', async () => {
+  it('creates review with fallback message when no plan content in tool_input', async () => {
+    // Mock create plan review POST
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ id: 'pr-empty', message_id: 'msg-empty' }), {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+    // Mock poll GET — return approved immediately
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ status: 'approved' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+
     const { processPlanReview } = await loadUsecase()
     await processPlanReview(makeInput({ tool_input: {} }), TEST_DIR)
-    expect(stderrCapture).toContain('no plan content')
-    expect(stdoutCapture).toBe('')
+
+    expect(mockFetch).toHaveBeenCalledTimes(2)
+    // Verify the create call sent the fallback message
+    const createCall = mockFetch.mock.calls[0]
+    const createUrl = createCall[0] as string
+    expect(createUrl).toContain('/plan-reviews')
+    const output = JSON.parse(stdoutCapture)
+    expect(output.hookSpecificOutput.hookEventName).toBe('PermissionRequest')
+    expect(output.hookSpecificOutput.decision.behavior).toBe('allow')
   })
 
   it('skips when no room found for session', async () => {

@@ -155,11 +155,9 @@ export async function processPlanReview(rawInput: string, teamsDir?: string): Pr
     return
   }
 
-  const planContent = input.tool_input?.plan as string | undefined
-  if (!planContent) {
-    process.stderr.write('[plan-review] no plan content in tool_input\n')
-    return
-  }
+  const planContent =
+    (input.tool_input?.plan as string | undefined) ||
+    '_Agent requested to exit plan mode without a plan._'
 
   const roomId = findRoomId(sessionId, teamsDir)
   if (!roomId) {
