@@ -29,6 +29,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
   const [voiceAvailable, setVoiceAvailable] = useState(false)
   const [planDecisions, setPlanDecisions] = useState<Record<string, { status: 'pending' | 'approved' | 'denied' | 'expired'; feedback?: string; permissionMode?: string }>>({})
   const [questionAnswers, setQuestionAnswers] = useState<Record<string, { status: 'pending' | 'answered' | 'expired'; answers?: Record<string, string> }>>({})
+  const [permissionDecisions, setPermissionDecisions] = useState<Record<string, { status: 'pending' | 'approved' | 'denied' | 'expired'; feedback?: string }>>({})
   const { queue, remove, getForRoom } = useOfflineQueue()
 
   // Check TTS availability once on mount
@@ -78,6 +79,20 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
       }
       if (Object.keys(qAnswers).length > 0) {
         setQuestionAnswers(prev => ({ ...prev, ...qAnswers }))
+      }
+
+      // Populate permission decisions from loaded messages
+      const pDecisions: Record<string, { status: 'pending' | 'approved' | 'denied' | 'expired'; feedback?: string }> = {}
+      for (const msg of history) {
+        if (msg.permission_review_id && msg.permission_review_status) {
+          pDecisions[msg.permission_review_id] = {
+            status: msg.permission_review_status,
+            feedback: msg.permission_review_feedback,
+          }
+        }
+      }
+      if (Object.keys(pDecisions).length > 0) {
+        setPermissionDecisions(prev => ({ ...prev, ...pDecisions }))
       }
 
       // Restore queued offline messages
@@ -168,10 +183,21 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
     }))
   }, [])
 
+  const onPermissionDecisionWs = useCallback((event: { permission_review_id: string; status: 'approved' | 'denied' | 'expired'; feedback?: string | null }) => {
+    setPermissionDecisions(prev => ({
+      ...prev,
+      [event.permission_review_id]: {
+        status: event.status,
+        feedback: event.feedback ?? undefined,
+      },
+    }))
+  }, [])
+
   const { connected, tasksInfo } = useRoomWebSocket(room.id, apiKey, onWsMessage, {
     onTeamInfo: onTeamInfoWs,
     onPlanDecision: onPlanDecisionWs,
     onQuestionAnswer: onQuestionAnswerWs,
+    onPermissionDecision: onPermissionDecisionWs,
   })
 
   useEffect(() => {
@@ -289,6 +315,23 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
     }
   }, [room.id, userName])
 
+  const handlePermissionDecide = useCallback(async (reviewId: string, approved: boolean, feedback?: string) => {
+    // Optimistic update
+    setPermissionDecisions(prev => ({
+      ...prev,
+      [reviewId]: { status: approved ? 'approved' : 'denied', feedback },
+    }))
+    try {
+      await api.decidePermissionReview(room.id, reviewId, approved, userName, feedback)
+    } catch {
+      // Revert on failure
+      setPermissionDecisions(prev => ({
+        ...prev,
+        [reviewId]: { status: 'pending' },
+      }))
+    }
+  }, [room.id, userName])
+
   const handleRetry = useCallback(async (tempId: string) => {
     const msg = messages.find(m => m.tempId === tempId)
     if (!msg) return
@@ -315,6 +358,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
         attachmentCounts={attachmentCounts}
         planDecisions={planDecisions}
         questionAnswers={questionAnswers}
+        permissionDecisions={permissionDecisions}
         unreadCount={unreadCount}
         forceScrollCounter={forceScrollCounter}
         onScrollToBottom={() => setUnreadCount(0)}
@@ -323,6 +367,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
         onPlanDecide={handlePlanDecide}
         onPlanDismiss={handlePlanDismiss}
         onQuestionAnswer={handleQuestionAnswer}
+        onPermissionDecide={handlePermissionDecide}
         connected={connected}
         voiceAvailable={voiceAvailable}
       />

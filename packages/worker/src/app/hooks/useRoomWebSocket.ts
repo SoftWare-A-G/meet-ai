@@ -19,10 +19,19 @@ type QuestionAnswerEvent = {
   answered_by?: string
 }
 
+type PermissionDecisionEvent = {
+  type: 'permission_decision'
+  permission_review_id: string
+  status: 'approved' | 'denied' | 'expired'
+  feedback?: string | null
+  decided_by?: string
+}
+
 type UseRoomWebSocketOptions = {
   onTeamInfo?: (info: TeamInfo) => void
   onPlanDecision?: (event: PlanDecisionEvent) => void
   onQuestionAnswer?: (event: QuestionAnswerEvent) => void
+  onPermissionDecision?: (event: PermissionDecisionEvent) => void
 }
 
 const MIN_BACKOFF = 1000
@@ -43,6 +52,8 @@ export function useRoomWebSocket(
   onPlanDecisionRef.current = options?.onPlanDecision
   const onQuestionAnswerRef = useRef(options?.onQuestionAnswer)
   onQuestionAnswerRef.current = options?.onQuestionAnswer
+  const onPermissionDecisionRef = useRef(options?.onPermissionDecision)
+  onPermissionDecisionRef.current = options?.onPermissionDecision
   const lastSeqRef = useRef<number>(0) as { current: number }
   const backoffRef = useRef<number>(MIN_BACKOFF) as { current: number }
   const [connected, setConnected] = useState(true)
@@ -96,6 +107,10 @@ export function useRoomWebSocket(
           }
           if (data.type === 'question_answer') {
             onQuestionAnswerRef.current?.(data as QuestionAnswerEvent)
+            return
+          }
+          if (data.type === 'permission_decision') {
+            onPermissionDecisionRef.current?.(data as PermissionDecisionEvent)
             return
           }
           const msg = data as Message

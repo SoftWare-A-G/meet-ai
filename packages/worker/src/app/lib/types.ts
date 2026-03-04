@@ -19,6 +19,10 @@ export type Message = {
   question_review_id?: string
   question_review_status?: 'pending' | 'answered' | 'expired'
   question_review_answers?: string
+  permission_review_id?: string
+  permission_review_status?: 'pending' | 'approved' | 'denied' | 'expired'
+  permission_review_tool_name?: string
+  permission_review_feedback?: string
 }
 
 export type PendingMessage = {

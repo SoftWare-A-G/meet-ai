@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { summarize } from '../summarize'
+import { describe, expect, it } from 'bun:test'
+import { summarize } from '../../src/lib/hooks/summarize'
 
 describe('summarize', () => {
   it('summarizes Edit with basename', () => {

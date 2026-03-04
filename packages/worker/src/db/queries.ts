@@ -1,4 +1,4 @@
-import type { ApiKey, Room, Message, Log, Attachment, PlanDecision, QuestionReview } from '../lib/types'
+import type { ApiKey, Room, Message, Log, Attachment, PlanDecision, QuestionReview, PermissionReview } from '../lib/types'
 
 export function queries(db: D1Database) {
   return {
@@ -40,7 +40,7 @@ export function queries(db: D1Database) {
     },
 
     async listMessages(roomId: string, afterId?: string, exclude?: string, senderType?: string) {
-      let sql = 'SELECT m.id, m.room_id, m.sender, m.sender_type, m.content, m.color, m.type, m.seq, m.created_at, pd.id AS plan_review_id, pd.status AS plan_review_status, pd.feedback AS plan_review_feedback, qr.id AS question_review_id, qr.status AS question_review_status, qr.answers_json AS question_review_answers FROM messages m LEFT JOIN plan_decisions pd ON pd.message_id = m.id LEFT JOIN question_reviews qr ON qr.message_id = m.id WHERE m.room_id = ?'
+      let sql = 'SELECT m.id, m.room_id, m.sender, m.sender_type, m.content, m.color, m.type, m.seq, m.created_at, pd.id AS plan_review_id, pd.status AS plan_review_status, pd.feedback AS plan_review_feedback, qr.id AS question_review_id, qr.status AS question_review_status, qr.answers_json AS question_review_answers, pr.id AS permission_review_id, pr.status AS permission_review_status, pr.tool_name AS permission_review_tool_name, pr.feedback AS permission_review_feedback FROM messages m LEFT JOIN plan_decisions pd ON pd.message_id = m.id LEFT JOIN question_reviews qr ON qr.message_id = m.id LEFT JOIN permission_reviews pr ON pr.message_id = m.id WHERE m.room_id = ?'
       const params: string[] = [roomId]
 
       if (afterId) {
@@ -75,7 +75,7 @@ export function queries(db: D1Database) {
     },
 
     async listMessagesSinceSeq(roomId: string, sinceSeq: number, exclude?: string, senderType?: string) {
-      let sql = 'SELECT m.id, m.room_id, m.sender, m.sender_type, m.content, m.color, m.type, m.seq, m.created_at, pd.id AS plan_review_id, pd.status AS plan_review_status, pd.feedback AS plan_review_feedback, qr.id AS question_review_id, qr.status AS question_review_status, qr.answers_json AS question_review_answers FROM messages m LEFT JOIN plan_decisions pd ON pd.message_id = m.id LEFT JOIN question_reviews qr ON qr.message_id = m.id WHERE m.room_id = ? AND m.seq > ?'
+      let sql = 'SELECT m.id, m.room_id, m.sender, m.sender_type, m.content, m.color, m.type, m.seq, m.created_at, pd.id AS plan_review_id, pd.status AS plan_review_status, pd.feedback AS plan_review_feedback, qr.id AS question_review_id, qr.status AS question_review_status, qr.answers_json AS question_review_answers, pr.id AS permission_review_id, pr.status AS permission_review_status, pr.tool_name AS permission_review_tool_name, pr.feedback AS permission_review_feedback FROM messages m LEFT JOIN plan_decisions pd ON pd.message_id = m.id LEFT JOIN question_reviews qr ON qr.message_id = m.id LEFT JOIN permission_reviews pr ON pr.message_id = m.id WHERE m.room_id = ? AND m.seq > ?'
       const params: (string | number)[] = [roomId, sinceSeq]
 
       if (exclude) {
@@ -197,8 +197,36 @@ export function queries(db: D1Database) {
       return result.meta.changes > 0
     },
 
+    async createPermissionReview(id: string, messageId: string, roomId: string, keyId: string, toolName: string, toolInputJson: string | null, formattedContent: string) {
+      await db.prepare(
+        'INSERT INTO permission_reviews (id, message_id, room_id, key_id, tool_name, tool_input_json, formatted_content) VALUES (?, ?, ?, ?, ?, ?, ?)'
+      ).bind(id, messageId, roomId, keyId, toolName, toolInputJson, formattedContent).run()
+    },
+
+    async getPermissionReview(id: string, roomId: string, keyId: string) {
+      return db.prepare(
+        'SELECT id, message_id, room_id, key_id, tool_name, tool_input_json, formatted_content, status, feedback, decided_by, decided_at, created_at FROM permission_reviews WHERE id = ? AND room_id = ? AND key_id = ?'
+      ).bind(id, roomId, keyId).first<PermissionReview>()
+    },
+
+    async decidePermissionReview(id: string, roomId: string, keyId: string, approved: boolean, decidedBy: string, feedback?: string) {
+      const status = approved ? 'approved' : 'denied'
+      const result = await db.prepare(
+        'UPDATE permission_reviews SET status = ?, feedback = ?, decided_by = ?, decided_at = datetime("now") WHERE id = ? AND room_id = ? AND key_id = ? AND status = "pending"'
+      ).bind(status, feedback ?? null, decidedBy, id, roomId, keyId).run()
+      return result.meta.changes > 0
+    },
+
+    async expirePermissionReview(id: string, roomId: string, keyId: string) {
+      const result = await db.prepare(
+        'UPDATE permission_reviews SET status = "expired", decided_at = datetime("now") WHERE id = ? AND room_id = ? AND key_id = ? AND status = "pending"'
+      ).bind(id, roomId, keyId).run()
+      return result.meta.changes > 0
+    },
+
     async deleteRoom(keyId: string, roomId: string) {
-      // Delete in order: question_reviews, plan_decisions, attachments, logs, messages, then room
+      // Delete in order: permission_reviews, question_reviews, plan_decisions, attachments, logs, messages, then room
+      await db.prepare('DELETE FROM permission_reviews WHERE room_id = ?').bind(roomId).run()
       await db.prepare('DELETE FROM question_reviews WHERE room_id = ?').bind(roomId).run()
       await db.prepare('DELETE FROM plan_decisions WHERE room_id = ?').bind(roomId).run()
       await db.prepare('DELETE FROM attachments WHERE room_id = ?').bind(roomId).run()

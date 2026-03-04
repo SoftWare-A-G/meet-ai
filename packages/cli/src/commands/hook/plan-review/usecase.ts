@@ -1,7 +1,6 @@
-#!/usr/bin/env node
 import { setTimeout as delay } from 'node:timers/promises'
-import { createHookClient } from '../log-tool-use/client'
-import { findRoomId } from '../log-tool-use/find-room'
+import { createHookClient, type HookClient } from '../../../lib/hooks/client'
+import { findRoomId } from '../../../lib/hooks/find-room'
 
 type PlanReviewInput = {
   session_id: string
@@ -26,13 +25,19 @@ type PlanReviewResponse = {
   message_id?: string
 }
 
+type PlanDecision = {
+  status: string
+  feedback?: string
+  permission_mode?: string
+}
+
 const POLL_INTERVAL_MS = 2000
 const POLL_TIMEOUT_MS = 2_592_000_000 // 30 days
 
 async function createPlanReview(
-  client: ReturnType<typeof createHookClient>,
+  client: HookClient,
   roomId: string,
-  planContent: string
+  planContent: string,
 ): Promise<PlanReviewResponse | null> {
   try {
     const res = await client.api.rooms[':id']['plan-reviews'].$post({
@@ -44,7 +49,7 @@ async function createPlanReview(
       process.stderr.write(`[plan-review] create failed: ${res.status} ${text}\n`)
       return null
     }
-    return await res.json()
+    return (await res.json()) as PlanReviewResponse
   } catch (error) {
     process.stderr.write(`[plan-review] create error: ${error}\n`)
     return null
@@ -52,10 +57,10 @@ async function createPlanReview(
 }
 
 async function pollForDecision(
-  client: ReturnType<typeof createHookClient>,
+  client: HookClient,
   roomId: string,
-  reviewId: string
-) {
+  reviewId: string,
+): Promise<PlanDecision | null> {
   const deadline = Date.now() + POLL_TIMEOUT_MS
 
   while (Date.now() < deadline) {
@@ -64,7 +69,7 @@ async function pollForDecision(
         param: { id: roomId, reviewId },
       })
       if (res.ok) {
-        const data = await res.json()
+        const data = (await res.json()) as PlanDecision
         if (data.status !== 'pending') {
           return data
         }
@@ -122,9 +127,9 @@ function buildDenyOutput(feedback: string): HookOutput {
 }
 
 async function expirePlanReview(
-  client: ReturnType<typeof createHookClient>,
+  client: HookClient,
   roomId: string,
-  reviewId: string
+  reviewId: string,
 ): Promise<void> {
   try {
     await client.api.rooms[':id']['plan-reviews'][':reviewId'].expire.$post({
@@ -135,7 +140,7 @@ async function expirePlanReview(
   }
 }
 
-async function processPlanReview(rawInput: string, teamsDir?: string): Promise<void> {
+export async function processPlanReview(rawInput: string, teamsDir?: string): Promise<void> {
   let input: PlanReviewInput
   try {
     input = JSON.parse(rawInput)
@@ -193,22 +198,4 @@ async function processPlanReview(rawInput: string, teamsDir?: string): Promise<v
       decision.feedback || 'Plan was rejected. Please revise the plan based on the feedback.'
     process.stdout.write(JSON.stringify(buildDenyOutput(feedback)))
   }
-}
-
-// Main
-async function main() {
-  let input = ''
-  for await (const chunk of process.stdin) {
-    input += chunk
-  }
-
-  await processPlanReview(input)
-}
-
-const isDirectExecution = process.argv[1]?.includes('/hooks/')
-if (isDirectExecution && !process.argv[1]?.includes('vitest')) {
-  main().catch(error => {
-    process.stderr.write(`[plan-review] fatal: ${error}\n`)
-    process.exit(0)
-  })
 }

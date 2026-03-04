@@ -173,6 +173,26 @@ export async function decidePlanReview(
   return res.json()
 }
 
+export async function decidePermissionReview(
+  roomId: string,
+  reviewId: string,
+  approved: boolean,
+  decidedBy?: string,
+  feedback?: string,
+): Promise<{ ok: boolean }> {
+  const res = await fetch(`/api/rooms/${roomId}/permission-reviews/${reviewId}/decide`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      approved,
+      decided_by: decidedBy || 'anonymous',
+      ...(feedback && { feedback }),
+    }),
+  })
+  if (!res.ok) throw new Error(`Permission review decide failed: HTTP ${res.status}`)
+  return res.json()
+}
+
 export async function expirePlanReview(
   roomId: string,
   reviewId: string,

@@ -1,9 +1,8 @@
-#!/usr/bin/env node
 import { readFileSync, writeFileSync, statSync, rmSync } from 'node:fs'
-import { createHookClient, sendParentMessage, sendLogEntry } from './client'
-import { findRoomId } from './find-room'
-import { summarize } from './summarize'
-import type { HookInput } from './types'
+import { createHookClient, sendParentMessage, sendLogEntry } from '../../../lib/hooks'
+import { findRoomId } from '../../../lib/hooks'
+import { summarize } from '../../../lib/hooks'
+import type { HookInput } from '../../../lib/hooks'
 
 const PARENT_MSG_TTL_SEC = 120
 
@@ -22,7 +21,11 @@ function getOrCreateParentId(sessionId: string): string | null {
 }
 
 function saveParentId(sessionId: string, msgId: string) {
-  writeFileSync(`/tmp/meet-ai-hook-${sessionId}.msgid`, msgId)
+  try {
+    writeFileSync(`/tmp/meet-ai-hook-${sessionId}.msgid`, msgId)
+  } catch {
+    // /tmp may be unavailable — silently ignore
+  }
 }
 
 export async function processHookInput(
@@ -71,21 +74,4 @@ export async function processHookInput(
   await sendLogEntry(client, roomId, summary, parentId ?? undefined)
 
   return 'sent'
-}
-
-// Main: read stdin and run
-async function main() {
-  let input = ''
-  for await (const chunk of process.stdin) {
-    input += chunk
-  }
-  await processHookInput(input)
-
-  process.exit(0)
-}
-
-// Only run main when executed directly (not imported by tests)
-const isDirectExecution = process.argv[1]?.includes('/hooks/')
-if (isDirectExecution && !process.argv[1]?.includes('vitest')) {
-  main().catch(() => process.exit(0))
 }

@@ -4,6 +4,7 @@ import Message from '../Message'
 import LogGroup from '../LogGroup'
 import QuestionCard from '../QuestionCard'
 import PlanReviewCard from '../PlanReviewCard'
+import PermissionCard from '../PermissionCard'
 import SpawnRequestCard from '../SpawnRequestCard'
 import NewMessagesPill from '../NewMessagesPill'
 import type { Message as MessageType } from '../../lib/types'
@@ -20,6 +21,7 @@ type MessageListProps = {
   attachmentCounts?: Record<string, number>
   planDecisions?: Record<string, { status: 'pending' | 'approved' | 'denied' | 'expired'; feedback?: string; permissionMode?: string }>
   questionAnswers?: Record<string, QuestionAnswerState>
+  permissionDecisions?: Record<string, { status: 'pending' | 'approved' | 'denied' | 'expired'; feedback?: string }>
   unreadCount: number
   forceScrollCounter: number
   onScrollToBottom: () => void
@@ -28,6 +30,7 @@ type MessageListProps = {
   onPlanDecide?: (reviewId: string, approved: boolean, feedback?: string, permissionMode?: string) => void
   onPlanDismiss?: (reviewId: string) => void
   onQuestionAnswer?: (reviewId: string, answers: Record<string, string>) => void
+  onPermissionDecide?: (reviewId: string, approved: boolean, feedback?: string) => void
   connected?: boolean
   voiceAvailable?: boolean
 }
@@ -36,6 +39,7 @@ type RenderItem =
   | { kind: 'message'; msg: DisplayMessage; index: number }
   | { kind: 'question'; msg: DisplayMessage; index: number }
   | { kind: 'plan-review'; msg: DisplayMessage; index: number }
+  | { kind: 'permission-review'; msg: DisplayMessage; index: number }
   | { kind: 'spawn-request'; msg: DisplayMessage; index: number; roomName: string }
   | { kind: 'log-group'; logs: DisplayMessage[] }
 
@@ -73,7 +77,8 @@ function groupMessages(messages: DisplayMessage[]): RenderItem[] {
       const children = msg.id ? childLogs.get(msg.id) : undefined
       const isQuestion = msg.sender === 'hook' && msg.color === '#f59e0b'
       const isPlanReview = msg.sender === 'hook' && msg.color === '#8b5cf6'
-      const isHookAnchor = msg.sender === 'hook' && !isQuestion && !isPlanReview
+      const isPermissionReview = msg.sender === 'hook' && msg.color === '#f97316'
+      const isHookAnchor = msg.sender === 'hook' && !isQuestion && !isPlanReview && !isPermissionReview
 
       // Detect spawn_request messages by content
       let spawnRoomName: string | null = null
@@ -91,6 +96,8 @@ function groupMessages(messages: DisplayMessage[]): RenderItem[] {
         items.push({ kind: 'question', msg, index })
       } else if (isPlanReview) {
         items.push({ kind: 'plan-review', msg, index })
+      } else if (isPermissionReview) {
+        items.push({ kind: 'permission-review', msg, index })
       } else if (!isHookAnchor) {
         items.push({ kind: 'message', msg, index })
       }
@@ -104,7 +111,7 @@ function groupMessages(messages: DisplayMessage[]): RenderItem[] {
   return items
 }
 
-export default function MessageList({ messages, attachmentCounts, planDecisions, questionAnswers, unreadCount, forceScrollCounter, onScrollToBottom, onRetry, onSend, onPlanDecide, onPlanDismiss, onQuestionAnswer, connected = true, voiceAvailable }: MessageListProps) {
+export default function MessageList({ messages, attachmentCounts, planDecisions, questionAnswers, permissionDecisions, unreadCount, forceScrollCounter, onScrollToBottom, onRetry, onSend, onPlanDecide, onPlanDismiss, onQuestionAnswer, onPermissionDecide, connected = true, voiceAvailable }: MessageListProps) {
   const { scrollRef, contentRef, isAtBottom, scrollToBottom } = useStickToBottom({ resize: 'smooth', initial: 'smooth' })
 
   // Auto-dismiss new messages pill when user scrolls to the bottom
@@ -186,6 +193,22 @@ export default function MessageList({ messages, attachmentCounts, planDecisions,
                 feedback={decision?.feedback}
                 onDecide={onPlanDecide}
                 onDismiss={onPlanDismiss}
+              />
+            )
+          }
+          if (item.kind === 'permission-review') {
+            const msg = item.msg
+            const reviewId = msg.permission_review_id || ''
+            const decision = reviewId && permissionDecisions ? permissionDecisions[reviewId] : undefined
+            return (
+              <PermissionCard
+                key={`permission-${msg.id || msg.created_at}-${item.index}`}
+                content={msg.content}
+                timestamp={msg.created_at}
+                reviewId={reviewId}
+                status={decision?.status}
+                feedback={decision?.feedback}
+                onDecide={onPermissionDecide}
               />
             )
           }

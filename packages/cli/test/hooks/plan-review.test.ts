@@ -1,0 +1,235 @@
+import { describe, expect, it, mock, beforeEach, afterEach } from 'bun:test'
+import { mkdirSync, writeFileSync, rmSync } from 'node:fs'
+
+const TEST_DIR = '/tmp/meet-ai-plan-review-test-teams'
+
+const originalFetch = globalThis.fetch
+const originalEnv = { ...process.env }
+const originalStdout = process.stdout.write
+const originalStderr = process.stderr.write
+
+function writeTeamFile(teamName: string, data: { session_id: string; room_id: string }) {
+  const dir = `${TEST_DIR}/${teamName}`
+  mkdirSync(dir, { recursive: true })
+  writeFileSync(`${dir}/meet-ai.json`, JSON.stringify(data))
+}
+
+function makeInput(overrides?: Record<string, unknown>) {
+  return JSON.stringify({
+    session_id: 'sess-1',
+    tool_name: 'ExitPlanMode',
+    tool_input: { plan: '## My Plan\n\nDo stuff' },
+    ...overrides,
+  })
+}
+
+describe('plan-review usecase', () => {
+  let mockFetch: ReturnType<typeof mock>
+  let stdoutCapture: string
+  let stderrCapture: string
+
+  beforeEach(() => {
+    mkdirSync(TEST_DIR, { recursive: true })
+    mockFetch = mock()
+    globalThis.fetch = mockFetch as unknown as typeof fetch
+    stdoutCapture = ''
+    stderrCapture = ''
+    process.stdout.write = ((chunk: string) => { stdoutCapture += chunk; return true }) as typeof process.stdout.write
+    process.stderr.write = ((chunk: string) => { stderrCapture += chunk; return true }) as typeof process.stderr.write
+    process.env.MEET_AI_URL = 'http://localhost:9999'
+    process.env.MEET_AI_KEY = 'mai_test123'
+    writeTeamFile('my-team', { session_id: 'sess-1', room_id: 'room-abc' })
+  })
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+    process.stdout.write = originalStdout
+    process.stderr.write = originalStderr
+    process.env.MEET_AI_URL = originalEnv.MEET_AI_URL
+    process.env.MEET_AI_KEY = originalEnv.MEET_AI_KEY
+    rmSync(TEST_DIR, { recursive: true, force: true })
+  })
+
+  async function loadUsecase() {
+    return import('../../src/commands/hook/plan-review/usecase')
+  }
+
+  it('skips when stdin is invalid JSON', async () => {
+    const { processPlanReview } = await loadUsecase()
+    await processPlanReview('not json', TEST_DIR)
+    expect(stderrCapture).toContain('failed to parse stdin')
+    expect(stdoutCapture).toBe('')
+  })
+
+  it('skips when no session_id', async () => {
+    const { processPlanReview } = await loadUsecase()
+    await processPlanReview(JSON.stringify({ tool_name: 'ExitPlanMode' }), TEST_DIR)
+    expect(stderrCapture).toContain('missing session_id')
+    expect(stdoutCapture).toBe('')
+  })
+
+  it('skips when no plan content in tool_input', async () => {
+    const { processPlanReview } = await loadUsecase()
+    await processPlanReview(makeInput({ tool_input: {} }), TEST_DIR)
+    expect(stderrCapture).toContain('no plan content')
+    expect(stdoutCapture).toBe('')
+  })
+
+  it('skips when no room found for session', async () => {
+    const { processPlanReview } = await loadUsecase()
+    await processPlanReview(makeInput({ session_id: 'unknown-sess' }), TEST_DIR)
+    expect(stderrCapture).toContain('no room found')
+    expect(stdoutCapture).toBe('')
+  })
+
+  it('skips when MEET_AI_URL not set', async () => {
+    delete process.env.MEET_AI_URL
+    const { processPlanReview } = await loadUsecase()
+    await processPlanReview(makeInput(), TEST_DIR)
+    expect(stderrCapture).toContain('MEET_AI_URL or MEET_AI_KEY not set')
+    expect(stdoutCapture).toBe('')
+  })
+
+  it('skips when MEET_AI_KEY not set', async () => {
+    delete process.env.MEET_AI_KEY
+    const { processPlanReview } = await loadUsecase()
+    await processPlanReview(makeInput(), TEST_DIR)
+    expect(stderrCapture).toContain('MEET_AI_URL or MEET_AI_KEY not set')
+    expect(stdoutCapture).toBe('')
+  })
+
+  it('creates plan review and outputs allow on approved decision', async () => {
+    // Mock create plan review POST
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ id: 'pr-1', message_id: 'msg-1' }), {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+    // Mock poll GET — return approved immediately
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ status: 'approved' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+
+    const { processPlanReview } = await loadUsecase()
+    await processPlanReview(makeInput(), TEST_DIR)
+
+    expect(mockFetch).toHaveBeenCalledTimes(2)
+    const output = JSON.parse(stdoutCapture)
+    expect(output.hookSpecificOutput.hookEventName).toBe('PermissionRequest')
+    expect(output.hookSpecificOutput.decision.behavior).toBe('allow')
+  })
+
+  it('outputs deny with feedback on denied decision', async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ id: 'pr-2' }), {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ status: 'denied', feedback: 'Needs more detail' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+
+    const { processPlanReview } = await loadUsecase()
+    await processPlanReview(makeInput(), TEST_DIR)
+
+    const output = JSON.parse(stdoutCapture)
+    expect(output.hookSpecificOutput.decision.behavior).toBe('deny')
+    expect(output.hookSpecificOutput.decision.message).toBe('Needs more detail')
+  })
+
+  it('uses default feedback when denied without feedback', async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ id: 'pr-3' }), {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ status: 'denied' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+
+    const { processPlanReview } = await loadUsecase()
+    await processPlanReview(makeInput(), TEST_DIR)
+
+    const output = JSON.parse(stdoutCapture)
+    expect(output.hookSpecificOutput.decision.behavior).toBe('deny')
+    expect(output.hookSpecificOutput.decision.message).toContain('Plan was rejected')
+  })
+
+  it('outputs allow with allowedPrompts for acceptEdits permission_mode', async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ id: 'pr-4' }), {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ status: 'approved', permission_mode: 'acceptEdits' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+
+    const { processPlanReview } = await loadUsecase()
+    await processPlanReview(makeInput(), TEST_DIR)
+
+    const output = JSON.parse(stdoutCapture)
+    expect(output.hookSpecificOutput.decision.behavior).toBe('allow')
+    expect(output.hookSpecificOutput.decision.allowedPrompts).toBeDefined()
+    expect(output.hookSpecificOutput.decision.allowedPrompts.length).toBeGreaterThan(0)
+  })
+
+  it('silently handles create plan review failure', async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response('{"error":"server error"}', { status: 500 }),
+    )
+
+    const { processPlanReview } = await loadUsecase()
+    await processPlanReview(makeInput(), TEST_DIR)
+
+    expect(stderrCapture).toContain('create failed')
+    expect(stdoutCapture).toBe('')
+  })
+
+  it('silently handles network error on create', async () => {
+    mockFetch.mockRejectedValueOnce(new Error('ECONNREFUSED'))
+
+    const { processPlanReview } = await loadUsecase()
+    await processPlanReview(makeInput(), TEST_DIR)
+
+    expect(stderrCapture).toContain('create error')
+    expect(stdoutCapture).toBe('')
+  })
+
+  it('outputs allow on expired status', async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ id: 'pr-5' }), {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ status: 'expired' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+
+    const { processPlanReview } = await loadUsecase()
+    await processPlanReview(makeInput(), TEST_DIR)
+
+    const output = JSON.parse(stdoutCapture)
+    expect(output.hookSpecificOutput.decision.behavior).toBe('allow')
+  })
+})

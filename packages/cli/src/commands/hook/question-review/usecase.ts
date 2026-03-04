@@ -1,6 +1,5 @@
-#!/usr/bin/env node
-import { findRoomId } from '../log-tool-use/find-room'
-import { createHookClient } from '../log-tool-use/client'
+import { createHookClient, type HookClient } from '../../../lib/hooks/client'
+import { findRoomId } from '../../../lib/hooks/find-room'
 
 type Option = {
   label: string
@@ -71,21 +70,18 @@ function formatQuestions(questions: Question[]): string {
 }
 
 async function createQuestionReview(
+  client: HookClient,
   roomId: string,
   questions: Question[],
   formattedContent: string,
 ): Promise<QuestionReviewResponse | null> {
   try {
-    const res = await fetch(`${process.env.MEET_AI_URL}/api/rooms/${roomId}/question-reviews`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.MEET_AI_KEY}`,
-      },
-      body: JSON.stringify({
+    const res = await client.api.rooms[':id']['question-reviews'].$post({
+      param: { id: roomId },
+      json: {
         questions_json: JSON.stringify(questions),
         formatted_content: formattedContent,
-      }),
+      },
     })
     if (!res.ok) {
       const text = await res.text()
@@ -100,19 +96,19 @@ async function createQuestionReview(
 }
 
 async function pollForAnswer(
+  client: HookClient,
   roomId: string,
   reviewId: string,
+  pollInterval = POLL_INTERVAL_MS,
+  pollTimeout = POLL_TIMEOUT_MS,
 ): Promise<QuestionReviewStatus | null> {
-  const deadline = Date.now() + POLL_TIMEOUT_MS
+  const deadline = Date.now() + pollTimeout
 
   while (Date.now() < deadline) {
     try {
-      const res = await fetch(
-        `${process.env.MEET_AI_URL}/api/rooms/${roomId}/question-reviews/${reviewId}`,
-        {
-          headers: { Authorization: `Bearer ${process.env.MEET_AI_KEY}` },
-        }
-      )
+      const res = await client.api.rooms[':id']['question-reviews'][':reviewId'].$get({
+        param: { id: roomId, reviewId },
+      })
       if (res.ok) {
         const data = (await res.json()) as QuestionReviewStatus
         if (data.status !== 'pending') {
@@ -122,7 +118,7 @@ async function pollForAnswer(
     } catch (error) {
       process.stderr.write(`[question-review] poll error: ${error}\n`)
     }
-    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
+    await new Promise((resolve) => setTimeout(resolve, pollInterval))
   }
 
   return null
@@ -143,31 +139,28 @@ function buildOutput(questions: Question[], answers: Record<string, string>): Ho
   }
 }
 
-async function expireReview(roomId: string, reviewId: string): Promise<void> {
+async function expireReview(
+  client: HookClient,
+  roomId: string,
+  reviewId: string,
+): Promise<void> {
   try {
-    await fetch(
-      `${process.env.MEET_AI_URL}/api/rooms/${roomId}/question-reviews/${reviewId}/expire`,
-      {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${process.env.MEET_AI_KEY}` },
-      }
-    )
+    await client.api.rooms[':id']['question-reviews'][':reviewId'].expire.$post({
+      param: { id: roomId, reviewId },
+    })
   } catch {
     // Never throw — hook must not block the agent
   }
 }
 
-async function sendTimeoutMessage(
-  client: ReturnType<typeof createHookClient>,
-  roomId: string,
-): Promise<void> {
+async function sendTimeoutMessage(client: HookClient, roomId: string): Promise<void> {
   try {
     await client.api.rooms[':id'].messages.$post({
       param: { id: roomId },
       json: {
         sender: 'hook',
         content: '_Question timed out — answer in terminal instead._',
-        sender_type: 'agent' as const,
+        sender_type: 'agent',
         color: '#f59e0b',
       },
     })
@@ -176,7 +169,11 @@ async function sendTimeoutMessage(
   }
 }
 
-export async function processQuestionReview(rawInput: string, teamsDir?: string): Promise<void> {
+export async function processQuestionReview(
+  rawInput: string,
+  teamsDir?: string,
+  opts?: { pollInterval?: number; pollTimeout?: number },
+): Promise<void> {
   let input: AskUserInput
   try {
     input = JSON.parse(rawInput)
@@ -210,15 +207,21 @@ export async function processQuestionReview(rawInput: string, teamsDir?: string)
   const formattedContent = formatQuestions(toolInput.questions)
 
   process.stderr.write(`[question-review] sending question to room ${roomId} via ${url}\n`)
-  const review = await createQuestionReview(roomId, toolInput.questions, formattedContent)
+  const review = await createQuestionReview(client, roomId, toolInput.questions, formattedContent)
   if (!review) return
 
   process.stderr.write(`[question-review] created: ${review.id}, polling for answer...\n`)
-  const result = await pollForAnswer(roomId, review.id)
+  const result = await pollForAnswer(
+    client,
+    roomId,
+    review.id,
+    opts?.pollInterval,
+    opts?.pollTimeout,
+  )
 
   if (!result) {
     process.stderr.write('[question-review] timed out waiting for answer\n')
-    await expireReview(roomId, review.id)
+    await expireReview(client, roomId, review.id)
     await sendTimeoutMessage(client, roomId)
     return
   }
@@ -226,25 +229,14 @@ export async function processQuestionReview(rawInput: string, teamsDir?: string)
   process.stderr.write(`[question-review] answer received: ${result.status}\n`)
 
   if (result.status === 'answered' && result.answers_json) {
-    const answers: Record<string, string> = JSON.parse(result.answers_json)
+    let answers: Record<string, string>
+    try {
+      answers = JSON.parse(result.answers_json)
+    } catch (error) {
+      process.stderr.write(`[question-review] failed to parse answers_json: ${error}\n`)
+      return
+    }
     process.stdout.write(JSON.stringify(buildOutput(toolInput.questions, answers)))
   }
   // If expired, output nothing — falls through to terminal prompt
-}
-
-// Main
-async function main() {
-  let input = ''
-  for await (const chunk of process.stdin) {
-    input += chunk
-  }
-  await processQuestionReview(input)
-}
-
-const isDirectExecution = process.argv[1]?.includes('/hooks/')
-if (isDirectExecution && !process.argv[1]?.includes('vitest')) {
-  main().catch((error) => {
-    process.stderr.write(`[question-review] fatal: ${error}\n`)
-    process.exit(0)
-  })
 }
