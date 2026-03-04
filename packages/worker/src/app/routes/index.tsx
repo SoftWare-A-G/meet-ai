@@ -235,7 +235,7 @@ function NeonLanding() {
               <Link
                 to={hasKey ? '/chat' : '/key'}
                 style={FONT_HEADING}
-                className={clsx(NEON_BTN, 'px-5 py-2 text-sm')}
+                className={clsx(NEON_BTN, 'min-w-[120px] px-5 py-2 text-center text-sm')}
               >
                 {hasKey ? 'Open Chat' : 'Get API Key'}
               </Link>
@@ -274,9 +274,9 @@ function NeonLanding() {
             <Link
               to={hasKey ? '/chat' : '/key'}
               style={FONT_HEADING}
-              className={clsx(NEON_BTN, 'px-8 py-3 text-base')}
+              className={clsx(NEON_BTN, 'min-w-[160px] px-8 py-3 text-center text-base')}
             >
-              {hasKey ? 'Enter Chat' : 'Get Free API Key'}
+              {hasKey ? 'Enter Chat' : 'Get API Key'}
             </Link>
             <a
               href="https://github.com/SoftWare-A-G/meet-ai"
@@ -348,15 +348,9 @@ function NeonLanding() {
               >
                 npm
               </a>
-              {hasKey ? (
-                <Link to="/chat" className={NAV_LINK_CYAN}>
-                  Chat
-                </Link>
-              ) : (
-                <Link to="/key" className={NAV_LINK}>
-                  Get API Key
-                </Link>
-              )}
+              <Link to={hasKey ? '/chat' : '/key'} className={hasKey ? NAV_LINK_CYAN : NAV_LINK}>
+                {hasKey ? 'Chat' : 'Get API Key'}
+              </Link>
             </div>
             <p className="text-[13px] text-slate-600">
               &copy; 2026 <span className="text-[#00FF8866]">meet-ai.cc</span> &middot;{' '}
