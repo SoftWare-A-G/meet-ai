@@ -1,6 +1,7 @@
 import { Field } from '@base-ui/react/field'
 import React, { useState, useCallback, useRef, useEffect } from 'react'
 import * as api from '../../lib/api'
+import { Button } from '../ui/button'
 
 type LoginPromptProps = {
   onLogin: (key: string) => void
@@ -59,9 +60,9 @@ export default function LoginPrompt({ onLogin }: LoginPromptProps) {
               onKeyDown={handleKeyDown}
               className="flex-1 min-w-0 h-[42px] px-3 border border-[#30363D] rounded-lg bg-[#161B22] text-[#C9D1D9] text-sm outline-none placeholder:text-[#8B949E] focus:border-primary"
             />
-            <button type="button" onClick={handleLogin} disabled={loading} className="h-[42px] px-5 border-none rounded-lg bg-primary text-primary-text text-sm font-semibold cursor-pointer shrink-0 hover:brightness-110">
+            <Button className="h-[42px] px-5 shrink-0" onClick={handleLogin} disabled={loading}>
               {loading ? '...' : 'Go'}
-            </button>
+            </Button>
           </div>
           <Field.Error className="text-[#F85149] text-[13px] min-h-[18px]" match>{error}</Field.Error>
         </Field.Root>

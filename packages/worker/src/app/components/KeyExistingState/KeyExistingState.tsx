@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { AlertDialog } from '@base-ui/react/alert-dialog'
 import KeyHeadline from '../KeyHeadline'
+import { Button } from '../ui/button'
 
 type KeyExistingStateProps = {
   apiKey: string
@@ -47,12 +48,12 @@ export default function KeyExistingState({ apiKey, onRegenerate }: KeyExistingSt
                   <AlertDialog.Close className="cursor-pointer rounded-full border border-edge-light bg-transparent px-5 py-2 text-[13px] text-text-secondary transition-colors duration-150 hover:bg-edge-dim hover:text-text-primary">
                     Cancel
                   </AlertDialog.Close>
-                  <button
-                    type="button"
-                    className="cursor-pointer rounded-full border border-[#5c2b2e] bg-transparent px-5 py-2 text-[13px] text-red-400 transition-colors duration-150 hover:bg-[#2a1215] hover:text-red-400"
+                  <Button
+                    variant="destructive"
+                    className="rounded-full"
                     onClick={onRegenerate}>
                     Generate
-                  </button>
+                  </Button>
                 </div>
               </AlertDialog.Popup>
             </AlertDialog.Portal>

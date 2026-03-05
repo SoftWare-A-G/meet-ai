@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import clsx from 'clsx'
 import { formatTime } from '../../lib/dates'
+import { Button } from '../ui/button'
 
 type PermissionCardProps = {
   content: string
@@ -100,20 +101,20 @@ export default function PermissionCard({ content, timestamp, reviewId, status, f
             className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-msg-text placeholder-[#8b8fa3] resize-none outline-none focus:border-[#f97316]/50"
           />
           <div className="flex gap-2 justify-end">
-            <button
-              type="button"
+            <Button
+              variant="destructive"
+              size="sm"
               onClick={() => onDecide(reviewId, false, text || undefined)}
-              className="rounded-lg px-4 py-1.5 text-sm font-medium transition-all bg-[#ef4444]/20 text-[#ef4444] cursor-pointer hover:bg-[#ef4444]/30"
             >
               Deny
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              size="sm"
+              className="bg-[#22c55e] text-black hover:bg-[#22c55e]/80"
               onClick={() => onDecide(reviewId, true, text || undefined)}
-              className="rounded-lg px-4 py-1.5 text-sm font-medium transition-all bg-[#22c55e] text-black cursor-pointer hover:brightness-110"
             >
               Allow
-            </button>
+            </Button>
           </div>
         </div>
       )}

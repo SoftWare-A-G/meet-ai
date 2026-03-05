@@ -55,6 +55,7 @@
     "tailwindcss": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
+    "vite-tsconfig-paths": "6.1.1",
     "vitest": "catalog:",
     "wrangler": "4.63.0"
   }

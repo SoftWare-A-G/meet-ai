@@ -2,6 +2,7 @@ import { Field } from '@base-ui/react/field'
 import { useState, useCallback, useRef, useEffect } from 'react'
 import type React from 'react'
 import KeyHeadline from '../KeyHeadline'
+import { Button } from '../ui/button'
 
 type KeyPasteStateProps = {
   onConnect: (key: string) => void
@@ -99,22 +100,22 @@ export default function KeyPasteState({ onConnect, onBack }: KeyPasteStateProps)
               disabled={loading}
               className="flex-1 rounded-lg border border-edge-light border-l-[3px] border-l-blue-600 bg-edge px-3.5 py-3 font-mono text-base text-text-primary outline-none transition-[border-color] duration-150 focus:border-edge-hover focus:border-l-blue-600 max-[520px]:w-full"
             />
-            <button
-              type="button"
-              className="cursor-pointer whitespace-nowrap rounded-lg border border-edge-light bg-edge px-4 py-3 text-sm text-text-primary transition-[background,transform,border-color] duration-150 hover:border-edge-hover hover:bg-edge-dim max-[520px]:w-full"
+            <Button
+              variant="outline"
+              className="whitespace-nowrap px-4 py-3 max-[520px]:w-full"
               onClick={connectWithKey}
               disabled={loading}>
               {loading ? '...' : 'Connect'}
-            </button>
+            </Button>
           </div>
           {error && <Field.Error className="text-center text-sm text-red-400" match>{error}</Field.Error>}
         </Field.Root>
-        <button
-          type="button"
-          className="cursor-pointer border-0 bg-transparent text-sm text-text-muted underline underline-offset-[3px] transition-colors duration-150 hover:text-text-secondary"
+        <Button
+          variant="link"
+          className="text-text-muted underline-offset-[3px] hover:text-text-secondary"
           onClick={onBack}>
           ← Back
-        </button>
+        </Button>
       </div>
     </>
   )

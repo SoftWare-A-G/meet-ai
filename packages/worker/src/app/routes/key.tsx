@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { Button } from '../components/ui/button'
 import KeyErrorState from '../components/KeyErrorState'
 import KeyExistingState from '../components/KeyExistingState'
 import KeyGenerateState from '../components/KeyGenerateState'
@@ -166,12 +167,12 @@ function KeyPage() {
               Your key to the conversation.
             </h1>
             <div className="flex flex-col items-center gap-4">
-              <button
-                type="button"
-                className="group inline-flex cursor-wait items-center justify-center gap-2 rounded-full border-0 bg-blue-600 px-8 py-3.5 text-base font-semibold text-white no-underline opacity-60 shadow-[0_0_60px_rgba(37,99,235,0.08)] transition-colors duration-150 max-[520px]:w-full"
+              <Button
+                size="lg"
+                className="rounded-full bg-blue-600 px-8 py-3.5 text-base font-semibold text-white shadow-[0_0_60px_rgba(37,99,235,0.08)] max-[520px]:w-full"
                 disabled>
                 <span className="spinner" /> Generating...
-              </button>
+              </Button>
             </div>
           </>
         )

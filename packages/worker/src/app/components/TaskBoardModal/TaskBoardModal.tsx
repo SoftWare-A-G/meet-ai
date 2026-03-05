@@ -3,6 +3,7 @@ import clsx from 'clsx'
 import { useState, useCallback, useMemo } from 'react'
 import * as api from '../../lib/api'
 import type { TaskItem, TasksInfo } from '../../lib/types'
+import { Button } from '../ui/button'
 
 type TaskBoardModalProps = {
   roomId: string
@@ -104,13 +105,12 @@ export default function TaskBoardModal({ roomId, tasksInfo, onClose }: TaskBoard
                 onChange={e => setSubject(e.target.value)}
                 maxLength={500}
               />
-              <button
+              <Button
                 type="submit"
                 disabled={!subject.trim() || submitting}
-                className="bg-primary text-primary-text cursor-pointer rounded-md border-none px-4 py-2 text-[13px] font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Add
-              </button>
+              </Button>
             </div>
             <textarea
               className="border-border text-msg-text mt-2 w-full rounded-md border bg-white/10 px-2.5 py-2 text-[13px] resize-y"

@@ -1,6 +1,6 @@
 import { Dialog } from '@base-ui/react'
-import clsx from 'clsx'
 import { useState, useCallback } from 'react'
+import { Button } from '../ui/button'
 import { IconLoader } from '../../icons'
 
 type SpawnTeamModalProps = {
@@ -57,19 +57,13 @@ export default function SpawnTeamModal({ onClose, onSend }: SpawnTeamModalProps)
             disabled={sending}
           />
           <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              className="text-msg-text border-border cursor-pointer rounded-md border bg-transparent px-4 py-2 text-[13px] font-semibold"
+            <Button
+              variant="outline"
               onClick={onClose}
               disabled={sending}>
               Cancel
-            </button>
-            <button
-              type="button"
-              className={clsx(
-                'bg-primary text-primary-text rounded-md border-none px-4 py-2 text-[13px] font-semibold',
-                sending ? 'cursor-wait opacity-70' : 'cursor-pointer'
-              )}
+            </Button>
+            <Button
               onClick={handleSpawn}
               disabled={sending || !roomName.trim()}>
               {sending ? (
@@ -80,7 +74,7 @@ export default function SpawnTeamModal({ onClose, onSend }: SpawnTeamModalProps)
               ) : (
                 'Spawn'
               )}
-            </button>
+            </Button>
           </div>
         </Dialog.Popup>
       </Dialog.Portal>

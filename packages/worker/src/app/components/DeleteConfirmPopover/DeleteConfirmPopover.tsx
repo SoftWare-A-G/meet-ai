@@ -1,5 +1,6 @@
 import { Popover } from '@base-ui/react/popover'
 import { useState } from 'react'
+import { Button } from '../ui/button'
 
 interface DeleteConfirmPopoverProps {
   roomName: string
@@ -32,23 +33,23 @@ export default function DeleteConfirmPopover({ roomName, onConfirm, children }: 
             <p className="mb-1 text-sm font-semibold text-white">Delete "{roomName}"?</p>
             <p className="mb-4 text-xs text-gray-400">This will remove all messages and cannot be undone.</p>
             <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                className="cursor-pointer rounded-md border border-white/20 bg-transparent px-3 py-1.5 text-xs text-gray-300 hover:bg-white/10"
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setOpen(false)}
               >
                 Cancel
-              </button>
-              <button
-                type="button"
-                className="cursor-pointer rounded-md border-none bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700"
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
                 onClick={() => {
                   setOpen(false)
                   onConfirm()
                 }}
               >
                 Delete
-              </button>
+              </Button>
             </div>
           </Popover.Popup>
         </Popover.Positioner>

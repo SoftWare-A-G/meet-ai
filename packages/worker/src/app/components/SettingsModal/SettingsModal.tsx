@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react'
 import { THEME_PRESETS, DEFAULT_SCHEMA } from '../../lib/constants'
 import { applySchema } from '../../lib/theme'
 import ColorPreview from '../ColorPreview'
+import { Button } from '../ui/button'
 
 type SettingsModalProps = {
   currentSchema: string
@@ -99,24 +100,21 @@ export default function SettingsModal({ currentSchema, onSave, onClose }: Settin
             />
             <ColorPreview schema={schema} />
             <div className="mt-2 flex justify-end gap-2">
-              <button
-                type="button"
-                className="text-primary border-border mr-auto cursor-pointer rounded-md border bg-transparent px-4 py-2 text-[13px] font-semibold"
+              <Button
+                variant="outline"
+                className="mr-auto text-primary"
                 onClick={handleReset}>
                 Reset
-              </button>
-              <button
-                type="button"
-                className="text-msg-text border-border cursor-pointer rounded-md border bg-transparent px-4 py-2 text-[13px] font-semibold"
+              </Button>
+              <Button
+                variant="outline"
                 onClick={handleCancel}>
                 Cancel
-              </button>
-              <button
-                type="button"
-                className="bg-primary text-primary-text cursor-pointer rounded-md border-none px-4 py-2 text-[13px] font-semibold"
+              </Button>
+              <Button
                 onClick={handleSave}>
                 Save
-              </button>
+              </Button>
             </div>
         </Dialog.Popup>
       </Dialog.Portal>
