@@ -1,4 +1,4 @@
-import { Dialog } from '@base-ui/react'
+import { Dialog, DialogContent, DialogTitle } from '../ui/dialog'
 import clsx from 'clsx'
 import { useState, useCallback, useMemo } from 'react'
 import * as api from '../../lib/api'
@@ -84,52 +84,46 @@ export default function TaskBoardModal({ roomId, tasksInfo, onClose }: TaskBoard
   }, [roomId, subject, description, submitting])
 
   return (
-    <Dialog.Root open onOpenChange={open => { if (!open) onClose() }}>
-      <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 z-[100] bg-black/50" />
-        <Dialog.Popup className="bg-chat-bg text-msg-text border-border fixed top-1/2 left-1/2 z-[100] max-h-[85vh] w-[800px] max-w-[95vw] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border p-6">
-          <div className="flex items-center justify-between mb-4">
-            <Dialog.Title className="text-lg">Task Board</Dialog.Title>
-            <Dialog.Close className="cursor-pointer rounded-md border-none bg-transparent p-1 text-[#6b7280] hover:text-msg-text text-lg leading-none">
-              &#x2715;
-            </Dialog.Close>
-          </div>
+    <Dialog open onOpenChange={open => { if (!open) onClose() }}>
+      <DialogContent className="max-h-[85vh] w-[800px] max-w-[95vw] sm:max-w-[800px] overflow-y-auto p-6">
+        <div className="flex items-center justify-between mb-4">
+          <DialogTitle className="text-lg">Task Board</DialogTitle>
+        </div>
 
-          <form onSubmit={handleSubmit} className="mb-4">
-            <div className="flex gap-2">
-              <input
-                className="border-border text-msg-text flex-1 rounded-md border bg-white/10 px-2.5 py-2 text-[13px]"
-                type="text"
-                placeholder="New task subject..."
-                value={subject}
-                onChange={e => setSubject(e.target.value)}
-                maxLength={500}
-              />
-              <Button
-                type="submit"
-                disabled={!subject.trim() || submitting}
-              >
-                Add
-              </Button>
-            </div>
-            <textarea
-              className="border-border text-msg-text mt-2 w-full rounded-md border bg-white/10 px-2.5 py-2 text-[13px] resize-y"
-              placeholder="Description (optional)"
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              maxLength={2000}
-              rows={2}
+        <form onSubmit={handleSubmit} className="mb-4">
+          <div className="flex gap-2">
+            <input
+              className="border-border text-msg-text flex-1 rounded-md border bg-white/10 px-2.5 py-2 text-[13px]"
+              type="text"
+              placeholder="New task subject..."
+              value={subject}
+              onChange={e => setSubject(e.target.value)}
+              maxLength={500}
             />
-            {error && <div className="mt-1 text-[12px] text-[#ef4444]">{error}</div>}
-          </form>
-
-          <div className="flex gap-4 max-[600px]:flex-col">
-            <Column title="Pending" tasks={pending} count={pending.length} />
-            <Column title="In Progress" tasks={inProgress} count={inProgress.length} />
-            <Column title="Completed" tasks={completed} count={completed.length} />
+            <Button
+              type="submit"
+              disabled={!subject.trim() || submitting}
+            >
+              Add
+            </Button>
           </div>
-        </Dialog.Popup>
-      </Dialog.Portal>
-    </Dialog.Root>
+          <textarea
+            className="border-border text-msg-text mt-2 w-full rounded-md border bg-white/10 px-2.5 py-2 text-[13px] resize-y"
+            placeholder="Description (optional)"
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            maxLength={2000}
+            rows={2}
+          />
+          {error && <div className="mt-1 text-[12px] text-[#ef4444]">{error}</div>}
+        </form>
+
+        <div className="flex gap-4 max-[600px]:flex-col">
+          <Column title="Pending" tasks={pending} count={pending.length} />
+          <Column title="In Progress" tasks={inProgress} count={inProgress.length} />
+          <Column title="Completed" tasks={completed} count={completed.length} />
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }

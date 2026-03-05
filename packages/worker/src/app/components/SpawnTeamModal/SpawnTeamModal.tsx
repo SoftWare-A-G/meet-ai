@@ -1,5 +1,5 @@
-import { Dialog } from '@base-ui/react'
 import { useState, useCallback } from 'react'
+import { Dialog, DialogContent, DialogTitle } from '../ui/dialog'
 import { Button } from '../ui/button'
 import { IconLoader } from '../../icons'
 
@@ -40,44 +40,41 @@ export default function SpawnTeamModal({ onClose, onSend }: SpawnTeamModalProps)
   )
 
   return (
-    <Dialog.Root open onOpenChange={handleOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 z-100 bg-black/50" />
-        <Dialog.Popup className="bg-chat-bg text-msg-text border-border fixed top-1/2 left-1/2 z-100 w-115 max-w-[90vw] -translate-x-1/2 -translate-y-1/2 rounded-xl border p-6">
-          <Dialog.Title className="mb-4 text-lg">Spawn Team</Dialog.Title>
-          <label className="mb-1 block text-[13px] font-semibold">Room Name</label>
-          <input
-            className="border-border text-msg-text mb-3 w-full rounded-md border bg-white/10 px-2.5 py-2 text-base"
-            type="text"
-            value={roomName}
-            onChange={e => setRoomName(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="e.g. my-feature-team"
-            autoFocus
-            disabled={sending}
-          />
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={onClose}
-              disabled={sending}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSpawn}
-              disabled={sending || !roomName.trim()}>
-              {sending ? (
-                <span className="flex items-center gap-1.5">
-                  <IconLoader size={14} className="animate-spin" />
-                  Spawning...
-                </span>
-              ) : (
-                'Spawn'
-              )}
-            </Button>
-          </div>
-        </Dialog.Popup>
-      </Dialog.Portal>
-    </Dialog.Root>
+    <Dialog open onOpenChange={handleOpenChange}>
+      <DialogContent className="w-115 max-w-[90vw] sm:max-w-115 p-6" showCloseButton={false}>
+        <DialogTitle className="mb-4 text-lg">Spawn Team</DialogTitle>
+        <label className="mb-1 block text-[13px] font-semibold">Room Name</label>
+        <input
+          className="border-border text-msg-text mb-3 w-full rounded-md border bg-white/10 px-2.5 py-2 text-base"
+          type="text"
+          value={roomName}
+          onChange={e => setRoomName(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="e.g. my-feature-team"
+          autoFocus
+          disabled={sending}
+        />
+        <div className="flex justify-end gap-2">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            disabled={sending}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSpawn}
+            disabled={sending || !roomName.trim()}>
+            {sending ? (
+              <span className="flex items-center gap-1.5">
+                <IconLoader size={14} className="animate-spin" />
+                Spawning...
+              </span>
+            ) : (
+              'Spawn'
+            )}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }

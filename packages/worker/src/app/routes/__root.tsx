@@ -2,6 +2,7 @@ import { Toast } from '@base-ui/react/toast'
 import { createRootRoute, HeadContent, Outlet, Scripts } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { Toaster } from 'sonner'
+import { ThemeProvider } from '../components/ThemeProvider'
 import { ToastList } from '../components/Toast'
 import appCss from '../main.css?url'
 
@@ -40,23 +41,25 @@ function RootLayout() {
         <HeadContent />
       </head>
       <body>
-        <Toast.Provider timeout={2100}>
-          <div className="root">
-            <Outlet />
-          </div>
-          <ToastList />
-        </Toast.Provider>
-        <Toaster
-          theme="dark"
-          position="bottom-center"
-          toastOptions={{
-            style: {
-              background: '#1a1a2e',
-              border: '1px solid #3b3768',
-              color: '#e5e5e5',
-            },
-          }}
-        />
+        <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+          <Toast.Provider timeout={2100}>
+            <div className="root">
+              <Outlet />
+            </div>
+            <ToastList />
+          </Toast.Provider>
+          <Toaster
+            theme="dark"
+            position="bottom-center"
+            toastOptions={{
+              style: {
+                background: '#1a1a2e',
+                border: '1px solid #3b3768',
+                color: '#e5e5e5',
+              },
+            }}
+          />
+        </ThemeProvider>
         <Scripts />
       </body>
     </html>

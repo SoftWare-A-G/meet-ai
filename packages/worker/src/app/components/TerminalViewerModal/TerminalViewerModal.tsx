@@ -1,4 +1,4 @@
-import { Dialog } from '@base-ui/react'
+import { Dialog, DialogContent, DialogClose } from '../ui/dialog'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
@@ -159,39 +159,36 @@ export default function TerminalViewerModal({ open, onClose, data, onResize }: T
   }, [open])
 
   return (
-    <Dialog.Root open={open} onOpenChange={isOpen => { if (!isOpen) onClose() }}>
-      <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 z-[100] bg-black/60" />
-        <Dialog.Popup className="fixed top-1/2 left-1/2 z-[100] -translate-x-1/2 -translate-y-1/2 flex flex-col border border-[#30363d] bg-[#0d1117] overflow-hidden w-[90vw] md:w-[58vw] h-[80vh] rounded-xl">
-          <div className="flex items-center justify-between border-b border-[#30363d] shrink-0">
-            <div className="flex items-center gap-0 overflow-x-auto">
-              {panes.map(pane => (
-                <button
-                  key={pane.paneId}
-                  type="button"
-                  onClick={() => handleTabSwitch(pane.paneId)}
-                  className={clsx(
-                    'px-4 py-2.5 text-[12px] font-mono border-b-2 border-r border-r-[#30363d] cursor-pointer bg-transparent whitespace-nowrap',
-                    pane.paneId === activePane
-                      ? 'text-[#e6edf3] border-b-[#58a6ff] bg-[#161b22]'
-                      : 'text-[#6e7681] border-b-transparent hover:text-[#b1bac4]'
-                  )}
-                >
-                  {pane.name}
-                </button>
-              ))}
-            </div>
-            <Dialog.Close className="cursor-pointer rounded-md border-none bg-transparent px-3 py-2 text-[#6e7681] hover:text-[#e6edf3] text-lg leading-none shrink-0">
-              &#x2715;
-            </Dialog.Close>
+    <Dialog open={open} onOpenChange={isOpen => { if (!isOpen) onClose() }}>
+      <DialogContent className="flex flex-col border border-[#30363d] bg-[#0d1117] overflow-hidden w-[90vw] sm:max-w-[90vw] md:w-[58vw] h-[80vh] p-0 gap-0" showCloseButton={false}>
+        <div className="flex items-center justify-between border-b border-[#30363d] shrink-0">
+          <div className="flex items-center gap-0 overflow-x-auto">
+            {panes.map(pane => (
+              <button
+                key={pane.paneId}
+                type="button"
+                onClick={() => handleTabSwitch(pane.paneId)}
+                className={clsx(
+                  'px-4 py-2.5 text-[12px] font-mono border-b-2 border-r border-r-[#30363d] cursor-pointer bg-transparent whitespace-nowrap',
+                  pane.paneId === activePane
+                    ? 'text-[#e6edf3] border-b-[#58a6ff] bg-[#161b22]'
+                    : 'text-[#6e7681] border-b-transparent hover:text-[#b1bac4]'
+                )}
+              >
+                {pane.name}
+              </button>
+            ))}
           </div>
-          {isMobile ? (
-            <TerminalTextRenderer panes={panes} activePane={activePane} />
-          ) : (
-            <div ref={containerRef} className="flex-1 min-h-0 w-full p-2" />
-          )}
-        </Dialog.Popup>
-      </Dialog.Portal>
-    </Dialog.Root>
+          <DialogClose className="cursor-pointer rounded-md border-none bg-transparent px-3 py-2 text-[#6e7681] hover:text-[#e6edf3] text-lg leading-none shrink-0">
+            &#x2715;
+          </DialogClose>
+        </div>
+        {isMobile ? (
+          <TerminalTextRenderer panes={panes} activePane={activePane} />
+        ) : (
+          <div ref={containerRef} className="flex-1 min-h-0 w-full p-2" />
+        )}
+      </DialogContent>
+    </Dialog>
   )
 }
