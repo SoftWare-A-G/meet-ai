@@ -1,0 +1,23 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "base-nova",
+  "rsc": false,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "src/app/main.css",
+    "baseColor": "gray",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "aliases": {
+    "components": "@meet-ai/worker/app/components",
+    "utils": "@meet-ai/worker/app/lib/utils",
+    "ui": "@meet-ai/worker/app/components/ui",
+    "lib": "@meet-ai/worker/app/lib",
+    "hooks": "@meet-ai/worker/app/hooks"
+  },
+  "iconLibrary": "lucide",
+  "menuAccent": "subtle",
+  "menuColor": "default"
+}
