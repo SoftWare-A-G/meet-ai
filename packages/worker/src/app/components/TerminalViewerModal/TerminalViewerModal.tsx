@@ -162,7 +162,7 @@ export default function TerminalViewerModal({ open, onClose, data, onResize }: T
     <Dialog.Root open={open} onOpenChange={isOpen => { if (!isOpen) onClose() }}>
       <Dialog.Portal>
         <Dialog.Backdrop className="fixed inset-0 z-[100] bg-black/60" />
-        <Dialog.Popup className="fixed top-1/2 left-1/2 z-[100] -translate-x-1/2 -translate-y-1/2 flex flex-col border border-[#30363d] bg-[#0d1117] overflow-hidden w-[58vw] h-[80vh] rounded-xl">
+        <Dialog.Popup className="fixed top-1/2 left-1/2 z-[100] -translate-x-1/2 -translate-y-1/2 flex flex-col border border-[#30363d] bg-[#0d1117] overflow-hidden w-[90vw] md:w-[58vw] h-[80vh] rounded-xl">
           <div className="flex items-center justify-between border-b border-[#30363d] shrink-0">
             <div className="flex items-center gap-0 overflow-x-auto">
               {panes.map(pane => (

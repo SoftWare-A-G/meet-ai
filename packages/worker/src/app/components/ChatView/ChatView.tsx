@@ -6,6 +6,7 @@ import { useRoomWebSocket } from '../../hooks/useRoomWebSocket'
 import { useOfflineQueue } from '../../hooks/useOfflineQueue'
 import * as api from '../../lib/api'
 import { requestPermission, notifyIfHidden } from '../../lib/notifications'
+import { useHaptics } from '../../hooks/useHaptics'
 import { parseUtcDate } from '../../lib/dates'
 import type { Message as MessageType, Room, TeamInfo, TasksInfo, CommandInfo } from '../../lib/types'
 
@@ -36,6 +37,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
   const [permissionDecisions, setPermissionDecisions] = useState<Record<string, { status: 'pending' | 'approved' | 'denied' | 'expired'; feedback?: string }>>({})
   const [terminalData, setTerminalData] = useState<string | null>(null)
   const { queue, remove, getForRoom } = useOfflineQueue()
+  const { triggerForMessage } = useHaptics()
 
   // Check TTS availability once on mount
   useEffect(() => {
@@ -159,9 +161,10 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
       setMessages(prev => [...prev, { ...msg, status: 'sent' as const }])
       if (msg.type !== 'log' && msg.sender !== 'hook') {
         setUnreadCount(c => c + 1)
+        triggerForMessage(msg)
       }
     }
-  }, [userName])
+  }, [userName, triggerForMessage])
 
   const onTeamInfoWs = useCallback((info: TeamInfo) => {
     onTeamInfo?.(info)
