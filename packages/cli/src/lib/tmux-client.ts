@@ -143,6 +143,33 @@ export class TmuxClient {
       })
   }
 
+  /** List all panes across all sessions with pane IDs and session names (async — does not block event loop). */
+  listAllPanes(): Promise<{ paneId: string; sessionName: string; title: string; command: string }[]> {
+    const args = [
+      '-L', this.server,
+      'list-panes', '-a',
+      '-F', '#{pane_id}\t#{session_name}\t#{pane_title}\t#{pane_current_command}',
+    ]
+    return new Promise(resolve => {
+      execFileCb('tmux', args, { encoding: 'utf8', timeout: 5000 }, (error, stdout) => {
+        if (error) {
+          resolve([])
+          return
+        }
+        resolve(
+          stdout
+            .trim()
+            .split('\n')
+            .filter(line => line.trim())
+            .map(line => {
+              const [paneId, sessionName, title, command] = line.split('\t')
+              return { paneId: paneId ?? '', sessionName: sessionName ?? '', title: title ?? '', command: command ?? '' }
+            })
+        )
+      })
+    })
+  }
+
   /** List all panes in a session. */
   listPanes(sessionName: string): TmuxPaneInfo[] {
     validateSessionName(sessionName)
@@ -178,13 +205,18 @@ export class TmuxClient {
    * Uses execFile (not exec) — no shell, safe from injection.
    */
   capturePane(target: string, lines: number): Promise<string[]> {
-    // Validate: allow "sessionName" or "sessionName.N"
-    const dotIdx = target.indexOf('.')
-    const sessionPart = dotIdx === -1 ? target : target.slice(0, dotIdx)
-    const panePart = dotIdx === -1 ? null : target.slice(dotIdx + 1)
-    validateSessionName(sessionPart)
-    if (panePart !== null && !/^\d+$/.test(panePart)) {
-      throw new Error(`Invalid pane index: ${panePart}`)
+    // Allow tmux pane IDs like "%14" — they start with %
+    if (/^%\d+$/.test(target)) {
+      // Valid pane ID — skip session name validation
+    } else {
+      // Validate: allow "sessionName" or "sessionName.N"
+      const dotIdx = target.indexOf('.')
+      const sessionPart = dotIdx === -1 ? target : target.slice(0, dotIdx)
+      const panePart = dotIdx === -1 ? null : target.slice(dotIdx + 1)
+      validateSessionName(sessionPart)
+      if (panePart !== null && !/^\d+$/.test(panePart)) {
+        throw new Error(`Invalid pane index: ${panePart}`)
+      }
     }
 
     const args = [

@@ -201,6 +201,19 @@ export class ChatRoom extends DurableObject {
       return new Response('ok')
     }
 
+    // /terminal — broadcast terminal data to all WebSocket clients
+    if (url.pathname === '/terminal') {
+      const body = await request.text()
+      for (const ws of this.ctx.getWebSockets()) {
+        try {
+          ws.send(body)
+        } catch {
+          /* client gone */
+        }
+      }
+      return new Response('ok')
+    }
+
     return new Response('not found', { status: 404 })
   }
 
@@ -232,11 +245,27 @@ export class ChatRoom extends DurableObject {
     }
   }
 
-  async webSocketMessage(_ws: WebSocket, _message: string | ArrayBuffer) {
+  async webSocketMessage(_ws: WebSocket, message: string | ArrayBuffer) {
     // Ping/pong handled by setWebSocketAutoResponse (edge-level, no DO wake).
-    // All other client messages are ignored — messages must go through
-    // the REST API (POST /api/rooms/:id/messages) which persists to D1
-    // and then broadcasts via the /broadcast internal endpoint.
+    if (typeof message !== 'string') return
+
+    let parsed: { type?: string; paneId?: string }
+    try {
+      parsed = JSON.parse(message)
+    } catch {
+      return
+    }
+
+    if (parsed.type === 'terminal_subscribe' || parsed.type === 'terminal_unsubscribe') {
+      // Broadcast subscription events to all connected clients
+      for (const ws of this.ctx.getWebSockets()) {
+        try {
+          ws.send(message)
+        } catch {
+          /* client gone */
+        }
+      }
+    }
   }
 
   async webSocketClose(_ws: WebSocket, _code: number, _reason: string, _wasClean: boolean) {

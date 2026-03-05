@@ -1,5 +1,5 @@
 import { Tooltip } from '@base-ui/react/tooltip'
-import { IconMenu2, IconQrcode, IconTrash, IconUsers } from '../../icons'
+import { IconMenu2, IconQrcode, IconTerminal, IconTrash, IconUsers } from '../../icons'
 import DeleteConfirmPopover from '../DeleteConfirmPopover'
 
 type MainHeaderProps = {
@@ -11,6 +11,7 @@ type MainHeaderProps = {
   onTeamToggle: () => void
   onInviteClick: () => void
   onDeleteConfirm: () => void
+  onTerminalClick?: () => void
 }
 
 const tooltipPopupClass = "rounded bg-gray-900 px-2 py-1 text-xs text-white shadow-lg"
@@ -24,6 +25,7 @@ export default function MainHeader({
   onTeamToggle,
   onInviteClick,
   onDeleteConfirm,
+  onTerminalClick,
 }: MainHeaderProps) {
   return (
     <Tooltip.Provider delay={600} closeDelay={0}>
@@ -49,6 +51,20 @@ export default function MainHeader({
           <span className="text-base font-bold">{roomName}</span>
         </div>
         <div className="flex items-center gap-3">
+          <Tooltip.Root>
+            <Tooltip.Trigger
+              aria-label="Terminal viewer"
+              className="text-header-text flex h-8 w-8 cursor-pointer items-center justify-center border-none bg-transparent text-lg hover:bg-white/10 rounded-md"
+              onClick={onTerminalClick}
+            >
+              <IconTerminal size={18} />
+            </Tooltip.Trigger>
+            <Tooltip.Portal>
+              <Tooltip.Positioner sideOffset={8}>
+                <Tooltip.Popup className={tooltipPopupClass}>Terminal viewer</Tooltip.Popup>
+              </Tooltip.Positioner>
+            </Tooltip.Portal>
+          </Tooltip.Root>
           {showInvite && (
             <Tooltip.Root>
               <Tooltip.Trigger

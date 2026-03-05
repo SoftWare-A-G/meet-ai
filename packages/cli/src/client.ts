@@ -232,6 +232,14 @@ export function createClient(baseUrl: string, apiKey?: string) {
               : new TextDecoder().decode(event.data as ArrayBuffer)
           const data = JSON.parse(text)
           if (data.type === 'pong') return
+          // Terminal control messages bypass deliver() — they have no id/sender
+          // fields and would corrupt dedup state and get filtered by senderType
+          if (data.type === 'terminal_subscribe' || data.type === 'terminal_unsubscribe') {
+            options?.onMessage?.(data as Message)
+            return
+          }
+          // Terminal data is for browser clients only, ignore in CLI
+          if (data.type === 'terminal_data') return
           deliver(data as Message)
         }
 
@@ -489,6 +497,19 @@ export function createClient(baseUrl: string, apiKey?: string) {
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
         throw new Error((err as any).error ?? `HTTP ${res.status}`)
+      }
+    },
+
+    async sendTerminalData(roomId: string, data: string): Promise<void> {
+      // No retry — terminal data is ephemeral
+      try {
+        await fetch(`${baseUrl}/api/rooms/${roomId}/terminal`, {
+          method: 'POST',
+          headers: headers(),
+          body: JSON.stringify({ data }),
+        })
+      } catch {
+        // Silently ignore — terminal data is ephemeral
       }
     },
   }

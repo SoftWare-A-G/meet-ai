@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { useChatContext } from '../../lib/chat-context'
 import { deleteRoom } from '../../lib/api'
@@ -14,6 +14,7 @@ function ChatRoom() {
   const { id } = Route.useParams()
   const navigate = useNavigate()
   const { rooms, removeRoom, apiKey, userName, isStandalone, teamInfo, setSidebarOpen, setTeamSidebarOpen, setTeamInfo, setTasksInfo, setCommandsInfo, showQR } = useChatContext()
+  const [terminalOpen, setTerminalOpen] = useState(false)
 
   const room = rooms.find(r => r.id === id)
   const roomName = room?.name ?? 'Loading...'
@@ -46,6 +47,7 @@ function ChatRoom() {
         onTeamToggle={() => setTeamSidebarOpen(prev => !prev)}
         onInviteClick={() => showQR()}
         onDeleteConfirm={handleDeleteConfirm}
+        onTerminalClick={() => setTerminalOpen(true)}
       />
       {room && (
         <ChatView
@@ -56,6 +58,8 @@ function ChatRoom() {
           onTeamInfo={setTeamInfo}
           onTasksInfo={setTasksInfo}
           onCommandsInfo={setCommandsInfo}
+          terminalOpen={terminalOpen}
+          onTerminalClose={() => setTerminalOpen(false)}
         />
       )}
     </div>

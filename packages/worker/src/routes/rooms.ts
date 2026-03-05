@@ -11,6 +11,7 @@ import {
   messagesQuerySchema,
   commandsSchema,
   createTaskSchema,
+  terminalDataSchema,
 } from '../schemas/rooms'
 import type { AppEnv } from '../lib/types'
 
@@ -402,6 +403,33 @@ export const roomsRoute = new Hono<AppEnv>()
         apiUrl: `${c.req.url.split('/api')[0]}`,
       },
     })
+  })
+
+  // POST /api/rooms/:id/terminal — stream terminal data to WebSocket clients
+  .post('/:id/terminal', requireAuth, zValidator('json', terminalDataSchema), async c => {
+    const keyId = c.get('keyId')
+    const roomId = c.req.param('id')
+    const db = queries(c.env.DB)
+
+    const room = await db.findRoom(roomId, keyId)
+    if (!room) {
+      return c.json({ error: 'room not found' }, 404)
+    }
+
+    const body = c.req.valid('json')
+
+    const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
+    const stub = c.env.CHAT_ROOM.get(doId)
+    c.executionCtx.waitUntil(
+      stub.fetch(
+        new Request('http://internal/terminal', {
+          method: 'POST',
+          body: JSON.stringify({ type: 'terminal_data', data: body.data }),
+        })
+      )
+    )
+
+    return c.json({ ok: true })
   })
 
   // DELETE /api/rooms/:id — delete a room and all its messages, logs, and attachments

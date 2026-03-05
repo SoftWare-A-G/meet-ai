@@ -8,6 +8,7 @@ import {
   checkIdleAgents,
   IDLE_CHECK_INTERVAL_MS,
 } from "../../inbox-router";
+import { TmuxClient } from "../../lib/tmux-client";
 
 function routeToInbox(
   msg: { sender: string; content: string },
@@ -65,7 +66,80 @@ export function listen(
     ? `${process.env.HOME}/.claude/teams/${team}`
     : null;
 
-  const onMessage = (msg: Message & { room_id?: string; attachment_count?: number }) => {
+  const tmuxClient = new TmuxClient({ server: "meet-ai", scrollback: 50000 });
+  let terminalInterval: ReturnType<typeof setInterval> | null = null;
+
+  const onMessage = (msg: Message & { room_id?: string; attachment_count?: number; type?: string; paneId?: string }) => {
+    // Handle terminal control messages
+    if (msg.type === "terminal_subscribe") {
+      const roomPrefix = roomId.slice(0, 8);
+
+      // Read team config once for name mapping
+      let membersByPaneId: Record<string, string> = {};
+      if (teamDir) {
+        try {
+          const configPath = `${teamDir}/config.json`;
+          const fs = require("node:fs") as typeof import("node:fs");
+          const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+          const members = (config.members || []) as { name: string; tmuxPaneId?: string }[];
+          for (const m of members) {
+            if (m.tmuxPaneId) {
+              membersByPaneId[m.tmuxPaneId] = m.name;
+            }
+          }
+        } catch {
+          // Continue without config — use tmux titles as names
+        }
+      }
+
+      // Clear any previous stream
+      if (terminalInterval) {
+        clearInterval(terminalInterval);
+        terminalInterval = null;
+      }
+      const TERMINAL_POLL_MS = 500;
+      terminalInterval = setInterval(async () => {
+        try {
+          // Re-discover live panes each tick so removed panes disappear from UI
+          const allTmuxPanes = await tmuxClient.listAllPanes();
+          const roomPanes = allTmuxPanes.filter(p => p.sessionName.includes(roomPrefix));
+
+          if (roomPanes.length === 0) return;
+
+          const panes = roomPanes.map(tp => ({
+            name: membersByPaneId[tp.paneId] || tp.title || tp.paneId,
+            paneId: tp.paneId,
+          }));
+
+          // Sort: team-lead first, then alphabetical
+          panes.sort((a, b) => {
+            if (a.name === "team-lead") return -1;
+            if (b.name === "team-lead") return 1;
+            return a.name.localeCompare(b.name);
+          });
+
+          const results = await Promise.all(
+            panes.map(async (p) => {
+              const lines = await tmuxClient.capturePane(p.paneId, 500);
+              return { name: p.name, paneId: p.paneId, data: lines.join("\r\n") };
+            })
+          );
+          await client.sendTerminalData(roomId, JSON.stringify({ panes: results }));
+        } catch {
+          // Gracefully handle errors
+        }
+      }, TERMINAL_POLL_MS);
+      return;
+    }
+
+    if (msg.type === "terminal_unsubscribe") {
+      if (terminalInterval) {
+        clearInterval(terminalInterval);
+        terminalInterval = null;
+      }
+      return;
+    }
+
     // Check for attachments asynchronously if broadcast indicates they exist
     if (msg.id && msg.room_id && (msg as any).attachment_count > 0) {
       downloadMessageAttachments(client, msg.room_id, msg.id).then((paths) => {
@@ -110,6 +184,10 @@ export function listen(
   // Graceful shutdown: send clean close frame before exit
   function shutdown() {
     if (idleCheckTimeout) clearTimeout(idleCheckTimeout);
+    if (terminalInterval) {
+      clearInterval(terminalInterval);
+      terminalInterval = null;
+    }
     if (ws.readyState === WebSocket.OPEN) {
       ws.close(1000, "client shutdown");
     }

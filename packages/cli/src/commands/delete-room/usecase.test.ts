@@ -22,6 +22,7 @@ function makeMockClient(overrides: Partial<MeetAiClient> = {}): MeetAiClient {
     listenLobby: mock(() => ({}) as WebSocket),
     generateKey: mock(() => Promise.resolve({ key: "k", prefix: "p" })),
     deleteRoom: mock(() => Promise.resolve()),
+    sendTerminalData: mock(() => Promise.resolve()),
     ...overrides,
   };
 }

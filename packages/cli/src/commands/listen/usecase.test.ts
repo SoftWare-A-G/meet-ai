@@ -20,6 +20,7 @@ function mockClient(overrides: Partial<MeetAiClient> = {}): MeetAiClient {
     downloadAttachment: mock(() => Promise.reject(new Error("not implemented"))),
     generateKey: mock(() => Promise.reject(new Error("not implemented"))),
     deleteRoom: mock(() => Promise.reject(new Error("not implemented"))),
+    sendTerminalData: mock(() => Promise.resolve()),
     ...overrides,
   } as MeetAiClient;
 }

@@ -55,3 +55,7 @@ export const createTaskSchema = z.object({
   subject: z.string().min(1).max(500),
   description: z.string().max(2000).optional(),
 })
+
+export const terminalDataSchema = z.object({
+  data: z.string().max(1_000_000),
+})

@@ -33,6 +33,7 @@ type UseRoomWebSocketOptions = {
   onPlanDecision?: (event: PlanDecisionEvent) => void
   onQuestionAnswer?: (event: QuestionAnswerEvent) => void
   onPermissionDecision?: (event: PermissionDecisionEvent) => void
+  onTerminalData?: (data: string) => void
 }
 
 const MIN_BACKOFF = 1000
@@ -57,6 +58,8 @@ export function useRoomWebSocket(
   onQuestionAnswerRef.current = options?.onQuestionAnswer
   const onPermissionDecisionRef = useRef(options?.onPermissionDecision)
   onPermissionDecisionRef.current = options?.onPermissionDecision
+  const onTerminalDataRef = useRef(options?.onTerminalData)
+  onTerminalDataRef.current = options?.onTerminalData
   const lastSeqRef = useRef<number>(0) as { current: number }
   const backoffRef = useRef<number>(MIN_BACKOFF) as { current: number }
   const [connected, setConnected] = useState(true)
@@ -120,6 +123,10 @@ export function useRoomWebSocket(
             onPermissionDecisionRef.current?.(data as PermissionDecisionEvent)
             return
           }
+          if (data.type === 'terminal_data' && typeof data.data === 'string') {
+            onTerminalDataRef.current?.(data.data)
+            return
+          }
           const msg = data as Message
           if (!msg.sender || !msg.content) return
           if (msg.seq && msg.seq > lastSeqRef.current) {
@@ -171,5 +178,19 @@ export function useRoomWebSocket(
   // eslint-disable-next-line react-hooks/exhaustive-deps -- refs are stable, .current should not be deps
   }, [roomId, apiKey])
 
-  return { wsRef, connected, tasksInfo }
+  function sendTerminalSubscribe(paneId: string) {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'terminal_subscribe', paneId }))
+    } else {
+      console.warn('[terminal] WebSocket not open, readyState:', wsRef.current?.readyState)
+    }
+  }
+
+  function sendTerminalUnsubscribe() {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'terminal_unsubscribe' }))
+    }
+  }
+
+  return { wsRef, connected, tasksInfo, sendTerminalSubscribe, sendTerminalUnsubscribe }
 }

@@ -42,4 +42,5 @@ export interface MeetAiClient {
   }): WebSocket;
   generateKey(): Promise<{ key: string; prefix: string }>;
   deleteRoom(roomId: string): Promise<void>;
+  sendTerminalData(roomId: string, data: string): Promise<void>;
 }

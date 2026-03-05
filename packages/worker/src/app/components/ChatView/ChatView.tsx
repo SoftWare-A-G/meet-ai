@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import MessageList from '../MessageList'
 import ChatInput from '../ChatInput'
+import TerminalViewerModal from '../TerminalViewerModal'
 import { useRoomWebSocket } from '../../hooks/useRoomWebSocket'
 import { useOfflineQueue } from '../../hooks/useOfflineQueue'
 import * as api from '../../lib/api'
@@ -20,9 +21,11 @@ type ChatViewProps = {
   onTeamInfo?: (info: TeamInfo | null) => void
   onTasksInfo?: (info: TasksInfo | null) => void
   onCommandsInfo?: (commands: CommandInfo[] | null) => void
+  terminalOpen?: boolean
+  onTerminalClose?: () => void
 }
 
-export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksInfo, onCommandsInfo }: ChatViewProps) {
+export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksInfo, onCommandsInfo, terminalOpen = false, onTerminalClose }: ChatViewProps) {
   const [messages, setMessages] = useState<DisplayMessage[]>([])
   const [attachmentCounts, setAttachmentCounts] = useState<Record<string, number>>({})
   const [unreadCount, setUnreadCount] = useState(0)
@@ -31,6 +34,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
   const [planDecisions, setPlanDecisions] = useState<Record<string, { status: 'pending' | 'approved' | 'denied' | 'expired'; feedback?: string; permissionMode?: string }>>({})
   const [questionAnswers, setQuestionAnswers] = useState<Record<string, { status: 'pending' | 'answered' | 'expired'; answers?: Record<string, string> }>>({})
   const [permissionDecisions, setPermissionDecisions] = useState<Record<string, { status: 'pending' | 'approved' | 'denied' | 'expired'; feedback?: string }>>({})
+  const [terminalData, setTerminalData] = useState<string | null>(null)
   const { queue, remove, getForRoom } = useOfflineQueue()
 
   // Check TTS availability once on mount
@@ -198,18 +202,33 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
     }))
   }, [])
 
-  const { connected, tasksInfo } = useRoomWebSocket(room.id, apiKey, onWsMessage, {
+  const onTerminalDataWs = useCallback((data: string) => {
+    setTerminalData(data)
+  }, [])
+
+  const { connected, tasksInfo, sendTerminalSubscribe, sendTerminalUnsubscribe } = useRoomWebSocket(room.id, apiKey, onWsMessage, {
     onTeamInfo: onTeamInfoWs,
     onCommandsInfo: onCommandsInfoWs,
     onPlanDecision: onPlanDecisionWs,
     onQuestionAnswer: onQuestionAnswerWs,
     onPermissionDecision: onPermissionDecisionWs,
+    onTerminalData: onTerminalDataWs,
   })
 
   useEffect(() => {
     onTasksInfo?.(tasksInfo)
   // eslint-disable-next-line react-hooks/exhaustive-deps -- onTasksInfo is stable
   }, [tasksInfo])
+
+  useEffect(() => {
+    if (terminalOpen && connected) {
+      sendTerminalSubscribe('default')
+    } else if (!terminalOpen) {
+      sendTerminalUnsubscribe()
+      setTerminalData(null)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- sendTerminal* are stable functions
+  }, [terminalOpen, connected])
 
   // Flush queue on coming online
   useEffect(() => {
@@ -359,6 +378,11 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
 
   return (
     <>
+      <TerminalViewerModal
+        open={terminalOpen}
+        onClose={() => onTerminalClose?.()}
+        data={terminalData}
+      />
       <MessageList
         messages={messages}
         attachmentCounts={attachmentCounts}

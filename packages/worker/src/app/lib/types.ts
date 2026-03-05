@@ -70,3 +70,7 @@ export type CommandInfo = {
 export type CommandsInfo = { type: 'commands_info'; commands: CommandInfo[] }
 
 export type Screen = 'login' | 'token' | 'chat'
+
+export type TerminalDataEvent = { type: 'terminal_data'; data: string }
+export type TerminalSubscribeEvent = { type: 'terminal_subscribe'; paneId: string }
+export type TerminalUnsubscribeEvent = { type: 'terminal_unsubscribe' }
