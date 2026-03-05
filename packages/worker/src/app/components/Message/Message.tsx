@@ -7,6 +7,7 @@ import { IconCopy, IconCheck, IconShare, IconVolume, IconPlayerStop, IconLoader 
 import MarkdownContent from '../MarkdownContent'
 import SlashCommandBadge from '../SlashCommandBadge'
 import { useChatContext } from '../../lib/chat-context'
+import { useHaptics } from '../../hooks/useHaptics'
 import type { CommandInfo } from '../../lib/types'
 
 type TtsState = 'idle' | 'loading' | 'playing'
@@ -40,6 +41,7 @@ type MessageProps = {
 export default function Message({ sender, content, color, timestamp, tempId, status = 'sent', onRetry, attachmentCount, voiceAvailable }: MessageProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const { commandsInfo } = useChatContext()
+  const { trigger } = useHaptics()
   const senderColor = color ? ensureSenderContrast(color) : hashColor(sender)
   const slashMatch = useMemo(() => parseSlashCommand(content, commandsInfo), [content, commandsInfo])
   const [copied, setCopied] = useState(false)
@@ -48,18 +50,21 @@ export default function Message({ sender, content, color, timestamp, tempId, sta
   const timeText = status === 'failed' ? 'failed' : formatTime(timestamp)
 
   const handleCopy = useCallback(() => {
+    trigger('light')
     navigator.clipboard.writeText(content).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     })
-  }, [content])
+  }, [content, trigger])
 
   const handleShare = useCallback(() => {
+    trigger('light')
     navigator.share({ text: content })
-  }, [content])
+  }, [content, trigger])
 
   const handleTts = useCallback(async () => {
     if (ttsState === 'loading') return
+    trigger('light')
 
     if (ttsState === 'playing') {
       audioRef.current?.pause()
@@ -90,7 +95,7 @@ export default function Message({ sender, content, color, timestamp, tempId, sta
     } catch {
       setTtsState('idle')
     }
-  }, [content, ttsState])
+  }, [content, ttsState, trigger])
 
   // Cleanup audio on unmount
   useEffect(() => () => {

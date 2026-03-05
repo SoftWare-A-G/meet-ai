@@ -1,6 +1,7 @@
 import clsx from 'clsx'
 import type { TeamInfo, TeamMember, TasksInfo, TaskItem } from '../../lib/types'
 import { ensureSenderContrast } from '../../lib/colors'
+import { useHaptics } from '../../hooks/useHaptics'
 
 type TeamSidebarProps = {
   teamInfo: TeamInfo | null
@@ -41,6 +42,7 @@ function TaskRow({ task }: { task: TaskItem }) {
 }
 
 function TeamSidebarContent({ teamInfo, tasksInfo, onOpenTaskBoard }: { teamInfo: TeamInfo; tasksInfo?: TasksInfo | null; onOpenTaskBoard?: () => void }) {
+  const { trigger } = useHaptics()
   const active = teamInfo.members.filter(m => m.status === 'active')
   const inactive = teamInfo.members.filter(m => m.status === 'inactive')
   const tasks = tasksInfo?.tasks ?? []
@@ -70,7 +72,7 @@ function TeamSidebarContent({ teamInfo, tasksInfo, onOpenTaskBoard }: { teamInfo
             {onOpenTaskBoard && (
               <button
                 type="button"
-                onClick={onOpenTaskBoard}
+                onClick={() => { trigger('light'); onOpenTaskBoard?.() }}
                 className="ml-auto bg-transparent border-none text-sidebar-text cursor-pointer text-[13px] p-0.5 rounded leading-none opacity-50 hover:opacity-100 hover:bg-hover-item"
                 title="Open task board"
               >

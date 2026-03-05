@@ -1,5 +1,6 @@
 import { Tooltip } from '@base-ui/react/tooltip'
 import { IconSettings, IconX, IconPlus } from '../../icons'
+import { useHaptics } from '../../hooks/useHaptics'
 
 type SidebarHeaderProps = {
   onSettingsClick: () => void
@@ -10,6 +11,7 @@ type SidebarHeaderProps = {
 const tooltipPopupClass = "rounded bg-gray-900 px-2 py-1 text-xs text-white shadow-lg"
 
 export default function SidebarHeader({ onSettingsClick, onSpawnClick, onCloseClick }: SidebarHeaderProps) {
+  const { trigger } = useHaptics()
   return (
     <div className="pl-4 pr-2 font-bold text-base border-b border-sidebar-border flex items-center justify-between h-14 shrink-0">
       <span>Chats</span>
@@ -19,7 +21,7 @@ export default function SidebarHeader({ onSettingsClick, onSpawnClick, onCloseCl
             <Tooltip.Trigger
               aria-label="Spawn Team"
               className="bg-transparent border-none text-sidebar-text cursor-pointer opacity-70 p-1.5 rounded flex items-center justify-center w-8 h-8 hover:opacity-100 hover:bg-hover-item"
-              onClick={onSpawnClick}
+              onClick={() => { trigger('light'); onSpawnClick() }}
             >
               <IconPlus size={18} />
             </Tooltip.Trigger>
@@ -33,7 +35,7 @@ export default function SidebarHeader({ onSettingsClick, onSpawnClick, onCloseCl
             <Tooltip.Trigger
               aria-label="Color Settings"
               className="bg-transparent border-none text-sidebar-text cursor-pointer opacity-70 p-1.5 rounded flex items-center justify-center w-8 h-8 hover:opacity-100 hover:bg-hover-item"
-              onClick={onSettingsClick}
+              onClick={() => { trigger('light'); onSettingsClick() }}
             >
               <IconSettings size={18} />
             </Tooltip.Trigger>

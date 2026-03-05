@@ -1,6 +1,7 @@
 import { Tooltip } from '@base-ui/react/tooltip'
 import { IconMenu2, IconQrcode, IconTerminal, IconTrash, IconUsers } from '../../icons'
 import DeleteConfirmPopover from '../DeleteConfirmPopover'
+import { useHaptics } from '../../hooks/useHaptics'
 
 type MainHeaderProps = {
   roomName: string
@@ -27,6 +28,7 @@ export default function MainHeader({
   onDeleteConfirm,
   onTerminalClick,
 }: MainHeaderProps) {
+  const { trigger } = useHaptics()
   return (
     <Tooltip.Provider delay={600} closeDelay={0}>
       <div className="border-border bg-header-bg text-header-text flex h-14 shrink-0 items-center justify-between border-b px-4">
@@ -56,7 +58,7 @@ export default function MainHeader({
               <Tooltip.Trigger
                 aria-label="Terminal viewer"
                 className="text-header-text flex h-8 w-8 cursor-pointer items-center justify-center border-none bg-transparent text-lg hover:bg-white/10 rounded-md"
-                onClick={onTerminalClick}
+                onClick={() => { trigger('light'); onTerminalClick?.() }}
               >
                 <IconTerminal size={18} />
               </Tooltip.Trigger>
@@ -72,7 +74,7 @@ export default function MainHeader({
               <Tooltip.Trigger
                 aria-label="QR code"
                 className="text-header-text flex! cursor-pointer items-center justify-center gap-1.5 rounded-md border border-white/30 bg-transparent px-2.5 py-1 text-xs font-semibold whitespace-nowrap hover:bg-white/10"
-                onClick={onInviteClick}
+                onClick={() => { trigger('light'); onInviteClick() }}
               >
                 <IconQrcode size={18} />
               </Tooltip.Trigger>

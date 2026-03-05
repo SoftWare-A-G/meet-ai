@@ -1,6 +1,8 @@
+import { useCallback } from 'react'
 import { Link } from '@tanstack/react-router'
 import { IconChevronRight, IconTrash } from '../../icons'
 import DeleteConfirmPopover from '../DeleteConfirmPopover'
+import { useHaptics } from '../../hooks/useHaptics'
 import type { Room } from '../../lib/types'
 
 type RoomListProps = {
@@ -10,6 +12,11 @@ type RoomListProps = {
 }
 
 export default function RoomList({ rooms, onLinkClick, onDeleteRoom }: RoomListProps) {
+  const { trigger } = useHaptics()
+  const handleLinkClick = useCallback(() => {
+    trigger('light')
+    onLinkClick?.()
+  }, [trigger, onLinkClick])
   return (
     <div className="flex-1 min-h-0 overflow-y-auto">
       {rooms.map((room) => (
@@ -20,7 +27,7 @@ export default function RoomList({ rooms, onLinkClick, onDeleteRoom }: RoomListP
           className="group flex items-center justify-between px-4 py-2.5 cursor-pointer text-sm transition-colors duration-100 hover:bg-hover-item has-data-popup-open:bg-hover-item"
           activeProps={{ className: 'bg-active text-active-text font-semibold' }}
           inactiveProps={{ className: 'text-sidebar-text' }}
-          onClick={onLinkClick}
+          onClick={handleLinkClick}
         >
           {({ isActive }) => (
             <>

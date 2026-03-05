@@ -14,5 +14,5 @@ export function useHaptics() {
     trigger(heavy ? 'heavy' : 'light')
   }, [trigger])
 
-  return { triggerForMessage }
+  return { trigger, triggerForMessage }
 }
