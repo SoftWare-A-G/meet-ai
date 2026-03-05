@@ -225,8 +225,10 @@ export class TmuxClient {
       '-t', target,
       '-p',     // print to stdout
       '-e',     // preserve ANSI escape sequences
-      '-S', `-${lines}`, // start from -N (last N lines)
     ]
+    if (lines > 0) {
+      args.push('-S', `-${lines}`) // start from -N (last N lines of scrollback)
+    }
 
     return new Promise(resolve => {
       // execFile (callback) does NOT use a shell — safe from injection
@@ -243,6 +245,16 @@ export class TmuxClient {
         resolve(result)
       })
     })
+  }
+
+  /** Resize a pane to the given columns (and optionally rows). Uses execFileSync — safe from injection. */
+  resizePane(paneId: string, cols: number, rows?: number): TmuxResult {
+    const result = this.exec(['-L', this.server, 'resize-pane', '-t', paneId, '-x', String(cols)])
+    if (!result.ok) return result
+    if (rows) {
+      return this.exec(['-L', this.server, 'resize-pane', '-t', paneId, '-y', String(rows)])
+    }
+    return result
   }
 
   // ── Interactive ──

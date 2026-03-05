@@ -69,7 +69,22 @@ export function listen(
   const tmuxClient = new TmuxClient({ server: "meet-ai", scrollback: 50000 });
   let terminalInterval: ReturnType<typeof setInterval> | null = null;
 
-  const onMessage = (msg: Message & { room_id?: string; attachment_count?: number; type?: string; paneId?: string }) => {
+  const onMessage = (msg: Message & { room_id?: string; attachment_count?: number; type?: string; paneId?: string; cols?: number }) => {
+    // Handle terminal resize — resize all room panes to match web viewer width
+    if (msg.type === "terminal_resize") {
+      const cols = msg.cols;
+      if (typeof cols === "number" && cols > 0) {
+        tmuxClient.listAllPanes().then(allPanes => {
+          const roomPrefix = roomId.slice(0, 8);
+          const roomPanes = allPanes.filter(p => p.sessionName.includes(roomPrefix));
+          for (const p of roomPanes) {
+            tmuxClient.resizePane(p.paneId, cols);
+          }
+        });
+      }
+      return;
+    }
+
     // Handle terminal control messages
     if (msg.type === "terminal_subscribe") {
       const roomPrefix = roomId.slice(0, 8);
@@ -120,7 +135,7 @@ export function listen(
 
           const results = await Promise.all(
             panes.map(async (p) => {
-              const lines = await tmuxClient.capturePane(p.paneId, 500);
+              const lines = await tmuxClient.capturePane(p.paneId, 0);
               return { name: p.name, paneId: p.paneId, data: lines.join("\r\n") };
             })
           );
@@ -137,6 +152,11 @@ export function listen(
         clearInterval(terminalInterval);
         terminalInterval = null;
       }
+      return;
+    }
+
+    // Ignore terminal_data echoes (our own broadcasts reflected back)
+    if (msg.type === "terminal_data") {
       return;
     }
 

@@ -5,6 +5,7 @@ bun.lock
 .env.*
 .DS_Store
 .claude/settings.json
+.claude/settings-temp.json
 wrangler.toml
 dist/
 packages/worker/src/app/routeTree.gen.ts

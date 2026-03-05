@@ -206,7 +206,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
     setTerminalData(data)
   }, [])
 
-  const { connected, tasksInfo, sendTerminalSubscribe, sendTerminalUnsubscribe } = useRoomWebSocket(room.id, apiKey, onWsMessage, {
+  const { connected, tasksInfo, sendTerminalSubscribe, sendTerminalUnsubscribe, sendTerminalResize } = useRoomWebSocket(room.id, apiKey, onWsMessage, {
     onTeamInfo: onTeamInfoWs,
     onCommandsInfo: onCommandsInfoWs,
     onPlanDecision: onPlanDecisionWs,
@@ -382,6 +382,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
         open={terminalOpen}
         onClose={() => onTerminalClose?.()}
         data={terminalData}
+        onResize={sendTerminalResize}
       />
       <MessageList
         messages={messages}

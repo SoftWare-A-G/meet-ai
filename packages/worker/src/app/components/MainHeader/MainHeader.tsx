@@ -51,20 +51,22 @@ export default function MainHeader({
           <span className="text-base font-bold">{roomName}</span>
         </div>
         <div className="flex items-center gap-3">
-          <Tooltip.Root>
-            <Tooltip.Trigger
-              aria-label="Terminal viewer"
-              className="text-header-text flex h-8 w-8 cursor-pointer items-center justify-center border-none bg-transparent text-lg hover:bg-white/10 rounded-md"
-              onClick={onTerminalClick}
-            >
-              <IconTerminal size={18} />
-            </Tooltip.Trigger>
-            <Tooltip.Portal>
-              <Tooltip.Positioner sideOffset={8}>
-                <Tooltip.Popup className={tooltipPopupClass}>Terminal viewer</Tooltip.Popup>
-              </Tooltip.Positioner>
-            </Tooltip.Portal>
-          </Tooltip.Root>
+          {onTerminalClick && (
+            <Tooltip.Root>
+              <Tooltip.Trigger
+                aria-label="Terminal viewer"
+                className="text-header-text flex h-8 w-8 cursor-pointer items-center justify-center border-none bg-transparent text-lg hover:bg-white/10 rounded-md"
+                onClick={onTerminalClick}
+              >
+                <IconTerminal size={18} />
+              </Tooltip.Trigger>
+              <Tooltip.Portal>
+                <Tooltip.Positioner sideOffset={8}>
+                  <Tooltip.Popup className={tooltipPopupClass}>Terminal viewer</Tooltip.Popup>
+                </Tooltip.Positioner>
+              </Tooltip.Portal>
+            </Tooltip.Root>
+          )}
           {showInvite && (
             <Tooltip.Root>
               <Tooltip.Trigger

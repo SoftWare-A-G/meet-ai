@@ -256,7 +256,7 @@ export class ChatRoom extends DurableObject {
       return
     }
 
-    if (parsed.type === 'terminal_subscribe' || parsed.type === 'terminal_unsubscribe') {
+    if (parsed.type === 'terminal_subscribe' || parsed.type === 'terminal_unsubscribe' || parsed.type === 'terminal_resize') {
       // Broadcast subscription events to all connected clients
       for (const ws of this.ctx.getWebSockets()) {
         try {

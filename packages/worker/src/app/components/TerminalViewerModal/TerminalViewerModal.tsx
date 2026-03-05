@@ -15,6 +15,7 @@ type TerminalViewerModalProps = {
   open: boolean
   onClose: () => void
   data: string | null
+  onResize?: (cols: number) => void
 }
 
 const TERMINAL_THEME = {
@@ -40,13 +41,16 @@ const TERMINAL_THEME = {
   brightWhite: '#f0f6fc',
 }
 
-export default function TerminalViewerModal({ open, onClose, data }: TerminalViewerModalProps) {
+export default function TerminalViewerModal({ open, onClose, data, onResize }: TerminalViewerModalProps) {
   const [panes, setPanes] = useState<PaneData[]>([])
   const [activePane, setActivePane] = useState<string | null>(null)
   const terminalRef = useRef<Terminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
   const cleanupRef = useRef<(() => void) | null>(null)
   const prevPaneDataRef = useRef<string | null>(null)
+  const onResizeRef = useRef(onResize)
+  onResizeRef.current = onResize
+  const lastReportedColsRef = useRef<number>(0)
 
   // Parse incoming data into panes
   useEffect(() => {
@@ -97,8 +101,17 @@ export default function TerminalViewerModal({ open, onClose, data }: TerminalVie
     terminalRef.current = terminal
     fitAddonRef.current = fitAddon
 
-    const fitTimeout = setTimeout(() => fitAddon.fit(), 100)
-    const observer = new ResizeObserver(() => fitAddon.fit())
+    function fitAndReport() {
+      fitAddon.fit()
+      const cols = terminal.cols
+      if (cols !== lastReportedColsRef.current) {
+        lastReportedColsRef.current = cols
+        onResizeRef.current?.(cols)
+      }
+    }
+
+    const fitTimeout = setTimeout(fitAndReport, 100)
+    const observer = new ResizeObserver(fitAndReport)
     observer.observe(container)
 
     cleanupRef.current = () => {
@@ -139,7 +152,7 @@ export default function TerminalViewerModal({ open, onClose, data }: TerminalVie
     <Dialog.Root open={open} onOpenChange={isOpen => { if (!isOpen) onClose() }}>
       <Dialog.Portal>
         <Dialog.Backdrop className="fixed inset-0 z-[100] bg-black/60" />
-        <Dialog.Popup className="fixed top-1/2 left-1/2 z-[100] -translate-x-1/2 -translate-y-1/2 flex flex-col rounded-xl border border-[#30363d] bg-[#0d1117] overflow-hidden w-[58vw] h-[80vh]">
+        <Dialog.Popup className="fixed top-1/2 left-1/2 z-[100] -translate-x-1/2 -translate-y-1/2 flex flex-col rounded-xl border border-[#30363d] bg-[#0d1117] overflow-hidden w-[90vw] max-w-7xl h-[80vh]">
           <div className="flex items-center justify-between border-b border-[#30363d] shrink-0">
             <div className="flex items-center gap-0 overflow-x-auto">
               {panes.map(pane => (

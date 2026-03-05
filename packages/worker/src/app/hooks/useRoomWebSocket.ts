@@ -192,5 +192,11 @@ export function useRoomWebSocket(
     }
   }
 
-  return { wsRef, connected, tasksInfo, sendTerminalSubscribe, sendTerminalUnsubscribe }
+  function sendTerminalResize(cols: number) {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'terminal_resize', cols }))
+    }
+  }
+
+  return { wsRef, connected, tasksInfo, sendTerminalSubscribe, sendTerminalUnsubscribe, sendTerminalResize }
 }
