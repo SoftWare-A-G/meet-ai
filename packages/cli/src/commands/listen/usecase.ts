@@ -112,6 +112,7 @@ export function listen(
         clearInterval(terminalInterval);
         terminalInterval = null;
       }
+      let lastSentPayload = "";
       const TERMINAL_POLL_MS = 500;
       terminalInterval = setInterval(async () => {
         try {
@@ -139,7 +140,11 @@ export function listen(
               return { name: p.name, paneId: p.paneId, data: lines.join("\r\n") };
             })
           );
-          await client.sendTerminalData(roomId, JSON.stringify({ panes: results }));
+          const payload = JSON.stringify({ panes: results });
+          // Skip sending if nothing changed since last tick
+          if (payload === lastSentPayload) return;
+          lastSentPayload = payload;
+          await client.sendTerminalData(roomId, payload);
         } catch {
           // Gracefully handle errors
         }

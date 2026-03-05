@@ -83,10 +83,11 @@ export default function TerminalViewerModal({ open, onClose, data, onResize }: T
       return
     }
 
+    const isMobile = window.innerWidth < 768
     const terminal = new Terminal({
       theme: TERMINAL_THEME,
       fontFamily: '"Cascadia Code", "JetBrains Mono", "Fira Code", Menlo, Monaco, "Courier New", monospace',
-      fontSize: 13,
+      fontSize: isMobile ? 11 : 13,
       lineHeight: 1,
       cursorBlink: false,
       scrollback: 5000,
@@ -152,7 +153,7 @@ export default function TerminalViewerModal({ open, onClose, data, onResize }: T
     <Dialog.Root open={open} onOpenChange={isOpen => { if (!isOpen) onClose() }}>
       <Dialog.Portal>
         <Dialog.Backdrop className="fixed inset-0 z-[100] bg-black/60" />
-        <Dialog.Popup className="fixed top-1/2 left-1/2 z-[100] -translate-x-1/2 -translate-y-1/2 flex flex-col rounded-xl border border-[#30363d] bg-[#0d1117] overflow-hidden w-[90vw] max-w-7xl h-[80vh]">
+        <Dialog.Popup className="fixed top-1/2 left-1/2 z-[100] -translate-x-1/2 -translate-y-1/2 flex flex-col border border-[#30363d] bg-[#0d1117] overflow-hidden w-screen h-[100dvh] rounded-none md:w-[58vw] md:h-[80vh] md:rounded-xl">
           <div className="flex items-center justify-between border-b border-[#30363d] shrink-0">
             <div className="flex items-center gap-0 overflow-x-auto">
               {panes.map(pane => (
@@ -161,7 +162,7 @@ export default function TerminalViewerModal({ open, onClose, data, onResize }: T
                   type="button"
                   onClick={() => handleTabSwitch(pane.paneId)}
                   className={clsx(
-                    'px-4 py-2.5 text-[12px] font-mono border-b-2 border-r border-r-[#30363d] cursor-pointer bg-transparent whitespace-nowrap',
+                    'px-3 py-3 text-[12px] font-mono border-b-2 border-r border-r-[#30363d] cursor-pointer bg-transparent whitespace-nowrap md:px-4 md:py-2.5',
                     pane.paneId === activePane
                       ? 'text-[#e6edf3] border-b-[#58a6ff] bg-[#161b22]'
                       : 'text-[#6e7681] border-b-transparent hover:text-[#b1bac4]'
@@ -171,11 +172,11 @@ export default function TerminalViewerModal({ open, onClose, data, onResize }: T
                 </button>
               ))}
             </div>
-            <Dialog.Close className="cursor-pointer rounded-md border-none bg-transparent px-3 py-2 text-[#6e7681] hover:text-[#e6edf3] text-lg leading-none shrink-0">
+            <Dialog.Close className="cursor-pointer rounded-md border-none bg-transparent px-4 py-3 text-[#6e7681] hover:text-[#e6edf3] text-xl leading-none shrink-0 md:px-3 md:py-2 md:text-lg">
               &#x2715;
             </Dialog.Close>
           </div>
-          <div ref={containerRef} className="flex-1 min-h-0 w-full p-2" />
+          <div ref={containerRef} className="flex-1 min-h-0 w-full p-1 md:p-2 touch-pan-y" />
         </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>
