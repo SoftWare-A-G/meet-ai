@@ -14,27 +14,19 @@ export default defineCommand({
       description: "Room ID to send commands to",
       required: true,
     },
-    payload: {
-      type: "positional",
-      description: "JSON commands payload",
+    "project-path": {
+      type: "string",
+      description: "Path to the project (defaults to cwd)",
       required: false,
     },
   },
   async run({ args }) {
     try {
       const client = getClient();
-      let payload = args.payload as string | undefined;
-
-      if (!payload) {
-        // Read from stdin
-        const chunks: Buffer[] = [];
-        for await (const chunk of process.stdin) {
-          chunks.push(chunk);
-        }
-        payload = Buffer.concat(chunks).toString("utf8").trim();
-      }
-
-      await sendCommands(client, { roomId: args.roomId, payload });
+      await sendCommands(client, {
+        roomId: args.roomId,
+        projectPath: args["project-path"] as string | undefined,
+      });
     } catch (error) {
       err(error instanceof Error ? error.message : String(error));
       process.exit(1);

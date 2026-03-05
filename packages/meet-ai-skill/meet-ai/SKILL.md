@@ -79,7 +79,7 @@ Run this via Bash with `run_in_background: true`. Note the background task ID so
 **Send available commands to the room** so the web UI can offer `/` autocomplete:
 
 ```bash
-meet-ai list-commands --project-path "$(pwd)" | meet-ai send-commands "<ROOM_ID>"
+meet-ai send-commands "<ROOM_ID>" --project-path "$(pwd)"
 ```
 
 Include in each teammate's spawn prompt:

@@ -46,12 +46,15 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
   const [selectedCommandIndex, setSelectedCommandIndex] = useState(0)
   const dismissedQueryRef = useRef<string | null>(null)
   const prevSlashQueryRef = useRef<string | null>(null)
+  const commandItemRefs = useRef<(HTMLButtonElement | null)[]>([])
 
   const slashQuery = plainText.startsWith('/') ? plainText.slice(1) : null
   if (slashQuery !== prevSlashQueryRef.current) {
     prevSlashQueryRef.current = slashQuery
+    dismissedQueryRef.current = null
     if (selectedCommandIndex !== 0) setSelectedCommandIndex(0)
   }
+
   const filteredCommands = useMemo(() => {
     if (slashQuery === null || !commandsInfo?.length) return []
     const q = slashQuery.toLowerCase()
@@ -138,12 +141,16 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
     if (showDropdown) {
       if (e.key === 'ArrowDown') {
         e.preventDefault()
-        setSelectedCommandIndex(i => (i + 1) % filteredCommands.length)
+        const newIndex = (selectedCommandIndex + 1) % filteredCommands.length
+        setSelectedCommandIndex(newIndex)
+        commandItemRefs.current[newIndex]?.scrollIntoView({ block: 'nearest' })
         return
       }
       if (e.key === 'ArrowUp') {
         e.preventDefault()
-        setSelectedCommandIndex(i => (i - 1 + filteredCommands.length) % filteredCommands.length)
+        const newIndex = (selectedCommandIndex - 1 + filteredCommands.length) % filteredCommands.length
+        setSelectedCommandIndex(newIndex)
+        commandItemRefs.current[newIndex]?.scrollIntoView({ block: 'nearest' })
         return
       }
       if (e.key === 'Escape') {
@@ -201,6 +208,7 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
               {filteredCommands.map((cmd, i) => (
                 <li key={cmd.name}>
                   <button
+                    ref={(el) => { commandItemRefs.current[i] = el }}
                     type="button"
                     className={clsx(
                       'w-full text-left px-3 py-2 flex gap-2 items-baseline cursor-pointer border-none bg-transparent text-msg-text text-sm',
