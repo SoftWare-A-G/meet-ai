@@ -20,15 +20,19 @@ export interface ListCommandsOptions {
   _pluginsFile?: string
 }
 
-function parseYamlFrontmatter(content: string): { name?: string; description?: string } | null {
+function parseYamlFrontmatter(
+  content: string
+): { name?: string; description?: string; disableModelInvocation?: boolean } | null {
   const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/)
   if (!match) return null
   const body = match[1]
   const nameMatch = body.match(/^name:\s*(.+)$/m)
   const descMatch = body.match(/^description:\s*(.+)$/m)
+  const disableMatch = body.match(/^disable-model-invocation:\s*(.+)$/m)
   return {
     name: nameMatch?.[1]?.trim(),
     description: descMatch?.[1]?.trim(),
+    disableModelInvocation: disableMatch?.[1]?.trim() === 'true',
   }
 }
 
@@ -56,6 +60,7 @@ async function readSkillsFromDir(
       const fm = parseYamlFrontmatter(content)
       if (!fm) continue
       if (!fm.description) continue
+      if (fm.disableModelInvocation) continue
       results.push({
         name: fm.name ?? entry,
         description: fm.description,
@@ -95,6 +100,7 @@ async function readCommandsFromDir(
           const content = await readFile(fullPath, 'utf-8')
           const fm = parseYamlFrontmatter(content)
           if (!fm || !fm.description) continue
+          if (fm.disableModelInvocation) continue
           // Use filename without .md as fallback name
           const fallbackName = entry.name.slice(0, -3)
           results.push({

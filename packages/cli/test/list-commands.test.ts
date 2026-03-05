@@ -348,6 +348,63 @@ describe('YAML frontmatter parsing', () => {
   })
 })
 
+describe('disable-model-invocation filtering', () => {
+  test('excludes skill with disable-model-invocation: true', async () => {
+    const userClaudeDir = join(tempDir, 'user-claude')
+    const skillDir = join(userClaudeDir, 'skills', 'disabled-skill')
+    await mkdir(skillDir, { recursive: true })
+    await writeFile(
+      join(skillDir, 'SKILL.md'),
+      '---\nname: disabled-skill\ndescription: Should be hidden\ndisable-model-invocation: true\n---\n'
+    )
+
+    const result = await listCommands(opts({ _userClaudeDir: userClaudeDir }))
+    expect(result.find(c => c.name === 'disabled-skill')).toBeUndefined()
+  })
+
+  test('excludes command with disable-model-invocation: true', async () => {
+    const installPath = join(tempDir, 'plugin-install')
+    const pluginsFile = join(tempDir, 'installed_plugins.json')
+    const userClaudeDir = join(tempDir, 'user-claude')
+    const userSettingsPath = join(userClaudeDir, 'settings.json')
+
+    const plugins = {
+      'test-plugin@marketplace': [{ scope: 'user', installPath, version: '1.0.0' }],
+    }
+    await writeFile(pluginsFile, JSON.stringify({ version: 2, plugins }))
+    await mkdir(userClaudeDir, { recursive: true })
+    await writeFile(
+      userSettingsPath,
+      JSON.stringify({ enabledPlugins: { 'test-plugin@marketplace': true } })
+    )
+
+    const cmdDir = join(installPath, 'commands')
+    await mkdir(cmdDir, { recursive: true })
+    await writeFile(
+      join(cmdDir, 'disabled-cmd.md'),
+      '---\nname: disabled-cmd\ndescription: Should be hidden\ndisable-model-invocation: true\n---\n'
+    )
+
+    const result = await listCommands(
+      opts({ _userClaudeDir: userClaudeDir, _pluginsFile: pluginsFile })
+    )
+    expect(result.find(c => c.name === 'disabled-cmd')).toBeUndefined()
+  })
+
+  test('includes skill without disable-model-invocation flag', async () => {
+    const userClaudeDir = join(tempDir, 'user-claude')
+    const skillDir = join(userClaudeDir, 'skills', 'normal-skill')
+    await mkdir(skillDir, { recursive: true })
+    await writeFile(
+      join(skillDir, 'SKILL.md'),
+      '---\nname: normal-skill\ndescription: Should be included\n---\n'
+    )
+
+    const result = await listCommands(opts({ _userClaudeDir: userClaudeDir }))
+    expect(result.find(c => c.name === 'normal-skill')).toBeDefined()
+  })
+})
+
 describe('output structure', () => {
   test('all entries have required fields', async () => {
     const result = await listCommands(opts())
