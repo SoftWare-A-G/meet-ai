@@ -1,5 +1,5 @@
-import { Box, Text, useInput, useApp, useStdout } from 'ink'
-import { useState, useCallback, useEffect, Component, type ReactNode } from 'react'
+import { Box, Text, useInput, useApp, useStdout, useStdin } from 'ink'
+import { useState, useCallback, useEffect, useRef, Component, type ReactNode } from 'react'
 import { ProcessManager } from '../lib/process-manager'
 import { Dashboard } from './dashboard'
 import { SpawnDialog } from './spawn-dialog'
@@ -29,20 +29,43 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
 interface AppProps {
   processManager: ProcessManager
   client: MeetAiClient
+  /** Called before attach to close WebSocket, and after to reconnect. */
+  onAttach?: () => void
+  onDetach?: () => void
 }
 
-function AppInner({ processManager, client }: AppProps) {
+function AppInner({ processManager, client, onAttach, onDetach }: AppProps) {
   const { exit } = useApp()
   const { stdout } = useStdout()
+  const { setRawMode } = useStdin()
   const [teams, setTeams] = useState(processManager.list())
   const [focusedIndex, setFocusedIndex] = useState(0)
   const [showSpawn, setShowSpawn] = useState(false)
+  const [killTargetId, setKillTargetId] = useState<string | null>(null)
+  const [, setRenderTick] = useState(0)
 
   const terminalHeight = stdout?.rows ?? 24
-  const dashboardHeight = terminalHeight - 2
+  // Spawn dialog (4 lines with border) is taller than status bar (1 line)
+  const bottomHeight = showSpawn ? 4 : killTargetId ? 1 : 1
+  const dashboardHeight = terminalHeight - bottomHeight
+
+  // Ref for focused room ID — polling reads this, not stale state
+  const focusedRoomRef = useRef<string | null>(null)
+  const focusedTeam = teams[focusedIndex]
+  focusedRoomRef.current = focusedTeam?.roomId ?? null
+
+  // Mode ref for synchronous gating (prevents batched key race conditions)
+  const busyRef = useRef(false)
 
   const refreshTeams = useCallback(() => {
-    setTeams([...processManager.list()])
+    const current = processManager.list()
+    setTeams(prev => {
+      // Skip re-render if nothing changed (dirty check)
+      if (prev.length === current.length && prev.every((t, i) => t === current[i])) {
+        return prev
+      }
+      return [...current]
+    })
   }, [processManager])
 
   // Create a new room then spawn
@@ -62,55 +85,126 @@ function AppInner({ processManager, client }: AppProps) {
     [client, processManager, refreshTeams]
   )
 
-  const handleKillById = useCallback(
-    (roomId: string) => {
-      processManager.kill(roomId)
-      refreshTeams()
-    },
-    [processManager, refreshTeams]
-  )
+  // Tick counter for staggered operations
+  const tickRef = useRef(0)
 
-  // Refresh TUI every 200ms to pick up new lines
+  // Poll focused session output every 200ms (async, non-blocking)
   useEffect(() => {
-    const interval = setInterval(refreshTeams, 200)
+    const interval = setInterval(async () => {
+      // Skip polling while attached to a tmux session (spawnSync blocks)
+      if (busyRef.current) return
+
+      const roomId = focusedRoomRef.current
+      if (!roomId) return
+
+      await processManager.capture(roomId, dashboardHeight)
+
+      // Refresh status + teams every 10th tick (~2s) to reduce overhead
+      tickRef.current++
+      if (tickRef.current % 10 === 0) {
+        processManager.refreshStatuses()
+        refreshTeams()
+      }
+
+      setRenderTick(t => t + 1)
+    }, 200)
     return () => clearInterval(interval)
-  }, [refreshTeams])
+  }, [processManager, dashboardHeight, refreshTeams])
+
+  // Immediate capture on focus change
+  useEffect(() => {
+    const roomId = focusedRoomRef.current
+    if (!roomId) return
+    processManager.capture(roomId, dashboardHeight).then(() => {
+      setRenderTick(t => t + 1)
+    })
+  }, [focusedIndex, processManager, dashboardHeight])
 
   useInput((input, key) => {
-    if (showSpawn) return
+    if (showSpawn || busyRef.current) return
 
+    // Kill confirmation mode — uses captured killTargetId (not stale closure)
+    if (killTargetId) {
+      if (input === 'y' || input === 'Y') {
+        processManager.kill(killTargetId)
+        refreshTeams()
+        if (focusedIndex >= teams.length - 1) {
+          setFocusedIndex(Math.max(0, focusedIndex - 1))
+        }
+      }
+      setKillTargetId(null)
+      return
+    }
+
+    // Quit (detach — sessions keep running in tmux)
     if (input === 'q') {
+      exit()
+      return
+    }
+
+    // Kill all sessions and quit
+    if (input === 'Q') {
       processManager.killAll()
       exit()
       return
     }
 
+    // New session
     if (input === 'n') {
       setShowSpawn(true)
       return
     }
 
-    if (input === 'k' && teams.length > 0) {
-      const team = teams[focusedIndex]
-      if (team) handleKillById(team.roomId)
-      if (focusedIndex >= teams.length - 1) {
-        setFocusedIndex(Math.max(0, focusedIndex - 1))
+    // Kill focused session (with confirmation — capture target now)
+    if (input === 'x' && teams.length > 0 && focusedTeam) {
+      setKillTargetId(focusedTeam.roomId)
+      return
+    }
+
+    // Attach to focused session
+    if ((input === 'a' || key.return) && teams.length > 0 && focusedTeam) {
+      busyRef.current = true
+      onAttach?.()
+
+      try {
+        // Release terminal for tmux attach
+        setRawMode(false)
+        process.stdout.write('\x1b[?1049l') // leave alt screen
+
+        // Synchronous — blocks until detach (Ctrl+B D)
+        processManager.attach(focusedTeam.roomId)
+      } finally {
+        // Reclaim terminal (always restore, even on error)
+        process.stdout.write('\x1b[?1049h') // re-enter alt screen
+        setRawMode(true)
+
+        onDetach?.()
+        refreshTeams()
+        busyRef.current = false
       }
       return
     }
 
-    if (key.leftArrow) {
-      setFocusedIndex(i => Math.max(0, i - 1))
-    }
-    if (key.rightArrow) {
+    // Navigate sidebar
+    if (input === 'j' || key.downArrow) {
       setFocusedIndex(i => Math.min(teams.length - 1, i + 1))
+    }
+    if (input === 'k' || key.upArrow) {
+      setFocusedIndex(i => Math.max(0, i - 1))
     }
   })
 
   return (
     <Box flexDirection="column" height={terminalHeight}>
       <Dashboard teams={teams} focusedIndex={focusedIndex} height={dashboardHeight} />
-      {showSpawn ? (
+      {killTargetId ? (
+        <Box>
+          <Text color="red">Kill </Text>
+          <Text bold>{teams.find(t => t.roomId === killTargetId)?.roomName ?? killTargetId}</Text>
+          <Text color="red">? </Text>
+          <Text dimColor>[y/n]</Text>
+        </Box>
+      ) : showSpawn ? (
         <SpawnDialog
           onSubmit={name => {
             setShowSpawn(false)
@@ -121,8 +215,7 @@ function AppInner({ processManager, client }: AppProps) {
       ) : (
         <StatusBar
           teamCount={teams.length}
-          focusedRoom={teams[focusedIndex]?.roomName ?? null}
-          showingSpawnDialog={false}
+          focusedRoom={focusedTeam?.roomName ?? null}
         />
       )}
     </Box>

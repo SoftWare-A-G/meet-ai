@@ -1,39 +1,45 @@
-import React from "react";
-import { Box, Text } from "ink";
-import { Pane } from "./pane";
-import type { TeamProcess } from "../lib/process-manager";
+import { Box, Text } from 'ink'
+import Sidebar from './Sidebar'
+import MainPane from './MainPane'
+import type { TeamProcess } from '../lib/process-manager'
 
 interface DashboardProps {
-  teams: TeamProcess[];
-  focusedIndex: number;
-  height: number;
+  teams: TeamProcess[]
+  focusedIndex: number
+  height: number
 }
+
+const SIDEBAR_WIDTH = 32
 
 export function Dashboard({ teams, focusedIndex, height }: DashboardProps) {
   if (teams.length === 0) {
     return (
       <Box flexGrow={1} alignItems="center" justifyContent="center">
         <Text dimColor>No teams running. Press </Text>
-        <Text bold color="green">
-          n
-        </Text>
+        <Text bold color="green">n</Text>
         <Text dimColor> to spawn a new team.</Text>
       </Box>
-    );
+    )
   }
+
+  const focused = teams[focusedIndex]
+  if (!focused) return null
 
   return (
     <Box flexGrow={1} flexDirection="row">
-      {teams.map((team, index) => (
-        <Pane
-          key={team.roomId}
-          roomName={team.roomName}
-          status={team.status}
-          lines={team.lines}
-          focused={index === focusedIndex}
-          height={height}
-        />
-      ))}
+      <Sidebar
+        sessions={teams}
+        focusedIndex={focusedIndex}
+        width={SIDEBAR_WIDTH}
+        height={height}
+      />
+      <MainPane
+        roomName={focused.roomName}
+        status={focused.status}
+        lines={focused.lines}
+        panes={focused.panes}
+        height={height}
+      />
     </Box>
-  );
+  )
 }

@@ -58,12 +58,13 @@ test("resolveRawConfig returns env vars when set", () => {
 // --- Default values ---
 
 test("defaults to https://meet-ai.cc when no config sources exist", () => {
-  // GIVEN: no env vars are set
+  // GIVEN: no env vars are set and settings file paths point to non-existent locations
   delete process.env.MEET_AI_URL;
   delete process.env.MEET_AI_KEY;
+  const noFiles = { projectSettingsPath: "/nonexistent", homeDir: "/nonexistent" };
 
-  // WHEN: raw config is resolved (avoids file-system dependency)
-  const raw = resolveRawConfig();
+  // WHEN: raw config is resolved
+  const raw = resolveRawConfig(noFiles);
 
   // THEN: defaults are returned
   expect(raw.url).toBe("https://meet-ai.cc");
@@ -71,12 +72,13 @@ test("defaults to https://meet-ai.cc when no config sources exist", () => {
 });
 
 test("default config passes validation", () => {
-  // GIVEN: no env vars are set
+  // GIVEN: no env vars are set and settings file paths point to non-existent locations
   delete process.env.MEET_AI_URL;
   delete process.env.MEET_AI_KEY;
+  const noFiles = { projectSettingsPath: "/nonexistent", homeDir: "/nonexistent" };
 
   // WHEN: getMeetAiConfig is called
-  const config = getMeetAiConfig();
+  const config = getMeetAiConfig(noFiles);
 
   // THEN: the default URL passes schema validation
   expect(config.url).toBe("https://meet-ai.cc");
