@@ -58,7 +58,7 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
   const filteredCommands = useMemo(() => {
     if (slashQuery === null || !commandsInfo?.length) return []
     const q = slashQuery.toLowerCase()
-    return commandsInfo.filter(c => c.name.toLowerCase().startsWith(q))
+    return commandsInfo.filter(c => c.name.toLowerCase().includes(q))
   }, [slashQuery, commandsInfo])
 
   const showDropdown = filteredCommands.length > 0 && dismissedQueryRef.current !== slashQuery

@@ -1,7 +1,6 @@
 import type { MeetAiClient, Message } from "../../types";
 import { ListenInput } from "./schema";
 import { downloadMessageAttachments } from "../../lib/attachments";
-import { execFileSync } from "node:child_process";
 import {
   appendToInbox,
   getTeamMembers,
@@ -36,7 +35,7 @@ function routeToInbox(
       appendToInbox(`${inboxDir}/${target}.json`, entry as any);
     }
   } else if (stdinPane) {
-    execFileSync("tmux", ["send-keys", "-t", stdinPane, msg.content, "Enter"]);
+    // Non-@mention message with stdinPane: stdout only (console.log already happened), skip inbox
   } else if (defaultInboxPath) {
     appendToInbox(defaultInboxPath, entry as any);
   }
