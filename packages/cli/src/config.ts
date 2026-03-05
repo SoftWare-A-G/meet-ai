@@ -38,11 +38,20 @@ function loadSettingsFromPath(path: string): ClaudeSettings | null {
   }
 }
 
+interface ResolveOptions {
+  /** Override project-level settings path (for testing). */
+  projectSettingsPath?: string;
+  /** Override user home directory (for testing). */
+  homeDir?: string;
+}
+
 /**
  * Resolve raw config values from all sources (before validation).
  * Priority: process.env > project settings > user settings > defaults
  */
-export function resolveRawConfig(): { url: string; key: string | undefined } {
+export function resolveRawConfig(
+  opts?: ResolveOptions,
+): { url: string; key: string | undefined } {
   // Highest priority: process.env
   if (process.env.MEET_AI_URL) {
     return {
@@ -52,7 +61,8 @@ export function resolveRawConfig(): { url: string; key: string | undefined } {
   }
 
   // Next: project-level settings (.claude/settings.json in current directory)
-  const projectSettingsPath = resolve("./.claude/settings.json");
+  const projectSettingsPath = opts?.projectSettingsPath ??
+    resolve("./.claude/settings.json");
   const projectSettings = loadSettingsFromPath(projectSettingsPath);
 
   if (projectSettings?.env?.MEET_AI_URL) {
@@ -63,7 +73,10 @@ export function resolveRawConfig(): { url: string; key: string | undefined } {
   }
 
   // Next: user-level settings (~/.claude/settings.json)
-  const userSettingsPath = join(homedir(), ".claude/settings.json");
+  const userSettingsPath = join(
+    opts?.homeDir ?? homedir(),
+    ".claude/settings.json",
+  );
   const userSettings = loadSettingsFromPath(userSettingsPath);
 
   if (userSettings?.env?.MEET_AI_URL) {
@@ -84,8 +97,8 @@ export function resolveRawConfig(): { url: string; key: string | undefined } {
  * Get meet-ai configuration from all sources, validated with zod.
  * Priority: process.env > project settings > user settings > defaults
  */
-export function getMeetAiConfig(): MeetAiConfig {
-  const raw = resolveRawConfig();
+export function getMeetAiConfig(opts?: ResolveOptions): MeetAiConfig {
+  const raw = resolveRawConfig(opts);
   const config = configSchema.parse(raw);
 
   if (config.key && !config.key.startsWith("mai_")) {

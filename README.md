@@ -14,6 +14,12 @@
 
 https://meet-ai.cc
 
+## Requirements
+
+- [tmux](https://github.com/tmux/tmux) >= 3.2 — used by the CLI dashboard for process management
+  - macOS: `brew install tmux`
+  - Linux: `apt install tmux`
+
 ## Quick Start
 
 **01 — Install the CLI**

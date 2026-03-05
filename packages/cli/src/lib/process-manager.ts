@@ -1,16 +1,26 @@
-import { spawn, type ChildProcess } from 'node:child_process'
-import { Terminal, type IBufferCell, type IBufferLine } from '@xterm/headless'
+import { mkdirSync, readFileSync, writeFileSync, renameSync, lstatSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
+import { z } from 'zod'
+import { TmuxClient } from './tmux-client'
 
 export type ProcessStatus = 'starting' | 'running' | 'exited' | 'error'
+
+export interface PaneCapture {
+  index: number
+  title: string
+  active: boolean
+  lines: string[]
+}
 
 export interface TeamProcess {
   roomId: string
   roomName: string
-  pid: number | null
-  process: ChildProcess | null
+  sessionName: string
   status: ProcessStatus
   exitCode: number | null
   lines: string[]
+  panes: PaneCapture[]
 }
 
 interface ProcessManagerOptions {
@@ -20,179 +30,109 @@ interface ProcessManagerOptions {
   debug?: boolean
   env?: Record<string, string>
   onStatusChange?: (roomId: string, status: ProcessStatus, exitCode?: number | null) => void
+  tmux?: TmuxClient // injectable for testing
 }
 
-/** Default virtual terminal size — matches typical Claude Code output. */
-const TERM_COLS = 120
-const TERM_ROWS = 120
+// ── Session Registry (inlined) ──
 
-const ESC = '\x1b['
-const RESET = `${ESC}0m`
+const SessionEntrySchema = z.object({
+  sessionName: z.string(),
+  roomId: z.string(),
+  roomName: z.string(),
+  createdAt: z.string(),
+})
 
-/** Extract R, G, B components from a 0xRRGGBB integer without bitwise ops. */
-function rgbComponents(v: number): [number, number, number] {
-  const r = Math.floor(v / 65536) % 256
-  const g = Math.floor(v / 256) % 256
-  const b = v % 256
-  return [r, g, b]
+type SessionEntry = z.infer<typeof SessionEntrySchema>
+
+const REGISTRY_DIR = join(homedir(), '.meet-ai')
+const REGISTRY_PATH = join(REGISTRY_DIR, 'sessions.json')
+
+function readRegistry(): SessionEntry[] {
+  try {
+    const data = readFileSync(REGISTRY_PATH, 'utf8')
+    const parsed = z.array(SessionEntrySchema).safeParse(JSON.parse(data))
+    return parsed.success ? parsed.data : []
+  } catch {
+    return []
+  }
 }
 
-/**
- * Build the SGR (Select Graphic Rendition) parameter string for a cell.
- * Returns "" when the cell uses default styling.
- */
-function cellSgr(cell: IBufferCell): string {
-  const params: number[] = []
-
-  if (cell.isBold()) params.push(1)
-  if (cell.isDim()) params.push(2)
-  if (cell.isItalic()) params.push(3)
-  if (cell.isUnderline()) params.push(4)
-  if (cell.isInverse()) params.push(7)
-  if (cell.isStrikethrough()) params.push(9)
-
-  // Foreground
-  if (cell.isFgRGB()) {
-    const [r, g, b] = rgbComponents(cell.getFgColor())
-    params.push(38, 2, r, g, b)
-  } else if (cell.isFgPalette()) {
-    const c = cell.getFgColor()
-    if (c < 8) params.push(30 + c)
-    else if (c < 16) params.push(90 + (c - 8))
-    else params.push(38, 5, c)
+function writeRegistry(entries: SessionEntry[]): void {
+  // Create directory with restrictive permissions, verify not a symlink
+  mkdirSync(REGISTRY_DIR, { recursive: true, mode: 0o700 })
+  try {
+    const stat = lstatSync(REGISTRY_DIR)
+    if (!stat.isDirectory()) return
+  } catch {
+    return
   }
 
-  // Background
-  if (cell.isBgRGB()) {
-    const [r, g, b] = rgbComponents(cell.getBgColor())
-    params.push(48, 2, r, g, b)
-  } else if (cell.isBgPalette()) {
-    const c = cell.getBgColor()
-    if (c < 8) params.push(40 + c)
-    else if (c < 16) params.push(100 + (c - 8))
-    else params.push(48, 5, c)
-  }
-
-  if (params.length === 0) return ''
-  return `${ESC}${params.join(';')}m`
+  const tmpPath = join(REGISTRY_DIR, `sessions.${process.pid}.${Date.now()}.tmp`)
+  writeFileSync(tmpPath, JSON.stringify(entries, null, 2), { mode: 0o600 })
+  renameSync(tmpPath, REGISTRY_PATH)
 }
 
-/**
- * Convert one xterm buffer row into a string with embedded ANSI escape codes.
- * Trailing whitespace with default styling is trimmed.
- */
-function rowToAnsi(row: IBufferLine, cell: IBufferCell): string {
-  // First pass: find rightmost non-empty cell (trim trailing whitespace)
-  let rightmost = -1
-  for (let x = row.length - 1; x >= 0; x--) {
-    const c = row.getCell(x, cell)
-    if (!c) continue
-    const ch = c.getChars()
-    if (ch !== '' && ch !== ' ') {
-      rightmost = x
-      break
-    }
-    // Space with non-default styling counts as content
-    if (ch === ' ' && !c.isAttributeDefault()) {
-      rightmost = x
-      break
-    }
-  }
-
-  if (rightmost < 0) return ''
-
-  let out = ''
-  let prevSgr = ''
-
-  for (let x = 0; x <= rightmost; x++) {
-    const c = row.getCell(x, cell)
-    if (!c) continue
-    if (c.getWidth() === 0) continue // right half of wide char
-
-    const sgr = cellSgr(c)
-    if (sgr !== prevSgr) {
-      // Reset then apply new style (simplest approach, avoids state tracking)
-      if (prevSgr !== '') out += RESET
-      if (sgr !== '') out += sgr
-      prevSgr = sgr
-    }
-
-    const ch = c.getChars()
-    out += ch || ' '
-  }
-
-  // Close any open SGR
-  if (prevSgr !== '') out += RESET
-
-  return out
+function addToRegistry(entry: SessionEntry): void {
+  const entries = readRegistry()
+  // Replace if session name already exists
+  const idx = entries.findIndex(e => e.sessionName === entry.sessionName)
+  if (idx !== -1) entries[idx] = entry
+  else entries.push(entry)
+  writeRegistry(entries)
 }
+
+function removeFromRegistry(sessionName: string): void {
+  const entries = readRegistry().filter(e => e.sessionName !== sessionName)
+  writeRegistry(entries)
+}
+
+/** Allowed env vars to pass to tmux sessions (security: allowlist, not denylist). */
+const ENV_ALLOWLIST = [
+  'HOME', 'USER', 'SHELL', 'PATH', 'TERM', 'LANG', 'LC_ALL',
+  'XDG_CONFIG_HOME', 'XDG_DATA_HOME',
+]
 
 export class ProcessManager {
   private teams = new Map<string, TeamProcess>()
-  private terminals = new Map<string, Terminal>()
+  private tmux: TmuxClient
   private opts: ProcessManagerOptions
+
+  /** Number of sessions spawned in this CLI instance. */
+  spawned = 0
 
   constructor(opts: ProcessManagerOptions) {
     this.opts = opts
+    this.tmux = opts.tmux ?? new TmuxClient({ server: 'meet-ai', scrollback: 10_000 })
   }
 
-  /** Read the virtual terminal screen buffer into team.lines with ANSI colors preserved. */
-  private syncLines(team: TeamProcess): void {
-    const term = this.terminals.get(team.roomId)
-    if (!term) return
-
-    const buf = term.buffer.active
-    const lines: string[] = []
-    const cell = buf.getNullCell()
-
-    // Read all rows from scrollback + visible area
-    for (let i = 0; i < buf.length; i++) {
-      const row = buf.getLine(i)
-      if (row) {
-        lines.push(rowToAnsi(row, cell))
-      }
-    }
-
-    // Trim trailing empty lines
-    while (lines.length > 0 && lines[lines.length - 1] === '') {
-      lines.pop()
-    }
-
-    team.lines = lines
+  private sessionName(roomId: string): string {
+    return `mai-${roomId}`
   }
-
-  spawned = 0
 
   spawn(roomId: string, roomName: string): TeamProcess {
+    const sessionName = this.sessionName(roomId)
     const team: TeamProcess = {
       roomId,
       roomName,
-      pid: null,
-      process: null,
+      sessionName,
       status: 'starting',
       exitCode: null,
       lines: [],
+      panes: [],
     }
 
     this.teams.set(roomId, team)
+    this.spawned++
 
     if (this.opts.dryRun) return team
 
-    // Create virtual terminal to interpret PTY escape sequences
-    const term = new Terminal({
-      cols: TERM_COLS,
-      rows: TERM_ROWS,
-      scrollback: 100,
-      allowProposedApi: true,
-    })
-    this.terminals.set(roomId, term)
-
     const fullPrompt = [
       `ROOM_ID: ${roomId}`,
-      ``,
-      `You are a team lead. IMMEDIATELY:`,
-      `1. Create a team of agents to work on the task`,
-      `2. Connect to the meet-ai room using the /meet-ai skill`,
+      '',
+      'You are a team lead. IMMEDIATELY:',
+      '1. Start agent-team to start accepting commands from Meet AI',
+      '2. Connect to the meet-ai room using the /meet-ai skill',
+      '3. Just send a welcome message to the room, do not perform any work yet.',
     ].join('\n')
 
     const claudeArgs = [
@@ -202,88 +142,35 @@ export class ProcessManager {
       fullPrompt,
     ]
 
-    // Must DELETE CLAUDECODE entirely — setting to "" still triggers
-    // Claude's nested-session detection (presence check).
-    const { CLAUDECODE: _, ...envWithoutClaude } = process.env
-    const childEnv = {
-      ...envWithoutClaude,
-      ...this.opts.env,
-      DISABLE_AUTOUPDATER: '1',
+    // Build environment: allowlist of safe vars + meet-ai specific vars
+    const sessionEnv: Record<string, string> = { DISABLE_AUTOUPDATER: '1' }
+    for (const key of ENV_ALLOWLIST) {
+      const value = process.env[key]
+      if (value) sessionEnv[key] = value
     }
-
-    // Use macOS `script` to allocate a real PTY for each Claude instance.
-    // `script -q /dev/null cmd args...` runs cmd in a PTY, outputs to stdout.
-    // This gives Claude a full interactive TTY without native deps like node-pty.
-    const spawnCmd = '/usr/bin/script'
-    const spawnArgs = ['-q', '/dev/null', this.opts.claudePath, ...claudeArgs]
+    // Merge user-provided env (MEET_AI_URL, MEET_AI_KEY, etc.)
+    if (this.opts.env) Object.assign(sessionEnv, this.opts.env)
 
     if (this.opts.debug) {
       team.lines.push(`[debug] CMD: ${this.opts.claudePath} ${claudeArgs.join(' ').slice(0, 200)}`)
-      team.lines.push(`[debug] ENV: ${Object.keys(this.opts.env ?? {}).join(', ') || '(none)'}`)
+      team.lines.push(`[debug] ENV: ${Object.keys(sessionEnv).join(', ')}`)
     }
 
-    this.spawned++
+    // Use -- separator: tmux runs the command directly without shell interpretation
+    const commandArgs = [this.opts.claudePath, ...claudeArgs]
+    const result = this.tmux.newSession(sessionName, commandArgs, sessionEnv)
 
-    const child = spawn(spawnCmd, spawnArgs, {
-      stdio: ['ignore', 'pipe', 'pipe'],
-      env: childEnv,
-      detached: false,
-    })
+    if (result.ok) {
+      team.status = 'running'
+      this.opts.onStatusChange?.(roomId, 'running')
 
-    team.process = child
-    team.pid = child.pid ?? null
-    team.status = 'running'
-    this.opts.onStatusChange?.(roomId, 'running')
-
-    // Feed raw PTY output into virtual terminal
-    child.stdout?.on('data', (chunk: Buffer) => {
-      term.write(chunk.toString())
-      this.syncLines(team)
-
-      if (team.status === 'starting') {
-        team.status = 'running'
-        this.opts.onStatusChange?.(roomId, 'running')
-      }
-    })
-
-    // Capture stderr separately (not part of the virtual terminal)
-    child.stderr?.on('data', (chunk: Buffer) => {
-      const text = chunk.toString().trim()
-      if (text) {
-        // Append stderr after the screen content
-        team.lines.push(`[stderr] ${text}`)
-      }
-    })
-
-    child.on('exit', (code, signal) => {
-      // Final sync
-      this.syncLines(team)
-
-      if (this.opts.debug) {
-        team.lines.push(`[debug] exit code=${code} signal=${signal}`)
-      }
-
-      team.exitCode = code
-      team.status = code === 0 || code === null ? 'exited' : 'error'
-      team.process = null
-
-      // Dispose terminal
-      term.dispose()
-      this.terminals.delete(roomId)
-
-      this.opts.onStatusChange?.(roomId, team.status, code)
-    })
-
-    child.on('error', err => {
+      // Save to registry for orphan reconnection
+      addToRegistry({ sessionName, roomId, roomName, createdAt: new Date().toISOString() })
+    } else {
       team.status = 'error'
-      team.lines.push(`[error] ${err.message}`)
-      team.process = null
-
-      term.dispose()
-      this.terminals.delete(roomId)
-
+      team.lines.push(`[error] tmux: ${result.error}`)
       this.opts.onStatusChange?.(roomId, 'error')
-    })
+    }
 
     return team
   }
@@ -293,12 +180,117 @@ export class ProcessManager {
     this.teams.set(roomId, {
       roomId,
       roomName,
-      pid: null,
-      process: null,
+      sessionName: this.sessionName(roomId),
       status: 'error',
       exitCode: null,
       lines: [`[error] ${message}`],
+      panes: [],
     })
+  }
+
+  /**
+   * Capture all pane content for a session (async — non-blocking).
+   * Discovers panes via listPanes, captures each in parallel.
+   * Updates team.panes and team.lines (first pane for backward compat).
+   */
+  async capture(roomId: string, lines: number): Promise<string[]> {
+    const team = this.teams.get(roomId)
+    if (!team) return []
+
+    const paneInfos = this.tmux.listPanes(team.sessionName)
+
+    // Single pane or no panes discovered — fast path
+    if (paneInfos.length <= 1) {
+      const captured = await this.tmux.capturePane(team.sessionName, lines)
+      if (captured.length === 0) return team.lines
+      team.lines = captured
+      team.panes = paneInfos.length === 1
+        ? [{ index: 0, title: paneInfos[0]!.title, active: true, lines: captured }]
+        : []
+      return captured
+    }
+
+    // Multiple panes — capture each in parallel
+    const captures = await Promise.all(
+      paneInfos.map(async pane => ({
+        index: pane.index,
+        title: pane.title,
+        active: pane.active,
+        lines: await this.tmux.capturePane(`${team.sessionName}.${pane.index}`, lines),
+      }))
+    )
+
+    team.panes = captures
+    // Keep first pane as team.lines for backward compat
+    const firstPane = captures[0]
+    if (firstPane && firstPane.lines.length > 0) {
+      team.lines = firstPane.lines
+    }
+
+    return team.lines
+  }
+
+  /** Refresh status of all sessions using a single listSessions call. */
+  refreshStatuses(): void {
+    const sessions = this.tmux.listSessions()
+    const sessionMap = new Map(sessions.map(s => [s.name, s]))
+
+    for (const team of this.teams.values()) {
+      if (team.status !== 'running' && team.status !== 'starting') continue
+
+      const info = sessionMap.get(team.sessionName)
+      if (!info) {
+        // Session no longer exists
+        team.status = 'exited'
+        team.exitCode = null
+        this.opts.onStatusChange?.(team.roomId, 'exited')
+      } else if (!info.alive && team.status === 'running') {
+        team.status = 'exited'
+        team.exitCode = 0
+        this.opts.onStatusChange?.(team.roomId, 'exited', 0)
+      }
+    }
+  }
+
+  /** Attach to a session interactively (blocks until detach). */
+  attach(roomId: string): void {
+    const team = this.teams.get(roomId)
+    if (!team) return
+    this.tmux.attachSession(team.sessionName)
+  }
+
+  /** Find and adopt orphaned tmux sessions from a previous CLI run. */
+  reconnect(): TeamProcess[] {
+    const sessions = this.tmux.listSessions()
+    const registry = readRegistry()
+    const registryMap = new Map(registry.map(e => [e.sessionName, e]))
+    const adopted: TeamProcess[] = []
+
+    for (const session of sessions) {
+      // Only adopt sessions with our prefix
+      if (!session.name.startsWith('mai-')) continue
+      // Skip sessions we already track
+      if ([...this.teams.values()].some(t => t.sessionName === session.name)) continue
+
+      const entry = registryMap.get(session.name)
+      const roomId = entry?.roomId ?? session.name.replace('mai-', '')
+      const roomName = entry?.roomName ?? session.name
+
+      const team: TeamProcess = {
+        roomId,
+        roomName,
+        sessionName: session.name,
+        status: session.alive ? 'running' : 'exited',
+        exitCode: session.alive ? null : 0,
+        lines: [],
+        panes: [],
+      }
+
+      this.teams.set(roomId, team)
+      adopted.push(team)
+    }
+
+    return adopted
   }
 
   get(roomId: string): TeamProcess | undefined {
@@ -311,25 +303,10 @@ export class ProcessManager {
 
   kill(roomId: string): void {
     const team = this.teams.get(roomId)
-    if (team?.process) {
-      team.process.kill('SIGTERM')
-      const proc = team.process
-      setTimeout(() => {
-        try {
-          proc.kill('SIGKILL')
-        } catch {
-          // Process already exited
-        }
-      }, 3000)
+    if (team) {
+      this.tmux.killSession(team.sessionName)
+      removeFromRegistry(team.sessionName)
     }
-
-    // Cleanup terminal
-    const term = this.terminals.get(roomId)
-    if (term) {
-      term.dispose()
-      this.terminals.delete(roomId)
-    }
-
     this.teams.delete(roomId)
   }
 

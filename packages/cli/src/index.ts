@@ -5,7 +5,7 @@ import { err } from './lib/output.js'
 const main = defineCommand({
   meta: {
     name: 'meet-ai',
-    version: '0.0.19',
+    version: '0.0.20',
     description:
       'CLI for meet-ai chat rooms — create rooms, send messages, and stream via WebSocket',
   },
@@ -28,7 +28,6 @@ const main = defineCommand({
     'download-attachment': () =>
       import('./commands/download-attachment/command').then(m => m.default),
     'generate-key': () => import('./commands/generate-key/command').then(m => m.default),
-    dashboard: () => import('./commands/dashboard/command').then(m => m.default),
     hook: () => import('./commands/hook/command').then(m => m.default),
     'setup-hooks': () => import('./commands/setup-hooks/command').then(m => m.default),
   },
