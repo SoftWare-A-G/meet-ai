@@ -1,12 +1,29 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import clsx from 'clsx'
 import { hashColor, ensureSenderContrast } from '../../lib/colors'
 import { formatTime } from '../../lib/dates'
 import { textToSpeech } from '../../lib/api'
 import { IconCopy, IconCheck, IconShare, IconVolume, IconPlayerStop, IconLoader } from '../../icons'
 import MarkdownContent from '../MarkdownContent'
+import SlashCommandBadge from '../SlashCommandBadge'
+import { useChatContext } from '../../lib/chat-context'
+import type { CommandInfo } from '../../lib/types'
 
 type TtsState = 'idle' | 'loading' | 'playing'
+
+function parseSlashCommand(content: string, commands: CommandInfo[] | null): { command: CommandInfo; promptText: string } | null {
+  if (!commands || !content.startsWith('/')) return null
+  const trimmed = content.slice(1)
+  // Match longest command name first (e.g., "ce:plan" before "ce")
+  const sorted = [...commands].sort((a, b) => b.name.length - a.name.length)
+  for (const cmd of sorted) {
+    if (trimmed === cmd.name || trimmed.startsWith(cmd.name + ' ')) {
+      const promptText = trimmed.slice(cmd.name.length).trim()
+      return { command: cmd, promptText }
+    }
+  }
+  return null
+}
 
 type MessageProps = {
   sender: string
@@ -22,7 +39,9 @@ type MessageProps = {
 
 export default function Message({ sender, content, color, timestamp, tempId, status = 'sent', onRetry, attachmentCount, voiceAvailable }: MessageProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const { commandsInfo } = useChatContext()
   const senderColor = color ? ensureSenderContrast(color) : hashColor(sender)
+  const slashMatch = useMemo(() => parseSlashCommand(content, commandsInfo), [content, commandsInfo])
   const [copied, setCopied] = useState(false)
   const [ttsState, setTtsState] = useState<TtsState>('idle')
 
@@ -82,7 +101,13 @@ export default function Message({ sender, content, color, timestamp, tempId, sta
   const canShare = typeof navigator !== 'undefined' && 'share' in navigator
 
   return (
-    <div className={clsx('group relative rounded-md px-2 py-1.5 text-sm break-words hover:bg-white/[0.08]', status === 'pending' && 'opacity-50', status === 'failed' && 'border-l-2 border-red-500/50 bg-red-500/[0.04]')} data-temp-id={tempId} data-content={tempId ? content : undefined}>
+    <div className={clsx(
+      'group relative rounded-md px-2 py-1.5 text-sm break-words hover:bg-white/[0.08]',
+      status === 'pending' && 'opacity-50',
+      status === 'failed' && 'border-l-2 border-red-500/50 bg-red-500/[0.04]',
+      slashMatch && slashMatch.command.type === 'skill' && 'border-l-2 border-[#a855f7] bg-[#a855f7]/[0.06]',
+      slashMatch && slashMatch.command.type !== 'skill' && 'border-l-2 border-[#3b82f6] bg-[#3b82f6]/[0.06]',
+    )} data-temp-id={tempId} data-content={tempId ? content : undefined}>
       <div className="min-w-0">
         <div className="flex items-center gap-2 mb-0.5">
           <span className="font-bold text-sm" style={{ color: senderColor }}>{sender}</span>
@@ -133,7 +158,17 @@ export default function Message({ sender, content, color, timestamp, tempId, sta
             <span className="inline text-[11px] text-primary cursor-pointer ml-1.5 underline" onClick={onRetry}>retry</span>
           )}
         </div>
-        <MarkdownContent content={content} className="msg-content" />
+        {slashMatch ? (
+          <div className="msg-content">
+            <SlashCommandBadge
+              commandName={slashMatch.command.name}
+              promptText={slashMatch.promptText}
+              commandType={slashMatch.command.type}
+            />
+          </div>
+        ) : (
+          <MarkdownContent content={content} className="msg-content" />
+        )}
         {attachmentCount && attachmentCount > 0 ? (
           <div className="text-xs opacity-60 mt-1">
             {'\u{1F4CE}'} {attachmentCount} attachment{attachmentCount > 1 ? 's' : ''}

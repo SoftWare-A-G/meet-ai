@@ -23,29 +23,6 @@ function opts(overrides: Partial<ListCommandsOptions> = {}): ListCommandsOptions
   }
 }
 
-describe('built-in commands', () => {
-  test('always returns built-in commands', async () => {
-    const result = await listCommands(opts())
-    const builtins = result.filter(c => c.source === 'built-in')
-    expect(builtins.length).toBeGreaterThan(0)
-    const names = builtins.map(c => c.name)
-    expect(names).toContain('help')
-    expect(names).toContain('model')
-    expect(names).toContain('clear')
-  })
-
-  test('built-in commands have correct shape', async () => {
-    const result = await listCommands(opts())
-    const builtins = result.filter(c => c.source === 'built-in')
-    for (const cmd of builtins) {
-      expect(cmd.type).toBe('command')
-      expect(cmd.scope).toBe('user')
-      expect(typeof cmd.name).toBe('string')
-      expect(typeof cmd.description).toBe('string')
-    }
-  })
-})
-
 describe('standalone skills (user)', () => {
   test('discovers user-level standalone skills', async () => {
     const userClaudeDir = join(tempDir, 'user-claude')
@@ -325,24 +302,21 @@ describe('missing directories', () => {
     const result = await listCommands(
       opts({ _userClaudeDir: join(tempDir, 'nonexistent') })
     )
-    const builtins = result.filter(c => c.source === 'built-in')
-    expect(builtins.length).toBeGreaterThan(0)
+    expect(result).toEqual([])
   })
 
   test('handles missing project .claude dir gracefully', async () => {
     const result = await listCommands(
       opts({ projectPath: join(tempDir, 'no-project') })
     )
-    const builtins = result.filter(c => c.source === 'built-in')
-    expect(builtins.length).toBeGreaterThan(0)
+    expect(result).toEqual([])
   })
 
   test('handles missing plugins file gracefully', async () => {
     const result = await listCommands(
       opts({ _pluginsFile: join(tempDir, 'no-plugins.json') })
     )
-    const builtins = result.filter(c => c.source === 'built-in')
-    expect(builtins.length).toBeGreaterThan(0)
+    expect(result).toEqual([])
   })
 })
 
@@ -386,10 +360,9 @@ describe('output structure', () => {
     }
   })
 
-  test('no duplicate built-in commands', async () => {
+  test('no duplicate entries', async () => {
     const result = await listCommands(opts())
-    const builtins = result.filter(c => c.source === 'built-in')
-    const names = builtins.map(c => c.name)
+    const names = result.map(c => `${c.source}:${c.name}`)
     const unique = new Set(names)
     expect(names.length).toBe(unique.size)
   })

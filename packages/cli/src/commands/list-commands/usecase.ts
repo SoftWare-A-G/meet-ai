@@ -8,7 +8,7 @@ export interface CommandEntry {
   name: string
   description: string
   type: 'command' | 'skill'
-  source: 'built-in' | `plugin:${string}` | 'standalone'
+  source: `plugin:${string}` | 'standalone'
   scope: 'user' | 'project'
 }
 
@@ -19,16 +19,6 @@ export interface ListCommandsOptions {
   /** Override plugins file path (for testing) */
   _pluginsFile?: string
 }
-
-const BUILT_IN_COMMANDS: Array<{ name: string; description: string }> = [
-  { name: 'help', description: 'Get help with using Claude Code' },
-  { name: 'model', description: 'Switch AI model' },
-  { name: 'clear', description: 'Clear conversation history' },
-  { name: 'compact', description: 'Compact conversation context' },
-  { name: 'fast', description: 'Toggle fast mode' },
-  { name: 'cost', description: 'Show usage costs' },
-  { name: 'resume', description: 'Resume previous session' },
-]
 
 function parseYamlFrontmatter(content: string): { name?: string; description?: string } | null {
   const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/)
@@ -156,12 +146,7 @@ export async function listCommands(options: ListCommandsOptions): Promise<Comman
 
   const results: CommandEntry[] = []
 
-  // 1. Built-in commands
-  for (const cmd of BUILT_IN_COMMANDS) {
-    results.push({ ...cmd, type: 'command', source: 'built-in', scope: 'user' })
-  }
-
-  // 2. Standalone skills (user)
+  // 1. Standalone skills (user)
   const userSkills = await readSkillsFromDir(userClaudeDir, 'standalone', 'user')
   results.push(...userSkills)
 
