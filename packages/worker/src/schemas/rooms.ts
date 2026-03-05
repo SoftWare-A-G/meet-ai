@@ -39,3 +39,14 @@ export const teamInfoSchema = z.object({
   team_name: z.string(),
   members: z.array(teamInfoMemberSchema),
 })
+
+export const commandInfoSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  type: z.string().optional(),
+  source: z.string().optional(),
+})
+
+export const commandsSchema = z.object({
+  commands: z.array(commandInfoSchema),
+})

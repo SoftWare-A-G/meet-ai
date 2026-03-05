@@ -17,7 +17,7 @@ import { ChatContext } from '../lib/chat-context'
 import { STORAGE_KEYS, DEFAULT_SCHEMA } from '../lib/constants'
 import { getOrCreateHandle } from '../lib/handle'
 import { applySchema } from '../lib/theme'
-import type { Room, TeamInfo, TasksInfo } from '../lib/types'
+import type { Room, TeamInfo, TasksInfo, CommandInfo } from '../lib/types'
 
 export const Route = createFileRoute('/chat')({
   component: ChatPage,
@@ -104,6 +104,7 @@ function ChatLayout({
   const toastManager = Toast.useToastManager()
   const [teamInfo, setTeamInfo] = useState<TeamInfo | null>(null)
   const [tasksInfo, setTasksInfo] = useState<TasksInfo | null>(null)
+  const [commandsInfo, setCommandsInfo] = useState<CommandInfo[] | null>(null)
   const [teamSidebarOpen, setTeamSidebarOpen] = useState(false)
 
   const isStandalone =
@@ -176,6 +177,8 @@ function ChatLayout({
       setTeamInfo,
       tasksInfo,
       setTasksInfo,
+      commandsInfo,
+      setCommandsInfo,
       teamSidebarOpen,
       setTeamSidebarOpen,
       onNameChange,
@@ -194,6 +197,7 @@ function ChatLayout({
       sidebarOpen,
       teamInfo,
       tasksInfo,
+      commandsInfo,
       teamSidebarOpen,
       onNameChange,
       onSchemaChange,

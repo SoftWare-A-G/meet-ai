@@ -31,6 +31,7 @@ export interface MeetAiClient {
   ): WebSocket;
   sendLog(roomId: string, sender: string, content: string, color?: string, messageId?: string): Promise<Message>;
   sendTeamInfo(roomId: string, payload: string): Promise<string>;
+  sendCommands(roomId: string, payload: string): Promise<string>;
   sendTasks(roomId: string, payload: string): Promise<string>;
   getMessageAttachments(roomId: string, messageId: string): Promise<AttachmentMeta[]>;
   downloadAttachment(attachmentId: string): Promise<string>;

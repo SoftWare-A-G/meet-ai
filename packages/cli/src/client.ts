@@ -316,6 +316,24 @@ export function createClient(baseUrl: string, apiKey?: string) {
       })
     },
 
+    async sendCommands(roomId: string, payload: string) {
+      return withRetry(async () => {
+        const res = await fetch(`${baseUrl}/api/rooms/${roomId}/commands`, {
+          method: 'POST',
+          headers: headers(),
+          body: payload,
+        })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          const msg = (err as any).error
+          throw new Error(
+            typeof msg === 'string' ? msg : msg ? JSON.stringify(msg) : `HTTP ${res.status}`
+          )
+        }
+        return res.text()
+      })
+    },
+
     async sendTasks(roomId: string, payload: string) {
       return withRetry(async () => {
         const res = await fetch(`${baseUrl}/api/rooms/${roomId}/tasks`, {

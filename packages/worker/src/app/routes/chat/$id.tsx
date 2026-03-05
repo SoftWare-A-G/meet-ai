@@ -13,7 +13,7 @@ export const Route = createFileRoute('/chat/$id')({
 function ChatRoom() {
   const { id } = Route.useParams()
   const navigate = useNavigate()
-  const { rooms, removeRoom, apiKey, userName, isStandalone, teamInfo, setSidebarOpen, setTeamSidebarOpen, setTeamInfo, setTasksInfo, showQR } = useChatContext()
+  const { rooms, removeRoom, apiKey, userName, isStandalone, teamInfo, setSidebarOpen, setTeamSidebarOpen, setTeamInfo, setTasksInfo, setCommandsInfo, showQR } = useChatContext()
 
   const room = rooms.find(r => r.id === id)
   const roomName = room?.name ?? 'Loading...'
@@ -55,6 +55,7 @@ function ChatRoom() {
           userName={userName}
           onTeamInfo={setTeamInfo}
           onTasksInfo={setTasksInfo}
+          onCommandsInfo={setCommandsInfo}
         />
       )}
     </div>

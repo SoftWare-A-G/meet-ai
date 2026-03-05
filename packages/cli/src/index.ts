@@ -30,6 +30,8 @@ const main = defineCommand({
     'generate-key': () => import('./commands/generate-key/command').then(m => m.default),
     hook: () => import('./commands/hook/command').then(m => m.default),
     'setup-hooks': () => import('./commands/setup-hooks/command').then(m => m.default),
+    'list-commands': () => import('./commands/list-commands/command').then(m => m.default),
+    'send-commands': () => import('./commands/send-commands/command').then(m => m.default),
   },
   async run({ args }) {
     // Only spawn interactive mode when no subcommand was given

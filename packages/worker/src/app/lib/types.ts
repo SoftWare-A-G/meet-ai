@@ -59,4 +59,13 @@ export type TasksInfo = {
   tasks: TaskItem[]
 }
 
+export type CommandInfo = {
+  name: string
+  description: string
+  type?: 'command' | 'skill'
+  source?: string
+}
+
+export type CommandsInfo = { type: 'commands_info'; commands: CommandInfo[] }
+
 export type Screen = 'login' | 'token' | 'chat'

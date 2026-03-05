@@ -15,6 +15,7 @@ function makeMockClient(overrides: Partial<MeetAiClient> = {}): MeetAiClient {
       Promise.resolve({ id: "l1", roomId: "r1", sender: "s", sender_type: "agent", content: "c" }),
     ),
     sendTeamInfo: mock(() => Promise.resolve("")),
+    sendCommands: mock(() => Promise.resolve("")),
     sendTasks: mock(() => Promise.resolve("")),
     getMessageAttachments: mock(() => Promise.resolve([])),
     downloadAttachment: mock(() => Promise.resolve("")),

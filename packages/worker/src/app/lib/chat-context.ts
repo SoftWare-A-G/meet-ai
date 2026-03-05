@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react'
-import type { Room, TeamInfo, TasksInfo } from './types'
+import type { Room, TeamInfo, TasksInfo, CommandInfo } from './types'
 
 export type ChatContextValue = {
   rooms: Room[]
@@ -13,6 +13,8 @@ export type ChatContextValue = {
   setTeamInfo: (info: TeamInfo | null) => void
   tasksInfo: TasksInfo | null
   setTasksInfo: (info: TasksInfo | null) => void
+  commandsInfo: CommandInfo[] | null
+  setCommandsInfo: (commands: CommandInfo[] | null) => void
   teamSidebarOpen: boolean
   setTeamSidebarOpen: (open: boolean | ((prev: boolean) => boolean)) => void
   onNameChange: (name: string) => void

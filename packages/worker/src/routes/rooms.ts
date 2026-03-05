@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator'
 import { queries } from '../db/queries'
 import { requireAuth } from '../middleware/auth'
 import { rateLimitByKey } from '../middleware/rate-limit'
-import { createRoomSchema, sendMessageSchema, sendLogSchema, teamInfoSchema, messagesQuerySchema } from '../schemas/rooms'
+import { createRoomSchema, sendMessageSchema, sendLogSchema, teamInfoSchema, messagesQuerySchema, commandsSchema } from '../schemas/rooms'
 import type { AppEnv } from '../lib/types'
 
 export const roomsRoute = new Hono<AppEnv>()
@@ -237,6 +237,31 @@ export const roomsRoute = new Hono<AppEnv>()
     const stub = c.env.CHAT_ROOM.get(doId)
     await stub.fetch(
       new Request('http://internal/team-info', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      })
+    )
+
+    return c.json({ ok: true })
+  })
+
+  // POST /api/rooms/:id/commands — push commands info to ChatRoom DO
+  .post('/:id/commands', requireAuth, zValidator('json', commandsSchema), async c => {
+    const keyId = c.get('keyId')
+    const roomId = c.req.param('id')
+    const db = queries(c.env.DB)
+
+    const room = await db.findRoom(roomId, keyId)
+    if (!room) {
+      return c.json({ error: 'room not found' }, 404)
+    }
+
+    const body = c.req.valid('json')
+
+    const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
+    const stub = c.env.CHAT_ROOM.get(doId)
+    await stub.fetch(
+      new Request('http://internal/commands', {
         method: 'POST',
         body: JSON.stringify(body),
       })

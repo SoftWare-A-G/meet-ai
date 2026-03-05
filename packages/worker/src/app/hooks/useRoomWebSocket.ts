@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { loadMessagesSinceSeq } from '../lib/api'
-import type { Message, TeamInfo, TasksInfo } from '../lib/types'
+import type { Message, TeamInfo, TasksInfo, CommandInfo, CommandsInfo } from '../lib/types'
 
 type PlanDecisionEvent = {
   type: 'plan_decision'
@@ -29,6 +29,7 @@ type PermissionDecisionEvent = {
 
 type UseRoomWebSocketOptions = {
   onTeamInfo?: (info: TeamInfo) => void
+  onCommandsInfo?: (commands: CommandInfo[]) => void
   onPlanDecision?: (event: PlanDecisionEvent) => void
   onQuestionAnswer?: (event: QuestionAnswerEvent) => void
   onPermissionDecision?: (event: PermissionDecisionEvent) => void
@@ -48,6 +49,8 @@ export function useRoomWebSocket(
   onMessageRef.current = onMessage
   const onTeamInfoRef = useRef(options?.onTeamInfo)
   onTeamInfoRef.current = options?.onTeamInfo
+  const onCommandsInfoRef = useRef(options?.onCommandsInfo)
+  onCommandsInfoRef.current = options?.onCommandsInfo
   const onPlanDecisionRef = useRef(options?.onPlanDecision)
   onPlanDecisionRef.current = options?.onPlanDecision
   const onQuestionAnswerRef = useRef(options?.onQuestionAnswer)
@@ -95,6 +98,10 @@ export function useRoomWebSocket(
           const data = JSON.parse(e.data)
           if (data.type === 'team_info') {
             onTeamInfoRef.current?.(data as TeamInfo)
+            return
+          }
+          if (data.type === 'commands_info') {
+            onCommandsInfoRef.current?.((data as CommandsInfo).commands)
             return
           }
           if (data.type === 'tasks_info') {

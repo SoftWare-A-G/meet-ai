@@ -6,7 +6,7 @@ import { useOfflineQueue } from '../../hooks/useOfflineQueue'
 import * as api from '../../lib/api'
 import { requestPermission, notifyIfHidden } from '../../lib/notifications'
 import { parseUtcDate } from '../../lib/dates'
-import type { Message as MessageType, Room, TeamInfo, TasksInfo } from '../../lib/types'
+import type { Message as MessageType, Room, TeamInfo, TasksInfo, CommandInfo } from '../../lib/types'
 
 type DisplayMessage = MessageType & {
   tempId?: string
@@ -19,9 +19,10 @@ type ChatViewProps = {
   userName: string
   onTeamInfo?: (info: TeamInfo | null) => void
   onTasksInfo?: (info: TasksInfo | null) => void
+  onCommandsInfo?: (commands: CommandInfo[] | null) => void
 }
 
-export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksInfo }: ChatViewProps) {
+export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksInfo, onCommandsInfo }: ChatViewProps) {
   const [messages, setMessages] = useState<DisplayMessage[]>([])
   const [attachmentCounts, setAttachmentCounts] = useState<Record<string, number>>({})
   const [unreadCount, setUnreadCount] = useState(0)
@@ -162,6 +163,10 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
     onTeamInfo?.(info)
   }, [onTeamInfo])
 
+  const onCommandsInfoWs = useCallback((commands: CommandInfo[]) => {
+    onCommandsInfo?.(commands)
+  }, [onCommandsInfo])
+
   const onPlanDecisionWs = useCallback((event: { plan_review_id: string; status: 'approved' | 'denied' | 'expired'; feedback?: string | null; permission_mode?: string }) => {
     setPlanDecisions(prev => ({
       ...prev,
@@ -195,6 +200,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
 
   const { connected, tasksInfo } = useRoomWebSocket(room.id, apiKey, onWsMessage, {
     onTeamInfo: onTeamInfoWs,
+    onCommandsInfo: onCommandsInfoWs,
     onPlanDecision: onPlanDecisionWs,
     onQuestionAnswer: onQuestionAnswerWs,
     onPermissionDecision: onPermissionDecisionWs,

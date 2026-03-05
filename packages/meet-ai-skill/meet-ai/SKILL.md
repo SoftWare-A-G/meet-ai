@@ -76,6 +76,12 @@ meet-ai listen "<ROOM_ID>" --sender-type human --team "<team-name>" --inbox team
 
 Run this via Bash with `run_in_background: true`. Note the background task ID so you can stop it during teardown.
 
+**Send available commands to the room** so the web UI can offer `/` autocomplete:
+
+```bash
+meet-ai list-commands --project-path "$(pwd)" | meet-ai send-commands "<ROOM_ID>"
+```
+
 Include in each teammate's spawn prompt:
 
 ```

@@ -40,7 +40,34 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
   const [value, setValue] = useState('')
   const [plainText, setPlainText] = useState('')
 
-  const { teamInfo } = useChatContext()
+  const { teamInfo, commandsInfo } = useChatContext()
+
+  // Slash command autocomplete
+  const [selectedCommandIndex, setSelectedCommandIndex] = useState(0)
+  const dismissedQueryRef = useRef<string | null>(null)
+  const prevSlashQueryRef = useRef<string | null>(null)
+
+  const slashQuery = plainText.startsWith('/') ? plainText.slice(1) : null
+  if (slashQuery !== prevSlashQueryRef.current) {
+    prevSlashQueryRef.current = slashQuery
+    if (selectedCommandIndex !== 0) setSelectedCommandIndex(0)
+  }
+  const filteredCommands = useMemo(() => {
+    if (slashQuery === null || !commandsInfo?.length) return []
+    const q = slashQuery.toLowerCase()
+    return commandsInfo.filter(c => c.name.toLowerCase().startsWith(q))
+  }, [slashQuery, commandsInfo])
+
+  const showDropdown = filteredCommands.length > 0 && dismissedQueryRef.current !== slashQuery
+
+  const selectCommand = useCallback((name: string) => {
+    const newValue = `/${name} `
+    setValue(newValue)
+    setPlainText(newValue)
+    dismissedQueryRef.current = null
+    setSelectedCommandIndex(0)
+    requestAnimationFrame(() => inputRef.current?.focus())
+  }, [])
 
   const mentionData = useMemo(() => {
     if (!teamInfo) return []
@@ -108,11 +135,34 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
   }, [onSend, pendingFiles, plainText])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (showDropdown) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setSelectedCommandIndex(i => (i + 1) % filteredCommands.length)
+        return
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setSelectedCommandIndex(i => (i - 1 + filteredCommands.length) % filteredCommands.length)
+        return
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        dismissedQueryRef.current = slashQuery
+        setSelectedCommandIndex(0)
+        return
+      }
+      if (e.key === 'Enter' && !e.shiftKey && !matchMedia('(pointer: coarse)').matches) {
+        e.preventDefault()
+        selectCommand(filteredCommands[selectedCommandIndex].name)
+        return
+      }
+    }
     if (e.key === 'Enter' && !e.shiftKey && !matchMedia('(pointer: coarse)').matches) {
       e.preventDefault()
       handleSend()
     }
-  }, [handleSend])
+  }, [showDropdown, filteredCommands, selectedCommandIndex, slashQuery, selectCommand, handleSend])
 
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const items = e.clipboardData?.items
@@ -145,6 +195,28 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
   return (
     <div className="chat-input-wrapper shrink-0 pb-[env(safe-area-inset-bottom)] bg-chat-bg">
       <div className="relative border-t border-b border-border bg-input-bg">
+        {showDropdown && (
+          <div className="absolute bottom-full left-0 right-0 z-10 border border-border border-b-0 bg-input-bg shadow-xl rounded-t-lg overflow-hidden">
+            <ul className="max-h-48 overflow-y-auto">
+              {filteredCommands.map((cmd, i) => (
+                <li key={cmd.name}>
+                  <button
+                    type="button"
+                    className={clsx(
+                      'w-full text-left px-3 py-2 flex gap-2 items-baseline cursor-pointer border-none bg-transparent text-msg-text text-sm',
+                      i === selectedCommandIndex ? 'bg-white/10' : 'hover:bg-white/5'
+                    )}
+                    onMouseDown={preventBlur}
+                    onClick={() => selectCommand(cmd.name)}
+                  >
+                    <span className="font-semibold shrink-0">/{cmd.name}</span>
+                    <span className="text-msg-text opacity-50 truncate">{cmd.description}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {pendingFiles.length > 0 && (
           <div className="flex flex-wrap gap-1.5 p-3 border-b border-border">
             {pendingFiles.map((pf) => (
