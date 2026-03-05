@@ -76,6 +76,15 @@ meet-ai listen "<ROOM_ID>" --sender-type human --team "<team-name>" --inbox team
 
 Run this via Bash with `run_in_background: true`. Note the background task ID so you can stop it during teardown.
 
+**Optional: inject non-@mention messages directly into the orchestrator's stdin** using `--stdin-pane`. Get the current tmux pane ID and pass it:
+
+```bash
+PANE_ID=$(tmux display-message -p '#{pane_id}')
+meet-ai listen "<ROOM_ID>" --sender-type human --team "<team-name>" --inbox team-lead --stdin-pane "$PANE_ID"
+```
+
+When `--stdin-pane` is set, messages without `@agent` mentions are injected into the tmux pane via `tmux send-keys` instead of being written to the inbox. Messages with `@mentions` are still routed to agent inboxes as usual.
+
 **Send available commands to the room** so the web UI can offer `/` autocomplete:
 
 ```bash

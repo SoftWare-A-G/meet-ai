@@ -110,7 +110,7 @@ function simpleHash(str: string): string {
 /** Memoised so that dangerouslySetInnerHTML DOM nodes survive parent re-renders. */
 const PlanMarkdownContent = memo(function PlanMarkdownContent({ segments }: { segments: Segment[] }) {
   return (
-    <div className="plan-markdown text-msg-text">
+    <div className="plan-markdown text-msg-text break-words">
       {segments.map((seg, i) =>
         seg.type === 'code' ? (
           <div key={i} className="plan-code-block" data-block-id={seg.blockId}>

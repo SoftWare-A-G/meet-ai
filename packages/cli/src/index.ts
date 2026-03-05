@@ -5,7 +5,7 @@ import { err } from './lib/output.js'
 const main = defineCommand({
   meta: {
     name: 'meet-ai',
-    version: '0.0.24',
+    version: '0.0.25',
     description:
       'CLI for meet-ai chat rooms — create rooms, send messages, and stream via WebSocket',
   },

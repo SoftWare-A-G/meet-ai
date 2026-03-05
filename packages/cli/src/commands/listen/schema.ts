@@ -7,6 +7,7 @@ export const ListenInput = z
     senderType: z.string().optional(),
     team: z.string().optional(),
     inbox: z.string().optional(),
+    stdinPane: z.string().optional(),
   })
   .refine((data) => !(data.inbox && !data.team), {
     message: "--inbox requires --team",

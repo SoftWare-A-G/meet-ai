@@ -1,6 +1,7 @@
 import type { MeetAiClient, Message } from "../../types";
 import { ListenInput } from "./schema";
 import { downloadMessageAttachments } from "../../lib/attachments";
+import { execFileSync } from "node:child_process";
 import {
   appendToInbox,
   getTeamMembers,
@@ -14,6 +15,7 @@ function routeToInbox(
   inboxDir: string,
   defaultInboxPath: string | null,
   teamDir: string,
+  stdinPane?: string,
   attachmentPaths?: string[],
 ) {
   const entry: Record<string, unknown> = {
@@ -33,6 +35,8 @@ function routeToInbox(
     for (const target of targets) {
       appendToInbox(`${inboxDir}/${target}.json`, entry as any);
     }
+  } else if (stdinPane) {
+    execFileSync("tmux", ["send-keys", "-t", stdinPane, msg.content, "Enter"]);
   } else if (defaultInboxPath) {
     appendToInbox(defaultInboxPath, entry as any);
   }
@@ -46,11 +50,12 @@ export function listen(
     senderType?: string;
     team?: string;
     inbox?: string;
+    stdinPane?: string;
   },
 ): WebSocket {
   const parsed = ListenInput.parse(input);
 
-  const { roomId, exclude, senderType, team, inbox } = parsed;
+  const { roomId, exclude, senderType, team, inbox, stdinPane } = parsed;
 
   const inboxDir = team
     ? `${process.env.HOME}/.claude/teams/${team}/inboxes`
@@ -67,11 +72,11 @@ export function listen(
       downloadMessageAttachments(client, msg.room_id, msg.id).then((paths) => {
         const output = paths.length ? { ...msg, attachments: paths } : msg;
         console.log(JSON.stringify(output));
-        if (inboxDir && teamDir) routeToInbox(msg, inboxDir, defaultInboxPath, teamDir, paths);
+        if (inboxDir && teamDir) routeToInbox(msg, inboxDir, defaultInboxPath, teamDir, stdinPane, paths);
       });
     } else {
       console.log(JSON.stringify(msg));
-      if (inboxDir && teamDir) routeToInbox(msg, inboxDir, defaultInboxPath, teamDir);
+      if (inboxDir && teamDir) routeToInbox(msg, inboxDir, defaultInboxPath, teamDir, stdinPane);
     }
   };
 

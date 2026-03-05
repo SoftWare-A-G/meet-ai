@@ -34,6 +34,11 @@ export default defineCommand({
       alias: "i",
       description: "Inbox name for routing (requires --team)",
     },
+    "stdin-pane": {
+      type: "string",
+      alias: "s",
+      description: "tmux pane ID to inject non-@mention messages into via send-keys",
+    },
   },
   run({ args }) {
     try {
@@ -45,6 +50,7 @@ export default defineCommand({
         senderType: args["sender-type"],
         team: args.team,
         inbox: args.inbox,
+        stdinPane: args["stdin-pane"],
       });
     } catch (error) {
       err(error instanceof Error ? error.message : String(error));
