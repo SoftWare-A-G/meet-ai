@@ -4,6 +4,7 @@ import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import clsx from 'clsx'
 import '@xterm/xterm/css/xterm.css'
+import TerminalTextRenderer from './TerminalTextRenderer'
 
 type PaneData = {
   name: string
@@ -44,6 +45,7 @@ const TERMINAL_THEME = {
 export default function TerminalViewerModal({ open, onClose, data, onResize }: TerminalViewerModalProps) {
   const [panes, setPanes] = useState<PaneData[]>([])
   const [activePane, setActivePane] = useState<string | null>(null)
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
   const terminalRef = useRef<Terminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
   const cleanupRef = useRef<(() => void) | null>(null)
@@ -51,6 +53,14 @@ export default function TerminalViewerModal({ open, onClose, data, onResize }: T
   const onResizeRef = useRef(onResize)
   onResizeRef.current = onResize
   const lastReportedColsRef = useRef<number>(0)
+
+  // Track mobile state
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)')
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
 
   // Parse incoming data into panes
   useEffect(() => {
@@ -83,11 +93,10 @@ export default function TerminalViewerModal({ open, onClose, data, onResize }: T
       return
     }
 
-    const isMobile = window.innerWidth < 768
     const terminal = new Terminal({
       theme: TERMINAL_THEME,
       fontFamily: '"Cascadia Code", "JetBrains Mono", "Fira Code", Menlo, Monaco, "Courier New", monospace',
-      fontSize: isMobile ? 11 : 13,
+      fontSize: 13,
       lineHeight: 1,
       cursorBlink: false,
       scrollback: 5000,
@@ -153,7 +162,7 @@ export default function TerminalViewerModal({ open, onClose, data, onResize }: T
     <Dialog.Root open={open} onOpenChange={isOpen => { if (!isOpen) onClose() }}>
       <Dialog.Portal>
         <Dialog.Backdrop className="fixed inset-0 z-[100] bg-black/60" />
-        <Dialog.Popup className="fixed top-1/2 left-1/2 z-[100] -translate-x-1/2 -translate-y-1/2 flex flex-col border border-[#30363d] bg-[#0d1117] overflow-hidden w-screen h-[100dvh] rounded-none md:w-[58vw] md:h-[80vh] md:rounded-xl">
+        <Dialog.Popup className="fixed top-1/2 left-1/2 z-[100] -translate-x-1/2 -translate-y-1/2 flex flex-col border border-[#30363d] bg-[#0d1117] overflow-hidden w-[58vw] h-[80vh] rounded-xl">
           <div className="flex items-center justify-between border-b border-[#30363d] shrink-0">
             <div className="flex items-center gap-0 overflow-x-auto">
               {panes.map(pane => (
@@ -162,7 +171,7 @@ export default function TerminalViewerModal({ open, onClose, data, onResize }: T
                   type="button"
                   onClick={() => handleTabSwitch(pane.paneId)}
                   className={clsx(
-                    'px-3 py-3 text-[12px] font-mono border-b-2 border-r border-r-[#30363d] cursor-pointer bg-transparent whitespace-nowrap md:px-4 md:py-2.5',
+                    'px-4 py-2.5 text-[12px] font-mono border-b-2 border-r border-r-[#30363d] cursor-pointer bg-transparent whitespace-nowrap',
                     pane.paneId === activePane
                       ? 'text-[#e6edf3] border-b-[#58a6ff] bg-[#161b22]'
                       : 'text-[#6e7681] border-b-transparent hover:text-[#b1bac4]'
@@ -172,11 +181,15 @@ export default function TerminalViewerModal({ open, onClose, data, onResize }: T
                 </button>
               ))}
             </div>
-            <Dialog.Close className="cursor-pointer rounded-md border-none bg-transparent px-4 py-3 text-[#6e7681] hover:text-[#e6edf3] text-xl leading-none shrink-0 md:px-3 md:py-2 md:text-lg">
+            <Dialog.Close className="cursor-pointer rounded-md border-none bg-transparent px-3 py-2 text-[#6e7681] hover:text-[#e6edf3] text-lg leading-none shrink-0">
               &#x2715;
             </Dialog.Close>
           </div>
-          <div ref={containerRef} className="flex-1 min-h-0 w-full p-1 md:p-2 touch-pan-y" />
+          {isMobile ? (
+            <TerminalTextRenderer panes={panes} activePane={activePane} />
+          ) : (
+            <div ref={containerRef} className="flex-1 min-h-0 w-full p-2" />
+          )}
         </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>
