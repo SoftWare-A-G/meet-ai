@@ -36,7 +36,7 @@ function MessageBubbleInner({ msg, markdownStyles, theme, onRetry }: Props) {
   }, [])
 
   const accessibilityLabel = useMemo(() => {
-    const truncated = msg.content.length > 200 ? msg.content.slice(0, 200) + '...' : msg.content
+    const truncated = msg.content.length > 200 ? `${msg.content.slice(0, 200)}...` : msg.content
     return `${msg.sender} said: ${truncated}, ${timeAgo(msg.created_at)}`
   }, [msg.sender, msg.content, msg.created_at])
 

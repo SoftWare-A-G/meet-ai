@@ -133,7 +133,7 @@ async function readSettings(settingsPath: string): Promise<Record<string, unknow
 
 async function readInstalledPlugins(
   pluginsFile: string
-): Promise<Record<string, Array<{ scope: string; installPath: string; version: string }>>> {
+): Promise<Record<string, { scope: string; installPath: string; version: string }[]>> {
   if (!existsSync(pluginsFile)) return {}
   try {
     const raw = await readFile(pluginsFile, 'utf-8')

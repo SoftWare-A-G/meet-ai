@@ -50,3 +50,8 @@ export const commandInfoSchema = z.object({
 export const commandsSchema = z.object({
   commands: z.array(commandInfoSchema),
 })
+
+export const createTaskSchema = z.object({
+  subject: z.string().min(1).max(500),
+  description: z.string().max(2000).optional(),
+})

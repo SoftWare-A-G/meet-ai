@@ -38,9 +38,8 @@ function parsePlanMarkdown(md: string): Segment[] {
 
   const renderer = new Renderer()
 
-  renderer.link = ({ href, text }: { href: string; text: string }) => {
-    return `<a href="${href}" target="_blank" rel="noopener noreferrer">${text}</a>`
-  }
+  renderer.link = ({ href, text }: { href: string; text: string }) =>
+    `<a href="${href}" target="_blank" rel="noopener noreferrer">${text}</a>`
 
   // Only override code blocks — they need special handling for ShikiCode.
   // All other block types use marked's default renderers so inline formatting

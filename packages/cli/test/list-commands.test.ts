@@ -88,8 +88,8 @@ describe('plugin commands and skills', () => {
     installPath: string
     pluginsFile: string
     userSettingsPath: string
-    commands?: Array<{ filename: string; content: string; subdir?: string }>
-    skills?: Array<{ name: string; content: string }>
+    commands?: { filename: string; content: string; subdir?: string }[]
+    skills?: { name: string; content: string }[]
   }) {
     // Write installed_plugins.json
     const plugins: Record<string, unknown[]> = {

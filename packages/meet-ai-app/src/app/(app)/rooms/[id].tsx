@@ -57,19 +57,20 @@ function groupMessages(messages: Message[]): RenderItem[] {
   for (const msg of standaloneItems) {
     if (msg.type === 'log') {
       logBuffer.push(msg)
-    } else if (msg.sender_type === 'human') {
-      flushLogs()
-      items.push({ kind: 'message', msg, key: msg.localId || msg.id })
     } else {
       flushLogs()
-      const isHookAnchor = msg.sender === 'hook'
-      // Hook messages never render as bubbles — they only exist as log group anchors
-      if (!isHookAnchor) {
-        items.push({ kind: 'message', msg, key: msg.id })
-      }
-      const children = childLogs.get(msg.id)
-      if (children && children.length > 0) {
-        items.push({ kind: 'log-group', logs: children, key: `lg-${children[0].id}` })
+      if (msg.sender_type === 'human') {
+        items.push({ kind: 'message', msg, key: msg.localId || msg.id })
+      } else {
+        const isHookAnchor = msg.sender === 'hook'
+        // Hook messages never render as bubbles — they only exist as log group anchors
+        if (!isHookAnchor) {
+          items.push({ kind: 'message', msg, key: msg.id })
+        }
+        const children = childLogs.get(msg.id)
+        if (children && children.length > 0) {
+          items.push({ kind: 'log-group', logs: children, key: `lg-${children[0].id}` })
+        }
       }
     }
   }

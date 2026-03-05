@@ -164,17 +164,15 @@ export default function QuestionCard({ content, timestamp, onSend, answeredWith,
           ? current.filter(l => l !== label)
           : [...current, label]
         if (next.length === 0) {
-          const copy = { ...prev }
-          delete copy[questionIndex]
-          return copy
+          const { [questionIndex]: _, ...rest } = prev
+          return rest
         }
         return { ...prev, [questionIndex]: next }
       }
       // Single select: toggle off or replace
       if (current.length === 1 && current[0] === label) {
-        const copy = { ...prev }
-        delete copy[questionIndex]
-        return copy
+        const { [questionIndex]: _, ...rest } = prev
+        return rest
       }
       return { ...prev, [questionIndex]: [label] }
     })

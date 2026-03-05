@@ -21,7 +21,7 @@ async function getMainViewUrl(): Promise<string> {
 // Create the main application window
 const url = await getMainViewUrl()
 
-const mainWindow = new BrowserWindow({
+const _mainWindow = new BrowserWindow({
   title: 'Meet AI',
   url,
   frame: {

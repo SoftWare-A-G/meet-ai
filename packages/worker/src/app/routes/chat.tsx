@@ -8,6 +8,7 @@ import QRShareModal from '../components/QRShareModal'
 import SettingsModal from '../components/SettingsModal'
 import Sidebar from '../components/Sidebar'
 import SpawnTeamModal from '../components/SpawnTeamModal'
+import TaskBoardModal from '../components/TaskBoardModal'
 import TeamSidebar from '../components/TeamSidebar'
 import TokenScreen from '../components/TokenScreen'
 import { useLobbyWebSocket } from '../hooks/useLobbyWebSocket'
@@ -106,6 +107,7 @@ function ChatLayout({
   const [tasksInfo, setTasksInfo] = useState<TasksInfo | null>(null)
   const [commandsInfo, setCommandsInfo] = useState<CommandInfo[] | null>(null)
   const [teamSidebarOpen, setTeamSidebarOpen] = useState(false)
+  const [showTaskBoard, setShowTaskBoard] = useState(false)
 
   const isStandalone =
     (window.navigator as any).standalone === true ||
@@ -225,6 +227,7 @@ function ChatLayout({
           tasksInfo={tasksInfo}
           isOpen={teamSidebarOpen}
           onClose={() => setTeamSidebarOpen(false)}
+          onOpenTaskBoard={() => setShowTaskBoard(true)}
         />
       </div>
       {showSettingsModal && (
@@ -247,6 +250,13 @@ function ChatLayout({
         <SpawnTeamModal onClose={() => setShowSpawnModal(false)} onSend={lobbySend} />
       )}
       {showIOSInstallModal && <IOSInstallModal onClose={() => setShowIOSInstallModal(false)} />}
+      {showTaskBoard && params.id && (
+        <TaskBoardModal
+          roomId={params.id}
+          tasksInfo={tasksInfo}
+          onClose={() => setShowTaskBoard(false)}
+        />
+      )}
     </ChatContext.Provider>
   )
 }

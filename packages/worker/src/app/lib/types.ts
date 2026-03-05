@@ -51,6 +51,7 @@ export type TeamInfo = {
 export type TaskItem = {
   id: string
   subject: string
+  description?: string
   status: 'pending' | 'in_progress' | 'completed'
   owner: string | null
 }

@@ -51,8 +51,6 @@ const NEON_BTN =
 const NEON_BTN_OUTLINE =
   'inline-block rounded-md border border-[#00FF8866] bg-transparent text-[#00FF88] font-semibold cursor-pointer no-underline transition-all duration-300 hover:bg-[#00FF8811] hover:border-[#00FF88] hover:shadow-[0_0_15px_#00FF8833] motion-reduce:transition-none'
 
-const NEON_LINK =
-  'cursor-pointer border-b border-[#00FF8844] text-[#00FF88] no-underline hover:border-[#00FF88]'
 
 const NAV_LINK =
   'font-medium text-slate-500 no-underline transition-colors duration-200 hover:text-[#00FF88]'

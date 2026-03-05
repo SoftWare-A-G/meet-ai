@@ -1,5 +1,5 @@
 import { STORAGE_KEYS } from './constants'
-import type { Message, Room } from './types'
+import type { Message, Room, TaskItem } from './types'
 
 export function getApiKey(): string | null {
   if (typeof localStorage === 'undefined') return null
@@ -190,6 +190,16 @@ export async function decidePermissionReview(
     }),
   })
   if (!res.ok) throw new Error(`Permission review decide failed: HTTP ${res.status}`)
+  return res.json()
+}
+
+export async function createTask(roomId: string, subject: string, description?: string): Promise<{ ok: boolean; task: TaskItem }> {
+  const res = await fetch(`/api/rooms/${roomId}/tasks/create`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ subject, ...(description && { description }) }),
+  })
+  if (!res.ok) throw new Error(`Create task failed: HTTP ${res.status}`)
   return res.json()
 }
 

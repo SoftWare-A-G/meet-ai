@@ -168,6 +168,7 @@ export function useRoomWebSocket(
         ws.close()
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- refs are stable, .current should not be deps
   }, [roomId, apiKey])
 
   return { wsRef, connected, tasksInfo }

@@ -27,7 +27,7 @@ export class ChatRoom extends DurableObject {
 
       // Send cached team info to the new client (load from storage if cache is empty)
       if (!this.teamInfo) {
-        this.teamInfo = await this.ctx.storage.get<string>('teamInfo') ?? null
+        this.teamInfo = (await this.ctx.storage.get<string>('teamInfo')) ?? null
       }
       if (this.teamInfo) {
         server.send(this.teamInfo)
@@ -35,7 +35,7 @@ export class ChatRoom extends DurableObject {
 
       // Send cached tasks info to the new client (load from storage if cache is empty)
       if (!this.tasksInfo) {
-        this.tasksInfo = await this.ctx.storage.get<string>('tasksInfo') ?? null
+        this.tasksInfo = (await this.ctx.storage.get<string>('tasksInfo')) ?? null
       }
       if (this.tasksInfo) {
         server.send(this.tasksInfo)
@@ -43,7 +43,7 @@ export class ChatRoom extends DurableObject {
 
       // Send cached commands info to the new client (load from storage if cache is empty)
       if (!this.commandsInfo) {
-        this.commandsInfo = await this.ctx.storage.get<string>('commandsInfo') ?? null
+        this.commandsInfo = (await this.ctx.storage.get<string>('commandsInfo')) ?? null
       }
       if (this.commandsInfo) {
         server.send(this.commandsInfo)
@@ -89,7 +89,9 @@ export class ChatRoom extends DurableObject {
       for (const ws of this.ctx.getWebSockets()) {
         try {
           ws.send(payload)
-        } catch { /* client gone */ }
+        } catch {
+          /* client gone */
+        }
       }
 
       return new Response('ok')
@@ -106,10 +108,78 @@ export class ChatRoom extends DurableObject {
       for (const ws of this.ctx.getWebSockets()) {
         try {
           ws.send(payload)
-        } catch { /* client gone */ }
+        } catch {
+          /* client gone */
+        }
       }
 
       return new Response('ok')
+    }
+
+    // /tasks/create — create a new task, append to list, broadcast
+    if (url.pathname === '/tasks/create') {
+      let body: Record<string, unknown>
+      try {
+        body = JSON.parse(await request.text())
+      } catch {
+        return new Response(JSON.stringify({ error: 'invalid JSON' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+
+      if (typeof body.subject !== 'string' || body.subject.trim() === '') {
+        return new Response(
+          JSON.stringify({ error: 'subject is required and must be a non-empty string' }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        )
+      }
+      if (body.description !== undefined && typeof body.description !== 'string') {
+        return new Response(JSON.stringify({ error: 'description must be a string' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+
+      // Load current tasks
+      if (!this.tasksInfo) {
+        this.tasksInfo = (await this.ctx.storage.get<string>('tasksInfo')) ?? null
+      }
+      const current = this.tasksInfo
+        ? JSON.parse(this.tasksInfo)
+        : { type: 'tasks_info', tasks: [] }
+      const tasks: {
+        id: string
+        subject: string
+        description?: string
+        status: string
+        owner: string | null
+      }[] = current.tasks ?? []
+
+      const newTask = {
+        id: crypto.randomUUID().slice(0, 8),
+        subject: body.subject,
+        ...(body.description && { description: body.description as string }),
+        status: 'pending' as const,
+        owner: null,
+      }
+      tasks.push(newTask)
+
+      const payload = JSON.stringify({ type: 'tasks_info', tasks })
+      this.tasksInfo = payload
+      await this.ctx.storage.put('tasksInfo', payload)
+
+      for (const ws of this.ctx.getWebSockets()) {
+        try {
+          ws.send(payload)
+        } catch {
+          /* client gone */
+        }
+      }
+
+      return new Response(JSON.stringify(newTask), {
+        headers: { 'Content-Type': 'application/json' },
+      })
     }
 
     // /commands — store and broadcast commands info
@@ -123,7 +193,9 @@ export class ChatRoom extends DurableObject {
       for (const ws of this.ctx.getWebSockets()) {
         try {
           ws.send(payload)
-        } catch { /* client gone */ }
+        } catch {
+          /* client gone */
+        }
       }
 
       return new Response('ok')
@@ -141,7 +213,11 @@ export class ChatRoom extends DurableObject {
     for (const ws of sockets) {
       const lastPong = this.ctx.getWebSocketAutoResponseTimestamp(ws)
       if (lastPong && now - lastPong.getTime() > STALE_TIMEOUT_MS) {
-        try { ws.close(1011, 'stale connection') } catch { /* already closed */ }
+        try {
+          ws.close(1011, 'stale connection')
+        } catch {
+          /* already closed */
+        }
         closed++
       }
     }
@@ -168,6 +244,10 @@ export class ChatRoom extends DurableObject {
   }
 
   async webSocketError(ws: WebSocket, _error: unknown) {
-    try { ws.close(1011, 'unexpected error') } catch { /* already closed */ }
+    try {
+      ws.close(1011, 'unexpected error')
+    } catch {
+      /* already closed */
+    }
   }
 }

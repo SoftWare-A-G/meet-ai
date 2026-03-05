@@ -110,7 +110,7 @@ function mergeHooks(existing: HooksConfig): { merged: HooksConfig; added: string
         (m: HookMatcher) => m.matcher === newMatcher.matcher && isMeetAiHook(m)
       )
 
-      if (existingIdx >= 0) {
+      if (existingIdx !== -1) {
         result[event][existingIdx] = newMatcher
         added.push(`updated ${event} [${newMatcher.matcher}]`)
       } else {
@@ -127,7 +127,9 @@ function mergeHooks(existing: HooksConfig): { merged: HooksConfig; added: string
       if (!isMeetAiHook(m)) return true
       return newMatchers.some(nm => nm.matcher === m.matcher)
     })
-    if (result[event].length === 0) delete result[event]
+    if (result[event].length === 0) {
+      Reflect.deleteProperty(result, event)
+    }
   }
 
   return { merged: result, added }
@@ -188,7 +190,7 @@ export async function setupHooks(options: SetupHooksOptions): Promise<void> {
       delete (updated as Record<string, unknown>).hooks
     }
     await mkdir(dirname(settingsPath), { recursive: true })
-    await writeFile(settingsPath, JSON.stringify(updated, null, 2) + '\n')
+    await writeFile(settingsPath, `${JSON.stringify(updated, null, 2)}\n`)
 
     for (const r of removed) {
       console.log(pc.yellow(`  ${r}`))
@@ -207,7 +209,7 @@ export async function setupHooks(options: SetupHooksOptions): Promise<void> {
 
     const updated = { ...settings, hooks: merged }
     await mkdir(dirname(settingsPath), { recursive: true })
-    await writeFile(settingsPath, JSON.stringify(updated, null, 2) + '\n')
+    await writeFile(settingsPath, `${JSON.stringify(updated, null, 2)}\n`)
 
     for (const a of added) {
       console.log(pc.green(`  ${a}`))

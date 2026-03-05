@@ -17,7 +17,7 @@ function parseSlashCommand(content: string, commands: CommandInfo[] | null): { c
   // Match longest command name first (e.g., "ce:plan" before "ce")
   const sorted = [...commands].sort((a, b) => b.name.length - a.name.length)
   for (const cmd of sorted) {
-    if (trimmed === cmd.name || trimmed.startsWith(cmd.name + ' ')) {
+    if (trimmed === cmd.name || trimmed.startsWith(`${cmd.name} `)) {
       const promptText = trimmed.slice(cmd.name.length).trim()
       return { command: cmd, promptText }
     }

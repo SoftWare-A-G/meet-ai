@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, afterEach } from "bun:test";
+import { describe, it, expect, beforeAll, afterAll } from "bun:test";
 import { unlinkSync } from "node:fs";
 import { runCli } from "../helpers/run-cli";
 

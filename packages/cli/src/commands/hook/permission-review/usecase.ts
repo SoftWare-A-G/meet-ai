@@ -42,7 +42,7 @@ function formatPermissionRequest(toolName: string, toolInput?: Record<string, un
       for (const [key, value] of entries) {
         const valueStr = typeof value === 'string' ? value : JSON.stringify(value)
         // Truncate long values
-        const truncated = valueStr.length > 200 ? valueStr.slice(0, 200) + '...' : valueStr
+        const truncated = valueStr.length > 200 ? `${valueStr.slice(0, 200)}...` : valueStr
         text += `\n**${key}:** \`${truncated}\``
       }
     }

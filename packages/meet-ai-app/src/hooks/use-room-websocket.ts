@@ -103,7 +103,7 @@ export function useRoomWebSocket(
 
     // Send via HTTP
     try {
-      const timeoutPromise = new Promise<never>((_, reject) =>
+      const timeoutPromise = new Promise<never>((_resolve, reject) =>
         setTimeout(() => reject(new Error('timeout')), SEND_TIMEOUT)
       )
       const serverMsg = await Promise.race([sendMessage(roomId, sender, content), timeoutPromise])
@@ -131,7 +131,7 @@ export function useRoomWebSocket(
     if (!msgToRetry) return
 
     try {
-      const timeoutPromise = new Promise<never>((_, reject) =>
+      const timeoutPromise = new Promise<never>((_resolve, reject) =>
         setTimeout(() => reject(new Error('timeout')), SEND_TIMEOUT)
       )
       const serverMsg = await Promise.race([

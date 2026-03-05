@@ -105,12 +105,13 @@ export function useHighlighter({ containerRef, onSelect, enabled = true }: UseHi
       byType.set(h.type, arr)
     }
 
+    const highlights = (CSS as any).highlights
     for (const [type, name] of Object.entries(HIGHLIGHT_NAMES)) {
       const ranges = byType.get(type as AnnotationType) || []
       if (ranges.length) {
-        ;(CSS as any).highlights.set(name, new (window as any).Highlight(...ranges))
+        highlights.set(name, new (window as any).Highlight(...ranges))
       } else {
-        ;(CSS as any).highlights.delete(name)
+        highlights.delete(name)
       }
     }
   }, [containerRef])

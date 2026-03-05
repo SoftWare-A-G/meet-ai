@@ -270,7 +270,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
         m.tempId === tempId ? { ...m, status: 'failed' as const } : m
       ))
     }
-  }, [room.id, userName, apiKey])
+  }, [room.id, userName, apiKey, queue])
 
   const handlePlanDecide = useCallback(async (reviewId: string, approved: boolean, feedback?: string, permissionMode?: string) => {
     // Optimistically update the decision state
@@ -355,7 +355,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
         m.tempId === tempId ? { ...m, status: 'failed' as const } : m
       ))
     }
-  }, [room.id, userName, messages])
+  }, [room.id, userName, messages, remove])
 
   return (
     <>

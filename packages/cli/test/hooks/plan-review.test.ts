@@ -23,6 +23,10 @@ function makeInput(overrides?: Record<string, unknown>) {
   })
 }
 
+async function loadUsecase() {
+  return import('../../src/commands/hook/plan-review/usecase')
+}
+
 describe('plan-review usecase', () => {
   let mockFetch: ReturnType<typeof mock>
   let stdoutCapture: string
@@ -49,10 +53,6 @@ describe('plan-review usecase', () => {
     process.env.MEET_AI_KEY = originalEnv.MEET_AI_KEY
     rmSync(TEST_DIR, { recursive: true, force: true })
   })
-
-  async function loadUsecase() {
-    return import('../../src/commands/hook/plan-review/usecase')
-  }
 
   it('skips when stdin is invalid JSON', async () => {
     const { processPlanReview } = await loadUsecase()

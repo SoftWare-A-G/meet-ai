@@ -1,9 +1,17 @@
-import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
+import { Hono } from 'hono'
 import { queries } from '../db/queries'
 import { requireAuth } from '../middleware/auth'
 import { rateLimitByKey } from '../middleware/rate-limit'
-import { createRoomSchema, sendMessageSchema, sendLogSchema, teamInfoSchema, messagesQuerySchema, commandsSchema } from '../schemas/rooms'
+import {
+  createRoomSchema,
+  sendMessageSchema,
+  sendLogSchema,
+  teamInfoSchema,
+  messagesQuerySchema,
+  commandsSchema,
+  createTaskSchema,
+} from '../schemas/rooms'
 import type { AppEnv } from '../lib/types'
 
 export const roomsRoute = new Hono<AppEnv>()
@@ -74,65 +82,71 @@ export const roomsRoute = new Hono<AppEnv>()
   })
 
   // POST /api/rooms/:id/messages — send a message (60/min per key)
-  .post('/:id/messages', requireAuth, rateLimitByKey(60, 60_000), zValidator('json', sendMessageSchema), async c => {
-    const keyId = c.get('keyId')
-    const roomId = c.req.param('id')
-    const db = queries(c.env.DB)
+  .post(
+    '/:id/messages',
+    requireAuth,
+    rateLimitByKey(60, 60_000),
+    zValidator('json', sendMessageSchema),
+    async c => {
+      const keyId = c.get('keyId')
+      const roomId = c.req.param('id')
+      const db = queries(c.env.DB)
 
-    const room = await db.findRoom(roomId, keyId)
-    if (!room) {
-      return c.json({ error: 'room not found' }, 404)
-    }
+      const room = await db.findRoom(roomId, keyId)
+      if (!room) {
+        return c.json({ error: 'room not found' }, 404)
+      }
 
-    const body = c.req.valid('json')
+      const body = c.req.valid('json')
 
-    const senderType = body.sender_type === 'agent' ? 'agent' : 'human'
-    const color = body.color || null
-    const id = crypto.randomUUID()
-    const seq = await db.insertMessage(
-      id,
-      roomId,
-      body.sender,
-      body.content,
-      senderType,
-      color ?? undefined
-    )
-
-    // Link attachments atomically before broadcast
-    const attachmentIds = body.attachment_ids ?? []
-    let attachmentCount = 0
-    for (const attId of attachmentIds) {
-      const linked = await db.linkAttachmentToMessage(attId, keyId, id)
-      if (linked) attachmentCount++
-    }
-
-    const message = {
-      id,
-      room_id: roomId,
-      sender: body.sender,
-      sender_type: senderType,
-      content: body.content,
-      color,
-      type: 'message' as const,
-      seq,
-      created_at: new Date().toISOString(),
-      attachment_count: attachmentCount,
-    }
-
-    // Broadcast via Durable Object
-    const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
-    const stub = c.env.CHAT_ROOM.get(doId)
-    c.executionCtx.waitUntil(
-      stub.fetch(
-        new Request('http://internal/broadcast', {
-          method: 'POST',
-          body: JSON.stringify(message),
-        })
+      const senderType = body.sender_type === 'agent' ? 'agent' : 'human'
+      const color = body.color || null
+      const id = crypto.randomUUID()
+      const seq = await db.insertMessage(
+        id,
+        roomId,
+        body.sender,
+        body.content,
+        senderType,
+        color ?? undefined
       )
-    )
 
-    return c.json(message, 201)
-  })
+      // Link attachments atomically before broadcast
+      const attachmentIds = body.attachment_ids ?? []
+      let attachmentCount = 0
+      for (const attId of attachmentIds) {
+        const linked = await db.linkAttachmentToMessage(attId, keyId, id)
+        if (linked) attachmentCount++
+      }
+
+      const message = {
+        id,
+        room_id: roomId,
+        sender: body.sender,
+        sender_type: senderType,
+        content: body.content,
+        color,
+        type: 'message' as const,
+        seq,
+        created_at: new Date().toISOString(),
+        attachment_count: attachmentCount,
+      }
+
+      // Broadcast via Durable Object
+      const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
+      const stub = c.env.CHAT_ROOM.get(doId)
+      c.executionCtx.waitUntil(
+        stub.fetch(
+          new Request('http://internal/broadcast', {
+            method: 'POST',
+            body: JSON.stringify(message),
+          })
+        )
+      )
+
+      return c.json(message, 201)
+    }
+  )
 
   // GET /api/rooms/:id/logs — get recent logs
   .get('/:id/logs', requireAuth, async c => {
@@ -150,56 +164,62 @@ export const roomsRoute = new Hono<AppEnv>()
   })
 
   // POST /api/rooms/:id/logs — send a log message (60/min per key)
-  .post('/:id/logs', requireAuth, rateLimitByKey(60, 60_000), zValidator('json', sendLogSchema), async c => {
-    const keyId = c.get('keyId')
-    const roomId = c.req.param('id')
-    const db = queries(c.env.DB)
+  .post(
+    '/:id/logs',
+    requireAuth,
+    rateLimitByKey(60, 60_000),
+    zValidator('json', sendLogSchema),
+    async c => {
+      const keyId = c.get('keyId')
+      const roomId = c.req.param('id')
+      const db = queries(c.env.DB)
 
-    const room = await db.findRoom(roomId, keyId)
-    if (!room) {
-      return c.json({ error: 'room not found' }, 404)
-    }
+      const room = await db.findRoom(roomId, keyId)
+      if (!room) {
+        return c.json({ error: 'room not found' }, 404)
+      }
 
-    const body = c.req.valid('json')
+      const body = c.req.valid('json')
 
-    const color = body.color || null
-    const messageId = body.message_id || null
-    const id = crypto.randomUUID()
-    await db.insertLog(
-      id,
-      keyId,
-      roomId,
-      body.sender,
-      body.content,
-      color ?? undefined,
-      messageId ?? undefined
-    )
-
-    const log = {
-      id,
-      room_id: roomId,
-      message_id: messageId,
-      sender: body.sender,
-      content: body.content,
-      color,
-      type: 'log' as const,
-      created_at: new Date().toISOString(),
-    }
-
-    // Broadcast via Durable Object
-    const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
-    const stub = c.env.CHAT_ROOM.get(doId)
-    c.executionCtx.waitUntil(
-      stub.fetch(
-        new Request('http://internal/broadcast', {
-          method: 'POST',
-          body: JSON.stringify(log),
-        })
+      const color = body.color || null
+      const messageId = body.message_id || null
+      const id = crypto.randomUUID()
+      await db.insertLog(
+        id,
+        keyId,
+        roomId,
+        body.sender,
+        body.content,
+        color ?? undefined,
+        messageId ?? undefined
       )
-    )
 
-    return c.json(log, 201)
-  })
+      const log = {
+        id,
+        room_id: roomId,
+        message_id: messageId,
+        sender: body.sender,
+        content: body.content,
+        color,
+        type: 'log' as const,
+        created_at: new Date().toISOString(),
+      }
+
+      // Broadcast via Durable Object
+      const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
+      const stub = c.env.CHAT_ROOM.get(doId)
+      c.executionCtx.waitUntil(
+        stub.fetch(
+          new Request('http://internal/broadcast', {
+            method: 'POST',
+            body: JSON.stringify(log),
+          })
+        )
+      )
+
+      return c.json(log, 201)
+    }
+  )
 
   // GET /api/rooms/:id/attachment-counts — get attachment counts per message
   .get('/:id/attachment-counts', requireAuth, async c => {
@@ -295,6 +315,66 @@ export const roomsRoute = new Hono<AppEnv>()
     return c.json({ ok: true })
   })
 
+  // POST /api/rooms/:id/tasks/create — create a task from web UI
+  .post('/:id/tasks/create', requireAuth, zValidator('json', createTaskSchema), async c => {
+    const keyId = c.get('keyId')
+    const roomId = c.req.param('id')
+    const db = queries(c.env.DB)
+
+    const room = await db.findRoom(roomId, keyId)
+    if (!room) {
+      return c.json({ error: 'room not found' }, 404)
+    }
+
+    const body = c.req.valid('json')
+
+    const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
+    const stub = c.env.CHAT_ROOM.get(doId)
+
+    // Create task in DO
+    const taskRes = await stub.fetch(
+      new Request('http://internal/tasks/create', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      })
+    )
+    const task = await taskRes.json()
+
+    // Send a chat message announcing the new task
+    const msgId = crypto.randomUUID()
+    const seq = await db.insertMessage(
+      msgId,
+      roomId,
+      'system',
+      `New task created: ${body.subject}`,
+      'agent'
+    )
+
+    const message = {
+      id: msgId,
+      room_id: roomId,
+      sender: 'system',
+      sender_type: 'agent' as const,
+      content: `New task created: ${body.subject}`,
+      color: null,
+      type: 'message' as const,
+      seq,
+      created_at: new Date().toISOString(),
+      attachment_count: 0,
+    }
+
+    c.executionCtx.waitUntil(
+      stub.fetch(
+        new Request('http://internal/broadcast', {
+          method: 'POST',
+          body: JSON.stringify(message),
+        })
+      )
+    )
+
+    return c.json({ ok: true, task }, 201)
+  })
+
   // POST /api/rooms/:id/spawn — request to spawn an orchestrator for this room
   .post('/:id/spawn', requireAuth, async c => {
     const keyId = c.get('keyId')
@@ -320,7 +400,7 @@ export const roomsRoute = new Hono<AppEnv>()
         roomId,
         roomName: room.name,
         apiUrl: `${c.req.url.split('/api')[0]}`,
-      }
+      },
     })
   })
 

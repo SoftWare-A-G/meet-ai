@@ -1,4 +1,3 @@
-import { useCallback } from 'react'
 import type { PendingMessage } from '../lib/types'
 
 function openMessageQueue(): Promise<IDBDatabase> {
@@ -56,10 +55,5 @@ async function getAllQueued(): Promise<PendingMessage[]> {
 }
 
 export function useOfflineQueue() {
-  const queue = useCallback(queueMessage, [])
-  const remove = useCallback(removeFromQueue, [])
-  const getForRoom = useCallback(getQueuedMessages, [])
-  const getAll = useCallback(getAllQueued, [])
-
-  return { queue, remove, getForRoom, getAll }
+  return { queue: queueMessage, remove: removeFromQueue, getForRoom: getQueuedMessages, getAll: getAllQueued }
 }

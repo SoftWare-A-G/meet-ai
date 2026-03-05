@@ -7,6 +7,7 @@ type TeamSidebarProps = {
   tasksInfo?: TasksInfo | null
   isOpen: boolean
   onClose: () => void
+  onOpenTaskBoard?: () => void
 }
 
 function MemberRow({ member, inactive }: { member: TeamMember; inactive?: boolean }) {
@@ -39,7 +40,7 @@ function TaskRow({ task }: { task: TaskItem }) {
   )
 }
 
-function TeamSidebarContent({ teamInfo, tasksInfo }: { teamInfo: TeamInfo; tasksInfo?: TasksInfo | null }) {
+function TeamSidebarContent({ teamInfo, tasksInfo, onOpenTaskBoard }: { teamInfo: TeamInfo; tasksInfo?: TasksInfo | null; onOpenTaskBoard?: () => void }) {
   const active = teamInfo.members.filter(m => m.status === 'active')
   const inactive = teamInfo.members.filter(m => m.status === 'inactive')
   const tasks = tasksInfo?.tasks ?? []
@@ -63,9 +64,19 @@ function TeamSidebarContent({ teamInfo, tasksInfo }: { teamInfo: TeamInfo; tasks
       )}
       {tasks.length > 0 && (
         <div className="py-1">
-          <div className="px-4 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide opacity-50">
+          <div className="px-4 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide opacity-50 flex items-center">
             Tasks
             <span className="text-[11px] text-[#6b7280] ml-1.5">{completed.length}/{tasks.length}</span>
+            {onOpenTaskBoard && (
+              <button
+                type="button"
+                onClick={onOpenTaskBoard}
+                className="ml-auto bg-transparent border-none text-sidebar-text cursor-pointer text-[13px] p-0.5 rounded leading-none opacity-50 hover:opacity-100 hover:bg-hover-item"
+                title="Open task board"
+              >
+                &#9638;
+              </button>
+            )}
           </div>
           {inProgress.map(t => <TaskRow key={t.id} task={t} />)}
           {pending.map(t => <TaskRow key={t.id} task={t} />)}
@@ -76,7 +87,7 @@ function TeamSidebarContent({ teamInfo, tasksInfo }: { teamInfo: TeamInfo; tasks
   )
 }
 
-export default function TeamSidebar({ teamInfo, tasksInfo, isOpen, onClose }: TeamSidebarProps) {
+export default function TeamSidebar({ teamInfo, tasksInfo, isOpen, onClose, onOpenTaskBoard }: TeamSidebarProps) {
   const activeCount = teamInfo?.members.filter(m => m.status === 'active').length ?? 0
   const totalCount = teamInfo?.members.length ?? 0
 
@@ -102,13 +113,14 @@ export default function TeamSidebar({ teamInfo, tasksInfo, isOpen, onClose }: Te
           <span>Team</span>
           <span className="text-xs font-normal opacity-50">{teamInfo ? `${activeCount}/${totalCount}` : ''}</span>
           <button
+            type="button"
             onClick={onClose}
             className="hidden bg-transparent border-none text-sidebar-text cursor-pointer text-[22px] p-1 rounded leading-none opacity-70 hover:opacity-100 hover:bg-hover-item max-[980px]:flex max-[980px]:items-center max-[980px]:justify-center"
           >
             &times;
           </button>
         </div>
-        {teamInfo && <TeamSidebarContent teamInfo={teamInfo} tasksInfo={tasksInfo} />}
+        {teamInfo && <TeamSidebarContent teamInfo={teamInfo} tasksInfo={tasksInfo} onOpenTaskBoard={onOpenTaskBoard} />}
       </div>
     </>
   )

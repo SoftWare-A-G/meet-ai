@@ -26,7 +26,6 @@
     "import/no-empty-named-blocks": "error",
     "import/no-mutable-exports": "error",
     "jsx-a11y/img-redundant-alt": "error",
-    "node/no-process-env": "warn",
     "no-alert": "error",
     "no-array-constructor": "error",
     "no-async-promise-executor": "warn",
