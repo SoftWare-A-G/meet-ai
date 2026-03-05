@@ -1,46 +1,28 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useCallback } from 'react'
+import { useWebHaptics } from 'web-haptics/react'
 import type { Message } from '../lib/types'
-
-type HapticsInstance = {
-  trigger: (pattern?: string) => Promise<void>
-  destroy: () => void
-}
-
-let instance: HapticsInstance | null = null
-let initPromise: Promise<HapticsInstance | null> | null = null
-
-function getHaptics(): Promise<HapticsInstance | null> {
-  if (instance) return Promise.resolve(instance)
-  if (initPromise) return initPromise
-  initPromise = import('web-haptics').then(mod => {
-    instance = new mod.WebHaptics()
-    return instance
-  }).catch(() => null)
-  return initPromise
-}
 
 function isSpecialMessage(msg: Message): boolean {
   return !!(msg.plan_review_id || msg.question_review_id || msg.permission_review_id)
 }
 
-export function useHaptics() {
-  const hapticsRef = useRef<HapticsInstance | null>(null)
+function vibrateFallback(heavy: boolean): void {
+  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+    navigator.vibrate(heavy ? [35] : [15])
+  }
+}
 
-  useEffect(() => {
-    getHaptics().then(h => { hapticsRef.current = h })
-    return () => { hapticsRef.current = null }
-  }, [])
+export function useHaptics() {
+  const { trigger, isSupported } = useWebHaptics()
 
   const triggerForMessage = useCallback((msg: Message) => {
-    const h = hapticsRef.current
-    if (!h) return
-
-    if (isSpecialMessage(msg)) {
-      h.trigger('heavy')
+    const heavy = isSpecialMessage(msg)
+    if (isSupported) {
+      trigger(heavy ? 'heavy' : 'light')
     } else {
-      h.trigger('light')
+      vibrateFallback(heavy)
     }
-  }, [])
+  }, [trigger, isSupported])
 
   return { triggerForMessage }
 }
