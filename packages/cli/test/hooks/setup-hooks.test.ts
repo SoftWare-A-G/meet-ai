@@ -209,6 +209,67 @@ describe('mergeHooks', () => {
   })
 })
 
+describe('upgrade path', () => {
+  test('replaces old .* permission-review matcher with negative lookahead on re-run', async () => {
+    const oldHooks = {
+      hooks: {
+        PostToolUse: [
+          {
+            matcher: '.*',
+            hooks: [{ type: 'command', command: 'meet-ai hook log-tool-use', timeout: 10 }],
+          },
+        ],
+        PermissionRequest: [
+          {
+            matcher: 'ExitPlanMode',
+            hooks: [{ type: 'command', command: 'meet-ai hook plan-review', timeout: 2592000 }],
+          },
+          {
+            matcher: 'AskUserQuestion',
+            hooks: [{ type: 'command', command: 'meet-ai hook question-review', timeout: 1800 }],
+          },
+          {
+            matcher: '.*',
+            hooks: [{ type: 'command', command: 'meet-ai hook permission-review', timeout: 1800 }],
+          },
+        ],
+      },
+    }
+    await writeFile(settingsFile, JSON.stringify(oldHooks, null, 2))
+
+    await setupHooks(opts())
+
+    const content = JSON.parse(await readFile(settingsFile, 'utf-8'))
+    const matchers = content.hooks.PermissionRequest.map((m: { matcher: string }) => m.matcher)
+    // Old .* should be gone, replaced by negative lookahead
+    expect(matchers).not.toContain('.*')
+    expect(matchers).toContain('^(?!ExitPlanMode$|AskUserQuestion$).*')
+    expect(content.hooks.PermissionRequest).toHaveLength(3)
+  })
+
+  test('updates old plan-review timeout from 2592000 to 2147483 on re-run', async () => {
+    const oldHooks = {
+      hooks: {
+        PermissionRequest: [
+          {
+            matcher: 'ExitPlanMode',
+            hooks: [{ type: 'command', command: 'meet-ai hook plan-review', timeout: 2592000 }],
+          },
+        ],
+      },
+    }
+    await writeFile(settingsFile, JSON.stringify(oldHooks, null, 2))
+
+    await setupHooks(opts())
+
+    const content = JSON.parse(await readFile(settingsFile, 'utf-8'))
+    const planReview = content.hooks.PermissionRequest.find(
+      (m: { matcher: string }) => m.matcher === 'ExitPlanMode'
+    )
+    expect(planReview.hooks[0].timeout).toBe(2147483)
+  })
+})
+
 describe('removeHooks', () => {
   test('removes all meet-ai hooks', () => {
     const { cleaned, removed } = removeHooks(MEET_AI_HOOKS)

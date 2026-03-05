@@ -1,7 +1,7 @@
-import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
-import { resolve, dirname } from 'node:path'
+import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { homedir } from 'node:os'
+import { resolve, dirname } from 'node:path'
 import pc from 'picocolors'
 import { ok, info } from '../../lib/output'
 
@@ -40,7 +40,7 @@ const MEET_AI_HOOKS: HooksConfig = {
         {
           type: 'command',
           command: 'meet-ai hook plan-review',
-          timeout: 2592000,
+          timeout: 2147483,
         },
       ],
     },
@@ -55,7 +55,7 @@ const MEET_AI_HOOKS: HooksConfig = {
       ],
     },
     {
-      matcher: '.*',
+      matcher: '^(?!ExitPlanMode$|AskUserQuestion$).*',
       hooks: [
         {
           type: 'command',
@@ -68,7 +68,11 @@ const MEET_AI_HOOKS: HooksConfig = {
 }
 
 function isMeetAiHook(entry: HookMatcher): boolean {
-  return entry.hooks?.some(h => typeof h.command === 'string' && h.command.startsWith('meet-ai hook ')) ?? false
+  return (
+    entry.hooks?.some(
+      h => typeof h.command === 'string' && h.command.startsWith('meet-ai hook ')
+    ) ?? false
+  )
 }
 
 function getSettingsPath(project: boolean): string {
@@ -114,6 +118,16 @@ function mergeHooks(existing: HooksConfig): { merged: HooksConfig; added: string
         added.push(`added ${event} [${newMatcher.matcher}]`)
       }
     }
+  }
+
+  // Remove stale meet-ai hooks (matcher changed between versions)
+  for (const event of Object.keys(result)) {
+    const newMatchers = MEET_AI_HOOKS[event] ?? []
+    result[event] = result[event].filter((m: HookMatcher) => {
+      if (!isMeetAiHook(m)) return true
+      return newMatchers.some(nm => nm.matcher === m.matcher)
+    })
+    if (result[event].length === 0) delete result[event]
   }
 
   return { merged: result, added }
