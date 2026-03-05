@@ -1,6 +1,6 @@
 {
   "name": "@meet-ai/cli",
-  "version": "0.0.21",
+  "version": "0.0.22",
   "description": "CLI for meet-ai chat rooms — create rooms, send messages, and stream via WebSocket",
   "keywords": [
     "chat",
@@ -12,11 +12,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/SoftWare-A-G/meet-ai",
+    "url": "git+https://github.com/SoftWare-A-G/meet-ai.git",
     "directory": "packages/cli"
   },
   "bin": {
-    "meet-ai": "./dist/index.js"
+    "meet-ai": "dist/index.js"
   },
   "files": [
     "dist"
