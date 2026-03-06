@@ -2,10 +2,13 @@ import { readFileSync, writeFileSync, statSync, rmSync } from 'node:fs'
 import {
   findRoomId,
   summarize,
+  formatDiff,
+  formatWriteDiff,
   createHookClient,
   sendParentMessage,
   sendLogEntry,
   type HookInput,
+  type StructuredPatchHunk,
 } from '../../../lib/hooks'
 
 const PARENT_MSG_TTL_SEC = 120
@@ -43,7 +46,13 @@ export async function processHookInput(
     return 'skip'
   }
 
-  const { session_id: sessionId, tool_name: toolName, tool_input: toolInput = {} } = input
+  const {
+    session_id: sessionId,
+    transcript_path: transcriptPath,
+    tool_name: toolName,
+    tool_input: toolInput = {},
+    tool_response: toolResponse,
+  } = input
   if (!sessionId || !toolName) return 'skip'
 
   // Skip SendMessage — internal agent communication
@@ -56,7 +65,7 @@ export async function processHookInput(
   }
 
   // Find room
-  const roomId = findRoomId(sessionId, teamsDir)
+  const roomId = await findRoomId(sessionId, teamsDir, transcriptPath)
   if (!roomId) return 'skip'
 
   // Need env vars
@@ -65,6 +74,38 @@ export async function processHookInput(
   if (!url || !key) return 'skip'
 
   const client = createHookClient(url, key)
+
+  // Edit tool with structuredPatch → send diff log instead of one-liner summary
+  if (toolName === 'Edit' && toolResponse?.structuredPatch) {
+    const hunks = toolResponse.structuredPatch as StructuredPatchHunk[]
+    const filePath = typeof toolInput.file_path === 'string' ? toolInput.file_path : '?'
+    const diffContent = formatDiff(filePath, hunks)
+
+    let parentId = getOrCreateParentId(sessionId)
+    if (!parentId) {
+      parentId = await sendParentMessage(client, roomId)
+      if (parentId) saveParentId(sessionId, parentId)
+    }
+
+    await sendLogEntry(client, roomId, diffContent, parentId ?? undefined)
+    return 'sent'
+  }
+
+  // Write tool → send diff showing entire file as additions
+  if (toolName === 'Write' && typeof toolInput.content === 'string') {
+    const filePath = typeof toolInput.file_path === 'string' ? toolInput.file_path : '?'
+    const diffContent = formatWriteDiff(filePath, toolInput.content)
+
+    let parentId = getOrCreateParentId(sessionId)
+    if (!parentId) {
+      parentId = await sendParentMessage(client, roomId)
+      if (parentId) saveParentId(sessionId, parentId)
+    }
+
+    await sendLogEntry(client, roomId, diffContent, parentId ?? undefined)
+    return 'sent'
+  }
+
   const summary = summarize(toolName, toolInput as Record<string, unknown>)
 
   // Get or create parent message

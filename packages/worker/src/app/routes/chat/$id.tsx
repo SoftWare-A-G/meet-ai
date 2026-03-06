@@ -13,7 +13,7 @@ export const Route = createFileRoute('/chat/$id')({
 function ChatRoom() {
   const { id } = Route.useParams()
   const navigate = useNavigate()
-  const { rooms, removeRoom, apiKey, userName, isStandalone, teamInfo, setSidebarOpen, setTeamSidebarOpen, setTeamInfo, setTasksInfo, setCommandsInfo, showQR } = useChatContext()
+  const { rooms, removeRoom, apiKey, userName, isStandalone, teamInfo, setTeamSidebarOpen, setTeamInfo, setTasksInfo, setCommandsInfo, showQR } = useChatContext()
   const [terminalOpen, setTerminalOpen] = useState(false)
 
   const room = rooms.find(r => r.id === id)
@@ -43,7 +43,6 @@ function ChatRoom() {
         showInvite={!isStandalone && !!room}
         showTeamToggle={!!teamInfo}
         showDelete={!!room}
-        onMobileToggle={() => setSidebarOpen(prev => !prev)}
         onTeamToggle={() => setTeamSidebarOpen(prev => !prev)}
         onInviteClick={() => showQR()}
         onDeleteConfirm={handleDeleteConfirm}

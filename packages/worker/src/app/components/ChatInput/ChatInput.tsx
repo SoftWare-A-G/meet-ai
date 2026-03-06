@@ -199,6 +199,8 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
     }
   }, [addFiles])
 
+  const sendDisabled = !plainText.trim() && !pendingFiles.some(f => f.status === 'done')
+
   return (
     <div className="chat-input-wrapper shrink-0 pb-[env(safe-area-inset-bottom)] bg-chat-bg">
       <div className="relative border-t border-b border-border bg-input-bg">
@@ -272,7 +274,13 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
           <button
             type="button"
             aria-label="Send"
-            className="h-9 w-9 rounded-lg bg-active text-active-text border-none cursor-pointer flex items-center justify-center hover:brightness-110 transition-all"
+            disabled={sendDisabled}
+            className={clsx(
+              'h-9 w-9 rounded-lg bg-active text-active-text border-none flex items-center justify-center transition-all',
+              sendDisabled
+                ? 'opacity-50 cursor-default'
+                : 'cursor-pointer hover:brightness-110'
+            )}
             onMouseDown={preventBlur}
             onClick={handleSend}
           >

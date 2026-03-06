@@ -7,8 +7,6 @@ export type ChatContextValue = {
   apiKey: string
   userName: string
   colorSchema: string
-  sidebarOpen: boolean
-  setSidebarOpen: (open: boolean | ((prev: boolean) => boolean)) => void
   teamInfo: TeamInfo | null
   setTeamInfo: (info: TeamInfo | null) => void
   tasksInfo: TasksInfo | null

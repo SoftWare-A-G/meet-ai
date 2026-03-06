@@ -11,6 +11,7 @@ import SpawnTeamModal from '../components/SpawnTeamModal'
 import TaskBoardModal from '../components/TaskBoardModal'
 import TeamSidebar from '../components/TeamSidebar'
 import TokenScreen from '../components/TokenScreen'
+import { SidebarProvider, SidebarInset } from '../components/ui/sidebar'
 import { useLobbyWebSocket } from '../hooks/useLobbyWebSocket'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import * as api from '../lib/api'
@@ -97,7 +98,6 @@ function ChatLayout({
   onSchemaChange,
 }: ChatLayoutProps) {
   const [rooms, setRooms] = useState<Room[]>([])
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [showSpawnModal, setShowSpawnModal] = useState(false)
   const [showQRModal, setShowQRModal] = useState(false)
@@ -154,7 +154,6 @@ function ChatLayout({
   const { send: lobbySend } = useLobbyWebSocket(apiKey, onRoomCreated)
 
   const handleInstallClick = useCallback(() => {
-    setSidebarOpen(false)
     setShowIOSInstallModal(true)
   }, [])
 
@@ -173,8 +172,6 @@ function ChatLayout({
       apiKey,
       userName,
       colorSchema,
-      sidebarOpen,
-      setSidebarOpen,
       teamInfo,
       setTeamInfo,
       tasksInfo,
@@ -196,7 +193,6 @@ function ChatLayout({
       apiKey,
       userName,
       colorSchema,
-      sidebarOpen,
       teamInfo,
       tasksInfo,
       commandsInfo,
@@ -209,19 +205,19 @@ function ChatLayout({
 
   return (
     <ChatContext.Provider value={ctx}>
-      <div className="flex h-dvh">
+      <SidebarProvider defaultOpen className="h-dvh min-h-0">
         <Sidebar
           rooms={rooms}
           userName={userName}
-          isOpen={sidebarOpen}
           onNameChange={onNameChange}
           onSettingsClick={() => setShowSettingsModal(true)}
           onSpawnClick={() => setShowSpawnModal(true)}
-          onClose={() => setSidebarOpen(false)}
           onInstallClick={handleInstallClick}
           onDeleteRoom={handleDeleteRoom}
         />
-        <Outlet />
+        <SidebarInset className="bg-transparent">
+          <Outlet />
+        </SidebarInset>
         <TeamSidebar
           teamInfo={teamInfo}
           tasksInfo={tasksInfo}
@@ -229,7 +225,7 @@ function ChatLayout({
           onClose={() => setTeamSidebarOpen(false)}
           onOpenTaskBoard={() => setShowTaskBoard(true)}
         />
-      </div>
+      </SidebarProvider>
       {showSettingsModal && (
         <SettingsModal
           currentSchema={colorSchema}

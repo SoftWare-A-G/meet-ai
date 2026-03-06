@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useStickToBottom } from 'use-stick-to-bottom'
 import Message from '../Message'
 import LogGroup from '../LogGroup'
+import DiffBlock from '../DiffBlock'
 import QuestionCard from '../QuestionCard'
 import PlanReviewCard from '../PlanReviewCard'
 import PermissionCard from '../PermissionCard'
@@ -42,6 +43,12 @@ type RenderItem =
   | { kind: 'permission-review'; msg: DisplayMessage; index: number }
   | { kind: 'spawn-request'; msg: DisplayMessage; index: number; roomName: string }
   | { kind: 'log-group'; logs: DisplayMessage[] }
+  | { kind: 'diff-log'; logs: DisplayMessage[] }
+
+function getDiffFilename(content: string): string | null {
+  const match = content.match(/^\[diff:(.+?)\]/)
+  return match ? match[1] : null
+}
 
 function groupMessages(messages: DisplayMessage[]): RenderItem[] {
   // Build a map of message_id -> child logs for parent-child grouping
@@ -70,7 +77,10 @@ function groupMessages(messages: DisplayMessage[]): RenderItem[] {
   }
 
   for (const { index, msg } of standaloneItems) {
-    if (msg.type === 'log') {
+    if (msg.type === 'log' && msg.content.startsWith('[diff:')) {
+      flushLogs()
+      items.push({ kind: 'diff-log', logs: [msg] })
+    } else if (msg.type === 'log') {
       logBuffer.push(msg)
     } else {
       flushLogs()
@@ -102,13 +112,44 @@ function groupMessages(messages: DisplayMessage[]): RenderItem[] {
         items.push({ kind: 'message', msg, index })
       }
       if (children && children.length > 0) {
-        items.push({ kind: 'log-group', logs: children })
+        const diffLogs: DisplayMessage[] = []
+        const regularLogs: DisplayMessage[] = []
+        for (const child of children) {
+          if (child.content.startsWith('[diff:')) {
+            diffLogs.push(child)
+          } else {
+            regularLogs.push(child)
+          }
+        }
+        if (regularLogs.length > 0) {
+          items.push({ kind: 'log-group', logs: regularLogs })
+        }
+        for (const dl of diffLogs) {
+          items.push({ kind: 'diff-log', logs: [dl] })
+        }
       }
     }
   }
   flushLogs()
 
-  return items
+  // Merge consecutive diff-log items for the same file
+  const merged: RenderItem[] = []
+  for (const item of items) {
+    if (item.kind === 'diff-log') {
+      const prev = merged[merged.length - 1]
+      if (prev?.kind === 'diff-log') {
+        const prevFile = getDiffFilename(prev.logs[0].content)
+        const curFile = getDiffFilename(item.logs[0].content)
+        if (prevFile && curFile && prevFile === curFile) {
+          prev.logs.push(...item.logs)
+          continue
+        }
+      }
+    }
+    merged.push(item)
+  }
+
+  return merged
 }
 
 export default function MessageList({ messages, attachmentCounts, planDecisions, questionAnswers, permissionDecisions, unreadCount, forceScrollCounter, onScrollToBottom, onRetry, onSend, onPlanDecide, onPlanDismiss, onQuestionAnswer, onPermissionDecide, connected = true, voiceAvailable }: MessageListProps) {
@@ -236,6 +277,30 @@ export default function MessageList({ messages, attachmentCounts, planDecisions,
                 onQuestionAnswer={onQuestionAnswer}
               />
             )
+          }
+          if (item.kind === 'diff-log') {
+            const hunks: string[] = []
+            let filename = ''
+            for (const log of item.logs) {
+              const match = log.content.match(/^\[diff:(.+?)\]\n([\s\S]*)$/)
+              if (match) {
+                filename = match[1]
+                hunks.push(match[2])
+              }
+            }
+            if (hunks.length > 0) {
+              const lastLog = item.logs[item.logs.length - 1]
+              return (
+                <DiffBlock
+                  key={`diff-${item.logs[0].created_at}-${i}`}
+                  filename={filename}
+                  hunks={hunks}
+                  timestamp={lastLog.created_at}
+                  changeCount={hunks.length > 1 ? hunks.length : undefined}
+                />
+              )
+            }
+            return null
           }
           const msg = item.msg
           const attCount = msg.id && attachmentCounts ? attachmentCounts[msg.id] : undefined

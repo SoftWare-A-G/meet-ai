@@ -3,6 +3,7 @@ import { findRoomId } from '../../../lib/hooks/find-room'
 
 type PermissionRequestInput = {
   session_id: string
+  transcript_path?: string
   hook_event_name: string
   tool_name: string
   tool_input?: Record<string, unknown>
@@ -172,7 +173,7 @@ export async function processPermissionReview(
     return
   }
 
-  const { session_id: sessionId, hook_event_name: hookEventName, tool_name: toolName, tool_input: toolInput } = input
+  const { session_id: sessionId, transcript_path: transcriptPath, hook_event_name: hookEventName, tool_name: toolName, tool_input: toolInput } = input
   if (!sessionId || !toolName) {
     process.stderr.write('[permission-review] missing session_id or tool_name\n')
     return
@@ -187,7 +188,7 @@ export async function processPermissionReview(
 
   process.stderr.write(`[permission-review] triggered by ${hookEventName} for tool ${toolName}\n`)
 
-  const roomId = findRoomId(sessionId, teamsDir)
+  const roomId = await findRoomId(sessionId, teamsDir, transcriptPath)
   if (!roomId) {
     process.stderr.write('[permission-review] no room found for session\n')
     return

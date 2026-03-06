@@ -1,9 +1,79 @@
-import { readdirSync, readFileSync } from 'node:fs'
+import { readdirSync, readFileSync, writeFileSync, createReadStream } from 'node:fs'
 import { join } from 'node:path'
+import { createInterface } from 'node:readline'
 import type { TeamSessionFile } from './types'
 
-export function findRoomId(sessionId: string, teamsDir?: string): string | null {
+/**
+ * Extract teamName from a JSONL transcript file by reading lines until found.
+ */
+async function extractTeamName(transcriptPath: string): Promise<string | null> {
+  try {
+    const rl = createInterface({
+      input: createReadStream(transcriptPath, 'utf-8'),
+      crlfDelay: Infinity,
+    })
+
+    for await (const line of rl) {
+      try {
+        const obj = JSON.parse(line)
+        if (obj.teamName) {
+          rl.close()
+          return obj.teamName
+        }
+      } catch {
+        continue
+      }
+    }
+  } catch {
+    // File doesn't exist or isn't readable
+  }
+  return null
+}
+
+/**
+ * Register a session ID in the team's meet-ai.json session_ids array.
+ */
+function registerSession(filePath: string, data: TeamSessionFile, sessionId: string): void {
+  const ids = data.session_ids ?? [data.session_id]
+  if (!ids.includes(sessionId)) {
+    ids.push(sessionId)
+  }
+  if (!ids.includes(data.session_id)) {
+    ids.unshift(data.session_id)
+  }
+  data.session_ids = ids
+  try {
+    writeFileSync(filePath, JSON.stringify(data))
+  } catch {
+    // Can't write — silently ignore
+  }
+}
+
+export async function findRoomId(
+  sessionId: string,
+  teamsDir?: string,
+  transcriptPath?: string
+): Promise<string | null> {
   const dir = teamsDir ?? `${process.env.HOME}/.claude/teams`
+
+  // Fast path: if we have a transcript, extract teamName and look up directly
+  if (transcriptPath) {
+    const teamName = await extractTeamName(transcriptPath)
+    if (teamName) {
+      const filePath = join(dir, teamName, 'meet-ai.json')
+      try {
+        const raw = readFileSync(filePath, 'utf-8')
+        const data: TeamSessionFile = JSON.parse(raw)
+        // Auto-register this session if not already known
+        registerSession(filePath, data, sessionId)
+        return data.room_id || null
+      } catch {
+        // meet-ai.json doesn't exist for this team
+      }
+    }
+  }
+
+  // Fallback: scan all teams (original behavior + session_ids support)
   let entries: string[]
   try {
     entries = readdirSync(dir)
@@ -16,7 +86,8 @@ export function findRoomId(sessionId: string, teamsDir?: string): string | null 
     try {
       const raw = readFileSync(filePath, 'utf-8')
       const data: TeamSessionFile = JSON.parse(raw)
-      if (data.session_id === sessionId) {
+      const knownIds = data.session_ids ?? [data.session_id]
+      if (knownIds.includes(sessionId) || data.session_id === sessionId) {
         return data.room_id || null
       }
     } catch {

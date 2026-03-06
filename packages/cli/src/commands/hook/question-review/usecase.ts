@@ -15,6 +15,7 @@ type Question = {
 
 type AskUserInput = {
   session_id: string
+  transcript_path?: string
   hook_event_name: string
   tool_name: string
   tool_input: {
@@ -182,7 +183,7 @@ export async function processQuestionReview(
     return
   }
 
-  const { session_id: sessionId, hook_event_name: hookEventName, tool_input: toolInput } = input
+  const { session_id: sessionId, transcript_path: transcriptPath, hook_event_name: hookEventName, tool_input: toolInput } = input
   if (!sessionId || !toolInput?.questions?.length) {
     process.stderr.write('[question-review] missing session_id or questions\n')
     return
@@ -190,7 +191,7 @@ export async function processQuestionReview(
 
   process.stderr.write(`[question-review] triggered by ${hookEventName} event\n`)
 
-  const roomId = findRoomId(sessionId, teamsDir)
+  const roomId = await findRoomId(sessionId, teamsDir, transcriptPath)
   if (!roomId) {
     process.stderr.write('[question-review] no room found for session\n')
     return

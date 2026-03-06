@@ -12,3 +12,5 @@ packages/worker/src/app/routeTree.gen.ts
 .obsidian/
 build/
 artifacts/
+*.json
+*.txt

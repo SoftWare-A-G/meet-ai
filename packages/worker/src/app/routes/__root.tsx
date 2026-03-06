@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { Toaster } from 'sonner'
 import { ThemeProvider } from '../components/ThemeProvider'
 import { ToastList } from '../components/Toast'
+import { TooltipProvider } from '../components/ui/tooltip'
 import appCss from '../main.css?url'
 
 export const Route = createRootRoute({
@@ -42,12 +43,14 @@ function RootLayout() {
       </head>
       <body>
         <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-          <Toast.Provider timeout={2100}>
-            <div className="root">
-              <Outlet />
-            </div>
-            <ToastList />
-          </Toast.Provider>
+          <TooltipProvider>
+            <Toast.Provider timeout={2100}>
+              <div className="root">
+                <Outlet />
+              </div>
+              <ToastList />
+            </Toast.Provider>
+          </TooltipProvider>
           <Toaster
             theme="dark"
             position="bottom-center"

@@ -4,6 +4,7 @@ import { findRoomId } from '../../../lib/hooks/find-room'
 
 type PlanReviewInput = {
   session_id: string
+  transcript_path?: string
   tool_name: string
   tool_input?: Record<string, unknown>
   permission_mode?: string
@@ -149,7 +150,7 @@ export async function processPlanReview(rawInput: string, teamsDir?: string): Pr
     return
   }
 
-  const { session_id: sessionId } = input
+  const { session_id: sessionId, transcript_path: transcriptPath } = input
   if (!sessionId) {
     process.stderr.write('[plan-review] missing session_id\n')
     return
@@ -159,7 +160,7 @@ export async function processPlanReview(rawInput: string, teamsDir?: string): Pr
     (input.tool_input?.plan as string | undefined) ||
     '_Agent requested to exit plan mode without a plan._'
 
-  const roomId = findRoomId(sessionId, teamsDir)
+  const roomId = await findRoomId(sessionId, teamsDir, transcriptPath)
   if (!roomId) {
     process.stderr.write('[plan-review] no room found for session\n')
     return

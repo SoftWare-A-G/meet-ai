@@ -1,59 +1,70 @@
 import { useCallback } from 'react'
-import { Link } from '@tanstack/react-router'
+import { Link, useParams } from '@tanstack/react-router'
 import { IconChevronRight, IconTrash } from '../../icons'
 import DeleteConfirmPopover from '../DeleteConfirmPopover'
 import { useHaptics } from '../../hooks/useHaptics'
+import {
+  useSidebar,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+} from '../ui/sidebar'
 import type { Room } from '../../lib/types'
 
 type RoomListProps = {
   rooms: Room[]
-  onLinkClick?: () => void
   onDeleteRoom?: (id: string) => void
 }
 
-export default function RoomList({ rooms, onLinkClick, onDeleteRoom }: RoomListProps) {
+export default function RoomList({ rooms, onDeleteRoom }: RoomListProps) {
   const { trigger } = useHaptics()
+  const { isMobile, setOpenMobile } = useSidebar()
+  const params = useParams({ strict: false }) as { id?: string }
   const handleLinkClick = useCallback(() => {
     trigger('light')
-    onLinkClick?.()
-  }, [trigger, onLinkClick])
+    if (isMobile) setOpenMobile(false)
+  }, [trigger, isMobile, setOpenMobile])
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto">
-      {rooms.map((room) => (
-        <Link
-          key={room.id}
-          to="/chat/$id"
-          params={{ id: room.id }}
-          className="group flex items-center justify-between px-4 py-2.5 cursor-pointer text-sm transition-colors duration-100 hover:bg-hover-item has-data-popup-open:bg-hover-item"
-          activeProps={{ className: 'bg-active text-active-text font-semibold' }}
-          inactiveProps={{ className: 'text-sidebar-text' }}
-          onClick={handleLinkClick}
-        >
-          {({ isActive }) => (
-            <>
-              <span className="truncate">{room.name}</span>
-              <span className="shrink-0 ml-2 flex items-center gap-1">
+    <SidebarGroup className="p-0">
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {rooms.map((room) => {
+            const isActive = params.id === room.id
+            return (
+              <SidebarMenuItem key={room.id} className="group/room">
+                <SidebarMenuButton
+                  render={<Link to="/chat/$id" params={{ id: room.id }} />}
+                  isActive={isActive}
+                  onClick={handleLinkClick}
+                  className="rounded-none px-4 py-2.5 h-auto data-active:bg-active data-active:text-active-text data-active:font-semibold"
+                >
+                  <span className="truncate">{room.name}</span>
+                  <span className="shrink-0 ml-auto flex items-center gap-1">
+                    <IconChevronRight
+                      size={16}
+                      className={`transition-opacity duration-100 ${isActive ? 'opacity-50' : 'opacity-25 group-hover/room:opacity-40'}`}
+                    />
+                  </span>
+                </SidebarMenuButton>
                 {onDeleteRoom && (
                   <DeleteConfirmPopover roomName={room.name} onConfirm={() => onDeleteRoom(room.id)}>
                     <button
                       type="button"
                       aria-label={`Delete ${room.name}`}
-                      className="flex h-6 w-6 cursor-pointer items-center justify-center rounded border-none bg-transparent text-gray-500 opacity-0 transition-opacity duration-100 group-hover:opacity-100 group-has-data-popup-open:opacity-100 hover:text-red-400 data-[popup-open]:text-red-400"
+                      className="absolute right-8 top-1/2 -translate-y-1/2 flex h-6 w-6 cursor-pointer items-center justify-center rounded border-none bg-transparent text-gray-500 opacity-0 transition-opacity duration-100 group-hover/room:opacity-100 group-has-data-popup-open/room:opacity-100 hover:text-red-400 data-[popup-open]:text-red-400"
                       onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
                     >
                       <IconTrash size={14} />
                     </button>
                   </DeleteConfirmPopover>
                 )}
-                <IconChevronRight
-                  size={16}
-                  className={`transition-opacity duration-100 ${isActive ? 'opacity-50' : 'opacity-25 group-hover:opacity-40'}`}
-                />
-              </span>
-            </>
-          )}
-        </Link>
-      ))}
-    </div>
+              </SidebarMenuItem>
+            )
+          })}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
   )
 }

@@ -1,44 +1,37 @@
-import clsx from 'clsx'
-import SidebarHeader from '../SidebarHeader'
+import {
+  Sidebar as ShadcnSidebar,
+  SidebarContent,
+  SidebarHeader as ShadcnSidebarHeader,
+  SidebarFooter as ShadcnSidebarFooter,
+} from '../ui/sidebar'
+import SidebarHeaderContent from '../SidebarHeader'
 import RoomList from '../RoomList'
-import SidebarFooter from '../SidebarFooter'
+import SidebarFooterContent from '../SidebarFooter'
 import type { Room } from '../../lib/types'
 
 type SidebarProps = {
   rooms: Room[]
   userName: string
-  isOpen: boolean
   onNameChange: (name: string) => void
   onSettingsClick: () => void
   onSpawnClick: () => void
-  onClose: () => void
   onInstallClick: () => void
   onDeleteRoom?: (id: string) => void
 }
 
-export default function Sidebar({ rooms, userName, isOpen, onNameChange, onSettingsClick, onSpawnClick, onClose, onInstallClick, onDeleteRoom }: SidebarProps) {
+export default function Sidebar({ rooms, userName, onNameChange, onSettingsClick, onSpawnClick, onInstallClick, onDeleteRoom }: SidebarProps) {
   return (
-    <>
-      {/* Mobile backdrop */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-[49] bg-black/50 [-webkit-tap-highlight-color:transparent] min-[701px]:hidden"
-          onClick={onClose}
-        />
-      )}
-      <aside
-        className={clsx(
-          'w-[260px] flex flex-col shrink-0 border-r border-b border-sidebar-border bg-sidebar-bg text-sidebar-text pb-[env(safe-area-inset-bottom,0px)]',
-          'max-[700px]:fixed max-[700px]:top-0 max-[700px]:left-0 max-[700px]:z-50 max-[700px]:h-full',
-          'max-[700px]:transition-transform max-[700px]:duration-[250ms] max-[700px]:ease-out',
-          'max-[700px]:-translate-x-full max-[700px]:w-[280px] max-[700px]:max-w-[85vw]',
-          isOpen && 'max-[700px]:translate-x-0'
-        )}
-      >
-        <SidebarHeader onSettingsClick={onSettingsClick} onSpawnClick={onSpawnClick} onCloseClick={onClose} />
-        <RoomList rooms={rooms} onLinkClick={onClose} onDeleteRoom={onDeleteRoom} />
-        <SidebarFooter userName={userName} onNameChange={onNameChange} onInstallClick={onInstallClick} />
-      </aside>
-    </>
+    <ShadcnSidebar className="pb-[env(safe-area-inset-bottom,0px)]">
+      <ShadcnSidebarHeader className="h-14 shrink-0 flex-row items-center justify-between border-b border-sidebar-border px-4 py-0">
+        <span className="text-base font-bold">Chats</span>
+        <SidebarHeaderContent onSettingsClick={onSettingsClick} onSpawnClick={onSpawnClick} />
+      </ShadcnSidebarHeader>
+      <SidebarContent className="overflow-y-auto">
+        <RoomList rooms={rooms} onDeleteRoom={onDeleteRoom} />
+      </SidebarContent>
+      <ShadcnSidebarFooter className="border-t border-sidebar-border p-0">
+        <SidebarFooterContent userName={userName} onNameChange={onNameChange} onInstallClick={onInstallClick} />
+      </ShadcnSidebarFooter>
+    </ShadcnSidebar>
   )
 }

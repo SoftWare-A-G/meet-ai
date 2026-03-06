@@ -10,7 +10,7 @@ export const Route = createFileRoute('/chat/')({
 })
 
 function ChatLobby() {
-  const { rooms, setSidebarOpen } = useChatContext()
+  const { rooms } = useChatContext()
   const navigate = useNavigate()
 
   const handleSelectRoom = useCallback(
@@ -27,7 +27,6 @@ function ChatLobby() {
         showInvite={false}
         showTeamToggle={false}
         showDelete={false}
-        onMobileToggle={() => setSidebarOpen(prev => !prev)}
         onTeamToggle={() => {}}
         onInviteClick={() => {}}
         onDeleteConfirm={() => {}}

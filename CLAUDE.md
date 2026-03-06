@@ -6,25 +6,12 @@
 
 ## meet-ai API Key in Claude Code Settings
 
-Add `MEET_AI_KEY` and `MEET_AI_URL` via the `env` field in `settings.json`.
-
-**User-level** (`~/.claude/settings.json`) — applies to all projects:
+Add `MEET_AI_KEY` and `MEET_AI_URL` via the `env` field in `settings.json` — works at both user-level (`~/.claude/settings.json`, applies to all projects) and project-level (`.claude/settings.json`, applies to this repo only).
 
 ```json
 {
   "env": {
     "MEET_AI_URL": "https://meet-ai.cc",
-    "MEET_AI_KEY": "mai_YourKeyHere1234567890ab"
-  }
-}
-```
-
-**Project-level** (`.claude/settings.json`) — applies to this repo only:
-
-```json
-{
-  "env": {
-    "MEET_AI_URL": "http://localhost:8787",
     "MEET_AI_KEY": "mai_YourKeyHere1234567890ab"
   }
 }
@@ -47,7 +34,7 @@ See the `meet-ai` skill in `packages/meet-ai-skill/meet-ai/SKILL.md` for the ful
 ## Package Manager
 
 Default to using Bun instead of Node.js.
-More bun-related info in `./claude/docs/bun.md`
+More bun-related info in `.claude/rules/runtime/bun.md`
 
 ## Commands
 

@@ -2,22 +2,23 @@ import { useState, useEffect } from 'react'
 import { createHighlighterCore } from 'shiki/core'
 import { createJavaScriptRegexEngine } from 'shiki/engine/javascript'
 import { bundledLanguages } from 'shiki/langs'
-import type { HighlighterCore } from 'shiki/core'
+import type { HighlighterCore, ShikiTransformer } from 'shiki/core'
 import type { JSX } from 'react'
 
 type ShikiCodeProps = {
   code: string
   lang: string
+  transformers?: ShikiTransformer[]
 }
 
-// Singleton highlighter — created once with only the rose-pine-moon theme.
+// Singleton highlighter — created once with the tokyo-night theme.
 // Languages are loaded on demand per code block.
 let highlighterPromise: Promise<HighlighterCore> | null = null
 
 function getHighlighter() {
   if (!highlighterPromise) {
     highlighterPromise = createHighlighterCore({
-      themes: [import('@shikijs/themes/rose-pine-moon')],
+      themes: [import('@shikijs/themes/tokyo-night')],
       langs: [],
       engine: createJavaScriptRegexEngine(),
     })
@@ -25,7 +26,7 @@ function getHighlighter() {
   return highlighterPromise
 }
 
-export default function ShikiCode({ code, lang }: ShikiCodeProps) {
+export default function ShikiCode({ code, lang, transformers }: ShikiCodeProps) {
   const [element, setElement] = useState<JSX.Element | null>(null)
 
   useEffect(() => {
@@ -59,7 +60,8 @@ export default function ShikiCode({ code, lang }: ShikiCodeProps) {
 
         const hast = highlighter.codeToHast(code, {
           lang,
-          theme: 'rose-pine-moon',
+          theme: 'tokyo-night',
+          transformers: transformers ?? [],
         })
 
         const jsxElement = toJsxRuntime(hast, {
@@ -80,12 +82,12 @@ export default function ShikiCode({ code, lang }: ShikiCodeProps) {
     return () => {
       cancelled = true
     }
-  }, [code, lang])
+  }, [code, lang, transformers])
 
   // Fallback: plain code block while shiki loads (or if lang fails)
   if (!element) {
     return (
-      <pre className="shiki" style={{ background: '#232136' }}>
+      <pre className="shiki" style={{ background: '#1a1b26' }}>
         <code>{code}</code>
       </pre>
     )

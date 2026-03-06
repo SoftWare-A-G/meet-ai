@@ -1,14 +1,14 @@
 import { Tooltip } from '@base-ui/react/tooltip'
-import { IconMenu2, IconQrcode, IconTerminal, IconTrash, IconUsers } from '../../icons'
+import { IconQrcode, IconTerminal, IconTrash, IconUsers } from '../../icons'
 import DeleteConfirmPopover from '../DeleteConfirmPopover'
 import { useHaptics } from '../../hooks/useHaptics'
+import { SidebarTrigger } from '../ui/sidebar'
 
 type MainHeaderProps = {
   roomName: string
   showInvite: boolean
   showTeamToggle: boolean
   showDelete: boolean
-  onMobileToggle: () => void
   onTeamToggle: () => void
   onInviteClick: () => void
   onDeleteConfirm: () => void
@@ -22,7 +22,6 @@ export default function MainHeader({
   showInvite,
   showTeamToggle,
   showDelete,
-  onMobileToggle,
   onTeamToggle,
   onInviteClick,
   onDeleteConfirm,
@@ -33,12 +32,7 @@ export default function MainHeader({
     <Tooltip.Provider delay={600} closeDelay={0}>
       <div className="border-border bg-header-bg text-header-text flex h-14 shrink-0 items-center justify-between border-b px-4">
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="text-header-text flex h-8 w-8 cursor-pointer items-center justify-center border-none bg-transparent text-xl min-[701px]:hidden"
-            onClick={onMobileToggle}>
-            <IconMenu2 size={20} />
-          </button>
+          <SidebarTrigger className="text-header-text md:hidden" />
           {showDelete && (
             <DeleteConfirmPopover roomName={roomName} onConfirm={onDeleteConfirm}>
               <button
