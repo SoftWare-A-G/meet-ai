@@ -55,6 +55,7 @@ export default function SidebarFooter({
     <SidebarMenu>
       <SidebarMenuItem>
         <SidebarMenuButton
+          render={<div />}
           size="lg"
           className="h-[52px] cursor-default px-4 py-2.5 hover:bg-transparent active:bg-transparent">
           {editing ? (

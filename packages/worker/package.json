@@ -13,7 +13,6 @@
   "dependencies": {
     "@base-ui/react": "catalog:",
     "@elevenlabs/elevenlabs-js": "catalog:",
-    "@git-diff-view/core": "0.1.1",
     "@git-diff-view/react": "0.1.1",
     "@hono/zod-validator": "catalog:",
     "@shikijs/langs": "3.22.0",
