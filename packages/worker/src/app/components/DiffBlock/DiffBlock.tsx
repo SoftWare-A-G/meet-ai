@@ -1,36 +1,7 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo } from 'react'
 import { Collapsible } from '@base-ui/react/collapsible'
 import { DiffView, DiffModeEnum, DiffFile } from '@git-diff-view/react'
-import { getDiffViewHighlighter } from '@git-diff-view/shiki'
-import type { DiffHighlighter } from '@git-diff-view/shiki'
 import { formatTimeWithSeconds } from '../../lib/dates'
-
-type DiffFileHighlighter = Omit<DiffHighlighter, 'getHighlighterEngine'>
-
-let highlighterCache: DiffFileHighlighter | null = null
-let highlighterPromise: Promise<DiffFileHighlighter> | null = null
-
-function getHighlighter(): Promise<DiffFileHighlighter> {
-  if (!highlighterPromise) {
-    highlighterPromise = getDiffViewHighlighter().then((h) => {
-      highlighterCache = h
-      return h
-    })
-  }
-  return highlighterPromise
-}
-
-function useShikiHighlighter() {
-  const [highlighter, setHighlighter] = useState<DiffFileHighlighter | null>(highlighterCache)
-
-  useEffect(() => {
-    if (!highlighter) {
-      getHighlighter().then(setHighlighter)
-    }
-  }, [highlighter])
-
-  return highlighter
-}
 
 type DiffBlockProps = {
   filename: string
@@ -52,8 +23,6 @@ function getLangFromFilename(filename: string): string {
 }
 
 export default function DiffBlock({ filename, hunks, timestamp, changeCount }: DiffBlockProps) {
-  const highlighter = useShikiHighlighter()
-
   const diffFile = useMemo(() => {
     const lang = getLangFromFilename(filename)
     const file = DiffFile.createInstance({
@@ -62,12 +31,10 @@ export default function DiffBlock({ filename, hunks, timestamp, changeCount }: D
     })
     file.initTheme('dark')
     file.init()
-    if (highlighter) {
-      file.initSyntax({ registerHighlighter: highlighter })
-    }
+    file.initSyntax()
     file.buildUnifiedDiffLines()
     return file
-  }, [filename, hunks, highlighter])
+  }, [filename, hunks])
 
   return (
     <Collapsible.Root defaultOpen={false} className="diff-block rounded my-px text-xs font-mono text-msg-text opacity-65">
@@ -85,7 +52,6 @@ export default function DiffBlock({ filename, hunks, timestamp, changeCount }: D
           diffViewFontSize={12}
           diffViewWrap
           diffViewHighlight
-          registerHighlighter={highlighter ?? undefined}
         />
       </Collapsible.Panel>
     </Collapsible.Root>

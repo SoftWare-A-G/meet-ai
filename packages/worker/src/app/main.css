@@ -543,9 +543,6 @@ html {
   overflow: hidden;
   font-size: 12px;
 }
-.diff-block [data-component] span[style*="--diff-view-dark"] {
-  color: var(--diff-view-dark);
-}
 
 .msg-content ul,
 .msg-content ol {
