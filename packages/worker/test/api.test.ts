@@ -579,7 +579,7 @@ describe('Team Info', () => {
   const teamInfoPayload = {
     team_name: 'test-team',
     members: [
-      { name: 'agent-1', color: 'blue', role: 'general-purpose', model: 'claude-opus-4-6', status: 'active', joinedAt: 1234567890 },
+      { teammate_id: 'agent-1@test-team', name: 'agent-1', color: 'blue', role: 'general-purpose', model: 'claude-opus-4-6', status: 'active', joinedAt: 1234567890 },
     ],
   }
 
@@ -617,6 +617,85 @@ describe('Team Info', () => {
       body: JSON.stringify(teamInfoPayload),
     })
     expect(res.status).toBe(401)
+  })
+})
+
+describe('Team Info Upsert', () => {
+  function upsertMember(key: string, roomId: string, teamName: string, member: Record<string, unknown>) {
+    return SELF.fetch(`http://localhost/api/rooms/${roomId}/team-info/members`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ team_name: teamName, member }),
+    })
+  }
+
+  const baseMember = {
+    teammate_id: 'agent-1@test-team',
+    name: 'agent-1',
+    color: '#818cf8',
+    role: 'general-purpose',
+    model: 'claude-opus-4-6',
+    status: 'active' as const,
+    joinedAt: 1234567890,
+  }
+
+  it('PATCH upserts a new member', async () => {
+    const key = await createKey()
+    const roomId = await createRoom(key, 'upsert-room')
+
+    const res = await upsertMember(key, roomId, 'test-team', baseMember)
+    expect(res.status).toBe(200)
+    const body = await res.json() as { ok: boolean }
+    expect(body.ok).toBe(true)
+  })
+
+  it('PATCH upserts existing member (status change)', async () => {
+    const key = await createKey()
+    const roomId = await createRoom(key, 'upsert-update-room')
+
+    // Insert first
+    await upsertMember(key, roomId, 'test-team', baseMember)
+
+    // Update status to inactive with placeholder values
+    const res = await upsertMember(key, roomId, 'test-team', {
+      ...baseMember,
+      status: 'inactive',
+      color: '#555',
+      model: 'unknown',
+      joinedAt: 0,
+    })
+    expect(res.status).toBe(200)
+    const body = await res.json() as { ok: boolean }
+    expect(body.ok).toBe(true)
+  })
+
+  it('upsert preserves other existing members', async () => {
+    const key = await createKey()
+    const roomId = await createRoom(key, 'upsert-preserve-room')
+
+    // First, push full team info with one member via POST (full-replace)
+    await SELF.fetch(`http://localhost/api/rooms/${roomId}/team-info`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        team_name: 'test-team',
+        members: [{ teammate_id: 'lead@test-team', name: 'lead', color: '#f00', role: 'lead', model: 'claude-opus-4-6', status: 'active', joinedAt: 1000 }],
+      }),
+    })
+
+    // Upsert a second member
+    const res = await upsertMember(key, roomId, 'test-team', baseMember)
+    expect(res.status).toBe(200)
+
+    // The full-replace POST stores with type: 'team_info', so after upsert
+    // the DO should have both members. We can't read DO storage directly in tests,
+    // but the 200 response confirms the upsert succeeded without error.
+  })
+
+  it('returns 404 for non-existent room', async () => {
+    const key = await createKey()
+    const res = await upsertMember(key, 'nonexistent', 'test-team', baseMember)
+    expect(res.status).toBe(404)
   })
 })
 

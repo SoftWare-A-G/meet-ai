@@ -18,5 +18,6 @@ export type HookInput = {
 export type TeamSessionFile = {
   session_id: string
   room_id: string
+  team_name?: string
   session_ids?: string[]
 }

@@ -237,6 +237,8 @@ function NeonLanding() {
           </div>
         </header>
 
+        {/* Main content */}
+        <main>
         {/* Hero */}
         <section className="mx-auto max-w-[1200px] px-6 pt-24 pb-20 text-center">
           <div
@@ -321,6 +323,7 @@ function NeonLanding() {
             ))}
           </div>
         </section>
+        </main>
 
         {/* Footer */}
         <footer className="border-t border-[#00FF8822] px-6 py-8 text-center">

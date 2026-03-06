@@ -49,11 +49,16 @@ function registerSession(filePath: string, data: TeamSessionFile, sessionId: str
   }
 }
 
-export async function findRoomId(
+export type RoomLookupResult = {
+  roomId: string
+  teamName: string
+}
+
+export async function findRoom(
   sessionId: string,
   teamsDir?: string,
   transcriptPath?: string
-): Promise<string | null> {
+): Promise<RoomLookupResult | null> {
   const dir = teamsDir ?? `${process.env.HOME}/.claude/teams`
 
   // Fast path: if we have a transcript, extract teamName and look up directly
@@ -66,7 +71,7 @@ export async function findRoomId(
         const data: TeamSessionFile = JSON.parse(raw)
         // Auto-register this session if not already known
         registerSession(filePath, data, sessionId)
-        return data.room_id || null
+        if (data.room_id) return { roomId: data.room_id, teamName: data.team_name || teamName }
       } catch {
         // meet-ai.json doesn't exist for this team
       }
@@ -88,7 +93,8 @@ export async function findRoomId(
       const data: TeamSessionFile = JSON.parse(raw)
       const knownIds = data.session_ids ?? [data.session_id]
       if (knownIds.includes(sessionId) || data.session_id === sessionId) {
-        return data.room_id || null
+        if (data.room_id) return { roomId: data.room_id, teamName: data.team_name || entry }
+        return null
       }
     } catch {
       continue
@@ -96,4 +102,13 @@ export async function findRoomId(
   }
 
   return null
+}
+
+export async function findRoomId(
+  sessionId: string,
+  teamsDir?: string,
+  transcriptPath?: string
+): Promise<string | null> {
+  const result = await findRoom(sessionId, teamsDir, transcriptPath)
+  return result?.roomId ?? null
 }

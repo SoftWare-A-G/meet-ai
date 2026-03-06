@@ -34,6 +34,30 @@ export async function sendParentMessage(client: HookClient, roomId: string): Pro
   }
 }
 
+export async function sendTeamMemberUpsert(
+  client: HookClient,
+  roomId: string,
+  teamName: string,
+  member: {
+    teammate_id: string
+    name: string
+    color: string
+    role: string
+    model: string
+    status: 'active' | 'inactive'
+    joinedAt: number
+  },
+): Promise<void> {
+  try {
+    await client.api.rooms[':id']['team-info'].members.$patch({
+      param: { id: roomId },
+      json: { team_name: teamName, member },
+    })
+  } catch {
+    // Never throw — hook must not block the agent
+  }
+}
+
 export async function sendLogEntry(
   client: HookClient,
   roomId: string,

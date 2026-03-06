@@ -1,12 +1,13 @@
 import { readFileSync, writeFileSync, statSync, rmSync } from 'node:fs'
 import {
-  findRoomId,
+  findRoom,
   summarize,
   formatDiff,
   formatWriteDiff,
   createHookClient,
   sendParentMessage,
   sendLogEntry,
+  sendTeamMemberUpsert,
   type HookInput,
   type StructuredPatchHunk,
 } from '../../../lib/hooks'
@@ -55,9 +56,6 @@ export async function processHookInput(
   } = input
   if (!sessionId || !toolName) return 'skip'
 
-  // Skip SendMessage — internal agent communication
-  if (toolName === 'SendMessage') return 'skip'
-
   // Skip Bash cd and meet-ai commands (avoid recursion)
   if (toolName === 'Bash') {
     const cmd = typeof toolInput.command === 'string' ? toolInput.command : ''
@@ -65,8 +63,9 @@ export async function processHookInput(
   }
 
   // Find room
-  const roomId = await findRoomId(sessionId, teamsDir, transcriptPath)
-  if (!roomId) return 'skip'
+  const room = await findRoom(sessionId, teamsDir, transcriptPath)
+  if (!room) return 'skip'
+  const { roomId, teamName } = room
 
   // Need env vars
   const url = process.env.MEET_AI_URL
@@ -74,6 +73,48 @@ export async function processHookInput(
   if (!url || !key) return 'skip'
 
   const client = createHookClient(url, key)
+
+  // Detect agent spawn
+  if (toolName === 'Agent' && toolResponse) {
+    const status = toolResponse.status as string | undefined
+    if (status === 'teammate_spawned') {
+      await sendTeamMemberUpsert(client, roomId, toolResponse.team_name as string, {
+        teammate_id: toolResponse.teammate_id as string,
+        name: toolResponse.name as string,
+        color: toolResponse.color as string,
+        role: (toolResponse.agent_type as string) || 'teammate',
+        model: (toolResponse.model as string) || 'unknown',
+        status: 'active',
+        joinedAt: Date.now(),
+      })
+    }
+  }
+
+  // Detect agent shutdown
+  if (toolName === 'SendMessage') {
+    const inputType = toolInput.type as string | undefined
+    const approve = toolInput.approve as boolean | undefined
+
+    if (inputType === 'shutdown_response' && approve === true) {
+      const requestId = toolInput.request_id as string | undefined
+      const agentName = requestId?.split('@')[1]
+
+      if (agentName) {
+        const teammateId = teamName ? `${agentName}@${teamName}` : agentName
+        await sendTeamMemberUpsert(client, roomId, teamName, {
+          teammate_id: teammateId,
+          name: agentName,
+          color: '#555',
+          role: 'teammate',
+          model: 'unknown',
+          status: 'inactive',
+          joinedAt: 0,
+        })
+      }
+    }
+    // Skip normal log for SendMessage — internal agent communication
+    return 'skip'
+  }
 
   // Edit tool with structuredPatch → send diff log instead of one-liner summary
   if (toolName === 'Edit' && toolResponse?.structuredPatch) {

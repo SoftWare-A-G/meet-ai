@@ -27,6 +27,7 @@ export const messagesQuerySchema = z.object({
 })
 
 export const teamInfoMemberSchema = z.object({
+  teammate_id: z.string().optional(),
   name: z.string(),
   color: z.string(),
   role: z.string(),
@@ -38,6 +39,11 @@ export const teamInfoMemberSchema = z.object({
 export const teamInfoSchema = z.object({
   team_name: z.string(),
   members: z.array(teamInfoMemberSchema),
+})
+
+export const teamInfoUpsertSchema = z.object({
+  team_name: z.string(),
+  member: teamInfoMemberSchema.extend({ teammate_id: z.string() }),
 })
 
 export const commandInfoSchema = z.object({

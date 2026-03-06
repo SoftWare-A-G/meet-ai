@@ -8,6 +8,7 @@ import {
   sendMessageSchema,
   sendLogSchema,
   teamInfoSchema,
+  teamInfoUpsertSchema,
   messagesQuerySchema,
   commandsSchema,
   createTaskSchema,
@@ -258,6 +259,31 @@ export const roomsRoute = new Hono<AppEnv>()
     const stub = c.env.CHAT_ROOM.get(doId)
     await stub.fetch(
       new Request('http://internal/team-info', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      })
+    )
+
+    return c.json({ ok: true })
+  })
+
+  // PATCH /api/rooms/:id/team-info/members — upsert a single team member
+  .patch('/:id/team-info/members', requireAuth, zValidator('json', teamInfoUpsertSchema), async c => {
+    const keyId = c.get('keyId')
+    const roomId = c.req.param('id')
+    const db = queries(c.env.DB)
+
+    const room = await db.findRoom(roomId, keyId)
+    if (!room) {
+      return c.json({ error: 'room not found' }, 404)
+    }
+
+    const body = c.req.valid('json')
+
+    const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
+    const stub = c.env.CHAT_ROOM.get(doId)
+    await stub.fetch(
+      new Request('http://internal/team-info/upsert', {
         method: 'POST',
         body: JSON.stringify(body),
       })

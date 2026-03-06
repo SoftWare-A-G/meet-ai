@@ -63,7 +63,7 @@ meet-ai create-room "<team-name>"
 **Write the meet-ai.json file** so the PostToolUse hook can auto-discover the room. The team directory already exists at this point (`~/.claude/teams/<team-name>/`). Write the file with the room ID and the orchestrator's session ID (available from the team config's `leadSessionId` field):
 
 ```json
-{"room_id": "<ROOM_ID>", "session_id": "<LEAD_SESSION_ID>"}
+{"room_id": "<ROOM_ID>", "session_id": "<LEAD_SESSION_ID>", "team_name": "<team-name>"}
 ```
 
 The `session_id` links the current Claude Code session to the room. The hook uses this to match tool events to the correct chat room.
@@ -141,28 +141,6 @@ and then modify the handler. Let me know if you have questions.
 ```
 
 Think of it this way: **compose once, send twice.** Your CLI output IS your chat room message.
-
-## Sending Team Info (Right Sidebar)
-
-Push team configuration to the chat room's right sidebar. The web UI displays active and inactive agent members in real time.
-
-```bash
-meet-ai send-team-info "<ROOM_ID>" '<json-payload>'
-```
-
-The JSON payload must match the `TeamInfo` shape:
-
-```json
-{
-  "team_name": "my-team",
-  "members": [
-    { "name": "researcher", "color": "#22d3ee", "role": "general-purpose", "model": "claude-opus-4-6", "status": "active", "joinedAt": 1234567890 },
-    { "name": "frontend", "color": "#a78bfa", "role": "general-purpose", "model": "claude-opus-4-6", "status": "inactive", "joinedAt": 1234567890 }
-  ]
-}
-```
-
-**Send progressively** — push updated team info after every spawn or shutdown so the sidebar reflects the current state immediately. Do NOT batch updates; send after each change.
 
 ## Sending Tasks (Right Sidebar)
 
