@@ -2,8 +2,9 @@ import { useRef, useCallback, useState, useMemo, type RefObject } from 'react'
 import clsx from 'clsx'
 import { MentionsInput, Mention } from 'react-mentions-ts'
 import type { MentionsInputClassNames, MentionsInputChangeEvent } from 'react-mentions-ts'
-import { IconPaperclip, IconSend } from '../../icons'
+import { IconPaperclip, IconSend, IconMicrophone } from '../../icons'
 import { useChatContext } from '../../lib/chat-context'
+import { useVoiceInput } from '../../hooks/useVoiceInput'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 
@@ -41,6 +42,40 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
   const [plainText, setPlainText] = useState('')
 
   const { teamInfo, commandsInfo } = useChatContext()
+
+  const interimRef = useRef('')
+  const baseTextRef = useRef('')
+
+  const handleTranscript = useCallback((text: string, isFinal: boolean) => {
+    if (isFinal) {
+      const base = baseTextRef.current
+      const separator = base && !base.endsWith(' ') ? ' ' : ''
+      const newValue = base + separator + text
+      setValue(newValue)
+      setPlainText(newValue)
+      baseTextRef.current = newValue
+      interimRef.current = ''
+    } else {
+      const base = baseTextRef.current
+      const separator = base && !base.endsWith(' ') ? ' ' : ''
+      const newValue = base + separator + text
+      setValue(newValue)
+      setPlainText(newValue)
+      interimRef.current = text
+    }
+  }, [])
+
+  const { isSupported: voiceSupported, isListening, start: startVoice, stop: stopVoice } = useVoiceInput({ onTranscript: handleTranscript })
+
+  const toggleVoice = useCallback(() => {
+    if (isListening) {
+      stopVoice()
+    } else {
+      baseTextRef.current = plainText
+      interimRef.current = ''
+      startVoice()
+    }
+  }, [isListening, startVoice, stopVoice, plainText])
 
   // Slash command autocomplete
   const [selectedCommandIndex, setSelectedCommandIndex] = useState(0)
@@ -261,15 +296,34 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
         </MentionsInput>
 
         <div className="flex items-center justify-between px-3 h-[52px] border-t border-border">
-          <button
-            type="button"
-            className="flex items-center gap-1.5 px-3 h-9 rounded-lg border border-border bg-transparent text-msg-text opacity-70 hover:opacity-100 hover:bg-white/5 cursor-pointer text-sm transition-all"
-            onMouseDown={preventBlur}
-            onClick={handleFileSelect}
-          >
-            <IconPaperclip size={16} />
-            Attach
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              className="flex items-center gap-1.5 px-3 h-9 rounded-lg border border-border bg-transparent text-msg-text opacity-70 hover:opacity-100 hover:bg-white/5 cursor-pointer text-sm transition-all"
+              onMouseDown={preventBlur}
+              onClick={handleFileSelect}
+            >
+              <IconPaperclip size={16} />
+              Attach
+            </button>
+
+            {voiceSupported && (
+              <button
+                type="button"
+                aria-label={isListening ? 'Stop recording' : 'Start voice input'}
+                className={clsx(
+                  'h-9 w-9 rounded-lg border flex items-center justify-center cursor-pointer text-sm transition-all',
+                  isListening
+                    ? 'bg-[#F85149]/20 border-[#F85149]/50 text-[#F85149] animate-pulse'
+                    : 'border-border bg-transparent text-msg-text opacity-70 hover:opacity-100 hover:bg-white/5'
+                )}
+                onMouseDown={preventBlur}
+                onClick={toggleVoice}
+              >
+                <IconMicrophone size={16} />
+              </button>
+            )}
+          </div>
 
           <button
             type="button"
