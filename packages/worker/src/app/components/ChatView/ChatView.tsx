@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { toast } from 'sonner'
 import MessageList from '../MessageList'
 import ChatInput from '../ChatInput'
 import TerminalViewerModal from '../TerminalViewerModal'
@@ -8,7 +9,7 @@ import * as api from '../../lib/api'
 import { requestPermission, notifyIfHidden } from '../../lib/notifications'
 import { useHaptics } from '../../hooks/useHaptics'
 import { parseUtcDate } from '../../lib/dates'
-import type { Message as MessageType, Room, TeamInfo, TasksInfo, CommandInfo } from '../../lib/types'
+import type { Message as MessageType, Room, TeamInfo, TeamMember, TasksInfo, CommandInfo } from '../../lib/types'
 
 type DisplayMessage = MessageType & {
   tempId?: string
@@ -38,6 +39,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
   const [terminalData, setTerminalData] = useState<string | null>(null)
   const { queue, remove, getForRoom } = useOfflineQueue()
   const { triggerForMessage } = useHaptics()
+  const prevMembersRef = useRef<TeamMember[] | null>(null)
 
   // Check TTS availability once on mount
   useEffect(() => {
@@ -167,6 +169,22 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
   }, [userName, triggerForMessage])
 
   const onTeamInfoWs = useCallback((info: TeamInfo) => {
+    const prev = prevMembersRef.current
+    if (prev) {
+      const prevNames = new Set(prev.map(m => m.name))
+      for (const m of info.members) {
+        if (!prevNames.has(m.name) && m.status === 'active') {
+          toast('Agent joined', { description: `${m.name} is now active` })
+        }
+      }
+      for (const m of info.members) {
+        const old = prev.find(p => p.name === m.name)
+        if (old && old.status === 'active' && m.status === 'inactive') {
+          toast('Agent offline', { description: `${m.name} has shut down` })
+        }
+      }
+    }
+    prevMembersRef.current = info.members
     onTeamInfo?.(info)
   }, [onTeamInfo])
 
