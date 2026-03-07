@@ -157,6 +157,8 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
     const content = plainText.trim()
     if (!content) return
 
+    if (isListening) stopVoice()
+
     const attachmentIds = pendingFiles
       .filter(f => f.status === 'done' && f.attachmentId)
       .map(f => f.attachmentId!)
@@ -165,12 +167,14 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
     setPendingFiles([])
     setValue('')
     setPlainText('')
+    baseTextRef.current = ''
+    interimRef.current = ''
     inputRef.current?.focus()
     requestAnimationFrame(() => {
       inputRef.current?.focus()
       requestAnimationFrame(() => inputRef.current?.scrollIntoView({ block: 'nearest' }))
     })
-  }, [onSend, pendingFiles, plainText])
+  }, [onSend, pendingFiles, plainText, isListening, stopVoice])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (showDropdown) {
