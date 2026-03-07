@@ -45,7 +45,8 @@ export function useVoiceInput({ onTranscript }: UseVoiceInputOptions) {
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null)
   const stoppingRef = useRef(false)
 
-  const isSupported = !isIOSStandalone() && getSpeechRecognition() !== null
+  const isFirefox = typeof navigator !== 'undefined' && /Firefox/.test(navigator.userAgent)
+  const isSupported = !isFirefox && !isIOSStandalone() && getSpeechRecognition() !== null
 
   const stop = useCallback(() => {
     stoppingRef.current = true
