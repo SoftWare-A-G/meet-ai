@@ -53,7 +53,7 @@ function RootLayout() {
           </TooltipProvider>
           <Toaster
             theme="dark"
-            position="bottom-center"
+            position="top-center"
             toastOptions={{
               style: {
                 background: '#1a1a2e',

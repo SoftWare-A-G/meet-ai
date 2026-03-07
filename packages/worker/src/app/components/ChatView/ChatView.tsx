@@ -174,13 +174,13 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
       const prevNames = new Set(prev.map(m => m.name))
       for (const m of info.members) {
         if (!prevNames.has(m.name) && m.status === 'active') {
-          toast('Agent joined', { description: `${m.name} is now active` })
+          toast.success(`${m.name} joined`, { description: `${m.name} is now active`, duration: 2000 })
         }
       }
       for (const m of info.members) {
         const old = prev.find(p => p.name === m.name)
         if (old && old.status === 'active' && m.status === 'inactive') {
-          toast('Agent offline', { description: `${m.name} has shut down` })
+          toast(`${m.name} offline`, { description: `${m.name} has shut down`, icon: '👋', duration: 2000 })
         }
       }
     }
