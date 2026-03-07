@@ -52,18 +52,6 @@ function TeamSidebarContent({ teamInfo, tasksInfo, onOpenTaskBoard }: { teamInfo
 
   return (
     <>
-      {active.length > 0 && (
-        <div className="py-1">
-          <div className="px-4 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide opacity-50">Active</div>
-          {active.map(m => <MemberRow key={m.name} member={m} />)}
-        </div>
-      )}
-      {inactive.length > 0 && (
-        <div className="py-1">
-          <div className="px-4 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide opacity-50">Inactive</div>
-          {inactive.map(m => <MemberRow key={m.name} member={m} inactive />)}
-        </div>
-      )}
       {tasks.length > 0 && (
         <div className="py-1">
           <div className="px-4 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide opacity-50 flex items-center">
@@ -83,6 +71,18 @@ function TeamSidebarContent({ teamInfo, tasksInfo, onOpenTaskBoard }: { teamInfo
           {inProgress.map(t => <TaskRow key={t.id} task={t} />)}
           {pending.map(t => <TaskRow key={t.id} task={t} />)}
           {completed.map(t => <TaskRow key={t.id} task={t} />)}
+        </div>
+      )}
+      {active.length > 0 && (
+        <div className="py-1">
+          <div className="px-4 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide opacity-50">Active</div>
+          {active.map(m => <MemberRow key={m.name} member={m} />)}
+        </div>
+      )}
+      {inactive.length > 0 && (
+        <div className="py-1">
+          <div className="px-4 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide opacity-50">Inactive</div>
+          {inactive.map(m => <MemberRow key={m.name} member={m} inactive />)}
         </div>
       )}
     </>
