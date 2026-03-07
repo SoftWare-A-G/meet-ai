@@ -8,7 +8,7 @@ import {
   MEET_AI_HOOKS,
   mergeHooks,
   removeHooks,
-} from '../../src/commands/setup-hooks/usecase'
+} from '@meet-ai/cli/commands/setup-hooks/usecase'
 
 let tempDir: string
 let settingsFile: string

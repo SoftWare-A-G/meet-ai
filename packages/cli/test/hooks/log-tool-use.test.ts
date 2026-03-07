@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach, afterEach, mock } from 'bun:test'
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs'
-import { processHookInput } from '../../src/commands/hook/log-tool-use/usecase'
+import { processHookInput } from '@meet-ai/cli/commands/hook/log-tool-use/usecase'
 
 const TEST_DIR = '/tmp/meet-ai-hook-test-teams-cli'
 const MSGID_DIR = '/tmp'

@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 import { defineCommand, runMain } from 'citty'
+import { version } from '../package.json'
 import { err } from './lib/output.js'
 
 const main = defineCommand({
   meta: {
     name: 'meet-ai',
-    version: '0.0.34',
+    version,
     description:
       'CLI for meet-ai chat rooms — create rooms, send messages, and stream via WebSocket',
   },
@@ -40,7 +41,7 @@ const main = defineCommand({
 
     // No subcommand given — launch the TUI dashboard as default
     try {
-      const { getClient } = await import('./lib/client-factory.js')
+      const { getClient } = await import('./domain/bootstrap.js')
       const { getMeetAiConfig } = await import('./config.js')
       const { startDashboard } = await import('./commands/dashboard/usecase.js')
       const client = getClient()

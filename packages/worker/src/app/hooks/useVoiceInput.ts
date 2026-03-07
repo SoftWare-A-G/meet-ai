@@ -108,10 +108,8 @@ export function useVoiceInput({ onTranscript }: UseVoiceInputOptions) {
     }
   }, [onTranscript])
 
-  useEffect(() => {
-    return () => {
-      recognitionRef.current?.abort()
-    }
+  useEffect(() => () => {
+    recognitionRef.current?.abort()
   }, [])
 
   return { isSupported, isListening, start, stop }

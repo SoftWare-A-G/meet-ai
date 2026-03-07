@@ -1,6 +1,6 @@
-import type { MeetAiClient } from "../../types";
+import type { MeetAiClient } from "@meet-ai/cli/types";
 import { PollInput } from "./schema";
-import { downloadMessageAttachments } from "../../lib/attachments";
+import { downloadMessageAttachments } from "@meet-ai/cli/lib/attachments";
 
 export async function poll(
   client: MeetAiClient,

@@ -1,6 +1,6 @@
-import type { MeetAiClient } from "../../types";
+import type { MeetAiClient } from "@meet-ai/cli/types";
 import { CreateRoomInput } from "./schema";
-import { ok } from "../../lib/output";
+import { ok } from "@meet-ai/cli/lib/output";
 
 export async function createRoom(client: MeetAiClient, input: { name: string }) {
   const parsed = CreateRoomInput.parse(input);

@@ -4,7 +4,7 @@ import {
   getMeetAiConfig,
   resolveRawConfig,
   configSchema,
-} from "../src/config";
+} from "@meet-ai/cli/config";
 
 // Save original env vars so we can restore them
 let savedEnv: Record<string, string | undefined>;

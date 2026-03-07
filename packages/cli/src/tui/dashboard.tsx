@@ -1,7 +1,7 @@
 import { Box, Text } from 'ink'
 import Sidebar from './Sidebar'
 import MainPane from './MainPane'
-import type { TeamProcess } from '../lib/process-manager'
+import type { TeamProcess } from '@meet-ai/cli/lib/process-manager'
 
 interface DashboardProps {
   teams: TeamProcess[]

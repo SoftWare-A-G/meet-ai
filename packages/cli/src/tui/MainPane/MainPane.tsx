@@ -1,5 +1,5 @@
 import { Box, Text } from 'ink'
-import type { ProcessStatus, PaneCapture } from '../../lib/process-manager'
+import type { ProcessStatus, PaneCapture } from '@meet-ai/cli/lib/process-manager'
 
 const MAX_VISIBLE_PANES = 5
 

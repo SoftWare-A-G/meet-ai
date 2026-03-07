@@ -3,7 +3,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { resolve, dirname } from 'node:path'
 import pc from 'picocolors'
-import { ok, info } from '../../lib/output'
+import { ok, info } from '@meet-ai/cli/lib/output'
 
 interface HookEntry {
   type: string

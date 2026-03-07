@@ -1,6 +1,6 @@
 import { defineCommand } from 'citty'
 import { setupHooks } from './usecase'
-import { err } from '../../lib/output'
+import { err } from '@meet-ai/cli/lib/output'
 
 export default defineCommand({
   meta: {

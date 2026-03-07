@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach, afterEach } from 'bun:test'
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs'
-import { findRoomId } from '../../src/lib/hooks/find-room'
+import { findRoomId } from '@meet-ai/cli/lib/hooks/find-room'
 
 const TEST_DIR = '/tmp/meet-ai-hook-test-teams'
 

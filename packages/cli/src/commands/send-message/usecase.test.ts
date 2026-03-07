@@ -1,7 +1,7 @@
 import { describe, it, expect, mock } from "bun:test";
 import { ZodError } from "zod";
 import { sendMessage } from "./usecase";
-import type { MeetAiClient } from "../../types";
+import type { MeetAiClient } from "@meet-ai/cli/types";
 
 function mockClient(overrides: Partial<MeetAiClient> = {}): MeetAiClient {
   return {

@@ -2,7 +2,7 @@ import { describe, test, expect, beforeEach, afterEach } from 'bun:test'
 import { mkdir, writeFile, mkdtemp, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { listCommands, type ListCommandsOptions } from '../src/commands/list-commands/usecase'
+import { listCommands, type ListCommandsOptions } from '@meet-ai/cli/commands/list-commands/usecase'
 
 let tempDir: string
 

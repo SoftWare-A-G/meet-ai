@@ -1,0 +1,42 @@
+import type IHttpTransport from '@meet-ai/cli/domain/interfaces/IHttpTransport'
+import type IRoomRepository from '@meet-ai/cli/domain/interfaces/IRoomRepository'
+
+const RETRY = { maxRetries: 3, baseDelay: 1000 }
+
+export default class RoomRepository implements IRoomRepository {
+  constructor(private readonly transport: IHttpTransport) {}
+
+  async create(name: string): Promise<{ id: string; name: string }> {
+    return this.transport.postJson('/api/rooms', { name })
+  }
+
+  async delete(roomId: string): Promise<void> {
+    return this.transport.del(`/api/rooms/${roomId}`)
+  }
+
+  async sendTeamInfo(roomId: string, payload: string): Promise<string> {
+    return this.transport.postText(`/api/rooms/${roomId}/team-info`, JSON.parse(payload), {
+      retry: RETRY,
+    })
+  }
+
+  async sendCommands(roomId: string, payload: string): Promise<string> {
+    return this.transport.postText(`/api/rooms/${roomId}/commands`, JSON.parse(payload), {
+      retry: RETRY,
+    })
+  }
+
+  async sendTasks(roomId: string, payload: string): Promise<string> {
+    return this.transport.postText(`/api/rooms/${roomId}/tasks`, JSON.parse(payload), {
+      retry: RETRY,
+    })
+  }
+
+  async sendTerminalData(roomId: string, data: string): Promise<void> {
+    try {
+      await this.transport.postJson(`/api/rooms/${roomId}/terminal`, { data })
+    } catch {
+      // Silently ignore — terminal data is ephemeral
+    }
+  }
+}

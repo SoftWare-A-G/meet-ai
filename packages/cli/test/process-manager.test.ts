@@ -1,5 +1,5 @@
 import { describe, test, expect, afterEach } from 'bun:test'
-import { ProcessManager } from '../src/lib/process-manager'
+import { ProcessManager } from '@meet-ai/cli/lib/process-manager'
 
 describe('ProcessManager', () => {
   let pm: ProcessManager

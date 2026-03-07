@@ -1,4 +1,4 @@
-import type { MeetAiClient } from "../types";
+import type { MeetAiClient } from "@meet-ai/cli/types";
 
 export async function downloadMessageAttachments(
   client: MeetAiClient,

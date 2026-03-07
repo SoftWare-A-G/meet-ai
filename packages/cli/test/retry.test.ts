@@ -1,5 +1,5 @@
 import { test, expect, mock, beforeEach } from "bun:test";
-import { withRetry } from "../src/client";
+import { withRetry } from "@meet-ai/cli/domain/adapters/HttpTransport";
 
 // Suppress retry logs during tests
 beforeEach(() => {

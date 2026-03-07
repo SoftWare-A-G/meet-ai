@@ -1,10 +1,10 @@
 import { Box, Text, useInput, useApp, useStdout, useStdin } from 'ink'
 import { useState, useCallback, useEffect, useRef, Component, type ReactNode } from 'react'
-import { ProcessManager } from '../lib/process-manager'
+import { ProcessManager } from '@meet-ai/cli/lib/process-manager'
 import { Dashboard } from './dashboard'
 import { SpawnDialog } from './spawn-dialog'
 import { StatusBar } from './status-bar'
-import type { MeetAiClient } from '../types'
+import type { MeetAiClient } from '@meet-ai/cli/types'
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   state = { error: null as Error | null }

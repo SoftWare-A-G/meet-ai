@@ -1,5 +1,5 @@
 import { Box, Text } from 'ink'
-import type { TeamProcess, ProcessStatus } from '../../lib/process-manager'
+import type { TeamProcess, ProcessStatus } from '@meet-ai/cli/lib/process-manager'
 
 const STATUS_ICONS: Record<ProcessStatus, { icon: string; color: string }> = {
   starting: { icon: '...', color: 'yellow' },

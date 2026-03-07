@@ -1,46 +1,9 @@
-import type { MeetAiClient, Message } from "../../types";
+import type { MeetAiClient, Message } from "@meet-ai/cli/types";
+import type IInboxRouter from "@meet-ai/cli/domain/interfaces/IInboxRouter";
 import { ListenInput } from "./schema";
-import { downloadMessageAttachments } from "../../lib/attachments";
-import {
-  appendToInbox,
-  getTeamMembers,
-  resolveInboxTargets,
-  checkIdleAgents,
-  IDLE_CHECK_INTERVAL_MS,
-} from "../../inbox-router";
-import { TmuxClient } from "../../lib/tmux-client";
-
-function routeToInbox(
-  msg: { sender: string; content: string },
-  inboxDir: string,
-  defaultInboxPath: string | null,
-  teamDir: string,
-  stdinPane?: string,
-  attachmentPaths?: string[],
-) {
-  const entry: Record<string, unknown> = {
-    from: `meet-ai:${msg.sender}`,
-    text: msg.content,
-    timestamp: new Date().toISOString(),
-    read: false,
-  };
-  if (attachmentPaths?.length) {
-    entry.attachments = attachmentPaths;
-  }
-
-  const members = getTeamMembers(teamDir);
-  const targets = resolveInboxTargets(msg.content, members);
-
-  if (targets) {
-    for (const target of targets) {
-      appendToInbox(`${inboxDir}/${target}.json`, entry as any);
-    }
-  } else if (stdinPane) {
-    // Non-@mention message with stdinPane: stdout only (console.log already happened), skip inbox
-  } else if (defaultInboxPath) {
-    appendToInbox(defaultInboxPath, entry as any);
-  }
-}
+import { downloadMessageAttachments } from "@meet-ai/cli/lib/attachments";
+import { IDLE_CHECK_INTERVAL_MS } from "@meet-ai/cli/inbox-router";
+import { TmuxClient } from "@meet-ai/cli/lib/tmux-client";
 
 export function listen(
   client: MeetAiClient,
@@ -52,6 +15,7 @@ export function listen(
     inbox?: string;
     stdinPane?: string;
   },
+  inboxRouter?: IInboxRouter,
 ): WebSocket {
   const parsed = ListenInput.parse(input);
 
@@ -170,11 +134,11 @@ export function listen(
       downloadMessageAttachments(client, msg.room_id, msg.id).then((paths) => {
         const output = paths.length ? { ...msg, attachments: paths } : msg;
         console.log(JSON.stringify(output));
-        if (inboxDir && teamDir) routeToInbox(msg, inboxDir, defaultInboxPath, teamDir, stdinPane, paths);
+        if (inboxDir && teamDir && inboxRouter) inboxRouter.route(msg, { inboxDir, defaultInboxPath, teamDir, stdinPane, attachmentPaths: paths });
       });
     } else {
       console.log(JSON.stringify(msg));
-      if (inboxDir && teamDir) routeToInbox(msg, inboxDir, defaultInboxPath, teamDir, stdinPane);
+      if (inboxDir && teamDir && inboxRouter) inboxRouter.route(msg, { inboxDir, defaultInboxPath, teamDir, stdinPane });
     }
   };
 
@@ -184,22 +148,10 @@ export function listen(
   let idleCheckTimeout: ReturnType<typeof setTimeout> | null = null;
   const idleNotified = new Set<string>();
 
-  if (inboxDir && inbox && teamDir) {
+  if (inboxDir && inbox && teamDir && inboxRouter) {
     function scheduleIdleCheck() {
       idleCheckTimeout = setTimeout(() => {
-        const members = getTeamMembers(teamDir!);
-        const newlyIdle = checkIdleAgents(inboxDir!, members, inbox!, idleNotified);
-        for (const agent of newlyIdle) {
-          idleNotified.add(agent);
-          if (defaultInboxPath) {
-            appendToInbox(defaultInboxPath, {
-              from: "meet-ai:idle-check",
-              text: `${agent} idle for 5+ minutes`,
-              timestamp: new Date().toISOString(),
-              read: false,
-            });
-          }
-        }
+        inboxRouter!.checkIdle({ inboxDir: inboxDir!, teamDir: teamDir!, inbox: inbox!, defaultInboxPath, notified: idleNotified });
         scheduleIdleCheck();
       }, IDLE_CHECK_INTERVAL_MS);
     }

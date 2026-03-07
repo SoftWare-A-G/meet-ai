@@ -1,6 +1,6 @@
 import { setTimeout as delay } from 'node:timers/promises'
-import { createHookClient, type HookClient } from '../../../lib/hooks/client'
-import { findRoomId } from '../../../lib/hooks/find-room'
+import { createHookClient, type HookClient } from '@meet-ai/cli/lib/hooks/client'
+import { findRoomId } from '@meet-ai/cli/lib/hooks/find-room'
 
 type PlanReviewInput = {
   session_id: string

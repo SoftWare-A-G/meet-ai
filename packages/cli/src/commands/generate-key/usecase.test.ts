@@ -1,6 +1,6 @@
 import { describe, it, expect, mock, spyOn, beforeEach, afterEach } from "bun:test";
 import { generateKey } from "./usecase";
-import type { MeetAiClient } from "../../types";
+import type { MeetAiClient } from "@meet-ai/cli/types";
 
 function mockClient(overrides: Partial<MeetAiClient> = {}): MeetAiClient {
   return {

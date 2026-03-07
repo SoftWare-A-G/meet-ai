@@ -1,8 +1,8 @@
 import { defineCommand } from "citty";
-import { getClient } from "../../lib/client-factory";
-import { extractRestContent } from "../../lib/rest-content";
+import { getClient } from "@meet-ai/cli/domain/bootstrap";
+import { extractRestContent } from "@meet-ai/cli/lib/rest-content";
 import { sendMessage } from "./usecase";
-import { err } from "../../lib/output";
+import { err } from "@meet-ai/cli/lib/output";
 
 export default defineCommand({
   meta: {

@@ -10,7 +10,7 @@ import {
   sendTeamMemberUpsert,
   type HookInput,
   type StructuredPatchHunk,
-} from '../../../lib/hooks'
+} from '@meet-ai/cli/lib/hooks'
 
 const PARENT_MSG_TTL_SEC = 120
 

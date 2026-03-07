@@ -5,12 +5,20 @@ type BeforeInstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
+// Capture the event at module level so it survives component unmount/remount
+// and is available even if the event fires before the component mounts.
+let savedPrompt: BeforeInstallPromptEvent | null = null
+window.addEventListener('beforeinstallprompt', (e: Event) => {
+  e.preventDefault()
+  savedPrompt = e as BeforeInstallPromptEvent
+})
+
 type InstallButtonProps = {
   onIOSInstall: () => void
 }
 
 export default function InstallButton({ onIOSInstall }: InstallButtonProps) {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(savedPrompt)
   const [isIOS, setIsIOS] = useState(false)
   const [visible, setVisible] = useState(false)
 
@@ -28,10 +36,17 @@ export default function InstallButton({ onIOSInstall }: InstallButtonProps) {
       return
     }
 
-    // Android/Chrome: listen for beforeinstallprompt
+    // If we already captured the event before mount, show the button
+    if (savedPrompt) {
+      setDeferredPrompt(savedPrompt)
+      setVisible(true)
+    }
+
+    // Listen for future beforeinstallprompt events
     const handler = (e: Event) => {
       e.preventDefault()
-      setDeferredPrompt(e as BeforeInstallPromptEvent)
+      savedPrompt = e as BeforeInstallPromptEvent
+      setDeferredPrompt(savedPrompt)
       setVisible(true)
     }
     window.addEventListener('beforeinstallprompt', handler)
@@ -39,6 +54,7 @@ export default function InstallButton({ onIOSInstall }: InstallButtonProps) {
     const installedHandler = () => {
       setVisible(false)
       setDeferredPrompt(null)
+      savedPrompt = null
     }
     window.addEventListener('appinstalled', installedHandler)
 
@@ -56,10 +72,12 @@ export default function InstallButton({ onIOSInstall }: InstallButtonProps) {
     if (deferredPrompt) {
       await deferredPrompt.prompt()
       const { outcome } = await deferredPrompt.userChoice
-      if (outcome === 'accepted') {
-        setVisible(false)
-      }
+      setVisible(false)
       setDeferredPrompt(null)
+      savedPrompt = null
+      if (outcome === 'accepted') {
+        // App installed successfully
+      }
     }
   }, [isIOS, deferredPrompt, onIOSInstall])
 

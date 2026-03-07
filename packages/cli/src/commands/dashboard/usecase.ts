@@ -1,11 +1,11 @@
 import { render } from 'ink'
 import React from 'react'
-import { ProcessManager } from '../../lib/process-manager'
-import { TmuxClient, parseVersion } from '../../lib/tmux-client'
-import { findClaudeCli } from '../../spawner'
-import { App } from '../../tui/app'
-import type { MeetAiConfig } from '../../config'
-import type { MeetAiClient } from '../../types'
+import { ProcessManager } from '@meet-ai/cli/lib/process-manager'
+import { TmuxClient, parseVersion } from '@meet-ai/cli/lib/tmux-client'
+import { findClaudeCli } from '@meet-ai/cli/spawner'
+import { App } from '@meet-ai/cli/tui/app'
+import type { MeetAiConfig } from '@meet-ai/cli/config'
+import type { MeetAiClient } from '@meet-ai/cli/types'
 
 interface DashboardOptions {
   debug?: boolean

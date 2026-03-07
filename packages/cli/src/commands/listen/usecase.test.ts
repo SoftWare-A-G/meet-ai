@@ -1,7 +1,7 @@
 import { describe, it, expect, mock, beforeEach, afterEach, spyOn } from "bun:test";
 import { ZodError } from "zod";
 import { listen } from "./usecase";
-import type { MeetAiClient, Message } from "../../types";
+import type { MeetAiClient, Message } from "@meet-ai/cli/types";
 
 // Capture the onMessage callback passed to client.listen()
 // so we can simulate incoming WebSocket messages in tests

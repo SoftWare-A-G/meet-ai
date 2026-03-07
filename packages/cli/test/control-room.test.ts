@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { parseControlMessage } from "../src/lib/control-room";
+import { parseControlMessage } from "@meet-ai/cli/lib/control-room";
 
 describe("parseControlMessage", () => {
   test("parses spawn_request", () => {

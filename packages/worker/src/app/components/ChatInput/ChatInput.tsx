@@ -47,20 +47,15 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
   const baseTextRef = useRef('')
 
   const handleTranscript = useCallback((text: string, isFinal: boolean) => {
+    const base = baseTextRef.current
+    const separator = base && !base.endsWith(' ') ? ' ' : ''
+    const newValue = base + separator + text
+    setValue(newValue)
+    setPlainText(newValue)
     if (isFinal) {
-      const base = baseTextRef.current
-      const separator = base && !base.endsWith(' ') ? ' ' : ''
-      const newValue = base + separator + text
-      setValue(newValue)
-      setPlainText(newValue)
       baseTextRef.current = newValue
       interimRef.current = ''
     } else {
-      const base = baseTextRef.current
-      const separator = base && !base.endsWith(' ') ? ' ' : ''
-      const newValue = base + separator + text
-      setValue(newValue)
-      setPlainText(newValue)
       interimRef.current = text
     }
   }, [])

@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test'
-import { parseVersion, TmuxClient } from '../src/lib/tmux-client'
+import { parseVersion, TmuxClient } from '@meet-ai/cli/lib/tmux-client'
 
 describe('parseVersion', () => {
   test('parses standard version string', () => {

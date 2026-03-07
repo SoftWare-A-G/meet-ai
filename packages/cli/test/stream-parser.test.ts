@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { parseLine } from "../src/lib/stream-parser";
+import { parseLine } from "@meet-ai/cli/lib/stream-parser";
 
 describe("parseLine", () => {
   test("extracts text from text_delta event", () => {

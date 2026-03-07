@@ -1,7 +1,7 @@
 import { defineCommand } from "citty";
-import { getClient } from "../../lib/client-factory";
+import { getClient, getContainer } from "@meet-ai/cli/domain/bootstrap";
 import { listen } from "./usecase";
-import { err } from "../../lib/output";
+import { err } from "@meet-ai/cli/lib/output";
 
 export default defineCommand({
   meta: {
@@ -43,6 +43,7 @@ export default defineCommand({
   run({ args }) {
     try {
       const client = getClient();
+      const container = getContainer();
       // This is long-running — the WebSocket keeps the process alive until killed
       listen(client, {
         roomId: args.roomId,
@@ -51,7 +52,7 @@ export default defineCommand({
         team: args.team,
         inbox: args.inbox,
         stdinPane: args["stdin-pane"],
-      });
+      }, container.inboxRouter);
     } catch (error) {
       err(error instanceof Error ? error.message : String(error));
       process.exit(1);

@@ -1,5 +1,5 @@
 import { describe, expect, it, mock, beforeEach, afterEach } from 'bun:test'
-import { createHookClient, sendParentMessage, sendLogEntry } from '../../src/lib/hooks/client'
+import { createHookClient, sendParentMessage, sendLogEntry } from '@meet-ai/cli/lib/hooks/client'
 
 const MOCK_URL = 'http://localhost:9999'
 const MOCK_KEY = 'mai_test123'

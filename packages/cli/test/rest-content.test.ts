@@ -1,5 +1,5 @@
 import { test, expect } from "bun:test";
-import { extractRestContent } from "../src/lib/rest-content";
+import { extractRestContent } from "@meet-ai/cli/lib/rest-content";
 
 test("extracts remaining positionals after skipping known ones", () => {
   const args = ["room-1", "bot", "hello", "world"];
