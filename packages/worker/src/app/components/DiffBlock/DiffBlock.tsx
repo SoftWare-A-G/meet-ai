@@ -23,6 +23,8 @@ function getLangFromFilename(filename: string): string {
 }
 
 export default function DiffBlock({ filename, hunks, timestamp, changeCount }: DiffBlockProps) {
+  const isNewFile = hunks.every(h => /^@@\s+-0,0\s/.test(h))
+
   const diffFile = useMemo(() => {
     const lang = getLangFromFilename(filename)
     const file = DiffFile.createInstance({
@@ -37,7 +39,7 @@ export default function DiffBlock({ filename, hunks, timestamp, changeCount }: D
   }, [filename, hunks])
 
   return (
-    <Collapsible.Root defaultOpen={false} className="diff-block rounded my-px text-xs font-mono text-msg-text opacity-65">
+    <Collapsible.Root defaultOpen={false} className={`diff-block rounded my-px text-xs font-mono text-msg-text opacity-65${isNewFile ? ' diff-block--new-file' : ''}`}>
       <Collapsible.Trigger className="group/diff flex w-full items-center gap-1.5 px-2 py-[3px] cursor-pointer rounded select-none hover:bg-white/[0.08] hover:opacity-100 bg-transparent border-none text-inherit font-inherit text-left">
         <span className="text-[10px] w-3 text-center shrink-0 inline group-data-[panel-open]/diff:hidden">{'\u25B8'}</span>
         <span className="text-[10px] w-3 text-center shrink-0 hidden group-data-[panel-open]/diff:inline">{'\u25BE'}</span>

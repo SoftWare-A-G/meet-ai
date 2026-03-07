@@ -544,6 +544,13 @@ html {
   font-size: 12px;
 }
 
+/* Shrink unified diff line-number column only for Write (new file, single column) */
+.diff-block--new-file .diff-line-num {
+  min-width: 55px !important;
+  padding-left: 4px !important;
+  padding-right: 4px !important;
+}
+
 .msg-content ul,
 .msg-content ol {
   margin: 4px 0 6px 0;
