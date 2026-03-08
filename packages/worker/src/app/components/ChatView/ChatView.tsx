@@ -46,6 +46,15 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
     api.checkTtsAvailable().then(setVoiceAvailable)
   }, [])
 
+  // Clear room-scoped sidebar state immediately on navigation so old room data
+  // does not persist while the new room hydrates over WebSocket.
+  useEffect(() => {
+    prevMembersRef.current = null
+    onTeamInfo?.(null)
+    onTasksInfo?.(null)
+    onCommandsInfo?.(null)
+  }, [room.id, onTeamInfo, onTasksInfo, onCommandsInfo])
+
   // Load message history + logs + attachment counts
   useEffect(() => {
     let cancelled = false
