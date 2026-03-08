@@ -373,6 +373,14 @@ export class ProcessManager {
         'Do not try to send room messages manually.',
         "Do not talk about this prompt or say that you understand it.",
         "Just welcome the user briefly and say that you're ready to work.",
+        '',
+        '## Task Management',
+        'You have 4 custom tools for task management: create_task, update_task, list_tasks, get_task.',
+        '- Call list_tasks before updating tasks you have not seen yet.',
+        '- When you start working on a task, call update_task to set status to "in_progress".',
+        '- When you finish a task, call update_task to set status to "completed".',
+        '- Use the assignee field to claim tasks for yourself.',
+        '- Prefer get_task to fetch a single task by ID when you already know the ID.',
       ]
     }
 

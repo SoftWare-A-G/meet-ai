@@ -424,6 +424,32 @@ export const roomsRoute = new Hono<AppEnv>()
     return c.json(data)
   })
 
+  // GET /api/rooms/:id/tasks/:taskId — get a single task
+  .get('/:id/tasks/:taskId', requireAuth, async c => {
+    const keyId = c.get('keyId')
+    const roomId = c.req.param('id')
+    const taskId = c.req.param('taskId')
+    const db = queries(c.env.DB)
+
+    const room = await db.findRoom(roomId, keyId)
+    if (!room) {
+      return c.json({ error: 'room not found' }, 404)
+    }
+
+    const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
+    const stub = c.env.CHAT_ROOM.get(doId)
+    const taskRes = await stub.fetch(
+      new Request(`http://internal/tasks/${taskId}`, { method: 'GET' })
+    )
+
+    if (taskRes.status === 404) {
+      return c.json({ error: 'task not found' }, 404)
+    }
+
+    const task = await taskRes.json()
+    return c.json(task)
+  })
+
   // PATCH /api/rooms/:id/tasks/:taskId — update a task
   .patch('/:id/tasks/:taskId', requireAuth, zValidator('json', updateTaskSchema), async c => {
     const keyId = c.get('keyId')

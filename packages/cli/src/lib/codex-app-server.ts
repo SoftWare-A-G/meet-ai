@@ -6,6 +6,9 @@ import {
 import { stderr } from 'node:process'
 import { createInterface, type Interface as ReadLineInterface } from 'node:readline'
 import type { AgentMessageDeltaNotification } from '@meet-ai/cli/generated/codex-app-server/v2/AgentMessageDeltaNotification'
+import type { DynamicToolCallParams } from '@meet-ai/cli/generated/codex-app-server/v2/DynamicToolCallParams'
+import type { DynamicToolCallResponse } from '@meet-ai/cli/generated/codex-app-server/v2/DynamicToolCallResponse'
+import type { DynamicToolSpec } from '@meet-ai/cli/generated/codex-app-server/v2/DynamicToolSpec'
 import type { ItemCompletedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/ItemCompletedNotification'
 import type { Thread } from '@meet-ai/cli/generated/codex-app-server/v2/Thread'
 import type { ThreadStartedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/ThreadStartedNotification'
@@ -54,6 +57,11 @@ type SpawnFn = (
   options: SpawnOptionsWithoutStdio
 ) => ChildProcessWithoutNullStreams
 
+export type DynamicToolCallHandler = (
+  tool: string,
+  args: unknown
+) => Promise<DynamicToolCallResponse>
+
 export type CodexAppServerBridgeOptions = {
   threadId?: string | null
   cwd?: string
@@ -65,6 +73,8 @@ export type CodexAppServerBridgeOptions = {
   env?: NodeJS.ProcessEnv
   spawnFn?: SpawnFn
   stderr?: Pick<NodeJS.WritableStream, 'write'>
+  dynamicTools?: DynamicToolSpec[]
+  toolCallHandler?: DynamicToolCallHandler
 }
 
 export type CodexInjectionResult = {
@@ -260,6 +270,8 @@ export class CodexAppServerBridge {
   private readonly env: NodeJS.ProcessEnv
   private readonly spawnFn: SpawnFn
   private readonly stderrStream: Pick<NodeJS.WritableStream, 'write'>
+  private readonly dynamicTools: DynamicToolSpec[]
+  private readonly toolCallHandler: DynamicToolCallHandler | null
 
   private child: ChildProcessWithoutNullStreams | null = null
   private stdoutReader: ReadLineInterface | null = null
@@ -285,6 +297,8 @@ export class CodexAppServerBridge {
     this.env = options.env ?? process.env
     this.spawnFn = options.spawnFn ?? spawn
     this.stderrStream = options.stderr ?? stderr
+    this.dynamicTools = options.dynamicTools ?? []
+    this.toolCallHandler = options.toolCallHandler ?? null
   }
 
   async start(): Promise<void> {
@@ -457,6 +471,7 @@ export class CodexAppServerBridge {
       cwd: this.cwd,
       experimentalRawEvents: false,
       persistExtendedHistory: this.experimentalApi,
+      ...(this.dynamicTools.length > 0 ? { dynamicTools: this.dynamicTools } : {}),
     })
     this.threadId = typeof startResult.thread?.id === 'string' ? startResult.thread.id : null
     this.activeTurnId = maybeActiveTurnId(startResult.thread)
@@ -610,6 +625,10 @@ export class CodexAppServerBridge {
         this.writeMessage({ id: message.id, result: { decision: 'denied' } })
         return
       }
+      case 'item/tool/call': {
+        void this.handleToolCall(message)
+        return
+      }
       default: {
         this.stderrStream.write(
           `meet-ai: rejecting unsupported codex app-server request ${message.method}\n`
@@ -621,6 +640,52 @@ export class CodexAppServerBridge {
           },
         })
       }
+    }
+  }
+
+  private async handleToolCall(message: JsonRpcServerRequest): Promise<void> {
+    const params = message.params as DynamicToolCallParams | undefined
+
+    if (!params || typeof params.tool !== 'string') {
+      this.writeMessage({
+        id: message.id,
+        result: {
+          contentItems: [{ type: 'inputText', text: JSON.stringify({ error: 'Invalid tool call: missing tool name' }) }],
+          success: false,
+        } satisfies DynamicToolCallResponse,
+      })
+      return
+    }
+
+    if (!this.toolCallHandler) {
+      this.stderrStream.write(
+        `meet-ai: no tool call handler registered, rejecting ${params.tool}\n`
+      )
+      this.writeMessage({
+        id: message.id,
+        result: {
+          contentItems: [{ type: 'inputText', text: JSON.stringify({ error: 'No handler registered for dynamic tool calls' }) }],
+          success: false,
+        } satisfies DynamicToolCallResponse,
+      })
+      return
+    }
+
+    try {
+      const response = await this.toolCallHandler(params.tool, params.arguments)
+      this.writeMessage({ id: message.id, result: response })
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      this.stderrStream.write(
+        `meet-ai: tool call ${params.tool} failed: ${errorMessage}\n`
+      )
+      this.writeMessage({
+        id: message.id,
+        result: {
+          contentItems: [{ type: 'inputText', text: JSON.stringify({ error: errorMessage }) }],
+          success: false,
+        } satisfies DynamicToolCallResponse,
+      })
     }
   }
 

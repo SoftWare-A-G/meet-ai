@@ -273,6 +273,23 @@ export class ChatRoom extends DurableObject {
       })
     }
 
+    // GET /tasks/:taskId — get a single task by id
+    if (url.pathname.startsWith('/tasks/') && !url.pathname.includes('/upsert') && request.method === 'GET') {
+      const taskId = url.pathname.split('/tasks/')[1]
+      const tasks = await this.loadTasks()
+      const task = tasks.find(t => t.id === taskId)
+      if (!task) {
+        return new Response(JSON.stringify({ error: 'task not found' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+
+      return new Response(JSON.stringify(task), {
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
     // PATCH /tasks/:taskId — sparse update a task
     if (url.pathname.startsWith('/tasks/') && request.method === 'PATCH') {
       const taskId = url.pathname.split('/tasks/')[1]

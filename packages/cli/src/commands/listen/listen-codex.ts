@@ -7,6 +7,9 @@ import {
   createCodexAppServerBridge,
   describeCodexAppServerError,
 } from '@meet-ai/cli/lib/codex-app-server'
+import { TASK_TOOL_SPECS, createTaskToolCallHandler } from '@meet-ai/cli/lib/codex-task-tools'
+import { createHookClient } from '@meet-ai/cli/lib/hooks/client'
+import { createTask, updateTask, listTasks, getTask } from '@meet-ai/cli/lib/hooks/tasks'
 import { ListenInput } from './schema'
 import { createTerminalControlHandler, type ListenMessage } from './shared'
 import type { MeetAiClient, Message } from '@meet-ai/cli/types'
@@ -159,12 +162,26 @@ export function listenCodex(
   }
 
   const terminal = createTerminalControlHandler({ client, roomId })
+
+  const meetAiUrl = process.env.MEET_AI_URL ?? ''
+  const meetAiKey = process.env.MEET_AI_KEY ?? ''
+  const hookClient = meetAiUrl && meetAiKey ? createHookClient(meetAiUrl, meetAiKey) : null
+  const taskToolCallHandler = hookClient
+    ? createTaskToolCallHandler({
+        createTask: params => createTask(hookClient, roomId, { ...params, source: 'codex' }),
+        updateTask: (taskId, params) => updateTask(hookClient, roomId, taskId, { ...params, source: 'codex' }),
+        listTasks: filters => listTasks(hookClient, roomId, filters),
+        getTask: taskId => getTask(hookClient, roomId, taskId),
+      })
+    : undefined
+
   const codexBridge: CodexBridge =
     codexBridgeOverride ??
     createCodexAppServerBridge({
       threadId: null,
       cwd: process.cwd(),
       experimentalApi: isTruthyEnv(process.env.MEET_AI_CODEX_APP_SERVER_EXPERIMENTAL),
+      ...(taskToolCallHandler ? { dynamicTools: TASK_TOOL_SPECS, toolCallHandler: taskToolCallHandler } : {}),
     })
   const bootstrapPrompt = process.env.MEET_AI_CODEX_BOOTSTRAP_PROMPT?.trim()
   const codexSender = process.env.MEET_AI_AGENT_NAME?.trim() || 'codex'
