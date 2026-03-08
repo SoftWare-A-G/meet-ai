@@ -180,7 +180,7 @@ export function listenCodex(
     createCodexAppServerBridge({
       threadId: null,
       cwd: process.cwd(),
-      experimentalApi: isTruthyEnv(process.env.MEET_AI_CODEX_APP_SERVER_EXPERIMENTAL),
+      experimentalApi: isTruthyEnv(process.env.MEET_AI_CODEX_APP_SERVER_EXPERIMENTAL) || !!taskToolCallHandler,
       ...(taskToolCallHandler ? { dynamicTools: TASK_TOOL_SPECS, toolCallHandler: taskToolCallHandler } : {}),
     })
   const bootstrapPrompt = process.env.MEET_AI_CODEX_BOOTSTRAP_PROMPT?.trim()
