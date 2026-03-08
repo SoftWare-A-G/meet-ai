@@ -22,6 +22,6 @@ export interface IdleCheckOptions {
 }
 
 export default interface IInboxRouter {
-  route(msg: { sender: string; content: string }, opts: RouteOptions): void
+  route(msg: { sender: string; content?: string }, opts: RouteOptions): void
   checkIdle(opts: IdleCheckOptions): void
 }

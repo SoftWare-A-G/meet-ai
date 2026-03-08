@@ -12,7 +12,9 @@ const IDLE_THRESHOLD_MS = 5 * 60 * 1000
 export default class InboxRouter implements IInboxRouter {
   constructor(private readonly fs: IFileSystem) {}
 
-  route(msg: { sender: string; content: string }, opts: RouteOptions): void {
+  route(msg: { sender: string; content?: string }, opts: RouteOptions): void {
+    if (typeof msg.content !== 'string') return
+
     const entry: InboxEntry = {
       from: `meet-ai:${msg.sender}`,
       text: msg.content,

@@ -22,9 +22,10 @@ export function getTeamMembers(teamDir: string): Set<string> {
 }
 
 export function resolveInboxTargets(
-  content: string,
+  content: string | undefined,
   members: Set<string>,
 ): string[] | null {
+  if (typeof content !== 'string') return null;
   const mentions = content.match(/@([\w-]+)/g);
   if (!mentions) return null;
 
