@@ -10,7 +10,7 @@ export function parseUtcDate(isoStr: string): dayjs.Dayjs {
 export function formatTime(isoStr?: string): string {
   if (!isoStr) return ''
   const d = dayjs.utc(isoStr).local()
-  return d.isValid() ? d.format('HH:mm') : ''
+  return d.isValid() ? d.format('HH:mm:ss') : ''
 }
 
 export function formatTimeWithSeconds(isoStr?: string): string {

@@ -1,17 +1,18 @@
 import { dirname } from 'node:path'
 import type IFileSystem from '@meet-ai/cli/domain/interfaces/IFileSystem'
 import type IInboxRouter from '@meet-ai/cli/domain/interfaces/IInboxRouter'
-import type { InboxEntry, RouteOptions, IdleCheckOptions } from '@meet-ai/cli/domain/interfaces/IInboxRouter'
+import type {
+  InboxEntry,
+  RouteOptions,
+  IdleCheckOptions,
+} from '@meet-ai/cli/domain/interfaces/IInboxRouter'
 
 const IDLE_THRESHOLD_MS = 5 * 60 * 1000
 
 export default class InboxRouter implements IInboxRouter {
   constructor(private readonly fs: IFileSystem) {}
 
-  route(
-    msg: { sender: string; content: string },
-    opts: RouteOptions,
-  ): void {
+  route(msg: { sender: string; content: string }, opts: RouteOptions): void {
     const entry: InboxEntry = {
       from: `meet-ai:${msg.sender}`,
       text: msg.content,
@@ -29,8 +30,6 @@ export default class InboxRouter implements IInboxRouter {
       for (const target of targets) {
         this.appendToInbox(`${opts.inboxDir}/${target}.json`, entry)
       }
-    } else if (opts.stdinPane) {
-      // Non-@mention message with stdinPane: stdout only, skip inbox
     } else if (opts.defaultInboxPath) {
       this.appendToInbox(opts.defaultInboxPath, entry)
     }
@@ -64,27 +63,18 @@ export default class InboxRouter implements IInboxRouter {
 
   private getTeamMembers(teamDir: string): Set<string> {
     try {
-      const config = JSON.parse(
-        this.fs.readFileSync(`${teamDir}/config.json`, 'utf-8'),
-      )
-      return new Set(
-        config.members?.map((m: { name: string }) => m.name) || [],
-      )
+      const config = JSON.parse(this.fs.readFileSync(`${teamDir}/config.json`, 'utf-8'))
+      return new Set(config.members?.map((m: { name: string }) => m.name) || [])
     } catch {
       return new Set()
     }
   }
 
-  private resolveInboxTargets(
-    content: string,
-    members: Set<string>,
-  ): string[] | null {
+  private resolveInboxTargets(content: string, members: Set<string>): string[] | null {
     const mentions = content.match(/@([\w-]+)/g)
     if (!mentions) return null
 
-    const valid = [...new Set(mentions.map((m) => m.slice(1)))].filter((name) =>
-      members.has(name),
-    )
+    const valid = [...new Set(mentions.map(m => m.slice(1)))].filter(name => members.has(name))
     return valid.length > 0 ? valid : null
   }
 
@@ -93,7 +83,7 @@ export default class InboxRouter implements IInboxRouter {
     members: Set<string>,
     excludeAgent: string,
     notified: Set<string>,
-    now: number = Date.now(),
+    now: number = Date.now()
   ): string[] {
     const newlyIdle: string[] = []
     for (const member of members) {

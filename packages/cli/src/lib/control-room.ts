@@ -5,6 +5,7 @@ const SpawnRequestSchema = z.object({
   room_name: z.string().min(1),
   prompt: z.string().min(1),
   model: z.string().optional(),
+  coding_agent: z.enum(['claude', 'codex']).optional(),
 })
 
 const KillRequestSchema = z.object({

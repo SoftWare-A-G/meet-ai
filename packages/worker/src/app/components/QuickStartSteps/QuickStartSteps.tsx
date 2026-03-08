@@ -32,7 +32,7 @@ function TabBar({
 }) {
   return (
     <div className="flex">
-      {tabs.map((tab) => (
+      {tabs.map(tab => (
         <button
           key={tab}
           type="button"
@@ -42,9 +42,8 @@ function TabBar({
             'cursor-pointer border-x-0 border-t-0 border-b-2 px-3 py-1 text-xs font-semibold transition-all duration-150',
             activeTab === tab
               ? 'border-b-[#00FF88] bg-[#00FF8818] text-[#00FF88]'
-              : 'border-b-transparent bg-transparent text-slate-500',
-          )}
-        >
+              : 'border-b-transparent bg-transparent text-slate-500'
+          )}>
           {tab}
         </button>
       ))}
@@ -62,7 +61,8 @@ function TerminalTabs({
   onTabChange: (tab: string) => void
 }) {
   return (
-    <TerminalBlock header={<TabBar tabs={PM_TABS} activeTab={activeTab} onTabChange={onTabChange} />}>
+    <TerminalBlock
+      header={<TabBar tabs={PM_TABS} activeTab={activeTab} onTabChange={onTabChange} />}>
       <span className="text-slate-500">$</span> {commands[activeTab]}
     </TerminalBlock>
   )
@@ -101,7 +101,7 @@ export default function QuickStartSteps({ apiKey }: QuickStartStepsProps) {
       {/* Step 1 — Install CLI */}
       <div>
         <p className="mb-3 flex items-center gap-3">
-          <span style={HEADING_GREEN} className="text-[28px] font-bold leading-none text-[#00FF88]">
+          <span style={HEADING_GREEN} className="text-[28px] leading-none font-bold text-[#00FF88]">
             01
           </span>
           <span style={FONT_HEADING} className="text-base font-semibold text-slate-200">
@@ -139,11 +139,11 @@ export default function QuickStartSteps({ apiKey }: QuickStartStepsProps) {
       {/* Step 2 — Install skill */}
       <div>
         <p className="mb-3 flex items-center gap-3">
-          <span style={HEADING_GREEN} className="text-[28px] font-bold leading-none text-[#00FF88]">
+          <span style={HEADING_GREEN} className="text-[28px] leading-none font-bold text-[#00FF88]">
             02
           </span>
           <span style={FONT_HEADING} className="text-base font-semibold text-slate-200">
-            Install the Claude Code skill
+            Install the skill for Claude Code
           </span>
         </p>
         <TerminalTabs
@@ -152,23 +152,26 @@ export default function QuickStartSteps({ apiKey }: QuickStartStepsProps) {
           commands={{
             npm: (
               <>
-                <span className="text-[#FF0080]">npx</span> skills add SoftWare-A-G/meet-ai --skill meet-ai
+                <span className="text-[#FF0080]">npx</span> skills add SoftWare-A-G/meet-ai --skill
+                meet-ai
               </>
             ),
             bun: (
               <>
-                <span className="text-[#FF0080]">bunx</span> skills add SoftWare-A-G/meet-ai --skill meet-ai
+                <span className="text-[#FF0080]">bunx</span> skills add SoftWare-A-G/meet-ai --skill
+                meet-ai
               </>
             ),
             pnpm: (
               <>
-                <span className="text-[#FF0080]">pnpx</span> skills add SoftWare-A-G/meet-ai --skill meet-ai
+                <span className="text-[#FF0080]">pnpx</span> skills add SoftWare-A-G/meet-ai --skill
+                meet-ai
               </>
             ),
             yarn: (
               <>
-                <span className="text-[#FF0080]">yarn</span> dlx skills add SoftWare-A-G/meet-ai --skill
-                meet-ai
+                <span className="text-[#FF0080]">yarn</span> dlx skills add SoftWare-A-G/meet-ai
+                --skill meet-ai
               </>
             ),
           }}
@@ -178,7 +181,7 @@ export default function QuickStartSteps({ apiKey }: QuickStartStepsProps) {
       {/* Step 3 — Add credentials */}
       <div>
         <p className="mb-2 flex items-center gap-3">
-          <span style={HEADING_GREEN} className="text-[28px] font-bold leading-none text-[#00FF88]">
+          <span style={HEADING_GREEN} className="text-[28px] leading-none font-bold text-[#00FF88]">
             03
           </span>
           <span style={FONT_HEADING} className="text-base font-semibold text-slate-200">
@@ -191,7 +194,12 @@ export default function QuickStartSteps({ apiKey }: QuickStartStepsProps) {
               Add your key to{' '}
               <code className="rounded bg-[#00D4FF11] px-1.5 py-px font-mono text-[13px] text-[#00D4FF]">
                 {scopeTab === 'user' ? '~/.claude/settings.json' : '.claude/settings.json'}
-              </code>
+              </code>{' '}
+              for Claude Code, or to{' '}
+              <code className="rounded bg-[#00D4FF11] px-1.5 py-px font-mono text-[13px] text-[#00D4FF]">
+                ~/.codex/config.toml
+              </code>{' '}
+              for Codex.
             </>
           ) : (
             <>
@@ -201,13 +209,19 @@ export default function QuickStartSteps({ apiKey }: QuickStartStepsProps) {
               and add it to{' '}
               <code className="rounded bg-[#00D4FF11] px-1.5 py-px font-mono text-[13px] text-[#00D4FF]">
                 {scopeTab === 'user' ? '~/.claude/settings.json' : '.claude/settings.json'}
-              </code>
+              </code>{' '}
+              for Claude Code, or to{' '}
+              <code className="rounded bg-[#00D4FF11] px-1.5 py-px font-mono text-[13px] text-[#00D4FF]">
+                ~/.codex/config.toml
+              </code>{' '}
+              for Codex.
             </>
           )}
         </p>
         <TerminalBlock
-          header={<TabBar tabs={SCOPE_TABS} activeTab={scopeTab} onTabChange={handleScopeChange} />}
-        >
+          header={
+            <TabBar tabs={SCOPE_TABS} activeTab={scopeTab} onTabChange={handleScopeChange} />
+          }>
           <div className="whitespace-pre">
             <span className="text-slate-500">{'{'}</span>
             {'\n'}
@@ -229,8 +243,7 @@ export default function QuickStartSteps({ apiKey }: QuickStartStepsProps) {
             {'\n'}
             {'\u00a0\u00a0\u00a0\u00a0'}
             <span className="text-[#00D4FF]">"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS"</span>
-            <span className="text-slate-500">:</span>{' '}
-            <span className="text-[#00FF88]">"1"</span>
+            <span className="text-slate-500">:</span> <span className="text-[#00FF88]">"1"</span>
             {'\n'}
             {'\u00a0\u00a0'}
             <span className="text-slate-500">{'}'}</span>
@@ -243,7 +256,7 @@ export default function QuickStartSteps({ apiKey }: QuickStartStepsProps) {
       {/* Step 4 — Setup hooks */}
       <div>
         <p className="mb-2 flex items-center gap-3">
-          <span style={HEADING_GREEN} className="text-[28px] font-bold leading-none text-[#00FF88]">
+          <span style={HEADING_GREEN} className="text-[28px] leading-none font-bold text-[#00FF88]">
             04
           </span>
           <span style={FONT_HEADING} className="text-base font-semibold text-slate-200">
@@ -251,17 +264,19 @@ export default function QuickStartSteps({ apiKey }: QuickStartStepsProps) {
           </span>
         </p>
         <p className="mb-3 text-sm text-slate-500">
-          Registers Claude Code hooks for plan review, permission review, question review, and tool activity logging.
+          Registers Claude Code hooks for plan review, permission review, question review, and tool
+          activity logging.
         </p>
         <TerminalBlock>
-          <span className="text-slate-500">$</span> <span className="text-[#FF0080]">meet-ai</span> setup-hooks
+          <span className="text-slate-500">$</span> <span className="text-[#FF0080]">meet-ai</span>{' '}
+          setup-hooks
         </TerminalBlock>
       </div>
 
       {/* Step 5 — Run */}
       <div>
         <p className="mb-3 flex items-center gap-3">
-          <span style={HEADING_GREEN} className="text-[28px] font-bold leading-none text-[#00FF88]">
+          <span style={HEADING_GREEN} className="text-[28px] leading-none font-bold text-[#00FF88]">
             05
           </span>
           <span style={FONT_HEADING} className="text-base font-semibold text-slate-200">
@@ -269,8 +284,7 @@ export default function QuickStartSteps({ apiKey }: QuickStartStepsProps) {
           </span>
         </p>
         <TerminalBlock
-          header={<TabBar tabs={RUN_TABS} activeTab={runTab} onTabChange={handleRunChange} />}
-        >
+          header={<TabBar tabs={RUN_TABS} activeTab={runTab} onTabChange={handleRunChange} />}>
           <span className="text-slate-500">$</span>{' '}
           {runTab === 'natively' ? (
             <span className="text-[#FF0080]">meet-ai</span>
@@ -286,7 +300,9 @@ export default function QuickStartSteps({ apiKey }: QuickStartStepsProps) {
       {runTab === 'natively' ? (
         <div>
           <p className="mb-2 flex items-center gap-3">
-            <span style={HEADING_GREEN} className="text-[28px] font-bold leading-none text-[#00FF88]">
+            <span
+              style={HEADING_GREEN}
+              className="text-[28px] leading-none font-bold text-[#00FF88]">
               06
             </span>
             <span style={FONT_HEADING} className="text-base font-semibold text-slate-200">
@@ -308,7 +324,9 @@ export default function QuickStartSteps({ apiKey }: QuickStartStepsProps) {
       ) : (
         <div>
           <p className="mb-3 flex items-center gap-3">
-            <span style={HEADING_GREEN} className="text-[28px] font-bold leading-none text-[#00FF88]">
+            <span
+              style={HEADING_GREEN}
+              className="text-[28px] leading-none font-bold text-[#00FF88]">
               06
             </span>
             <span style={FONT_HEADING} className="text-base font-semibold text-slate-200">
@@ -319,7 +337,8 @@ export default function QuickStartSteps({ apiKey }: QuickStartStepsProps) {
             </span>
           </p>
           <TerminalBlock>
-            <span className="text-[#FF0080]">/meet-ai</span> spawn a team to refactor the auth module
+            <span className="text-[#FF0080]">/meet-ai</span> spawn a team to refactor the auth
+            module
           </TerminalBlock>
         </div>
       )}

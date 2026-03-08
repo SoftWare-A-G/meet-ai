@@ -1,8 +1,10 @@
 import { test, expect, beforeEach } from 'bun:test'
-import type IFileSystem from '@meet-ai/cli/domain/interfaces/IFileSystem'
 import InboxRouter from '@meet-ai/cli/domain/services/InboxRouter'
+import type IFileSystem from '@meet-ai/cli/domain/interfaces/IFileSystem'
 
-function createMockFs(files: Record<string, string> = {}): IFileSystem & { files: Record<string, string> } {
+function createMockFs(
+  files: Record<string, string> = {}
+): IFileSystem & { files: Record<string, string> } {
   const store: Record<string, string> = { ...files }
   return {
     files: store,
@@ -45,7 +47,7 @@ test('route writes to @mentioned agent inbox', () => {
       inboxDir: '/inboxes',
       defaultInboxPath: '/inboxes/team-lead.json',
       teamDir: '/teams/my-team',
-    },
+    }
   )
 
   expect(mockFs.files['/inboxes/researcher.json']).toBeDefined()
@@ -68,7 +70,7 @@ test('route writes to multiple @mentioned agent inboxes', () => {
       inboxDir: '/inboxes',
       defaultInboxPath: null,
       teamDir: '/teams/t',
-    },
+    }
   )
 
   expect(mockFs.files['/inboxes/researcher.json']).toBeDefined()
@@ -86,31 +88,13 @@ test('route writes to default inbox when no @mentions', () => {
       inboxDir: '/inboxes',
       defaultInboxPath: '/inboxes/team-lead.json',
       teamDir: '/teams/t',
-    },
+    }
   )
 
   expect(mockFs.files['/inboxes/team-lead.json']).toBeDefined()
   const messages = JSON.parse(mockFs.files['/inboxes/team-lead.json'])
   expect(messages).toHaveLength(1)
   expect(messages[0].text).toBe('hello everyone')
-})
-
-test('route skips inbox when stdinPane is set and no @mentions', () => {
-  mockFs.files['/teams/t/config.json'] = JSON.stringify({
-    members: [{ name: 'researcher' }],
-  })
-
-  router.route(
-    { sender: 'human', content: 'hello' },
-    {
-      inboxDir: '/inboxes',
-      defaultInboxPath: '/inboxes/lead.json',
-      teamDir: '/teams/t',
-      stdinPane: '%1',
-    },
-  )
-
-  expect(mockFs.files['/inboxes/lead.json']).toBeUndefined()
 })
 
 test('route includes attachment paths in entry', () => {
@@ -125,7 +109,7 @@ test('route includes attachment paths in entry', () => {
       defaultInboxPath: null,
       teamDir: '/teams/t',
       attachmentPaths: ['/tmp/file.png'],
-    },
+    }
   )
 
   const messages = JSON.parse(mockFs.files['/inboxes/dev.json'])
@@ -146,7 +130,7 @@ test('route appends to existing inbox file', () => {
       inboxDir: '/inboxes',
       defaultInboxPath: null,
       teamDir: '/teams/t',
-    },
+    }
   )
 
   const messages = JSON.parse(mockFs.files['/inboxes/dev.json'])
@@ -167,7 +151,7 @@ test('route ignores invalid @mentions and falls back to default inbox', () => {
       inboxDir: '/inboxes',
       defaultInboxPath: '/inboxes/lead.json',
       teamDir: '/teams/t',
-    },
+    }
   )
 
   // Invalid mention → no targeted inbox
@@ -185,7 +169,7 @@ test('route handles missing team config gracefully', () => {
       inboxDir: '/inboxes',
       defaultInboxPath: '/inboxes/lead.json',
       teamDir: '/teams/missing',
-    },
+    }
   )
 
   // No valid members → falls back to default

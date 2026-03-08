@@ -2,11 +2,12 @@ import { formatTime } from '../../lib/dates'
 
 type SpawnRequestCardProps = {
   roomName: string
+  codingAgent?: string
   sender: string
   timestamp?: string
 }
 
-export default function SpawnRequestCard({ roomName, sender, timestamp }: SpawnRequestCardProps) {
+export default function SpawnRequestCard({ roomName, codingAgent, sender, timestamp }: SpawnRequestCardProps) {
   return (
     <div className="mx-auto my-2 flex w-full max-w-[600px] items-center gap-3 rounded-lg border border-[#30363d] bg-[#161b22] px-4 py-3">
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#238636]/20 text-[#3fb950]">
@@ -19,6 +20,9 @@ export default function SpawnRequestCard({ roomName, sender, timestamp }: SpawnR
           <span className="font-medium text-[#c9d1d9]">{sender}</span> requested to spawn team
         </div>
         <div className="text-sm font-semibold text-[#c9d1d9]">{roomName}</div>
+        {codingAgent && (
+          <div className="text-[12px] text-[#8b949e]">Coding agent: {codingAgent}</div>
+        )}
       </div>
       {timestamp && (
         <div className="shrink-0 text-[11px] text-[#484f58]">{formatTime(timestamp)}</div>

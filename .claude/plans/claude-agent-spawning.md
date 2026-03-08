@@ -78,15 +78,15 @@ Simplified implementation for spawning Claude Code instances via the `meet-ai` C
 
 ### New Files
 
-| File | Purpose |
-|------|---------|
-| `src/config.ts` | Multi-source configuration loading (env → project settings → user settings) |
-| `src/spawner.ts` | Simple Claude Code spawner for interactive mode |
+| File             | Purpose                                                                     |
+| ---------------- | --------------------------------------------------------------------------- |
+| `src/config.ts`  | Multi-source configuration loading (env → project settings → user settings) |
+| `src/spawner.ts` | Simple Claude Code spawner for interactive mode                             |
 
 ### Modified Files
 
-| File | Changes |
-|------|---------|
+| File           | Changes                                                                    |
+| -------------- | -------------------------------------------------------------------------- |
 | `src/index.ts` | Updated default behavior to run Claude interactively; added config loading |
 
 ### Removed (Not Implemented)
@@ -114,6 +114,7 @@ The following were in original plan but removed:
 **File: `src/config.ts`**
 
 Loads configuration from multiple sources in priority order:
+
 1. Environment variables (`MEET_AI_URL`, `MEET_AI_KEY`)
 2. Project settings (`./.claude/settings.json`)
 3. User settings (`~/.claude/settings.json`)
@@ -121,8 +122,8 @@ Loads configuration from multiple sources in priority order:
 
 ```typescript
 export function getMeetAiConfig(): {
-  url: string;
-  key: string | undefined;
+  url: string
+  key: string | undefined
 }
 ```
 
@@ -137,6 +138,7 @@ export async function spawnInteractive(): Promise<void>
 ```
 
 Discovery order:
+
 1. Check `PATH` (`which claude`)
 2. Check `MEET_AI_CLAUDE_PATH` env var
 3. Check common locations (Homebrew, etc.)
@@ -146,11 +148,13 @@ Discovery order:
 **File: `src/index.ts`**
 
 Default behavior (no command):
+
 ```bash
 meet-ai  # Runs Claude Code interactively
 ```
 
 Standard commands:
+
 ```bash
 meet-ai create-room <name>
 meet-ai send-message <roomId> <sender> <content> [--color <color>]
@@ -181,12 +185,14 @@ meet-ai
 Initiates a request to spawn a Claude orchestrator for an existing room.
 
 **Request:**
+
 ```bash
 POST /api/rooms/abc-123/spawn
 Authorization: Bearer <api-key>
 ```
 
 **Response:**
+
 ```json
 {
   "roomId": "abc-123",
@@ -207,18 +213,18 @@ The frontend or a local service receives this configuration and spawns Claude Co
 
 All existing meet-ai CLI commands remain unchanged:
 
-| Command | Usage | Description |
-|---------|-------|-------------|
-| `create-room` | `meet-ai create-room <name>` | Create a new chat room |
-| `delete-room` | `meet-ai delete-room <roomId>` | Delete a room |
-| `send-message` | `meet-ai send-message <roomId> <sender> <content>` | Send message to room |
-| `send-log` | `meet-ai send-log <roomId> <sender> <content>` | Send log entry |
-| `poll` | `meet-ai poll <roomId> [options]` | Fetch messages |
-| `listen` | `meet-ai listen <roomId> [options]` | WebSocket stream |
-| `download-attachment` | `meet-ai download-attachment <id>` | Download attachment |
-| `send-team-info` | `meet-ai send-team-info <roomId> '<json>'` | Update team sidebar |
-| `send-tasks` | `meet-ai send-tasks <roomId> '<json>'` | Update tasks sidebar |
-| `generate-key` | `meet-ai generate-key` | Generate API key |
+| Command               | Usage                                              | Description            |
+| --------------------- | -------------------------------------------------- | ---------------------- |
+| `create-room`         | `meet-ai create-room <name>`                       | Create a new chat room |
+| `delete-room`         | `meet-ai delete-room <roomId>`                     | Delete a room          |
+| `send-message`        | `meet-ai send-message <roomId> <sender> <content>` | Send message to room   |
+| `send-log`            | `meet-ai send-log <roomId> <sender> <content>`     | Send log entry         |
+| `poll`                | `meet-ai poll <roomId> [options]`                  | Fetch messages         |
+| `listen`              | `meet-ai listen <roomId> [options]`                | WebSocket stream       |
+| `download-attachment` | `meet-ai download-attachment <id>`                 | Download attachment    |
+| `send-team-info`      | `meet-ai send-team-info <roomId> '<json>'`         | Update team sidebar    |
+| `send-tasks`          | `meet-ai send-tasks <roomId> '<json>'`             | Update tasks sidebar   |
+| `generate-key`        | `meet-ai generate-key`                             | Generate API key       |
 
 ---
 
@@ -227,12 +233,14 @@ All existing meet-ai CLI commands remain unchanged:
 ### Priority Order
 
 1. **Environment Variables** (highest priority)
+
    ```bash
    export MEET_AI_URL="https://meet-ai.cc"
    export MEET_AI_KEY="mai_xxx"
    ```
 
 2. **Project Settings** (`./.claude/settings.json`)
+
    ```json
    {
      "env": {
@@ -243,6 +251,7 @@ All existing meet-ai CLI commands remain unchanged:
    ```
 
 3. **User Settings** (`~/.claude/settings.json`)
+
    ```json
    {
      "env": {
@@ -266,32 +275,31 @@ When user creates a chat on the web UI:
 
 ```javascript
 // Backend WebSocket handler
-socket.on('message', async (data) => {
-  const message = JSON.parse(data);
-  
+socket.on('message', async data => {
+  const message = JSON.parse(data)
+
   if (message.type === 'spawn_orchestrator') {
-    const { roomId, workingDir } = message;
-    
+    const { roomId, workingDir } = message
+
     // Option 1: Spawn via CLI (if running on same machine)
-    const { spawnInteractive } = await import('@meet-ai/cli/spawner');
+    const { spawnInteractive } = await import('@meet-ai/cli/spawner')
     // ...or spawn directly
-    
+
     // Option 2: Spawn Claude directly
-    const { spawn } = require('child_process');
+    const { spawn } = require('child_process')
     const child = spawn('claude', [], {
       detached: true,
       env: {
         ...process.env,
-        MEET_AI_ROOM_ID: roomId,
         DISABLE_AUTOUPDATER: '1',
       },
       cwd: workingDir,
-    });
-    
+    })
+
     // Store PID for management
-    await storeOrchestratorPid(roomId, child.pid);
+    await storeOrchestratorPid(roomId, child.pid)
   }
-});
+})
 ```
 
 ### Orchestrator Behavior
@@ -301,7 +309,7 @@ The spawned Claude instance (orchestrator):
 1. **Starts up** with access to room ID (via env or initial prompt)
 2. **Creates meet-ai.json** to enable hooks:
    ```json
-   {"room_id": "<ROOM_ID>", "session_id": "<SESSION_ID>"}
+   { "room_id": "<ROOM_ID>", "session_id": "<SESSION_ID>" }
    ```
 3. **Starts listener** for human messages:
    ```bash
@@ -318,15 +326,15 @@ The spawned Claude instance (orchestrator):
 
 ### Removed Features
 
-| Original Plan | Simplified To | Reason |
-|--------------|---------------|--------|
-| Agent registry (`~/.meet-ai/agents.json`) | Not implemented | Backend manages orchestrators |
-| Session management | Not implemented | Each spawn is independent |
-| Launcher script with fetch() interception | Not implemented | Not needed for basic functionality |
-| Thinking state tracking | Not implemented | Can be added later if needed |
-| `spawn`/`agents`/`kill` commands | Removed | Backend handles orchestrator lifecycle |
-| Tmux integration | Removed | Not needed |
-| Complex state transitions | Not implemented | Simplified architecture |
+| Original Plan                             | Simplified To   | Reason                                 |
+| ----------------------------------------- | --------------- | -------------------------------------- |
+| Agent registry (`~/.meet-ai/agents.json`) | Not implemented | Backend manages orchestrators          |
+| Session management                        | Not implemented | Each spawn is independent              |
+| Launcher script with fetch() interception | Not implemented | Not needed for basic functionality     |
+| Thinking state tracking                   | Not implemented | Can be added later if needed           |
+| `spawn`/`agents`/`kill` commands          | Removed         | Backend handles orchestrator lifecycle |
+| Tmux integration                          | Removed         | Not needed                             |
+| Complex state transitions                 | Not implemented | Simplified architecture                |
 
 ### What We Kept
 
@@ -361,6 +369,7 @@ The spawned Claude instance (orchestrator):
 ### Unit Tests (Optional)
 
 If needed later:
+
 - Test configuration loading priority
 - Test Claude discovery logic
 - Test interactive spawning

@@ -1,4 +1,5 @@
 import { test, expect, beforeEach, afterEach, spyOn } from "bun:test";
+import { mkdirSync, rmSync } from "node:fs";
 import { z } from "zod";
 import {
   getMeetAiConfig,
@@ -13,6 +14,7 @@ beforeEach(() => {
   savedEnv = {
     MEET_AI_URL: process.env.MEET_AI_URL,
     MEET_AI_KEY: process.env.MEET_AI_KEY,
+    MEET_AI_RUNTIME: process.env.MEET_AI_RUNTIME,
   };
 });
 
@@ -83,6 +85,32 @@ test("default config passes validation", () => {
   // THEN: the default URL passes schema validation
   expect(config.url).toBe("https://meet-ai.cc");
   expect(config.key).toBeUndefined();
+});
+
+test("loads MEET_AI_* from Codex config.toml env section when runtime is codex", async () => {
+  process.env.MEET_AI_RUNTIME = "codex";
+  delete process.env.MEET_AI_URL;
+  delete process.env.MEET_AI_KEY;
+
+  const codexHome = "/tmp/meet-ai-codex-config";
+  rmSync(codexHome, { recursive: true, force: true });
+  mkdirSync(codexHome, { recursive: true });
+  await Bun.write(
+    `${codexHome}/config.toml`,
+    [
+      'model = "gpt-5.4"',
+      "",
+      "[env]",
+      'MEET_AI_URL = "https://codex-config.example.com"',
+      'MEET_AI_KEY = "mai_codex_123"',
+      "",
+    ].join("\n"),
+  );
+
+  const raw = resolveRawConfig({ codexHome });
+
+  expect(raw.url).toBe("https://codex-config.example.com");
+  expect(raw.key).toBe("mai_codex_123");
 });
 
 // --- URL validation ---

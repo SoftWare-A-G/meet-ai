@@ -1,6 +1,7 @@
 import type IConnectionAdapter from '@meet-ai/cli/domain/interfaces/IConnectionAdapter'
 import type { ListenOptions, LobbyOptions } from '@meet-ai/cli/domain/interfaces/IConnectionAdapter'
 import type IHttpTransport from '@meet-ai/cli/domain/interfaces/IHttpTransport'
+import { isCodingAgentId } from '@meet-ai/cli/coding-agents'
 import type { Message } from '@meet-ai/cli/types'
 
 function wsLog(data: Record<string, unknown>) {
@@ -206,7 +207,11 @@ export default class ConnectionAdapter implements IConnectionAdapter {
             options?.onRoomCreated?.(data.id, data.name)
           }
           if (data.type === 'spawn_request' && data.room_name) {
-            options?.onSpawnRequest?.(data.room_name)
+            const codingAgent =
+              typeof data.coding_agent === 'string' && isCodingAgentId(data.coding_agent)
+                ? data.coding_agent
+                : 'claude'
+            options?.onSpawnRequest?.({ roomName: data.room_name, codingAgent })
           }
         } catch {
           // Ignore malformed messages

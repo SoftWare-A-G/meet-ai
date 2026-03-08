@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import { Dialog, DialogContent, DialogTitle } from '../ui/dialog'
 import { Button } from '../ui/button'
 import { IconLoader } from '../../icons'
+import { CODING_AGENT_OPTIONS, type CodingAgentId } from '../../lib/coding-agents'
 
 type SpawnTeamModalProps = {
   onClose: () => void
@@ -10,6 +11,7 @@ type SpawnTeamModalProps = {
 
 export default function SpawnTeamModal({ onClose, onSend }: SpawnTeamModalProps) {
   const [roomName, setRoomName] = useState('')
+  const [codingAgent, setCodingAgent] = useState<CodingAgentId>('claude')
   const [sending, setSending] = useState(false)
 
   const handleSpawn = useCallback(() => {
@@ -17,10 +19,10 @@ export default function SpawnTeamModal({ onClose, onSend }: SpawnTeamModalProps)
     if (!name || sending) return
 
     setSending(true)
-    onSend({ type: 'spawn_request', room_name: name })
+    onSend({ type: 'spawn_request', room_name: name, coding_agent: codingAgent })
     // Close after a brief delay so the user sees "Spawning..."
     setTimeout(onClose, 400)
-  }, [roomName, sending, onSend, onClose])
+  }, [codingAgent, roomName, sending, onSend, onClose])
 
   const handleOpenChange = useCallback(
     (open: boolean) => {
@@ -54,6 +56,18 @@ export default function SpawnTeamModal({ onClose, onSend }: SpawnTeamModalProps)
           autoFocus
           disabled={sending}
         />
+        <label className="mb-1 block text-[13px] font-semibold">Coding Agent</label>
+        <select
+          className="border-border text-msg-text mb-3 w-full rounded-md border bg-white/10 px-2.5 py-2 text-base"
+          value={codingAgent}
+          onChange={e => setCodingAgent(e.target.value as CodingAgentId)}
+          disabled={sending}>
+          {CODING_AGENT_OPTIONS.map(option => (
+            <option key={option.id} value={option.id}>
+              {option.label}
+            </option>
+          ))}
+        </select>
         <div className="flex justify-end gap-2">
           <Button
             variant="outline"

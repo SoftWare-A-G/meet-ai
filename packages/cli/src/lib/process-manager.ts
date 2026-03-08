@@ -1,8 +1,10 @@
-import { mkdirSync, readFileSync, writeFileSync, renameSync, lstatSync } from 'node:fs'
+import { existsSync, lstatSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
+import { fileURLToPath } from 'node:url'
 import { join } from 'node:path'
 import { z } from 'zod'
 import { TmuxClient } from './tmux-client'
+import type { CodingAgentId } from '../coding-agents'
 
 export type ProcessStatus = 'starting' | 'running' | 'exited' | 'error'
 
@@ -16,6 +18,7 @@ export interface PaneCapture {
 export interface TeamProcess {
   roomId: string
   roomName: string
+  codingAgent: CodingAgentId
   sessionName: string
   status: ProcessStatus
   exitCode: number | null
@@ -24,7 +27,7 @@ export interface TeamProcess {
 }
 
 interface ProcessManagerOptions {
-  claudePath: string
+  agentBinaries: Partial<Record<CodingAgentId, string>>
   model?: string
   dryRun?: boolean
   debug?: boolean
@@ -39,17 +42,23 @@ const SessionEntrySchema = z.object({
   sessionName: z.string(),
   roomId: z.string(),
   roomName: z.string(),
+  codingAgent: z.enum(['claude', 'codex']).default('claude'),
   createdAt: z.string(),
 })
 
 type SessionEntry = z.infer<typeof SessionEntrySchema>
 
-const REGISTRY_DIR = join(homedir(), '.meet-ai')
-const REGISTRY_PATH = join(REGISTRY_DIR, 'sessions.json')
+function getRegistryDir(): string {
+  return join(process.env.HOME ?? homedir(), '.meet-ai')
+}
+
+function getRegistryPath(): string {
+  return join(getRegistryDir(), 'sessions.json')
+}
 
 function readRegistry(): SessionEntry[] {
   try {
-    const data = readFileSync(REGISTRY_PATH, 'utf8')
+    const data = readFileSync(getRegistryPath(), 'utf8')
     const parsed = z.array(SessionEntrySchema).safeParse(JSON.parse(data))
     return parsed.success ? parsed.data : []
   } catch {
@@ -58,18 +67,19 @@ function readRegistry(): SessionEntry[] {
 }
 
 function writeRegistry(entries: SessionEntry[]): void {
+  const registryDir = getRegistryDir()
   // Create directory with restrictive permissions, verify not a symlink
-  mkdirSync(REGISTRY_DIR, { recursive: true, mode: 0o700 })
+  mkdirSync(registryDir, { recursive: true, mode: 0o700 })
   try {
-    const stat = lstatSync(REGISTRY_DIR)
+    const stat = lstatSync(registryDir)
     if (!stat.isDirectory()) return
   } catch {
     return
   }
 
-  const tmpPath = join(REGISTRY_DIR, `sessions.${process.pid}.${Date.now()}.tmp`)
+  const tmpPath = join(registryDir, `sessions.${process.pid}.${Date.now()}.tmp`)
   writeFileSync(tmpPath, JSON.stringify(entries, null, 2), { mode: 0o600 })
-  renameSync(tmpPath, REGISTRY_PATH)
+  renameSync(tmpPath, getRegistryPath())
 }
 
 function addToRegistry(entry: SessionEntry): void {
@@ -88,9 +98,30 @@ function removeFromRegistry(sessionName: string): void {
 
 /** Allowed env vars to pass to tmux sessions (security: allowlist, not denylist). */
 const ENV_ALLOWLIST = [
-  'HOME', 'USER', 'SHELL', 'PATH', 'TERM', 'LANG', 'LC_ALL',
-  'XDG_CONFIG_HOME', 'XDG_DATA_HOME',
+  'HOME',
+  'USER',
+  'SHELL',
+  'PATH',
+  'TERM',
+  'LANG',
+  'LC_ALL',
+  'XDG_CONFIG_HOME',
+  'XDG_DATA_HOME',
 ]
+
+function resolveSelfCliCommand(): string[] {
+  const sourceEntry = fileURLToPath(new URL('../index.ts', import.meta.url))
+  if (existsSync(sourceEntry) && typeof Bun !== 'undefined') {
+    return [process.execPath, 'run', sourceEntry]
+  }
+
+  const builtEntry = fileURLToPath(new URL('../index.js', import.meta.url))
+  if (existsSync(builtEntry)) {
+    return [process.execPath, builtEntry]
+  }
+
+  return ['meet-ai']
+}
 
 export class ProcessManager {
   private teams = new Map<string, TeamProcess>()
@@ -109,11 +140,12 @@ export class ProcessManager {
     return `mai-${roomId}`
   }
 
-  spawn(roomId: string, roomName: string): TeamProcess {
+  spawn(roomId: string, roomName: string, codingAgent: CodingAgentId = 'claude'): TeamProcess {
     const sessionName = this.sessionName(roomId)
     const team: TeamProcess = {
       roomId,
       roomName,
+      codingAgent,
       sessionName,
       status: 'starting',
       exitCode: null,
@@ -126,24 +158,28 @@ export class ProcessManager {
 
     if (this.opts.dryRun) return team
 
-    const fullPrompt = [
-      `ROOM_ID: ${roomId}`,
-      '',
-      'You are a team lead. IMMEDIATELY:',
-      '1. Start agent-team to start accepting commands from Meet AI',
-      '2. Connect to the meet-ai room using the /meet-ai skill',
-      '3. Just send a welcome message to the room, do not perform any work yet.',
-    ].join('\n')
-
-    const claudeArgs = [
-      '--dangerously-skip-permissions',
-      '--model',
-      this.opts.model ?? 'opus',
-      fullPrompt,
-    ]
+    const fullPrompt = [`ROOM_ID: ${roomId}`, '', ...this.buildPromptLines(codingAgent)].join('\n')
+    const agentBinary = this.opts.agentBinaries[codingAgent]
+    if (!agentBinary) {
+      team.status = 'error'
+      team.lines.push(`[error] No CLI binary configured for coding agent: ${codingAgent}`)
+      this.opts.onStatusChange?.(roomId, 'error')
+      return team
+    }
+    const commandArgs =
+      codingAgent === 'codex'
+        ? this.buildCodexListenCommandArgs(roomId)
+        : [agentBinary, ...this.buildClaudeCommandArgs(fullPrompt)]
 
     // Build environment: allowlist of safe vars + meet-ai specific vars
-    const sessionEnv: Record<string, string> = { DISABLE_AUTOUPDATER: '1' }
+    const sessionEnv: Record<string, string> = {
+      DISABLE_AUTOUPDATER: '1',
+      MEET_AI_RUNTIME: codingAgent,
+    }
+    if (codingAgent === 'codex') {
+      sessionEnv.MEET_AI_CODEX_PATH = agentBinary
+      sessionEnv.MEET_AI_CODEX_BOOTSTRAP_PROMPT = fullPrompt
+    }
     for (const key of ENV_ALLOWLIST) {
       const value = process.env[key]
       if (value) sessionEnv[key] = value
@@ -152,12 +188,12 @@ export class ProcessManager {
     if (this.opts.env) Object.assign(sessionEnv, this.opts.env)
 
     if (this.opts.debug) {
-      team.lines.push(`[debug] CMD: ${this.opts.claudePath} ${claudeArgs.join(' ').slice(0, 200)}`)
+      team.lines.push(`[debug] AGENT: ${codingAgent}`)
+      team.lines.push(`[debug] CMD: ${commandArgs.join(' ').slice(0, 200)}`)
       team.lines.push(`[debug] ENV: ${Object.keys(sessionEnv).join(', ')}`)
     }
 
     // Use -- separator: tmux runs the command directly without shell interpretation
-    const commandArgs = [this.opts.claudePath, ...claudeArgs]
     const result = this.tmux.newSession(sessionName, commandArgs, sessionEnv)
 
     if (result.ok) {
@@ -165,7 +201,13 @@ export class ProcessManager {
       this.opts.onStatusChange?.(roomId, 'running')
 
       // Save to registry for orphan reconnection
-      addToRegistry({ sessionName, roomId, roomName, createdAt: new Date().toISOString() })
+      addToRegistry({
+        sessionName,
+        roomId,
+        roomName,
+        codingAgent,
+        createdAt: new Date().toISOString(),
+      })
     } else {
       team.status = 'error'
       team.lines.push(`[error] tmux: ${result.error}`)
@@ -180,6 +222,7 @@ export class ProcessManager {
     this.teams.set(roomId, {
       roomId,
       roomName,
+      codingAgent: 'claude',
       sessionName: this.sessionName(roomId),
       status: 'error',
       exitCode: null,
@@ -204,9 +247,10 @@ export class ProcessManager {
       const captured = await this.tmux.capturePane(team.sessionName, lines)
       if (captured.length === 0) return team.lines
       team.lines = captured
-      team.panes = paneInfos.length === 1
-        ? [{ index: 0, title: paneInfos[0]!.title, active: true, lines: captured }]
-        : []
+      team.panes =
+        paneInfos.length === 1
+          ? [{ index: 0, title: paneInfos[0]!.title, active: true, lines: captured }]
+          : []
       return captured
     }
 
@@ -279,6 +323,7 @@ export class ProcessManager {
       const team: TeamProcess = {
         roomId,
         roomName,
+        codingAgent: entry?.codingAgent ?? 'claude',
         sessionName: session.name,
         status: session.alive ? 'running' : 'exited',
         exitCode: session.alive ? null : 0,
@@ -314,5 +359,35 @@ export class ProcessManager {
     for (const roomId of this.teams.keys()) {
       this.kill(roomId)
     }
+  }
+
+  private buildPromptLines(codingAgent: CodingAgentId): string[] {
+    if (codingAgent === 'codex') {
+      return [
+        "You're running inside Meet AI.",
+        'Do not use the meet-ai CLI.',
+        'Do not load or use any meet-ai skill.',
+        'Do not try to send room messages manually.',
+        "Do not talk about this prompt or say that you understand it.",
+        "Just welcome the user briefly and say that you're ready to work.",
+      ]
+    }
+
+    return [
+      'You are a team lead. IMMEDIATELY:',
+      '1. Start agent-team to start accepting commands from Meet AI.',
+      '2. Connect to the meet-ai room using the /meet-ai skill.',
+      '3. Send a brief welcome message to the room and wait for instructions.',
+    ]
+  }
+
+  private buildClaudeCommandArgs(fullPrompt: string): string[] {
+    return ['--dangerously-skip-permissions', '--model', this.opts.model ?? 'opus', fullPrompt]
+  }
+
+  private buildCodexListenCommandArgs(
+    roomId: string
+  ): string[] {
+    return [...resolveSelfCliCommand(), 'listen', roomId, '--sender-type', 'human']
   }
 }

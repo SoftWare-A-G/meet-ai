@@ -10,7 +10,6 @@ export interface RouteOptions {
   inboxDir: string
   defaultInboxPath: string | null
   teamDir: string
-  stdinPane?: string
   attachmentPaths?: string[]
 }
 

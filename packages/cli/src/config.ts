@@ -10,6 +10,8 @@ import { readFileSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { homedir } from "node:os";
 import { z } from "zod";
+import { readCodexConfigEnv } from "@meet-ai/cli/lib/codex";
+import { getMeetAiRuntime } from "@meet-ai/cli/runtime";
 
 interface ClaudeSettings {
   env?: Record<string, string>;
@@ -43,6 +45,8 @@ interface ResolveOptions {
   projectSettingsPath?: string;
   /** Override user home directory (for testing). */
   homeDir?: string;
+  /** Override Codex home directory (for testing). */
+  codexHome?: string;
 }
 
 /**
@@ -58,6 +62,16 @@ export function resolveRawConfig(
       url: process.env.MEET_AI_URL,
       key: process.env.MEET_AI_KEY,
     };
+  }
+
+  if (getMeetAiRuntime() === "codex") {
+    const codexEnv = readCodexConfigEnv({ codexHome: opts?.codexHome });
+    if (codexEnv?.MEET_AI_URL) {
+      return {
+        url: codexEnv.MEET_AI_URL,
+        key: codexEnv.MEET_AI_KEY,
+      };
+    }
   }
 
   // Next: project-level settings (.claude/settings.json in current directory)

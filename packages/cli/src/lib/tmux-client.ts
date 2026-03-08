@@ -59,6 +59,9 @@ export class TmuxClient {
         timeout: 5000,
         stdio: ['pipe', 'pipe', 'pipe'],
       }).trim()
+      if (!result) {
+        return { available: false, version: null, error: 'tmux returned an empty version string' }
+      }
       return { available: true, version: result }
     } catch (error) {
       return {
@@ -76,12 +79,9 @@ export class TmuxClient {
   newSession(name: string, commandArgs: string[], env?: Record<string, string>): TmuxResult {
     validateSessionName(name)
 
-    // Set environment variables on the server temporarily (not via -e flags which are visible in ps)
-    if (env) {
-      for (const [key, value] of Object.entries(env)) {
-        this.exec(['-L', this.server, 'set-environment', '-g', key, value])
-      }
-    }
+    const envArgs = env
+      ? ['env', ...Object.entries(env).map(([key, value]) => `${key}=${value}`)]
+      : []
 
     const args = [
       '-L', this.server,
@@ -91,17 +91,11 @@ export class TmuxClient {
       '-x', '120',
       '-y', '40',
       '--',
+      ...envArgs,
       ...commandArgs,
     ]
 
     const result = this.exec(args)
-
-    // Clean up global env vars immediately (prevents leaking to future sessions)
-    if (env) {
-      for (const key of Object.keys(env)) {
-        this.exec(['-L', this.server, 'set-environment', '-g', '-u', key])
-      }
-    }
 
     if (!result.ok) return result
 

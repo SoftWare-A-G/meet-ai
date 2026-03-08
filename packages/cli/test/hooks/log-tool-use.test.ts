@@ -22,13 +22,15 @@ describe('processHookInput', () => {
     ) as unknown as typeof fetch
     process.env.MEET_AI_URL = 'http://localhost:9999'
     process.env.MEET_AI_KEY = 'mai_test123'
+    delete process.env.MEET_AI_RUNTIME
+    delete process.env.MEET_AI_CODEX_SESSION_ID
+    delete process.env.CODEX_HOME
   })
 
   afterEach(() => {
     rmSync(TEST_DIR, { recursive: true, force: true })
     globalThis.fetch = originalFetch
-    process.env.MEET_AI_URL = originalEnv.MEET_AI_URL
-    process.env.MEET_AI_KEY = originalEnv.MEET_AI_KEY
+    process.env = { ...originalEnv }
     // Clean up msgid files
     try {
       rmSync(`${MSGID_DIR}/meet-ai-hook-sess-1.msgid`)

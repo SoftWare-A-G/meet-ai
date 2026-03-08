@@ -1,4 +1,5 @@
 import type { Message } from '@meet-ai/cli/types'
+import type { CodingAgentId } from '@meet-ai/cli/coding-agents'
 
 export interface ListenOptions {
   exclude?: string
@@ -8,7 +9,7 @@ export interface ListenOptions {
 
 export interface LobbyOptions {
   onRoomCreated?: (id: string, name: string) => void
-  onSpawnRequest?: (roomName: string) => void
+  onSpawnRequest?: (request: { roomName: string; codingAgent: CodingAgentId }) => void
   silent?: boolean
 }
 

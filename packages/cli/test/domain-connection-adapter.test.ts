@@ -335,21 +335,21 @@ test('listenLobby calls onRoomCreated for room_created events', async () => {
 test('listenLobby calls onSpawnRequest for spawn_request events', async () => {
   const transport = createMockTransport()
   const adapter = new ConnectionAdapter(transport, 'https://example.com', 'key')
-  const spawns: string[] = []
+  const spawns: { roomName: string; codingAgent: string }[] = []
 
   adapter.listenLobby({
-    onSpawnRequest: (roomName) => spawns.push(roomName),
+    onSpawnRequest: (request) => spawns.push(request),
   })
 
   await new Promise((resolve) => setTimeout(resolve, 10))
 
   const ws = MockWebSocket.instances[0]
   ws.onmessage?.({
-    data: JSON.stringify({ type: 'spawn_request', room_name: 'new-agent-room' }),
+    data: JSON.stringify({ type: 'spawn_request', room_name: 'new-agent-room', coding_agent: 'codex' }),
   })
 
   expect(spawns).toHaveLength(1)
-  expect(spawns[0]).toBe('new-agent-room')
+  expect(spawns[0]).toEqual({ roomName: 'new-agent-room', codingAgent: 'codex' })
 })
 
 test('listenLobby ignores pong messages', async () => {

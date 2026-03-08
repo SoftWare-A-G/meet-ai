@@ -8,6 +8,7 @@ describe("parseControlMessage", () => {
       room_name: "fix-login",
       prompt: "Fix the login bug",
       model: "opus",
+      coding_agent: "codex",
     });
     const result = parseControlMessage(msg);
     expect(result).toEqual({
@@ -15,6 +16,7 @@ describe("parseControlMessage", () => {
       room_name: "fix-login",
       prompt: "Fix the login bug",
       model: "opus",
+      coding_agent: "codex",
     });
   });
 

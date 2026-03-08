@@ -20,10 +20,7 @@ function makeInput(overrides: Record<string, unknown> = {}) {
       questions: [
         {
           question: 'Pick a color',
-          options: [
-            { label: 'Red', description: 'A warm color' },
-            { label: 'Blue' },
-          ],
+          options: [{ label: 'Red', description: 'A warm color' }, { label: 'Blue' }],
         },
       ],
     },
@@ -47,6 +44,9 @@ describe('processQuestionReview', () => {
     globalThis.fetch = mockFetch as unknown as typeof fetch
     process.env.MEET_AI_URL = MOCK_URL
     process.env.MEET_AI_KEY = MOCK_KEY
+    delete process.env.MEET_AI_RUNTIME
+    delete process.env.MEET_AI_CODEX_SESSION_ID
+    delete process.env.CODEX_HOME
     stderrOutput = ''
     stdoutOutput = ''
     process.stderr.write = ((chunk: string) => {
@@ -68,31 +68,32 @@ describe('processQuestionReview', () => {
   })
 
   it('skips when stdin is not valid JSON', async () => {
-    const { processQuestionReview } = await import('../../src/commands/hook/question-review/usecase')
+    const { processQuestionReview } =
+      await import('../../src/commands/hook/question-review/usecase')
     await processQuestionReview('not json', TEST_DIR)
     expect(stderrOutput).toContain('failed to parse stdin')
     expect(stdoutOutput).toBe('')
   })
 
   it('skips when session_id is missing', async () => {
-    const { processQuestionReview } = await import('../../src/commands/hook/question-review/usecase')
+    const { processQuestionReview } =
+      await import('../../src/commands/hook/question-review/usecase')
     await processQuestionReview(makeInput({ session_id: '' }), TEST_DIR)
     expect(stderrOutput).toContain('missing session_id or questions')
     expect(stdoutOutput).toBe('')
   })
 
   it('skips when questions array is empty', async () => {
-    const { processQuestionReview } = await import('../../src/commands/hook/question-review/usecase')
-    await processQuestionReview(
-      makeInput({ tool_input: { questions: [] } }),
-      TEST_DIR,
-    )
+    const { processQuestionReview } =
+      await import('../../src/commands/hook/question-review/usecase')
+    await processQuestionReview(makeInput({ tool_input: { questions: [] } }), TEST_DIR)
     expect(stderrOutput).toContain('missing session_id or questions')
     expect(stdoutOutput).toBe('')
   })
 
   it('skips when no room found for session', async () => {
-    const { processQuestionReview } = await import('../../src/commands/hook/question-review/usecase')
+    const { processQuestionReview } =
+      await import('../../src/commands/hook/question-review/usecase')
     // No team file written — room lookup will fail
     await processQuestionReview(makeInput(), TEST_DIR)
     expect(stderrOutput).toContain('no room found for session')
@@ -100,7 +101,8 @@ describe('processQuestionReview', () => {
   })
 
   it('skips when env vars are missing', async () => {
-    const { processQuestionReview } = await import('../../src/commands/hook/question-review/usecase')
+    const { processQuestionReview } =
+      await import('../../src/commands/hook/question-review/usecase')
     writeTeamFile('my-team', { session_id: 'sess-1', room_id: 'room-abc' })
     delete process.env.MEET_AI_URL
     delete process.env.MEET_AI_KEY
@@ -110,7 +112,8 @@ describe('processQuestionReview', () => {
   })
 
   it('creates question review and outputs answers on success', async () => {
-    const { processQuestionReview } = await import('../../src/commands/hook/question-review/usecase')
+    const { processQuestionReview } =
+      await import('../../src/commands/hook/question-review/usecase')
     writeTeamFile('my-team', { session_id: 'sess-1', room_id: 'room-abc' })
 
     // Mock create review
@@ -124,10 +127,10 @@ describe('processQuestionReview', () => {
     // Mock poll — answered immediately
     const answers = { 'Pick a color': 'Red' }
     mockFetch.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ status: 'answered', answers_json: JSON.stringify(answers) }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
-      )
+      new Response(JSON.stringify({ status: 'answered', answers_json: JSON.stringify(answers) }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
     )
 
     await processQuestionReview(makeInput(), TEST_DIR, { pollInterval: 10, pollTimeout: 500 })
@@ -141,7 +144,8 @@ describe('processQuestionReview', () => {
   })
 
   it('handles pending then answered poll', async () => {
-    const { processQuestionReview } = await import('../../src/commands/hook/question-review/usecase')
+    const { processQuestionReview } =
+      await import('../../src/commands/hook/question-review/usecase')
     writeTeamFile('my-team', { session_id: 'sess-1', room_id: 'room-abc' })
 
     // Mock create review
@@ -163,10 +167,10 @@ describe('processQuestionReview', () => {
     // Second poll — answered
     const answers = { 'Pick a color': 'Blue' }
     mockFetch.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ status: 'answered', answers_json: JSON.stringify(answers) }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
-      )
+      new Response(JSON.stringify({ status: 'answered', answers_json: JSON.stringify(answers) }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
     )
 
     await processQuestionReview(makeInput(), TEST_DIR, { pollInterval: 10, pollTimeout: 500 })
@@ -177,7 +181,8 @@ describe('processQuestionReview', () => {
   })
 
   it('handles expired status — no stdout output', async () => {
-    const { processQuestionReview } = await import('../../src/commands/hook/question-review/usecase')
+    const { processQuestionReview } =
+      await import('../../src/commands/hook/question-review/usecase')
     writeTeamFile('my-team', { session_id: 'sess-1', room_id: 'room-abc' })
 
     // Mock create review
@@ -203,7 +208,8 @@ describe('processQuestionReview', () => {
   })
 
   it('handles malformed answers_json gracefully (hardening)', async () => {
-    const { processQuestionReview } = await import('../../src/commands/hook/question-review/usecase')
+    const { processQuestionReview } =
+      await import('../../src/commands/hook/question-review/usecase')
     writeTeamFile('my-team', { session_id: 'sess-1', room_id: 'room-abc' })
 
     // Mock create review
@@ -216,10 +222,10 @@ describe('processQuestionReview', () => {
 
     // Poll returns answered but with broken JSON
     mockFetch.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ status: 'answered', answers_json: '{broken json!!!' }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
-      )
+      new Response(JSON.stringify({ status: 'answered', answers_json: '{broken json!!!' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
     )
 
     await processQuestionReview(makeInput(), TEST_DIR, { pollInterval: 10, pollTimeout: 500 })
@@ -230,13 +236,12 @@ describe('processQuestionReview', () => {
   })
 
   it('handles create review failure', async () => {
-    const { processQuestionReview } = await import('../../src/commands/hook/question-review/usecase')
+    const { processQuestionReview } =
+      await import('../../src/commands/hook/question-review/usecase')
     writeTeamFile('my-team', { session_id: 'sess-1', room_id: 'room-abc' })
 
     // Mock create review — server error
-    mockFetch.mockResolvedValueOnce(
-      new Response('Internal Server Error', { status: 500 })
-    )
+    mockFetch.mockResolvedValueOnce(new Response('Internal Server Error', { status: 500 }))
 
     await processQuestionReview(makeInput(), TEST_DIR, { pollInterval: 10, pollTimeout: 500 })
 
@@ -245,7 +250,8 @@ describe('processQuestionReview', () => {
   })
 
   it('handles poll timeout — sends timeout message and expires review', async () => {
-    const { processQuestionReview } = await import('../../src/commands/hook/question-review/usecase')
+    const { processQuestionReview } =
+      await import('../../src/commands/hook/question-review/usecase')
     writeTeamFile('my-team', { session_id: 'sess-1', room_id: 'room-abc' })
 
     // Mock create review
@@ -274,7 +280,8 @@ describe('processQuestionReview', () => {
   })
 
   it('never throws — always exits cleanly on fetch network error', async () => {
-    const { processQuestionReview } = await import('../../src/commands/hook/question-review/usecase')
+    const { processQuestionReview } =
+      await import('../../src/commands/hook/question-review/usecase')
     writeTeamFile('my-team', { session_id: 'sess-1', room_id: 'room-abc' })
 
     // Mock create review — network error

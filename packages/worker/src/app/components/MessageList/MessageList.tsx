@@ -41,7 +41,7 @@ type RenderItem =
   | { kind: 'question'; msg: DisplayMessage; index: number }
   | { kind: 'plan-review'; msg: DisplayMessage; index: number }
   | { kind: 'permission-review'; msg: DisplayMessage; index: number }
-  | { kind: 'spawn-request'; msg: DisplayMessage; index: number; roomName: string }
+  | { kind: 'spawn-request'; msg: DisplayMessage; index: number; roomName: string; codingAgent?: string }
   | { kind: 'log-group'; logs: DisplayMessage[] }
   | { kind: 'diff-log'; logs: DisplayMessage[] }
 
@@ -92,16 +92,20 @@ function groupMessages(messages: DisplayMessage[]): RenderItem[] {
 
       // Detect spawn_request messages by content
       let spawnRoomName: string | null = null
+      let spawnCodingAgent: string | undefined
       try {
         const parsed = JSON.parse(msg.content)
         if (parsed?.type === 'spawn_request' && parsed?.room_name) {
           spawnRoomName = parsed.room_name
+          if (typeof parsed?.coding_agent === 'string') {
+            spawnCodingAgent = parsed.coding_agent
+          }
         }
       } catch { /* not JSON */ }
 
       // Hook anchor messages never render as bubbles — they only exist as log group anchors
       if (spawnRoomName) {
-        items.push({ kind: 'spawn-request', msg, index, roomName: spawnRoomName })
+        items.push({ kind: 'spawn-request', msg, index, roomName: spawnRoomName, codingAgent: spawnCodingAgent })
       } else if (isQuestion) {
         items.push({ kind: 'question', msg, index })
       } else if (isPlanReview) {
@@ -215,6 +219,7 @@ export default function MessageList({ messages, attachmentCounts, planDecisions,
               <SpawnRequestCard
                 key={`spawn-${item.msg.id || item.msg.created_at}-${item.index}`}
                 roomName={item.roomName}
+                codingAgent={item.codingAgent}
                 sender={item.msg.sender}
                 timestamp={item.msg.created_at}
               />

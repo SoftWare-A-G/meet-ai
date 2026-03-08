@@ -1,6 +1,7 @@
 import { Box, Text, useInput, useApp, useStdout, useStdin } from 'ink'
 import { useState, useCallback, useEffect, useRef, Component, type ReactNode } from 'react'
 import { ProcessManager } from '@meet-ai/cli/lib/process-manager'
+import type { CodingAgentDefinition, CodingAgentId } from '@meet-ai/cli/coding-agents'
 import { Dashboard } from './dashboard'
 import { SpawnDialog } from './spawn-dialog'
 import { StatusBar } from './status-bar'
@@ -29,12 +30,13 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
 interface AppProps {
   processManager: ProcessManager
   client: MeetAiClient
+  codingAgents: readonly CodingAgentDefinition[]
   /** Called before attach to close WebSocket, and after to reconnect. */
   onAttach?: () => void
   onDetach?: () => void
 }
 
-function AppInner({ processManager, client, onAttach, onDetach }: AppProps) {
+function AppInner({ processManager, client, codingAgents, onAttach, onDetach }: AppProps) {
   const { exit } = useApp()
   const { stdout } = useStdout()
   const { setRawMode } = useStdin()
@@ -45,8 +47,8 @@ function AppInner({ processManager, client, onAttach, onDetach }: AppProps) {
   const [, setRenderTick] = useState(0)
 
   const terminalHeight = stdout?.rows ?? 24
-  // Spawn dialog (4 lines with border) is taller than status bar (1 line)
-  const bottomHeight = showSpawn ? 4 : killTargetId ? 1 : 1
+  // Spawn dialog is 6 rows including borders after the coding-agent selector was added.
+  const bottomHeight = showSpawn ? 6 : killTargetId ? 1 : 1
   const dashboardHeight = terminalHeight - bottomHeight
 
   // Ref for focused room ID — polling reads this, not stale state
@@ -70,10 +72,10 @@ function AppInner({ processManager, client, onAttach, onDetach }: AppProps) {
 
   // Create a new room then spawn
   const handleSpawn = useCallback(
-    async (roomName: string) => {
+    async (roomName: string, codingAgent: CodingAgentId) => {
       try {
         const room = await client.createRoom(roomName)
-        processManager.spawn(room.id, roomName)
+        processManager.spawn(room.id, roomName, codingAgent)
         refreshTeams()
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error)
@@ -206,9 +208,10 @@ function AppInner({ processManager, client, onAttach, onDetach }: AppProps) {
         </Box>
       ) : showSpawn ? (
         <SpawnDialog
-          onSubmit={name => {
+          codingAgents={[...codingAgents]}
+          onSubmit={(roomName, codingAgent) => {
             setShowSpawn(false)
-            handleSpawn(name)
+            handleSpawn(roomName, codingAgent)
           }}
           onCancel={() => setShowSpawn(false)}
         />

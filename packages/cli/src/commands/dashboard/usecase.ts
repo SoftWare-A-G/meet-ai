@@ -1,11 +1,13 @@
 import { render } from 'ink'
 import React from 'react'
+import { CODING_AGENT_DEFINITIONS } from '@meet-ai/cli/coding-agents'
+import { findClaudeCli, findCodexCli } from '@meet-ai/cli/spawner'
 import { ProcessManager } from '@meet-ai/cli/lib/process-manager'
 import { TmuxClient, parseVersion } from '@meet-ai/cli/lib/tmux-client'
-import { findClaudeCli } from '@meet-ai/cli/spawner'
 import { App } from '@meet-ai/cli/tui/app'
 import type { MeetAiConfig } from '@meet-ai/cli/config'
 import type { MeetAiClient } from '@meet-ai/cli/types'
+import type { CodingAgentId } from '@meet-ai/cli/coding-agents'
 
 interface DashboardOptions {
   debug?: boolean
@@ -31,10 +33,23 @@ export async function startDashboard(
     process.exit(1)
   }
 
-  const claudePath = findClaudeCli()
+  const agentBinaries: Partial<Record<CodingAgentId, string>> = {}
+  try {
+    agentBinaries.claude = findClaudeCli()
+  } catch {}
+  try {
+    agentBinaries.codex = findCodexCli()
+  } catch {}
+
+  const availableCodingAgents = CODING_AGENT_DEFINITIONS.filter(agent => Boolean(agentBinaries[agent.id]))
+  if (availableCodingAgents.length === 0) {
+    console.error('No supported coding agent CLI was found.')
+    console.error('Install Claude Code or Codex, or set MEET_AI_CLAUDE_PATH / MEET_AI_CODEX_PATH.')
+    process.exit(1)
+  }
 
   const processManager = new ProcessManager({
-    claudePath,
+    agentBinaries,
     debug: options?.debug,
     tmux,
     env: {
@@ -63,14 +78,15 @@ export async function startDashboard(
     try {
       lobbyWs = client.listenLobby({
         silent: true,
-        onSpawnRequest: async roomName => {
-          if (pendingSpawns.has(roomName)) return
-          pendingSpawns.add(roomName)
+        onSpawnRequest: async ({ roomName, codingAgent }) => {
+          const key = `${roomName}:${codingAgent}`
+          if (pendingSpawns.has(key)) return
+          pendingSpawns.add(key)
           try {
             const room = await client.createRoom(roomName)
-            processManager.spawn(room.id, roomName)
+            processManager.spawn(room.id, roomName, codingAgent)
           } finally {
-            pendingSpawns.delete(roomName)
+            pendingSpawns.delete(key)
           }
         },
       })
@@ -93,6 +109,7 @@ export async function startDashboard(
   const element = React.createElement(App, {
     processManager,
     client,
+    codingAgents: availableCodingAgents,
     onAttach: () => {
       // Intentionally close lobby WS during attach (blocked event loop)
       lobbyWs?.close()

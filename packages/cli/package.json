@@ -28,6 +28,7 @@
   },
   "scripts": {
     "start": "bun run src/index.ts",
+    "generate:app-server-types": "codex app-server generate-ts --experimental --out src/generated/codex-app-server",
     "build": "bun build src/index.ts --outdir dist --target node --format esm",
     "prepublishOnly": "bun run build",
     "test": "bun test",
