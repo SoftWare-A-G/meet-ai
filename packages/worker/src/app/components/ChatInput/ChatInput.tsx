@@ -119,6 +119,12 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
   const handleMentionsChange = useCallback((event: MentionsInputChangeEvent) => {
     setValue(event.value)
     setPlainText(event.plainTextValue)
+    // Workaround: mobile browsers may not fire selectionchange reliably,
+    // which prevents react-mentions-ts from detecting @ triggers.
+    // Dispatching a synthetic event ensures trigger detection works on mobile.
+    requestAnimationFrame(() => {
+      document.dispatchEvent(new Event('selectionchange'))
+    })
   }, [])
 
   const addFiles = useCallback(async (files: File[]) => {
