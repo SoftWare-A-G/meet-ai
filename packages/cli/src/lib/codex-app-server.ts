@@ -244,6 +244,11 @@ function isTurnCompletedNotification(params: unknown): params is TurnCompletedNo
   )
 }
 
+function matchesActiveThread(threadId: string | null, params: unknown): boolean {
+  if (!threadId || !isObject(params) || typeof params.threadId !== 'string') return false
+  return params.threadId === threadId
+}
+
 export class CodexAppServerBridge {
   private threadId: string | null
   private readonly cwd?: string
@@ -522,6 +527,7 @@ export class CodexAppServerBridge {
     }
 
     if (message.method === 'item/agentMessage/delta') {
+      if (!matchesActiveThread(this.threadId, message.params)) return
       const event = extractAgentMessageDelta(message.params)
       if (event.text) {
         this.emitEvent({
@@ -535,6 +541,7 @@ export class CodexAppServerBridge {
     }
 
     if (message.method === 'item/completed') {
+      if (!matchesActiveThread(this.threadId, message.params)) return
       const event = extractCompletedAgentMessage(message.params)
       if (event?.text) {
         this.emitEvent({

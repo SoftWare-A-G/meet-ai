@@ -51,7 +51,7 @@ interface ResolveOptions {
 
 /**
  * Resolve raw config values from all sources (before validation).
- * Priority: process.env > project settings > user settings > defaults
+ * Priority: process.env > project settings > Codex config > user settings > defaults
  */
 export function resolveRawConfig(
   opts?: ResolveOptions,
@@ -64,16 +64,6 @@ export function resolveRawConfig(
     };
   }
 
-  if (getMeetAiRuntime() === "codex") {
-    const codexEnv = readCodexConfigEnv({ codexHome: opts?.codexHome });
-    if (codexEnv?.MEET_AI_URL) {
-      return {
-        url: codexEnv.MEET_AI_URL,
-        key: codexEnv.MEET_AI_KEY,
-      };
-    }
-  }
-
   // Next: project-level settings (.claude/settings.json in current directory)
   const projectSettingsPath = opts?.projectSettingsPath ??
     resolve("./.claude/settings.json");
@@ -84,6 +74,16 @@ export function resolveRawConfig(
       url: projectSettings.env.MEET_AI_URL,
       key: projectSettings.env.MEET_AI_KEY,
     };
+  }
+
+  if (getMeetAiRuntime() === "codex") {
+    const codexEnv = readCodexConfigEnv({ codexHome: opts?.codexHome });
+    if (codexEnv?.MEET_AI_URL) {
+      return {
+        url: codexEnv.MEET_AI_URL,
+        key: codexEnv.MEET_AI_KEY,
+      };
+    }
   }
 
   // Next: user-level settings (~/.claude/settings.json)
@@ -109,7 +109,7 @@ export function resolveRawConfig(
 
 /**
  * Get meet-ai configuration from all sources, validated with zod.
- * Priority: process.env > project settings > user settings > defaults
+ * Priority: process.env > project settings > Codex config > user settings > defaults
  */
 export function getMeetAiConfig(opts?: ResolveOptions): MeetAiConfig {
   const raw = resolveRawConfig(opts);

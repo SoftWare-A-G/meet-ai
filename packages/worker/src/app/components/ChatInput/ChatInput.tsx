@@ -10,6 +10,13 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 
 const preventBlur = (e: { preventDefault: () => void }) => e.preventDefault()
 
+// Wrap mentions suggestions to prevent input blur on touch devices.
+// The library only uses onMouseDown to set a flag that prevents blur,
+// but on mobile touchstart fires before mousedown, causing premature blur.
+const mentionsSuggestionsContainer = (children: React.ReactElement) => (
+  <div onTouchStart={preventBlur}>{children}</div>
+)
+
 type PendingFile = {
   file: File
   status: 'pending' | 'uploading' | 'done' | 'error'
@@ -29,7 +36,7 @@ const mentionsClassNames: MentionsInputClassNames = {
   input: 'w-full border-none outline-none bg-transparent text-msg-text px-4 py-3 min-h-[48px] max-h-[200px] text-base font-[inherit] resize-none leading-relaxed overflow-y-auto placeholder:opacity-50',
   suggestions: 'rounded-lg border border-border bg-input-bg shadow-xl',
   suggestionsList: 'max-h-48 overflow-y-auto',
-  suggestionItem: 'px-3 py-2 text-sm text-msg-text cursor-pointer hover:bg-white/10',
+  suggestionItem: 'px-3 py-2 text-sm text-msg-text cursor-pointer hover:bg-white/10 active:bg-white/15',
   suggestionItemFocused: 'bg-white/15',
   suggestionHighlight: 'font-semibold text-active',
 }
@@ -285,6 +292,7 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
           autoResize
           suggestionsPlacement="above"
           classNames={mentionsClassNames}
+          customSuggestionsContainer={mentionsSuggestionsContainer}
         >
           <Mention
             trigger="@"

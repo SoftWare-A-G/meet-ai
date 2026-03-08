@@ -83,8 +83,21 @@ export async function startDashboard(
           if (pendingSpawns.has(key)) return
           pendingSpawns.add(key)
           try {
+            // Validate agent is available before creating a room
+            if (!agentBinaries[codingAgent]) {
+              processManager.addError(
+                `spawn-failed-${Date.now()}`,
+                roomName,
+                `Coding agent "${codingAgent}" is not installed. Install it or set the corresponding env var.`
+              )
+              return
+            }
             const room = await client.createRoom(roomName)
-            processManager.spawn(room.id, roomName, codingAgent)
+            const team = processManager.spawn(room.id, roomName, codingAgent)
+            // If spawn failed after room creation, surface the error with the real room ID
+            if (team.status === 'error') {
+              console.error(`[dashboard] spawn failed for room "${roomName}": ${team.lines.join('; ')}`)
+            }
           } finally {
             pendingSpawns.delete(key)
           }

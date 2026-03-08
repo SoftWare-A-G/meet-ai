@@ -282,4 +282,84 @@ describe('CodexAppServerBridge', () => {
       },
     ])
   })
+
+  it('ignores agent message notifications from other threads', async () => {
+    const fake = createFakeAppServer()
+    const events: CodexAppServerEvent[] = []
+    const bridge = new CodexAppServerBridge({
+      threadId: 'thread-1',
+      spawnFn: fake.spawnFn,
+    })
+
+    bridge.setEventHandler((event) => {
+      events.push(event)
+    })
+
+    await bridge.injectText({
+      sender: 'alice',
+      content: 'hello from web',
+    })
+
+    emitNotification(fake.child, {
+      method: 'item/agentMessage/delta',
+      params: {
+        itemId: 'item-foreign',
+        turnId: 'turn-foreign',
+        threadId: 'thread-2',
+        delta: 'foreign delta',
+      },
+    })
+    emitNotification(fake.child, {
+      method: 'item/completed',
+      params: {
+        threadId: 'thread-2',
+        turnId: 'turn-foreign',
+        item: {
+          id: 'item-foreign',
+          type: 'agentMessage',
+          text: 'foreign completed',
+          phase: null,
+        },
+      },
+    })
+    emitNotification(fake.child, {
+      method: 'item/agentMessage/delta',
+      params: {
+        itemId: 'item-1',
+        turnId: 'turn-started',
+        threadId: 'thread-1',
+        delta: 'local delta',
+      },
+    })
+    emitNotification(fake.child, {
+      method: 'item/completed',
+      params: {
+        threadId: 'thread-1',
+        turnId: 'turn-started',
+        item: {
+          id: 'item-1',
+          type: 'agentMessage',
+          text: 'local completed',
+          phase: null,
+        },
+      },
+    })
+
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(events).toEqual([
+      {
+        type: 'agent_message_delta',
+        itemId: 'item-1',
+        turnId: 'turn-started',
+        text: 'local delta',
+      },
+      {
+        type: 'agent_message_completed',
+        itemId: 'item-1',
+        turnId: 'turn-started',
+        text: 'local completed',
+      },
+    ])
+  })
 })

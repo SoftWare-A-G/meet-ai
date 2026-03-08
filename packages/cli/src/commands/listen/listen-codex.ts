@@ -40,8 +40,24 @@ function normalizeFinalText(value: string): string {
   return value.replace(/\r\n/g, '\n').trim()
 }
 
-function makeMessageKey(event: { turnId: string | null; itemId: string | null }): string {
-  return event.itemId ?? event.turnId ?? 'unknown'
+function makeTurnKey(event: { turnId: string | null; itemId: string | null }): string {
+  return event.turnId ?? event.itemId ?? 'unknown'
+}
+
+type TurnMessageState = {
+  itemOrder: string[]
+  itemTexts: Map<string, string>
+  sent: boolean
+  sending: boolean
+}
+
+function buildPublishedText(state: TurnMessageState): string {
+  return normalizeFinalText(
+    state.itemOrder
+      .map(itemId => normalizeFinalText(state.itemTexts.get(itemId) ?? ''))
+      .filter(Boolean)
+      .join('\n\n')
+  )
 }
 
 export function listenCodex(
@@ -76,7 +92,7 @@ export function listenCodex(
     })
   const bootstrapPrompt = process.env.MEET_AI_CODEX_BOOTSTRAP_PROMPT?.trim()
   const codexSender = process.env.MEET_AI_AGENT_NAME?.trim() || 'codex'
-  const messageState = new Map<string, { turnId: string | null; text: string; sent: boolean; sending: boolean }>()
+  const messageState = new Map<string, TurnMessageState>()
   let publishQueue: Promise<void> = Promise.resolve()
 
   const enqueuePublish = (task: () => Promise<void>) => {
@@ -87,7 +103,7 @@ export function listenCodex(
 
   const publishBufferedMessage = (key: string) => {
     const state = messageState.get(key)
-    const text = normalizeFinalText(state?.text ?? '')
+    const text = state ? buildPublishedText(state) : ''
     if (!state || state.sent || state.sending || !text) return
 
     state.sending = true
@@ -102,38 +118,41 @@ export function listenCodex(
   }
 
   const mergeEventText = (event: Extract<CodexAppServerEvent, { type: 'agent_message_delta' | 'agent_message_completed' }>) => {
-    const key = makeMessageKey(event)
+    const key = makeTurnKey(event)
+    const itemKey = event.itemId ?? key
     const nextText = event.text.replace(/\r\n/g, '\n')
     if (!nextText) return
 
     const existing = messageState.get(key)
     if (!existing) {
-      messageState.set(key, { turnId: event.turnId, text: nextText, sent: false, sending: false })
+      messageState.set(key, {
+        itemOrder: [itemKey],
+        itemTexts: new Map([[itemKey, nextText]]),
+        sent: false,
+        sending: false,
+      })
       return
     }
 
-    existing.turnId = event.turnId ?? existing.turnId
+    if (!existing.itemTexts.has(itemKey)) existing.itemOrder.push(itemKey)
 
     if (event.type === 'agent_message_completed') {
-      existing.text = nextText
+      existing.itemTexts.set(itemKey, nextText)
       return
     }
 
-    existing.text += nextText
+    existing.itemTexts.set(itemKey, `${existing.itemTexts.get(itemKey) ?? ''}${nextText}`)
   }
 
   codexBridge.setEventHandler((event) => {
     if (event.type === 'agent_message_delta' || event.type === 'agent_message_completed') {
       mergeEventText(event)
-      if (event.type === 'agent_message_completed') {
-        publishBufferedMessage(makeMessageKey(event))
-      }
       return
     }
 
     if (event.type === 'turn_completed') {
       for (const [key, state] of messageState.entries()) {
-        if (state.turnId === event.turnId || (!event.turnId && !state.sent)) {
+        if (key === event.turnId || (!event.turnId && !state.sent)) {
           publishBufferedMessage(key)
         }
       }

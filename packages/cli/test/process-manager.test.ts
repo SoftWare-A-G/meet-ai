@@ -115,6 +115,8 @@ describe('ProcessManager', () => {
   })
 
   test('codex spawn passes runtime env directly into tmux session command', () => {
+    process.env.CODEX_HOME = '/tmp/custom-codex-home'
+    process.env.MEET_AI_CODEX_STATE_DIR = '/tmp/custom-codex-state'
     const tmux = {
       newSession: (_name: string, _commandArgs: string[], env?: Record<string, string>) => {
         expect(env?.MEET_AI_RUNTIME).toBe('codex')
@@ -122,6 +124,8 @@ describe('ProcessManager', () => {
         expect(env?.MEET_AI_CODEX_BOOTSTRAP_PROMPT).toContain('ROOM_ID: room-1')
         expect(env?.MEET_AI_AGENT_NAME).toBe('codex')
         expect(env?.MEET_AI_CODEX_RESUME_SESSION).toBeUndefined()
+        expect(env?.CODEX_HOME).toBe('/tmp/custom-codex-home')
+        expect(env?.MEET_AI_CODEX_STATE_DIR).toBe('/tmp/custom-codex-state')
         return { ok: true, output: '' }
       },
       killSession: () => ({ ok: true, output: '' }),
@@ -132,6 +136,15 @@ describe('ProcessManager', () => {
     const team = pm.spawn('room-1', 'test-room', 'codex')
 
     expect(team.status).toBe('running')
+    delete process.env.CODEX_HOME
+    delete process.env.MEET_AI_CODEX_STATE_DIR
+  })
+
+  test('spawn returns error when coding agent binary is not configured', () => {
+    pm = new ProcessManager({ agentBinaries: { claude: 'echo' }, dryRun: false })
+    const team = pm.spawn('room-1', 'test-room', 'codex')
+    expect(team.status).toBe('error')
+    expect(team.lines[0]).toContain('No CLI binary configured for coding agent: codex')
   })
 
   test('codex bootstrap prompt does not instruct skill loading', () => {

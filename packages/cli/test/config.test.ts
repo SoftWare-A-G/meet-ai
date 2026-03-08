@@ -15,6 +15,7 @@ beforeEach(() => {
     MEET_AI_URL: process.env.MEET_AI_URL,
     MEET_AI_KEY: process.env.MEET_AI_KEY,
     MEET_AI_RUNTIME: process.env.MEET_AI_RUNTIME,
+    CODEX_HOME: process.env.CODEX_HOME,
   };
 });
 
@@ -63,6 +64,8 @@ test("defaults to https://meet-ai.cc when no config sources exist", () => {
   // GIVEN: no env vars are set and settings file paths point to non-existent locations
   delete process.env.MEET_AI_URL;
   delete process.env.MEET_AI_KEY;
+  delete process.env.MEET_AI_RUNTIME;
+  delete process.env.CODEX_HOME;
   const noFiles = { projectSettingsPath: "/nonexistent", homeDir: "/nonexistent" };
 
   // WHEN: raw config is resolved
@@ -77,6 +80,8 @@ test("default config passes validation", () => {
   // GIVEN: no env vars are set and settings file paths point to non-existent locations
   delete process.env.MEET_AI_URL;
   delete process.env.MEET_AI_KEY;
+  delete process.env.MEET_AI_RUNTIME;
+  delete process.env.CODEX_HOME;
   const noFiles = { projectSettingsPath: "/nonexistent", homeDir: "/nonexistent" };
 
   // WHEN: getMeetAiConfig is called
@@ -111,6 +116,41 @@ test("loads MEET_AI_* from Codex config.toml env section when runtime is codex",
 
   expect(raw.url).toBe("https://codex-config.example.com");
   expect(raw.key).toBe("mai_codex_123");
+});
+
+test("project settings override Codex config when runtime is codex", async () => {
+  process.env.MEET_AI_RUNTIME = "codex";
+  delete process.env.MEET_AI_URL;
+  delete process.env.MEET_AI_KEY;
+  delete process.env.CODEX_HOME;
+
+  const codexHome = "/tmp/meet-ai-codex-config-priority";
+  const projectRoot = "/tmp/meet-ai-project-priority";
+  rmSync(codexHome, { recursive: true, force: true });
+  rmSync(projectRoot, { recursive: true, force: true });
+  mkdirSync(codexHome, { recursive: true });
+  mkdirSync(projectRoot, { recursive: true });
+
+  await Bun.write(
+    `${codexHome}/config.toml`,
+    ['[env]', 'MEET_AI_URL = "https://codex-config.example.com"', 'MEET_AI_KEY = "mai_codex_123"', ""].join("\n"),
+  );
+
+  const projectSettingsPath = `${projectRoot}/settings.json`;
+  await Bun.write(
+    projectSettingsPath,
+    JSON.stringify({
+      env: {
+        MEET_AI_URL: "https://project-settings.example.com",
+        MEET_AI_KEY: "mai_project_123",
+      },
+    }),
+  );
+
+  const raw = resolveRawConfig({ codexHome, projectSettingsPath, homeDir: "/nonexistent" });
+
+  expect(raw.url).toBe("https://project-settings.example.com");
+  expect(raw.key).toBe("mai_project_123");
 });
 
 // --- URL validation ---

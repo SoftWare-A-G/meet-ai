@@ -395,7 +395,7 @@ describe('listen', () => {
     )
   })
 
-  it('publishes completed Codex assistant output back to the room', async () => {
+  it('publishes completed Codex assistant output back to the room on turn completion', async () => {
     process.env.MEET_AI_RUNTIME = 'codex'
     process.env.CODEX_HOME = codexHome
     process.env.MEET_AI_CODEX_SESSION_ID = 'codex-sess-6'
@@ -431,6 +431,10 @@ describe('listen', () => {
       itemId: 'item-1',
       turnId: 'turn-1',
       text: 'Hello world',
+    })
+    codexBridge.emitEvent({
+      type: 'turn_completed',
+      turnId: 'turn-1',
     })
 
     await new Promise(resolve => setTimeout(resolve, 0))
@@ -536,6 +540,58 @@ describe('listen', () => {
       'df75b1db-f583-4d9f-8e34-9b3d614f152c',
       'codex',
       'Hello world'
+    )
+  })
+
+  it('publishes a single combined Codex reply when one turn emits multiple completed items', async () => {
+    process.env.MEET_AI_RUNTIME = 'codex'
+    process.env.CODEX_HOME = codexHome
+    process.env.MEET_AI_CODEX_SESSION_ID = 'codex-sess-9'
+
+    const client = mockClient({
+      sendMessage: mock(() =>
+        Promise.resolve({
+          id: 'reply-4',
+          roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c',
+          sender: 'codex',
+          sender_type: 'agent',
+          content: 'First answer\n\nSecond answer',
+        })
+      ),
+    })
+    const codexBridge = makeCodexBridgeMock()
+
+    listen(
+      client,
+      { roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c', senderType: 'human' },
+      undefined,
+      codexBridge
+    )
+
+    codexBridge.emitEvent({
+      type: 'agent_message_completed',
+      itemId: 'item-4a',
+      turnId: 'turn-4',
+      text: 'First answer',
+    })
+    codexBridge.emitEvent({
+      type: 'agent_message_completed',
+      itemId: 'item-4b',
+      turnId: 'turn-4',
+      text: 'Second answer',
+    })
+    codexBridge.emitEvent({
+      type: 'turn_completed',
+      turnId: 'turn-4',
+    })
+
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(client.sendMessage).toHaveBeenCalledTimes(1)
+    expect(client.sendMessage).toHaveBeenCalledWith(
+      'df75b1db-f583-4d9f-8e34-9b3d614f152c',
+      'codex',
+      'First answer\n\nSecond answer'
     )
   })
 })

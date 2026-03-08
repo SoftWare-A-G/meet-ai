@@ -107,6 +107,8 @@ const ENV_ALLOWLIST = [
   'LC_ALL',
   'XDG_CONFIG_HOME',
   'XDG_DATA_HOME',
+  'CODEX_HOME',
+  'MEET_AI_CODEX_STATE_DIR',
 ]
 
 function resolveSelfCliCommand(): string[] {
