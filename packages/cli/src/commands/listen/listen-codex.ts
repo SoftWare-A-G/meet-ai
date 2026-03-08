@@ -33,11 +33,6 @@ function formatCodexInjectionOutput(result: { mode: 'start' | 'steer'; turnId: s
   return `[meet-ai->codex] ${result.mode} ${result.turnId}\n`
 }
 
-function isTruthyEnv(value: string | undefined): boolean {
-  if (!value) return false
-  const normalized = value.trim().toLowerCase()
-  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on'
-}
 
 function normalizeFinalText(value: string): string {
   return value.replace(/\r\n/g, '\n').trim()
@@ -180,7 +175,7 @@ export function listenCodex(
     createCodexAppServerBridge({
       threadId: null,
       cwd: process.cwd(),
-      experimentalApi: isTruthyEnv(process.env.MEET_AI_CODEX_APP_SERVER_EXPERIMENTAL) || !!taskToolCallHandler,
+      experimentalApi: true,
       ...(taskToolCallHandler ? { dynamicTools: TASK_TOOL_SPECS, toolCallHandler: taskToolCallHandler } : {}),
     })
   const bootstrapPrompt = process.env.MEET_AI_CODEX_BOOTSTRAP_PROMPT?.trim()
