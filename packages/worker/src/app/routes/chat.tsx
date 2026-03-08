@@ -250,6 +250,7 @@ function ChatLayout({
         <TaskBoardModal
           roomId={params.id}
           tasksInfo={tasksInfo}
+          teamInfo={teamInfo}
           onClose={() => setShowTaskBoard(false)}
         />
       )}

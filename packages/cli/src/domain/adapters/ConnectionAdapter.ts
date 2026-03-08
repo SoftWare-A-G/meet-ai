@@ -101,7 +101,13 @@ export default class ConnectionAdapter implements IConnectionAdapter {
             : new TextDecoder().decode(event.data as ArrayBuffer)
         const data = JSON.parse(text)
         if (data.type === 'pong') return
-        if (data.type === 'terminal_subscribe' || data.type === 'terminal_unsubscribe') {
+        if (
+          data.type === 'terminal_subscribe' ||
+          data.type === 'terminal_unsubscribe' ||
+          data.type === 'tasks_info' ||
+          data.type === 'team_info' ||
+          data.type === 'commands_info'
+        ) {
           options?.onMessage?.(data as Message)
           return
         }

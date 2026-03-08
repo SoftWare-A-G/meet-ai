@@ -53,7 +53,12 @@ export type TaskItem = {
   subject: string
   description?: string
   status: 'pending' | 'in_progress' | 'completed'
+  assignee: string | null
   owner: string | null
+  source: 'claude' | 'codex' | 'meet_ai'
+  source_id: string | null
+  updated_by: string | null
+  updated_at: number
 }
 
 export type TasksInfo = {

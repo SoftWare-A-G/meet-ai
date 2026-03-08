@@ -44,6 +44,78 @@ function isPlainChatMessage(msg: ListenMessage): boolean {
   return msg.type == null || msg.type === 'message'
 }
 
+type TaskItem = {
+  id: string
+  subject: string
+  description?: string
+  status: 'pending' | 'in_progress' | 'completed'
+  assignee: string | null
+  owner: string | null
+  source: 'claude' | 'codex' | 'meet_ai'
+  source_id: string | null
+  updated_by: string | null
+  updated_at: number
+}
+
+type TasksInfoMessage = {
+  type: 'tasks_info'
+  tasks: TaskItem[]
+}
+
+function isTasksInfoMessage(msg: unknown): msg is TasksInfoMessage {
+  return (
+    typeof msg === 'object' &&
+    msg !== null &&
+    (msg as Record<string, unknown>).type === 'tasks_info' &&
+    Array.isArray((msg as Record<string, unknown>).tasks)
+  )
+}
+
+function diffTasks(
+  prev: Map<string, TaskItem>,
+  next: TaskItem[],
+  agentName: string
+): string[] {
+  const notifications: string[] = []
+
+  for (const task of next) {
+    const isAssignedToMe =
+      task.assignee != null &&
+      task.assignee.toLowerCase() === agentName.toLowerCase()
+    if (!isAssignedToMe) continue
+
+    const old = prev.get(task.id)
+
+    if (!old) {
+      // Newly visible task assigned to this agent
+      notifications.push(
+        `New task assigned to you: ${task.subject} (status: ${task.status})`
+      )
+      continue
+    }
+
+    const wasAssignedToMe =
+      old.assignee != null &&
+      old.assignee.toLowerCase() === agentName.toLowerCase()
+
+    if (!wasAssignedToMe) {
+      // Task reassigned to this agent
+      notifications.push(
+        `Task assigned to you: ${task.subject} (status: ${task.status})`
+      )
+      continue
+    }
+
+    if (old.status !== task.status) {
+      notifications.push(
+        `Task status changed: ${task.subject} (${old.status} → ${task.status})`
+      )
+    }
+  }
+
+  return notifications
+}
+
 function makeTurnKey(event: { turnId: string | null; itemId: string | null }): string {
   return event.turnId ?? event.itemId ?? 'unknown'
 }
@@ -190,8 +262,42 @@ export function listenCodex(
       })
   }
 
+  const knownTasks = new Map<string, TaskItem>()
+  let isFirstTasksInfo = true
+
+  const handleTasksInfo = (msg: ListenMessage) => {
+    if (!isTasksInfoMessage(msg)) return false
+
+    // First tasks_info is the cached snapshot from the DO —
+    // use it as a baseline without generating notifications.
+    if (isFirstTasksInfo) {
+      isFirstTasksInfo = false
+      for (const task of msg.tasks) {
+        knownTasks.set(task.id, task)
+      }
+      return true
+    }
+
+    const notifications = diffTasks(knownTasks, msg.tasks, codexSender)
+
+    // Update cache with latest state
+    knownTasks.clear()
+    for (const task of msg.tasks) {
+      knownTasks.set(task.id, task)
+    }
+
+    // Inject each notification into the Codex thread
+    for (const text of notifications) {
+      console.log(`[meet-ai:tasks] ${text}\n`)
+      injectMessage({ sender: 'meet-ai', content: text })
+    }
+
+    return true
+  }
+
   const onMessage = (msg: ListenMessage) => {
     if (terminal.handle(msg)) return
+    if (handleTasksInfo(msg)) return
     if (!isPlainChatMessage(msg)) return
 
     if (msg.id && msg.room_id && (msg.attachment_count ?? 0) > 0) {

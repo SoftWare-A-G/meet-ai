@@ -3,10 +3,49 @@ import { DurableObject } from 'cloudflare:workers'
 const STALE_TIMEOUT_MS = 120_000 // 2 minutes
 const ALARM_INTERVAL_MS = 60_000 // check every 60s
 
+type StoredTask = {
+  id: string
+  subject: string
+  description?: string
+  status: string
+  assignee: string | null
+  owner: string | null
+  source: string
+  source_id: string | null
+  updated_by: string | null
+  updated_at: number
+}
+
 export class ChatRoom extends DurableObject {
   private teamInfo: string | null = null
   private tasksInfo: string | null = null
   private commandsInfo: string | null = null
+
+  private broadcastAll(data: string) {
+    for (const ws of this.ctx.getWebSockets()) {
+      try {
+        ws.send(data)
+      } catch {
+        /* client gone */
+      }
+    }
+  }
+
+  private async loadTasks(): Promise<StoredTask[]> {
+    if (!this.tasksInfo) {
+      this.tasksInfo = (await this.ctx.storage.get<string>('tasksInfo')) ?? null
+    }
+    if (!this.tasksInfo) return []
+    const parsed = JSON.parse(this.tasksInfo)
+    return (parsed.tasks ?? []) as StoredTask[]
+  }
+
+  private async saveTasks(tasks: StoredTask[]) {
+    const payload = JSON.stringify({ type: 'tasks_info', tasks })
+    this.tasksInfo = payload
+    await this.ctx.storage.put('tasksInfo', payload)
+    this.broadcastAll(payload)
+  }
 
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url)
@@ -154,21 +193,22 @@ export class ChatRoom extends DurableObject {
       return new Response('ok')
     }
 
-    // /tasks — store and broadcast tasks info
-    if (url.pathname === '/tasks') {
+    // GET /tasks — return current task list
+    if (url.pathname === '/tasks' && request.method === 'GET') {
+      const tasks = await this.loadTasks()
+      return new Response(JSON.stringify({ tasks }), {
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    // POST /tasks — store and broadcast tasks info (full replace)
+    if (url.pathname === '/tasks' && request.method === 'POST') {
       const body = await request.text()
       const parsed = JSON.parse(body)
       const payload = JSON.stringify({ type: 'tasks_info', ...parsed })
       this.tasksInfo = payload
       await this.ctx.storage.put('tasksInfo', payload)
-
-      for (const ws of this.ctx.getWebSockets()) {
-        try {
-          ws.send(payload)
-        } catch {
-          /* client gone */
-        }
-      }
+      this.broadcastAll(payload)
 
       return new Response('ok')
     }
@@ -198,43 +238,167 @@ export class ChatRoom extends DurableObject {
         })
       }
 
-      // Load current tasks
-      if (!this.tasksInfo) {
-        this.tasksInfo = (await this.ctx.storage.get<string>('tasksInfo')) ?? null
-      }
-      const current = this.tasksInfo
-        ? JSON.parse(this.tasksInfo)
-        : { type: 'tasks_info', tasks: [] }
-      const tasks: {
-        id: string
-        subject: string
-        description?: string
-        status: string
-        owner: string | null
-      }[] = current.tasks ?? []
+      const tasks = await this.loadTasks()
+      const assignee = (typeof body.assignee === 'string' ? body.assignee : null)
+      const source = (typeof body.source === 'string' ? body.source : 'meet_ai')
+      const sourceId = (typeof body.source_id === 'string' ? body.source_id : null)
 
-      const newTask = {
-        id: crypto.randomUUID().slice(0, 8),
-        subject: body.subject,
-        ...(body.description && { description: body.description as string }),
-        status: 'pending' as const,
-        owner: null,
-      }
-      tasks.push(newTask)
-
-      const payload = JSON.stringify({ type: 'tasks_info', tasks })
-      this.tasksInfo = payload
-      await this.ctx.storage.put('tasksInfo', payload)
-
-      for (const ws of this.ctx.getWebSockets()) {
-        try {
-          ws.send(payload)
-        } catch {
-          /* client gone */
+      // Dedup: if both source and source_id are provided, return existing task
+      if (sourceId) {
+        const existing = tasks.find(t => t.source === source && t.source_id === sourceId)
+        if (existing) {
+          return new Response(JSON.stringify(existing), {
+            headers: { 'Content-Type': 'application/json' },
+          })
         }
       }
 
+      const newTask: StoredTask = {
+        id: crypto.randomUUID().slice(0, 8),
+        subject: body.subject as string,
+        description: typeof body.description === 'string' ? body.description : undefined,
+        status: 'pending',
+        assignee,
+        owner: assignee,
+        source,
+        source_id: sourceId,
+        updated_by: typeof body.updated_by === 'string' ? body.updated_by : null,
+        updated_at: Date.now(),
+      }
+      tasks.push(newTask)
+      await this.saveTasks(tasks)
+
       return new Response(JSON.stringify(newTask), {
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    // PATCH /tasks/:taskId — sparse update a task
+    if (url.pathname.startsWith('/tasks/') && request.method === 'PATCH') {
+      const taskId = url.pathname.split('/tasks/')[1]
+      let body: Record<string, unknown>
+      try {
+        body = JSON.parse(await request.text())
+      } catch {
+        return new Response(JSON.stringify({ error: 'invalid JSON' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+
+      const tasks = await this.loadTasks()
+      const idx = tasks.findIndex(t => t.id === taskId)
+      if (idx === -1) {
+        return new Response(JSON.stringify({ error: 'task not found' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+
+      const task = tasks[idx]
+      if (body.subject !== undefined) task.subject = body.subject as string
+      if (body.description !== undefined) task.description = body.description as string
+      if (body.status !== undefined) task.status = body.status as string
+      if (body.assignee !== undefined) {
+        task.assignee = body.assignee as string | null
+        task.owner = task.assignee
+      }
+      if (body.source !== undefined) task.source = body.source as string
+      if (body.source_id !== undefined) task.source_id = body.source_id as string | null
+      if (body.updated_by !== undefined) task.updated_by = body.updated_by as string | null
+      task.updated_at = Date.now()
+
+      tasks[idx] = task
+      await this.saveTasks(tasks)
+
+      return new Response(JSON.stringify(task), {
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    // DELETE /tasks/:taskId — remove a task
+    if (url.pathname.startsWith('/tasks/') && request.method === 'DELETE') {
+      const taskId = url.pathname.split('/tasks/')[1]
+      const tasks = await this.loadTasks()
+      const idx = tasks.findIndex(t => t.id === taskId)
+      if (idx === -1) {
+        return new Response(JSON.stringify({ error: 'task not found' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+
+      tasks.splice(idx, 1)
+      await this.saveTasks(tasks)
+
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    // POST /tasks/upsert — upsert task by source + source_id
+    if (url.pathname === '/tasks/upsert') {
+      let body: Record<string, unknown>
+      try {
+        body = JSON.parse(await request.text())
+      } catch {
+        return new Response(JSON.stringify({ error: 'invalid JSON' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+
+      const source = body.source as string
+      const sourceId = body.source_id as string
+      const tasks = await this.loadTasks()
+      const idx = tasks.findIndex(t => t.source === source && t.source_id === sourceId)
+
+      if (idx !== -1) {
+        // Update existing
+        const task = tasks[idx]
+        if (body.subject !== undefined) task.subject = body.subject as string
+        if (body.description !== undefined) task.description = body.description as string
+        if (body.status !== undefined) task.status = body.status as string
+        if (body.assignee !== undefined) {
+          task.assignee = body.assignee as string | null
+          task.owner = task.assignee
+        }
+        if (body.updated_by !== undefined) task.updated_by = body.updated_by as string | null
+        task.updated_at = Date.now()
+        tasks[idx] = task
+        await this.saveTasks(tasks)
+
+        return new Response(JSON.stringify({ ...task, upserted: 'updated' }), {
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+
+      // Create new — subject is required
+      if (typeof body.subject !== 'string' || body.subject.trim() === '') {
+        return new Response(
+          JSON.stringify({ error: 'subject is required when creating a new task' }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        )
+      }
+
+      const assignee = (typeof body.assignee === 'string' ? body.assignee : null)
+      const newTask: StoredTask = {
+        id: crypto.randomUUID().slice(0, 8),
+        subject: body.subject as string,
+        description: typeof body.description === 'string' ? body.description : undefined,
+        status: (body.status as string) || 'pending',
+        assignee,
+        owner: assignee,
+        source,
+        source_id: sourceId,
+        updated_by: typeof body.updated_by === 'string' ? body.updated_by : null,
+        updated_at: Date.now(),
+      }
+      tasks.push(newTask)
+      await this.saveTasks(tasks)
+
+      return new Response(JSON.stringify({ ...newTask, upserted: 'created' }), {
+        status: 201,
         headers: { 'Content-Type': 'application/json' },
       })
     }

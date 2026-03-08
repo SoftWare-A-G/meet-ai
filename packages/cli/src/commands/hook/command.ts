@@ -10,5 +10,6 @@ export default defineCommand({
     'plan-review': () => import('./plan-review/command').then(m => m.default),
     'question-review': () => import('./question-review/command').then(m => m.default),
     'permission-review': () => import('./permission-review/command').then(m => m.default),
+    'task-sync': () => import('./task-sync/command').then(m => m.default),
   },
 })

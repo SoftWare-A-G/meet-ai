@@ -646,4 +646,237 @@ describe('listen', () => {
       'First answer\n\nSecond answer'
     )
   })
+
+  describe('tasks_info handling', () => {
+    function makeTask(overrides: Partial<{
+      id: string
+      subject: string
+      status: string
+      assignee: string | null
+      owner: string | null
+      source: string
+      source_id: string | null
+      updated_by: string | null
+      updated_at: number
+    }> = {}) {
+      return {
+        id: 'task-1',
+        subject: 'Fix the bug',
+        status: 'pending',
+        assignee: null,
+        owner: null,
+        source: 'meet_ai',
+        source_id: null,
+        updated_by: null,
+        updated_at: Date.now(),
+        ...overrides,
+      }
+    }
+
+    it('treats the first tasks_info as a baseline without injecting notifications', async () => {
+      process.env.MEET_AI_RUNTIME = 'codex'
+      process.env.CODEX_HOME = codexHome
+      process.env.MEET_AI_AGENT_NAME = 'my-codex'
+
+      const { client, getHandler } = mockClientCapturingHandler()
+      const codexBridge = makeCodexBridgeMock()
+
+      listen(client, { roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c' }, undefined, codexBridge)
+      const handler = getHandler()
+
+      // First tasks_info is the cached snapshot — should be absorbed silently
+      handler({
+        type: 'tasks_info',
+        tasks: [makeTask({ id: 'task-1', subject: 'Fix the bug', assignee: 'my-codex', status: 'pending' })],
+      } as any)
+
+      await new Promise(resolve => setTimeout(resolve, 0))
+
+      expect(codexBridge.injectText).not.toHaveBeenCalled()
+      expect(logSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining('[meet-ai:tasks]')
+      )
+    })
+
+    it('injects a notification when a task is newly assigned after the baseline', async () => {
+      process.env.MEET_AI_RUNTIME = 'codex'
+      process.env.CODEX_HOME = codexHome
+      process.env.MEET_AI_AGENT_NAME = 'my-codex'
+
+      const { client, getHandler } = mockClientCapturingHandler()
+      const codexBridge = makeCodexBridgeMock()
+
+      listen(client, { roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c' }, undefined, codexBridge)
+      const handler = getHandler()
+
+      // Baseline: no tasks yet
+      handler({ type: 'tasks_info', tasks: [] } as any)
+
+      await new Promise(resolve => setTimeout(resolve, 0))
+      codexBridge.injectText.mockClear()
+
+      // Second broadcast: new task assigned
+      handler({
+        type: 'tasks_info',
+        tasks: [makeTask({ id: 'task-1', subject: 'Fix the bug', assignee: 'my-codex', status: 'pending' })],
+      } as any)
+
+      await new Promise(resolve => setTimeout(resolve, 0))
+
+      expect(codexBridge.injectText).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sender: 'meet-ai',
+          content: 'New task assigned to you: Fix the bug (status: pending)',
+        })
+      )
+      expect(logSpy).toHaveBeenCalledWith(
+        '[meet-ai:tasks] New task assigned to you: Fix the bug (status: pending)\n'
+      )
+    })
+
+    it('does not inject notifications for tasks assigned to other agents', async () => {
+      process.env.MEET_AI_RUNTIME = 'codex'
+      process.env.CODEX_HOME = codexHome
+      process.env.MEET_AI_AGENT_NAME = 'my-codex'
+
+      const { client, getHandler } = mockClientCapturingHandler()
+      const codexBridge = makeCodexBridgeMock()
+
+      listen(client, { roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c' }, undefined, codexBridge)
+      const handler = getHandler()
+
+      handler({
+        type: 'tasks_info',
+        tasks: [makeTask({ id: 'task-1', assignee: 'other-agent' })],
+      } as any)
+
+      await new Promise(resolve => setTimeout(resolve, 0))
+
+      expect(codexBridge.injectText).not.toHaveBeenCalled()
+    })
+
+    it('injects a notification when task status changes for assigned agent', async () => {
+      process.env.MEET_AI_RUNTIME = 'codex'
+      process.env.CODEX_HOME = codexHome
+      process.env.MEET_AI_AGENT_NAME = 'my-codex'
+
+      const { client, getHandler } = mockClientCapturingHandler()
+      const codexBridge = makeCodexBridgeMock()
+
+      listen(client, { roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c' }, undefined, codexBridge)
+      const handler = getHandler()
+
+      // First broadcast: task assigned
+      handler({
+        type: 'tasks_info',
+        tasks: [makeTask({ id: 'task-1', assignee: 'my-codex', status: 'pending' })],
+      } as any)
+
+      await new Promise(resolve => setTimeout(resolve, 0))
+      codexBridge.injectText.mockClear()
+
+      // Second broadcast: status changed
+      handler({
+        type: 'tasks_info',
+        tasks: [makeTask({ id: 'task-1', assignee: 'my-codex', status: 'in_progress' })],
+      } as any)
+
+      await new Promise(resolve => setTimeout(resolve, 0))
+
+      expect(codexBridge.injectText).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: 'Task status changed: Fix the bug (pending → in_progress)',
+        })
+      )
+    })
+
+    it('does not inject when tasks_info has no changes for this agent', async () => {
+      process.env.MEET_AI_RUNTIME = 'codex'
+      process.env.CODEX_HOME = codexHome
+      process.env.MEET_AI_AGENT_NAME = 'my-codex'
+
+      const { client, getHandler } = mockClientCapturingHandler()
+      const codexBridge = makeCodexBridgeMock()
+
+      listen(client, { roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c' }, undefined, codexBridge)
+      const handler = getHandler()
+
+      // First broadcast
+      handler({
+        type: 'tasks_info',
+        tasks: [makeTask({ id: 'task-1', assignee: 'my-codex', status: 'pending' })],
+      } as any)
+
+      await new Promise(resolve => setTimeout(resolve, 0))
+      codexBridge.injectText.mockClear()
+
+      // Same broadcast again — no changes
+      handler({
+        type: 'tasks_info',
+        tasks: [makeTask({ id: 'task-1', assignee: 'my-codex', status: 'pending' })],
+      } as any)
+
+      await new Promise(resolve => setTimeout(resolve, 0))
+
+      expect(codexBridge.injectText).not.toHaveBeenCalled()
+    })
+
+    it('injects notification when task is reassigned to this agent', async () => {
+      process.env.MEET_AI_RUNTIME = 'codex'
+      process.env.CODEX_HOME = codexHome
+      process.env.MEET_AI_AGENT_NAME = 'my-codex'
+
+      const { client, getHandler } = mockClientCapturingHandler()
+      const codexBridge = makeCodexBridgeMock()
+
+      listen(client, { roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c' }, undefined, codexBridge)
+      const handler = getHandler()
+
+      // First: assigned to someone else
+      handler({
+        type: 'tasks_info',
+        tasks: [makeTask({ id: 'task-1', assignee: 'other-agent', status: 'pending' })],
+      } as any)
+
+      await new Promise(resolve => setTimeout(resolve, 0))
+      codexBridge.injectText.mockClear()
+
+      // Reassigned to this agent
+      handler({
+        type: 'tasks_info',
+        tasks: [makeTask({ id: 'task-1', assignee: 'my-codex', status: 'pending' })],
+      } as any)
+
+      await new Promise(resolve => setTimeout(resolve, 0))
+
+      expect(codexBridge.injectText).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: 'Task assigned to you: Fix the bug (status: pending)',
+        })
+      )
+    })
+
+    it('does not treat tasks_info as a chat message', async () => {
+      process.env.MEET_AI_RUNTIME = 'codex'
+      process.env.CODEX_HOME = codexHome
+
+      const { client, getHandler } = mockClientCapturingHandler()
+      const codexBridge = makeCodexBridgeMock()
+
+      listen(client, { roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c' }, undefined, codexBridge)
+      const handler = getHandler()
+
+      handler({
+        type: 'tasks_info',
+        tasks: [],
+      } as any)
+
+      await new Promise(resolve => setTimeout(resolve, 0))
+
+      // Should not inject any chat-type message
+      expect(codexBridge.injectText).not.toHaveBeenCalled()
+      // Should not log as a chat message format
+      expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining('[meet-ai]'))
+    })
+  })
 })

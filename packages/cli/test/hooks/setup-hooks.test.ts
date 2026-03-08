@@ -35,7 +35,7 @@ describe('setup-hooks', () => {
     await setupHooks(opts())
     const content = JSON.parse(await readFile(settingsFile, 'utf-8'))
     expect(content.hooks).toBeDefined()
-    expect(content.hooks.PostToolUse).toHaveLength(1)
+    expect(content.hooks.PostToolUse).toHaveLength(2)
     expect(content.hooks.PermissionRequest).toHaveLength(3)
   })
 
@@ -51,7 +51,7 @@ describe('setup-hooks', () => {
     const content = JSON.parse(await readFile(settingsFile, 'utf-8'))
     expect(content.env).toEqual({ MEET_AI_URL: 'https://meet-ai.cc' })
     expect(content.permissions).toEqual({ allow: ['Read'] })
-    expect(content.hooks.PostToolUse).toHaveLength(1)
+    expect(content.hooks.PostToolUse).toHaveLength(2)
     expect(content.hooks.PostToolUse[0].hooks[0].command).toBe('meet-ai hook log-tool-use')
     expect(content.hooks.PermissionRequest).toHaveLength(3)
   })
@@ -69,8 +69,8 @@ describe('setup-hooks', () => {
     await setupHooks(opts())
 
     const content = JSON.parse(await readFile(settingsFile, 'utf-8'))
-    // Original non-meet-ai hook preserved + meet-ai hook added
-    expect(content.hooks.PostToolUse).toHaveLength(2)
+    // Original non-meet-ai hook preserved + 2 meet-ai hooks added
+    expect(content.hooks.PostToolUse).toHaveLength(3)
     expect(content.hooks.PostToolUse[0].hooks[0].command).toBe('echo hello')
     expect(content.hooks.PostToolUse[1].hooks[0].command).toBe('meet-ai hook log-tool-use')
   })
@@ -122,7 +122,7 @@ describe('setup-hooks', () => {
     await setupHooks(opts())
 
     const content = JSON.parse(await readFile(settingsFile, 'utf-8'))
-    expect(content.hooks.PostToolUse).toHaveLength(1)
+    expect(content.hooks.PostToolUse).toHaveLength(2)
   })
 
   test('handles malformed JSON gracefully', async () => {
@@ -131,7 +131,7 @@ describe('setup-hooks', () => {
     await setupHooks(opts())
 
     const content = JSON.parse(await readFile(settingsFile, 'utf-8'))
-    expect(content.hooks.PostToolUse).toHaveLength(1)
+    expect(content.hooks.PostToolUse).toHaveLength(2)
   })
 
   test('--project flag is accepted (path override takes precedence in test)', async () => {
@@ -140,7 +140,7 @@ describe('setup-hooks', () => {
     await setupHooks(opts({ project: true }))
 
     const content = JSON.parse(await readFile(settingsFile, 'utf-8'))
-    expect(content.hooks.PostToolUse).toHaveLength(1)
+    expect(content.hooks.PostToolUse).toHaveLength(2)
     expect(content.hooks.PermissionRequest).toHaveLength(3)
   })
 
@@ -149,7 +149,7 @@ describe('setup-hooks', () => {
     await setupHooks(opts())
 
     const content = JSON.parse(await readFile(settingsFile, 'utf-8'))
-    expect(content.hooks.PostToolUse).toHaveLength(1)
+    expect(content.hooks.PostToolUse).toHaveLength(2)
     expect(content.hooks.PermissionRequest).toHaveLength(3)
   })
 
@@ -183,7 +183,7 @@ describe('setup-hooks', () => {
     await setupHooks(opts({ _settingsPath: nestedPath }))
 
     const content = JSON.parse(await readFile(nestedPath, 'utf-8'))
-    expect(content.hooks.PostToolUse).toHaveLength(1)
+    expect(content.hooks.PostToolUse).toHaveLength(2)
   })
 })
 
@@ -191,7 +191,7 @@ describe('mergeHooks', () => {
   test('adds all hooks to empty config', () => {
     const { merged, added } = mergeHooks({})
     expect(Object.keys(merged)).toEqual(['PostToolUse', 'PermissionRequest'])
-    expect(added).toHaveLength(4)
+    expect(added).toHaveLength(5)
   })
 
   test('reports updated when existing meet-ai hook found', () => {
@@ -204,7 +204,7 @@ describe('mergeHooks', () => {
       ],
     }
     const { merged, added } = mergeHooks(existing)
-    expect(merged.PostToolUse).toHaveLength(1)
+    expect(merged.PostToolUse).toHaveLength(2)
     expect(added).toContain('updated PostToolUse [.*]')
   })
 })
@@ -274,7 +274,7 @@ describe('removeHooks', () => {
   test('removes all meet-ai hooks', () => {
     const { cleaned, removed } = removeHooks(MEET_AI_HOOKS)
     expect(Object.keys(cleaned)).toHaveLength(0)
-    expect(removed).toHaveLength(4)
+    expect(removed).toHaveLength(5)
   })
 
   test('returns empty removed array when no meet-ai hooks', () => {

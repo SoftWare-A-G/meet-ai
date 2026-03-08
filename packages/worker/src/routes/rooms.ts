@@ -12,6 +12,8 @@ import {
   messagesQuerySchema,
   commandsSchema,
   createTaskSchema,
+  updateTaskSchema,
+  upsertTaskSchema,
   terminalDataSchema,
 } from '../schemas/rooms'
 import type { AppEnv } from '../lib/types'
@@ -400,6 +402,110 @@ export const roomsRoute = new Hono<AppEnv>()
     )
 
     return c.json({ ok: true, task }, 201)
+  })
+
+  // GET /api/rooms/:id/tasks — get current task list
+  .get('/:id/tasks', requireAuth, async c => {
+    const keyId = c.get('keyId')
+    const roomId = c.req.param('id')
+    const db = queries(c.env.DB)
+
+    const room = await db.findRoom(roomId, keyId)
+    if (!room) {
+      return c.json({ error: 'room not found' }, 404)
+    }
+
+    const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
+    const stub = c.env.CHAT_ROOM.get(doId)
+    const res = await stub.fetch(
+      new Request('http://internal/tasks', { method: 'GET' })
+    )
+    const data = await res.json()
+    return c.json(data)
+  })
+
+  // PATCH /api/rooms/:id/tasks/:taskId — update a task
+  .patch('/:id/tasks/:taskId', requireAuth, zValidator('json', updateTaskSchema), async c => {
+    const keyId = c.get('keyId')
+    const roomId = c.req.param('id')
+    const taskId = c.req.param('taskId')
+    const db = queries(c.env.DB)
+
+    const room = await db.findRoom(roomId, keyId)
+    if (!room) {
+      return c.json({ error: 'room not found' }, 404)
+    }
+
+    const body = c.req.valid('json')
+
+    const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
+    const stub = c.env.CHAT_ROOM.get(doId)
+    const taskRes = await stub.fetch(
+      new Request(`http://internal/tasks/${taskId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      })
+    )
+
+    if (taskRes.status === 404) {
+      return c.json({ error: 'task not found' }, 404)
+    }
+
+    const task = await taskRes.json()
+    return c.json(task)
+  })
+
+  // DELETE /api/rooms/:id/tasks/:taskId — delete a task
+  .delete('/:id/tasks/:taskId', requireAuth, async c => {
+    const keyId = c.get('keyId')
+    const roomId = c.req.param('id')
+    const taskId = c.req.param('taskId')
+    const db = queries(c.env.DB)
+
+    const room = await db.findRoom(roomId, keyId)
+    if (!room) {
+      return c.json({ error: 'room not found' }, 404)
+    }
+
+    const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
+    const stub = c.env.CHAT_ROOM.get(doId)
+    const taskRes = await stub.fetch(
+      new Request(`http://internal/tasks/${taskId}`, {
+        method: 'DELETE',
+      })
+    )
+
+    if (taskRes.status === 404) {
+      return c.json({ error: 'task not found' }, 404)
+    }
+
+    return c.json({ ok: true })
+  })
+
+  // POST /api/rooms/:id/tasks/upsert — upsert a task by source + source_id
+  .post('/:id/tasks/upsert', requireAuth, zValidator('json', upsertTaskSchema), async c => {
+    const keyId = c.get('keyId')
+    const roomId = c.req.param('id')
+    const db = queries(c.env.DB)
+
+    const room = await db.findRoom(roomId, keyId)
+    if (!room) {
+      return c.json({ error: 'room not found' }, 404)
+    }
+
+    const body = c.req.valid('json')
+
+    const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
+    const stub = c.env.CHAT_ROOM.get(doId)
+    const taskRes = await stub.fetch(
+      new Request('http://internal/tasks/upsert', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      })
+    )
+
+    const task = await taskRes.json()
+    return c.json(task, taskRes.status === 201 ? 201 : 200)
   })
 
   // POST /api/rooms/:id/spawn — request to spawn an orchestrator for this room

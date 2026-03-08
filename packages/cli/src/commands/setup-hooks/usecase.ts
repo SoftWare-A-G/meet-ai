@@ -32,6 +32,16 @@ const MEET_AI_HOOKS: HooksConfig = {
         },
       ],
     },
+    {
+      matcher: 'TaskCreate|TaskUpdate',
+      hooks: [
+        {
+          type: 'command',
+          command: 'meet-ai hook task-sync',
+          timeout: 10,
+        },
+      ],
+    },
   ],
   PermissionRequest: [
     {

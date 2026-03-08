@@ -193,13 +193,47 @@ export async function decidePermissionReview(
   return res.json()
 }
 
-export async function createTask(roomId: string, subject: string, description?: string): Promise<{ ok: boolean; task: TaskItem }> {
+export async function createTask(
+  roomId: string,
+  subject: string,
+  description?: string,
+  assignee?: string | null,
+): Promise<{ ok: boolean; task: TaskItem }> {
   const res = await fetch(`/api/rooms/${roomId}/tasks/create`, {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify({ subject, ...(description && { description }) }),
+    body: JSON.stringify({
+      subject,
+      ...(description && { description }),
+      ...(assignee !== undefined && { assignee }),
+      source: 'meet_ai',
+      updated_by: 'human',
+    }),
   })
   if (!res.ok) throw new Error(`Create task failed: HTTP ${res.status}`)
+  return res.json()
+}
+
+export async function updateTask(
+  roomId: string,
+  taskId: string,
+  updates: Partial<Pick<TaskItem, 'subject' | 'description' | 'status' | 'assignee'>>,
+): Promise<{ ok: boolean; task: TaskItem }> {
+  const res = await fetch(`/api/rooms/${roomId}/tasks/${taskId}`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify({ ...updates, updated_by: 'human' }),
+  })
+  if (!res.ok) throw new Error(`Update task failed: HTTP ${res.status}`)
+  return res.json()
+}
+
+export async function deleteTask(roomId: string, taskId: string): Promise<{ ok: boolean }> {
+  const res = await fetch(`/api/rooms/${roomId}/tasks/${taskId}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  if (!res.ok) throw new Error(`Delete task failed: HTTP ${res.status}`)
   return res.json()
 }
 
