@@ -161,7 +161,7 @@ export function listenCodex(
   const meetAiUrl = process.env.MEET_AI_URL ?? ''
   const meetAiKey = process.env.MEET_AI_KEY ?? ''
   const hookClient = meetAiUrl && meetAiKey ? createHookClient(meetAiUrl, meetAiKey) : null
-  const taskToolCallHandler = hookClient
+  const taskToolCallHandler = hookClient && roomId
     ? createTaskToolCallHandler({
         createTask: params => createTask(hookClient, roomId, { ...params, source: 'codex' }),
         updateTask: (taskId, params) => updateTask(hookClient, roomId, taskId, { ...params, source: 'codex' }),
