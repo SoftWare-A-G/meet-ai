@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { TmuxClient } from '@meet-ai/cli/lib/tmux-client'
 import type IInboxRouter from '@meet-ai/cli/domain/interfaces/IInboxRouter'
 import type { MeetAiClient, Message } from '@meet-ai/cli/types'
@@ -8,6 +9,26 @@ export type ListenMessage = Message & {
   type?: string
   paneId?: string
   cols?: number
+}
+
+export function loadTeamExcludeSet(teamName?: string): Set<string> {
+  if (!teamName) return new Set()
+  const configPath = `${process.env.HOME}/.claude/teams/${teamName}/config.json`
+  let raw: string
+  try {
+    raw = readFileSync(configPath, 'utf-8')
+  } catch {
+    // Config doesn't exist yet — team may still be initializing
+    return new Set()
+  }
+  let config: { members?: { name: string }[] }
+  try {
+    config = JSON.parse(raw)
+  } catch {
+    console.error(`Error: Malformed JSON in team config at ${configPath}`)
+    process.exit(1)
+  }
+  return new Set(config.members?.map(m => m.name) || [])
 }
 
 export function createTerminalControlHandler(input: {

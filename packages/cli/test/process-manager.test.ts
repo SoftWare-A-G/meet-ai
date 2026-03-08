@@ -100,8 +100,8 @@ describe('ProcessManager', () => {
       newSession: (_name: string, commandArgs: string[]) => {
         expect(commandArgs).toContain('listen')
         expect(commandArgs).toContain('room-1')
-        expect(commandArgs).toContain('--sender-type')
-        expect(commandArgs).toContain('human')
+        expect(commandArgs).toContain('--exclude')
+        expect(commandArgs).toContain('codex')
         return { ok: true, output: '' }
       },
       killSession: () => ({ ok: true, output: '' }),
@@ -120,6 +120,7 @@ describe('ProcessManager', () => {
         expect(env?.MEET_AI_RUNTIME).toBe('codex')
         expect(env?.MEET_AI_CODEX_PATH).toBe('echo')
         expect(env?.MEET_AI_CODEX_BOOTSTRAP_PROMPT).toContain('ROOM_ID: room-1')
+        expect(env?.MEET_AI_AGENT_NAME).toBe('codex')
         expect(env?.MEET_AI_CODEX_RESUME_SESSION).toBeUndefined()
         return { ok: true, output: '' }
       },

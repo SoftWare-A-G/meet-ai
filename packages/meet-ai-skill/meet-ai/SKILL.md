@@ -71,7 +71,7 @@ The `session_id` links the current Claude Code session to the room. The hook use
 **Start the inbox listener** immediately after creating the room. This background process connects via WebSocket and writes human messages directly to the orchestrator's Claude Code inbox:
 
 ```bash
-meet-ai listen "<ROOM_ID>" --sender-type human --team "<team-name>" --inbox team-lead
+meet-ai listen "<ROOM_ID>" --team "<team-name>" --inbox team-lead
 ```
 
 Run this via Bash with `run_in_background: true`. Note the background task ID so you can stop it during teardown.
@@ -282,7 +282,7 @@ meet-ai send-log "<ROOM_ID>" "<sender>" "<content>" [--color <color>] [--message
 2. **Every text message visible to the user in the CLI must also be sent to meet-ai.** No exceptions. Every line of text you output in the CC terminal — status updates, acknowledgments, progress reports, results, answers — must also be sent via `meet-ai send-message`. The human may only be watching the web UI. If they can't see it there, it doesn't exist.
 3. **Use the agent's CC team name as sender.** The orchestrator uses its team name (e.g. `team-lead`), not a separate display name.
 4. **The orchestrator creates exactly one room per team session.**
-5. **The orchestrator MUST start the inbox listener** as a background process immediately after creating the room. Use `listen --sender-type human --team <name> --inbox team-lead`. This writes human messages directly to the orchestrator's Claude Code inbox.
+5. **The orchestrator MUST start the inbox listener** as a background process immediately after creating the room. Use `listen --team <name> --inbox team-lead`. The `--team` flag both enables inbox routing and filters out the team's own messages, delivering everything else (human messages, other teams) to the orchestrator's Claude Code inbox.
 6. **Teammate agents should idle between tasks.** The orchestrator wakes them via SendMessage when new work arrives (e.g., a human message in the chat room).
 7. **Identical messages in CLI and chat room.** The text you output in the CC terminal and the text you send via `meet-ai send-message` must be exactly the same. Do NOT add extra lines, summaries, or filler in one channel that isn't in the other. Write the message once, send it to both places.
 8. **Pass `--exclude` with your own name** when polling/listening to skip your own messages.

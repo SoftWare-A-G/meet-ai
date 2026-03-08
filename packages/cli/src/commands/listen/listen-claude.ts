@@ -1,7 +1,7 @@
 import { IDLE_CHECK_INTERVAL_MS } from '@meet-ai/cli/inbox-router'
 import { downloadMessageAttachments } from '@meet-ai/cli/lib/attachments'
 import { ListenInput } from './schema'
-import { createTerminalControlHandler, type ListenMessage } from './shared'
+import { createTerminalControlHandler, loadTeamExcludeSet, type ListenMessage } from './shared'
 import type IInboxRouter from '@meet-ai/cli/domain/interfaces/IInboxRouter'
 import type { MeetAiClient } from '@meet-ai/cli/types'
 
@@ -18,6 +18,7 @@ export function listenClaude(
 ): WebSocket {
   const parsed = ListenInput.parse(input)
   const { roomId, exclude, senderType, team, inbox } = parsed
+  const teamExcludeSet = loadTeamExcludeSet(team)
 
   const inboxDir = team ? `${process.env.HOME}/.claude/teams/${team}/inboxes` : null
   const defaultInboxPath = inboxDir && inbox ? `${inboxDir}/${inbox}.json` : null
@@ -27,6 +28,7 @@ export function listenClaude(
 
   const onMessage = (msg: ListenMessage) => {
     if (terminal.handle(msg)) return
+    if (teamExcludeSet.has(msg.sender)) return
 
     if (msg.id && msg.room_id && (msg.attachment_count ?? 0) > 0) {
       void downloadMessageAttachments(client, msg.room_id, msg.id).then(paths => {

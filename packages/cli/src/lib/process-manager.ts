@@ -166,11 +166,6 @@ export class ProcessManager {
       this.opts.onStatusChange?.(roomId, 'error')
       return team
     }
-    const commandArgs =
-      codingAgent === 'codex'
-        ? this.buildCodexListenCommandArgs(roomId)
-        : [agentBinary, ...this.buildClaudeCommandArgs(fullPrompt)]
-
     // Build environment: allowlist of safe vars + meet-ai specific vars
     const sessionEnv: Record<string, string> = {
       DISABLE_AUTOUPDATER: '1',
@@ -179,6 +174,7 @@ export class ProcessManager {
     if (codingAgent === 'codex') {
       sessionEnv.MEET_AI_CODEX_PATH = agentBinary
       sessionEnv.MEET_AI_CODEX_BOOTSTRAP_PROMPT = fullPrompt
+      sessionEnv.MEET_AI_AGENT_NAME = 'codex'
     }
     for (const key of ENV_ALLOWLIST) {
       const value = process.env[key]
@@ -186,6 +182,11 @@ export class ProcessManager {
     }
     // Merge user-provided env (MEET_AI_URL, MEET_AI_KEY, etc.)
     if (this.opts.env) Object.assign(sessionEnv, this.opts.env)
+
+    const commandArgs =
+      codingAgent === 'codex'
+        ? this.buildCodexListenCommandArgs(roomId, sessionEnv.MEET_AI_AGENT_NAME ?? 'codex')
+        : [agentBinary, ...this.buildClaudeCommandArgs(fullPrompt)]
 
     if (this.opts.debug) {
       team.lines.push(`[debug] AGENT: ${codingAgent}`)
@@ -386,8 +387,9 @@ export class ProcessManager {
   }
 
   private buildCodexListenCommandArgs(
-    roomId: string
+    roomId: string,
+    agentName: string
   ): string[] {
-    return [...resolveSelfCliCommand(), 'listen', roomId, '--sender-type', 'human']
+    return [...resolveSelfCliCommand(), 'listen', roomId, '--exclude', agentName]
   }
 }
