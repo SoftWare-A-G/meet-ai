@@ -1,8 +1,8 @@
 import {
   findRoom,
   createHookClient,
-  type HookInput,
 } from '@meet-ai/cli/lib/hooks'
+import { TaskHookInput } from './schema'
 
 const CLAUDE_STATUS_MAP: Record<string, string> = {
   open: 'pending',
@@ -15,7 +15,6 @@ function mapStatus(status: unknown): 'pending' | 'in_progress' | 'completed' | u
   if (typeof status !== 'string') return undefined
   const mapped = CLAUDE_STATUS_MAP[status]
   if (mapped) return mapped as 'pending' | 'in_progress' | 'completed'
-  // If it's already a valid status, pass through
   if (['pending', 'in_progress', 'completed'].includes(status)) {
     return status as 'pending' | 'in_progress' | 'completed'
   }
@@ -26,30 +25,20 @@ export async function processTaskSync(
   rawInput: string,
   teamsDir?: string
 ): Promise<'sent' | 'skip'> {
-  let input: HookInput
+  let raw: unknown
   try {
-    input = JSON.parse(rawInput)
+    raw = JSON.parse(rawInput)
   } catch {
     return 'skip'
   }
 
-  const {
-    session_id: sessionId,
-    transcript_path: transcriptPath,
-    tool_name: toolName,
-    tool_response: toolResponse,
-  } = input
+  const parsed = TaskHookInput.safeParse(raw)
+  if (!parsed.success) return 'skip'
 
-  if (!sessionId || !toolName) return 'skip'
-
-  // Only process TaskCreate and TaskUpdate
-  if (toolName !== 'TaskCreate' && toolName !== 'TaskUpdate') return 'skip'
-
-  // Must have a response with an id
-  if (!toolResponse || typeof toolResponse.id !== 'string') return 'skip'
+  const input = parsed.data
 
   // Find room
-  const room = await findRoom(sessionId, teamsDir, transcriptPath)
+  const room = await findRoom(input.session_id, teamsDir, input.transcript_path)
   if (!room) return 'skip'
   const { roomId } = room
 
@@ -60,23 +49,26 @@ export async function processTaskSync(
 
   const client = createHookClient(url, key)
 
-  // Build upsert payload
-  const title = typeof toolResponse.title === 'string' ? toolResponse.title : undefined
-  const status = mapStatus(toolResponse.status)
-  const assignee = typeof toolResponse.owner === 'string' ? toolResponse.owner : undefined
-
-  // TaskCreate must have a title
-  if (toolName === 'TaskCreate' && !title) return 'skip'
-
+  // Build upsert payload based on tool type
   const body: Record<string, unknown> = {
     source: 'claude' as const,
-    source_id: toolResponse.id as string,
     updated_by: 'claude',
   }
 
-  if (title) body.subject = title
-  if (status) body.status = status
-  if (assignee !== undefined) body.assignee = assignee
+  if (input.tool_name === 'TaskCreate') {
+    body.source_id = input.tool_response.task.id
+    body.subject = input.tool_input.subject
+    body.status = 'pending'
+    if (input.tool_input.description) body.description = input.tool_input.description
+  } else {
+    // TaskUpdate
+    body.source_id = input.tool_response.taskId
+
+    if (input.tool_input.subject) body.subject = input.tool_input.subject
+    if (input.tool_input.description) body.description = input.tool_input.description
+    if (input.tool_input.status) body.status = mapStatus(input.tool_input.status)
+    if (input.tool_input.owner !== undefined) body.assignee = input.tool_input.owner
+  }
 
   const res = await client.api.rooms[':id'].tasks.upsert.$post({
     param: { id: roomId },
@@ -84,6 +76,7 @@ export async function processTaskSync(
       source: 'claude' | 'codex' | 'meet_ai'
       source_id: string
       subject?: string
+      description?: string
       status?: 'pending' | 'in_progress' | 'completed'
       assignee?: string | null
       updated_by?: string | null
