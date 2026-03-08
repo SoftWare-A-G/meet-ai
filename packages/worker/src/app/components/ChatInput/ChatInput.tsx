@@ -10,12 +10,7 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 
 const preventBlur = (e: { preventDefault: () => void }) => e.preventDefault()
 
-// Wrap mentions suggestions to prevent input blur on touch devices.
-// The library only uses onMouseDown to set a flag that prevents blur,
-// but on mobile touchstart fires before mousedown, causing premature blur.
-const mentionsSuggestionsContainer = (children: React.ReactElement) => (
-  <div onTouchStart={preventBlur}>{children}</div>
-)
+const isTouchDevice = () => matchMedia('(pointer: coarse)').matches
 
 type PendingFile = {
   file: File
@@ -34,12 +29,11 @@ const mentionsClassNames: MentionsInputClassNames = {
   control: 'relative border-none',
   highlighter: 'pointer-events-none whitespace-pre-wrap break-words px-4 py-3 text-transparent leading-relaxed',
   input: 'w-full border-none outline-none bg-transparent text-msg-text px-4 py-3 min-h-[48px] max-h-[200px] text-base font-[inherit] resize-none leading-relaxed overflow-y-auto placeholder:opacity-50',
-  suggestions: 'rounded-lg border border-border bg-input-bg shadow-xl',
-  suggestionsList: 'max-h-48 overflow-y-auto',
-  suggestionItem: 'px-3 py-2 text-sm text-msg-text cursor-pointer hover:bg-white/10 active:bg-white/15',
-  suggestionItemFocused: 'bg-white/15',
-  suggestionHighlight: 'font-semibold text-active',
 }
+
+// Empty data disables the library's built-in suggestion dropdown.
+// We render our own dropdown for @mentions (works on all platforms).
+const emptyMentionData: { id: string; display: string }[] = []
 
 export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -98,7 +92,7 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
     return commandsInfo.filter(c => c.name.toLowerCase().includes(q))
   }, [slashQuery, commandsInfo])
 
-  const showDropdown = filteredCommands.length > 0 && dismissedQueryRef.current !== slashQuery
+  const showCommandDropdown = filteredCommands.length > 0 && dismissedQueryRef.current !== slashQuery
 
   const selectCommand = useCallback((name: string) => {
     const newValue = `/${name} `
@@ -109,22 +103,55 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
     requestAnimationFrame(() => inputRef.current?.focus())
   }, [])
 
-  const mentionData = useMemo(() => {
+  // @mention autocomplete — custom dropdown for all platforms.
+  // The library's built-in suggestion mechanism is unreliable on mobile,
+  // so we own trigger detection and rendering consistently everywhere.
+  const mentionMembers = useMemo(() => {
     if (!teamInfo) return []
     return teamInfo.members
       .filter(m => m.status === 'active')
       .map(m => ({ id: m.name, display: m.name }))
   }, [teamInfo])
 
+  const [selectedMentionIndex, setSelectedMentionIndex] = useState(0)
+  const dismissedMentionQueryRef = useRef<string | null>(null)
+  const prevMentionQueryRef = useRef<string | null>(null)
+
+  const mentionQuery = useMemo(() => {
+    const match = plainText.match(/(?:^|\s)@([\w-]*)$/)
+    return match ? match[1] : null
+  }, [plainText])
+
+  if (mentionQuery !== prevMentionQueryRef.current) {
+    prevMentionQueryRef.current = mentionQuery
+    dismissedMentionQueryRef.current = null
+    if (selectedMentionIndex !== 0) setSelectedMentionIndex(0)
+  }
+
+  const filteredMentions = useMemo(() => {
+    if (mentionQuery === null || !mentionMembers.length) return []
+    const q = mentionQuery.toLowerCase()
+    return mentionMembers.filter(m => m.display.toLowerCase().includes(q))
+  }, [mentionQuery, mentionMembers])
+
+  const showMentionDropdown = filteredMentions.length > 0 && dismissedMentionQueryRef.current !== mentionQuery
+  const mentionItemRefs = useRef<(HTMLButtonElement | null)[]>([])
+
+  const selectMention = useCallback((name: string) => {
+    const match = plainText.match(/(?:^|\s)@([\w-]*)$/)
+    if (!match) return
+    const prefixEnd = match.index! + (match[0].startsWith(' ') ? 1 : 0)
+    const newText = plainText.slice(0, prefixEnd) + `@${name} `
+    setValue(newText)
+    setPlainText(newText)
+    dismissedMentionQueryRef.current = null
+    setSelectedMentionIndex(0)
+    requestAnimationFrame(() => inputRef.current?.focus())
+  }, [plainText])
+
   const handleMentionsChange = useCallback((event: MentionsInputChangeEvent) => {
     setValue(event.value)
     setPlainText(event.plainTextValue)
-    // Workaround: mobile browsers may not fire selectionchange reliably,
-    // which prevents react-mentions-ts from detecting @ triggers.
-    // Dispatching a synthetic event ensures trigger detection works on mobile.
-    requestAnimationFrame(() => {
-      document.dispatchEvent(new Event('selectionchange'))
-    })
   }, [])
 
   const addFiles = useCallback(async (files: File[]) => {
@@ -185,7 +212,8 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
   }, [onSend, pendingFiles, plainText, isListening, stopVoice])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    if (showDropdown) {
+    // Slash command keyboard navigation
+    if (showCommandDropdown) {
       if (e.key === 'ArrowDown') {
         e.preventDefault()
         const newIndex = (selectedCommandIndex + 1) % filteredCommands.length
@@ -206,17 +234,45 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
         setSelectedCommandIndex(0)
         return
       }
-      if (e.key === 'Enter' && !e.shiftKey && !matchMedia('(pointer: coarse)').matches) {
+      if (e.key === 'Enter' && !e.shiftKey && !isTouchDevice()) {
         e.preventDefault()
         selectCommand(filteredCommands[selectedCommandIndex].name)
         return
       }
     }
-    if (e.key === 'Enter' && !e.shiftKey && !matchMedia('(pointer: coarse)').matches) {
+    // @mention keyboard navigation
+    if (showMentionDropdown) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        const newIndex = (selectedMentionIndex + 1) % filteredMentions.length
+        setSelectedMentionIndex(newIndex)
+        mentionItemRefs.current[newIndex]?.scrollIntoView({ block: 'nearest' })
+        return
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        const newIndex = (selectedMentionIndex - 1 + filteredMentions.length) % filteredMentions.length
+        setSelectedMentionIndex(newIndex)
+        mentionItemRefs.current[newIndex]?.scrollIntoView({ block: 'nearest' })
+        return
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        dismissedMentionQueryRef.current = mentionQuery
+        setSelectedMentionIndex(0)
+        return
+      }
+      if (e.key === 'Enter' && !e.shiftKey && !isTouchDevice()) {
+        e.preventDefault()
+        selectMention(filteredMentions[selectedMentionIndex].display)
+        return
+      }
+    }
+    if (e.key === 'Enter' && !e.shiftKey && !isTouchDevice()) {
       e.preventDefault()
       handleSend()
     }
-  }, [showDropdown, filteredCommands, selectedCommandIndex, slashQuery, selectCommand, handleSend])
+  }, [showCommandDropdown, filteredCommands, selectedCommandIndex, slashQuery, selectCommand, showMentionDropdown, filteredMentions, selectedMentionIndex, mentionQuery, selectMention, handleSend])
 
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const items = e.clipboardData?.items
@@ -251,7 +307,7 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
   return (
     <div className="chat-input-wrapper shrink-0 pb-[env(safe-area-inset-bottom)] bg-chat-bg">
       <div className="relative border-t border-b border-border bg-input-bg">
-        {showDropdown && (
+        {showCommandDropdown && (
           <div className="absolute bottom-full left-0 right-0 z-10 border border-border border-b-0 bg-input-bg shadow-xl rounded-t-lg overflow-hidden">
             <ul className="max-h-48 overflow-y-auto">
               {filteredCommands.map((cmd, i) => (
@@ -268,6 +324,29 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
                   >
                     <span className="font-semibold shrink-0">/{cmd.name}</span>
                     <span className="text-msg-text opacity-50 truncate">{cmd.description}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {showMentionDropdown && (
+          <div className="absolute bottom-full left-0 right-0 z-10 border border-border border-b-0 bg-input-bg shadow-xl rounded-t-lg overflow-hidden">
+            <ul className="max-h-48 overflow-y-auto">
+              {filteredMentions.map((member, i) => (
+                <li key={member.id}>
+                  <button
+                    ref={(el) => { mentionItemRefs.current[i] = el }}
+                    type="button"
+                    className={clsx(
+                      'w-full text-left px-3 py-2 flex gap-2 items-baseline cursor-pointer border-none bg-transparent text-msg-text text-sm',
+                      i === selectedMentionIndex ? 'bg-white/10' : 'hover:bg-white/5'
+                    )}
+                    onMouseDown={preventBlur}
+                    onTouchStart={preventBlur}
+                    onClick={() => selectMention(member.display)}
+                  >
+                    <span className="font-semibold shrink-0">@{member.display}</span>
                   </button>
                 </li>
               ))}
@@ -296,13 +375,11 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
           placeholder={`Message #${roomName}`}
           inputRef={inputRef as unknown as RefObject<HTMLTextAreaElement>}
           autoResize
-          suggestionsPlacement="above"
           classNames={mentionsClassNames}
-          customSuggestionsContainer={mentionsSuggestionsContainer}
         >
           <Mention
             trigger="@"
-            data={mentionData}
+            data={emptyMentionData}
             displayTransform={(_id, display) => `@${display ?? _id}`}
             appendSpaceOnAdd
           />

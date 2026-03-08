@@ -40,6 +40,10 @@ function normalizeFinalText(value: string): string {
   return value.replace(/\r\n/g, '\n').trim()
 }
 
+function isPlainChatMessage(msg: ListenMessage): boolean {
+  return msg.type == null || msg.type === 'message'
+}
+
 function makeTurnKey(event: { turnId: string | null; itemId: string | null }): string {
   return event.turnId ?? event.itemId ?? 'unknown'
 }
@@ -188,6 +192,7 @@ export function listenCodex(
 
   const onMessage = (msg: ListenMessage) => {
     if (terminal.handle(msg)) return
+    if (!isPlainChatMessage(msg)) return
 
     if (msg.id && msg.room_id && (msg.attachment_count ?? 0) > 0) {
       void downloadMessageAttachments(client, msg.room_id, msg.id).then(paths => {

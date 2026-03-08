@@ -4,6 +4,7 @@ import { ZodError } from 'zod'
 import { listen } from './usecase'
 import type { CodexAppServerEvent } from '@meet-ai/cli/lib/codex-app-server'
 import type { MeetAiClient, Message } from '@meet-ai/cli/types'
+import type IInboxRouter from '@meet-ai/cli/domain/interfaces/IInboxRouter'
 
 // Capture the onMessage callback passed to client.listen()
 // so we can simulate incoming WebSocket messages in tests
@@ -76,6 +77,13 @@ function mockClientCapturingHandler(): {
       if (!captured) throw new Error('onMessage was not captured — listen() was not called')
       return captured
     },
+  }
+}
+
+function mockInboxRouter(): IInboxRouter {
+  return {
+    route: mock(() => {}),
+    checkIdle: mock(() => {}),
   }
 }
 
@@ -196,6 +204,30 @@ describe('listen', () => {
 
     // THEN it returns the WebSocket object
     expect(result).toBe(fakeWs)
+  })
+
+  it('does not route non-message payloads into Claude inboxes', () => {
+    const { client, getHandler } = mockClientCapturingHandler()
+    const inboxRouter = mockInboxRouter()
+
+    listen(
+      client,
+      {
+        roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c',
+        team: 'my-team',
+        inbox: 'team-lead',
+      },
+      inboxRouter,
+    )
+
+    const handler = getHandler()
+    handler({
+      ...makeMessage({ id: 'msg-log', sender: 'hook', content: 'Agent activity' }),
+      type: 'log',
+    } as any)
+
+    expect(inboxRouter.route).not.toHaveBeenCalled()
+    expect(logSpy).not.toHaveBeenCalledWith(JSON.stringify(expect.objectContaining({ id: 'msg-log' })))
   })
 
   describe('validation', () => {
@@ -334,6 +366,26 @@ describe('listen', () => {
       })
     )
     expect(logSpy).toHaveBeenCalledWith('[meet-ai->codex] start turn-1\n')
+  })
+
+  it('does not deliver non-message payloads to the Codex inbox', async () => {
+    process.env.MEET_AI_RUNTIME = 'codex'
+    process.env.CODEX_HOME = codexHome
+
+    const { client, getHandler } = mockClientCapturingHandler()
+    const codexBridge = makeCodexBridgeMock()
+
+    listen(client, { roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c' }, undefined, codexBridge)
+    const handler = getHandler()
+    handler({
+      ...makeMessage({ id: 'msg-log', sender: 'hook', content: 'Agent activity' }),
+      type: 'log',
+    } as any)
+
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(codexBridge.injectText).not.toHaveBeenCalled()
+    expect(() => readFileSync(`${codexHome}/meet-ai/inbox/thread-1.json`, 'utf-8')).toThrow()
   })
 
   it('starts a fresh Codex session even when a workspace transcript exists', () => {

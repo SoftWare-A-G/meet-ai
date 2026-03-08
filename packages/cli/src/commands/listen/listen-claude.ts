@@ -5,6 +5,10 @@ import { createTerminalControlHandler, loadTeamExcludeSet, type ListenMessage } 
 import type IInboxRouter from '@meet-ai/cli/domain/interfaces/IInboxRouter'
 import type { MeetAiClient } from '@meet-ai/cli/types'
 
+function isPlainChatMessage(msg: ListenMessage): boolean {
+  return msg.type == null || msg.type === 'message'
+}
+
 export function listenClaude(
   client: MeetAiClient,
   input: {
@@ -28,6 +32,7 @@ export function listenClaude(
 
   const onMessage = (msg: ListenMessage) => {
     if (terminal.handle(msg)) return
+    if (!isPlainChatMessage(msg)) return
     if (teamExcludeSet.has(msg.sender)) return
 
     if (msg.id && msg.room_id && (msg.attachment_count ?? 0) > 0) {
