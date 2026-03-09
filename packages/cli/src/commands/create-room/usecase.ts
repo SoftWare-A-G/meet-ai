@@ -6,6 +6,7 @@ import { ok } from "@meet-ai/cli/lib/output";
 
 export async function createRoom(client: MeetAiClient, input: {
   name: string;
+  silent?: boolean;
 }) {
   const parsed = CreateRoomInput.parse(input);
   const config = getMeetAiConfig();
@@ -17,6 +18,8 @@ export async function createRoom(client: MeetAiClient, input: {
     }
   }
   const room = await client.createRoom(parsed.name, project?.projectId);
-  ok(`Room created: ${room.id} (${room.name})`);
+  if (!input.silent) {
+    ok(`Room created: ${room.id} (${room.name})`);
+  }
   return room;
 }

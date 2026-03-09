@@ -8,6 +8,7 @@ import { StatusBar } from './status-bar'
 import { groupTeamsByRoom } from './room-groups'
 import { useAutoUpdate } from './use-auto-update'
 import { CURRENT_VERSION, restartApp } from '@meet-ai/cli/lib/auto-update'
+import { createRoom } from '@meet-ai/cli/commands/create-room/usecase'
 import type { MeetAiClient, Room } from '@meet-ai/cli/types'
 import type { SpawnDialogSelection } from './spawn-dialog-state'
 
@@ -129,7 +130,7 @@ function AppInner({ processManager, client, codingAgents, onAttach, onDetach, on
           return
         }
 
-        const room = await client.createRoom(selection.roomName)
+        const room = await createRoom(client, { name: selection.roomName, silent: true })
         setAvailableRooms(prev => (prev.some(existing => existing.id === room.id) ? prev : [...prev, room]))
         processManager.spawn(room.id, room.name, selection.codingAgent)
         refreshTeams()

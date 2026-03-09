@@ -1,14 +1,14 @@
-import { render } from 'ink'
-import React from 'react'
 import { CODING_AGENT_DEFINITIONS } from '@meet-ai/cli/coding-agents'
-import { findClaudeCli, findCodexCli } from '@meet-ai/cli/spawner'
+import { createRoom } from '@meet-ai/cli/commands/create-room/usecase'
 import { ProcessManager } from '@meet-ai/cli/lib/process-manager'
 import { TmuxClient, parseVersion } from '@meet-ai/cli/lib/tmux-client'
+import { findClaudeCli, findCodexCli } from '@meet-ai/cli/spawner'
 import { App } from '@meet-ai/cli/tui/app'
-import { detectProject } from '@meet-ai/cli/lib/project'
+import { render } from 'ink'
+import React from 'react'
+import type { CodingAgentId } from '@meet-ai/cli/coding-agents'
 import type { MeetAiConfig } from '@meet-ai/cli/config'
 import type { MeetAiClient } from '@meet-ai/cli/types'
-import type { CodingAgentId } from '@meet-ai/cli/coding-agents'
 
 interface DashboardOptions {
   debug?: boolean
@@ -42,7 +42,9 @@ export async function startDashboard(
     agentBinaries.codex = findCodexCli()
   } catch {}
 
-  const availableCodingAgents = CODING_AGENT_DEFINITIONS.filter(agent => Boolean(agentBinaries[agent.id]))
+  const availableCodingAgents = CODING_AGENT_DEFINITIONS.filter(agent =>
+    Boolean(agentBinaries[agent.id])
+  )
   if (availableCodingAgents.length === 0) {
     console.error('No supported coding agent CLI was found.')
     console.error('Install Claude Code or Codex, or set MEET_AI_CLAUDE_PATH / MEET_AI_CODEX_PATH.')
@@ -93,18 +95,13 @@ export async function startDashboard(
               )
               return
             }
-            const project = config.key ? detectProject(config.key) : null
-            if (project) {
-              const existing = await client.findProject(project.projectId)
-              if (!existing) {
-                await client.upsertProject(project.projectId, project.projectName)
-              }
-            }
-            const room = await client.createRoom(roomName, project?.projectId)
+            const room = await createRoom(client, { name: roomName, silent: true })
             const team = processManager.spawn(room.id, roomName, codingAgent)
             // If spawn failed after room creation, surface the error with the real room ID
             if (team.status === 'error') {
-              console.error(`[dashboard] spawn failed for room "${roomName}": ${team.lines.join('; ')}`)
+              console.error(
+                `[dashboard] spawn failed for room "${roomName}": ${team.lines.join('; ')}`
+              )
             }
           } finally {
             pendingSpawns.delete(key)
