@@ -1,12 +1,62 @@
 import { Box, Text } from 'ink'
+import type { UpdateState } from '@meet-ai/cli/lib/auto-update'
 
 interface StatusBarProps {
   teamCount: number
   roomCount: number
   focusedRoom: string | null
+  version: string
+  updateState: UpdateState
 }
 
-export function StatusBar({ teamCount, roomCount, focusedRoom }: StatusBarProps) {
+function UpdateStatus({ state }: { state: UpdateState }) {
+  switch (state.status) {
+    case 'checking': {
+      return (
+        <Text dimColor>
+          <Text>[</Text><Text bold>u</Text><Text>]pdate checking...</Text>
+        </Text>
+      )
+    }
+    case 'downloading': {
+      return (
+        <Text dimColor>
+          <Text>[</Text><Text bold>u</Text><Text>]pdate downloading...</Text>
+        </Text>
+      )
+    }
+    case 'ready_to_restart': {
+      return (
+        <Text color="green">
+          <Text>[</Text><Text bold>u</Text><Text>]pdate ready: v{state.version}</Text>
+        </Text>
+      )
+    }
+    case 'failed': {
+      return (
+        <Text color="red" dimColor>
+          <Text>[</Text><Text bold>u</Text><Text>]pdate failed</Text>
+        </Text>
+      )
+    }
+    case 'update_unavailable': {
+      return (
+        <Text dimColor>
+          <Text>[</Text><Text bold>u</Text><Text>]pdate unavailable</Text>
+        </Text>
+      )
+    }
+    default: {
+      return (
+        <Text>
+          <Text dimColor>[</Text><Text bold>u</Text><Text dimColor>]pdate</Text>
+        </Text>
+      )
+    }
+  }
+}
+
+export function StatusBar({ teamCount, roomCount, focusedRoom, version, updateState }: StatusBarProps) {
   return (
     <Box justifyContent="space-between">
       <Box gap={2}>
@@ -51,6 +101,8 @@ export function StatusBar({ teamCount, roomCount, focusedRoom }: StatusBarProps)
         <Text dimColor>
           {roomCount} room{roomCount !== 1 ? 's' : ''}, {teamCount} team{teamCount !== 1 ? 's' : ''}
         </Text>
+        <Text dimColor>v{version}</Text>
+        <UpdateStatus state={updateState} />
       </Box>
     </Box>
   )

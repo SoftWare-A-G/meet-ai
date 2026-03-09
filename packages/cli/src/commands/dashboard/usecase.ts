@@ -119,6 +119,7 @@ export async function startDashboard(
   process.on('SIGTERM', cleanup)
 
   // 4. Launch TUI with attach/detach callbacks for WebSocket lifecycle
+  let inkInstance: ReturnType<typeof render> | null = null
   const element = React.createElement(App, {
     processManager,
     client,
@@ -132,8 +133,15 @@ export async function startDashboard(
       // Reconnect lobby WS after detach
       startLobby()
     },
+    onBeforeRestart: () => {
+      // Close lobby WS and unmount Ink before spawning replacement process
+      lobbyWs?.close()
+      lobbyWs = null
+      inkInstance?.unmount()
+    },
   })
   const instance = render(element)
+  inkInstance = instance
   await instance.waitUntilExit()
   cleanup()
 }

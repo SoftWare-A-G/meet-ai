@@ -6,6 +6,8 @@ import { Dashboard } from './dashboard'
 import { SpawnDialog } from './spawn-dialog'
 import { StatusBar } from './status-bar'
 import { groupTeamsByRoom } from './room-groups'
+import { useAutoUpdate } from './use-auto-update'
+import { CURRENT_VERSION, restartApp } from '@meet-ai/cli/lib/auto-update'
 import type { MeetAiClient, Room } from '@meet-ai/cli/types'
 import type { SpawnDialogSelection } from './spawn-dialog-state'
 
@@ -36,9 +38,11 @@ interface AppProps {
   /** Called before attach to close WebSocket, and after to reconnect. */
   onAttach?: () => void
   onDetach?: () => void
+  /** Called before restart to close WebSocket and unmount Ink. */
+  onBeforeRestart?: () => void
 }
 
-function AppInner({ processManager, client, codingAgents, onAttach, onDetach }: AppProps) {
+function AppInner({ processManager, client, codingAgents, onAttach, onDetach, onBeforeRestart }: AppProps) {
   const { exit } = useApp()
   const { stdout } = useStdout()
   const { setRawMode } = useStdin()
@@ -50,7 +54,10 @@ function AppInner({ processManager, client, codingAgents, onAttach, onDetach }: 
   const [roomsLoading, setRoomsLoading] = useState(false)
   const [roomsError, setRoomsError] = useState<string | null>(null)
   const [killTargetId, setKillTargetId] = useState<string | null>(null)
+  const [restartConfirm, setRestartConfirm] = useState(false)
   const [, setRenderTick] = useState(0)
+
+  const { state: updateState, triggerCheck } = useAutoUpdate()
 
   const terminalHeight = stdout?.rows ?? 24
   const spawnDialogHeight = Math.max(10, Math.min(16, terminalHeight - 4))
@@ -175,6 +182,20 @@ function AppInner({ processManager, client, codingAgents, onAttach, onDetach }: 
   useInput((input, key) => {
     if (showSpawn || busyRef.current) return
 
+    // Restart confirmation mode
+    if (restartConfirm) {
+      if (input === 'y' || input === 'Y') {
+        try {
+          // Cleanup callback runs inside restartApp() only after child is confirmed spawned
+          restartApp(onBeforeRestart)
+        } catch {
+          // spawn failed — TUI is still intact, stay in ready_to_restart
+        }
+      }
+      setRestartConfirm(false)
+      return
+    }
+
     // Kill confirmation mode — uses captured killTargetId (not stale closure)
     if (killTargetId) {
       if (input === 'y' || input === 'Y') {
@@ -182,6 +203,16 @@ function AppInner({ processManager, client, codingAgents, onAttach, onDetach }: 
         refreshTeams()
       }
       setKillTargetId(null)
+      return
+    }
+
+    // Update: check or apply
+    if (input === 'u') {
+      if (updateState.status === 'ready_to_restart') {
+        setRestartConfirm(true)
+      } else {
+        triggerCheck()
+      }
       return
     }
 
@@ -266,7 +297,12 @@ function AppInner({ processManager, client, codingAgents, onAttach, onDetach }: 
         focusedTeamIndex={clampedTeamIndex}
         height={dashboardHeight}
       />
-      {killTargetId ? (
+      {restartConfirm && updateState.status === 'ready_to_restart' ? (
+        <Box>
+          <Text color="green">Apply update v{updateState.version}? </Text>
+          <Text dimColor>[y/n]</Text>
+        </Box>
+      ) : killTargetId ? (
         <Box>
           <Text color="red">Kill </Text>
           <Text bold>{killLabel}</Text>
@@ -292,6 +328,8 @@ function AppInner({ processManager, client, codingAgents, onAttach, onDetach }: 
           teamCount={teams.length}
           roomCount={roomGroups.length}
           focusedRoom={focusedTeam?.roomName ?? null}
+          version={CURRENT_VERSION}
+          updateState={updateState}
         />
       )}
     </Box>
