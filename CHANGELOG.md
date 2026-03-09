@@ -1,6 +1,12 @@
 # Changelog
 
-## [0.5.2](https://github.com/SoftWare-A-G/meet-ai/compare/0.5.1...HEAD) (2026-03-10)
+## [0.5.3](https://github.com/SoftWare-A-G/meet-ai/compare/0.5.2...HEAD) (2026-03-10)
+
+### Bug Fixes
+
+* add project auto-detection and find-then-upsert to `create-room` and `dashboard` usecases so rooms are properly associated with projects
+
+## [0.5.2](https://github.com/SoftWare-A-G/meet-ai/compare/0.5.1...0.5.2) (2026-03-10)
 
 ### Bug Fixes
 

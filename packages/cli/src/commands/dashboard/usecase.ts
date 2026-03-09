@@ -5,6 +5,7 @@ import { findClaudeCli, findCodexCli } from '@meet-ai/cli/spawner'
 import { ProcessManager } from '@meet-ai/cli/lib/process-manager'
 import { TmuxClient, parseVersion } from '@meet-ai/cli/lib/tmux-client'
 import { App } from '@meet-ai/cli/tui/app'
+import { detectProject } from '@meet-ai/cli/lib/project'
 import type { MeetAiConfig } from '@meet-ai/cli/config'
 import type { MeetAiClient } from '@meet-ai/cli/types'
 import type { CodingAgentId } from '@meet-ai/cli/coding-agents'
@@ -92,7 +93,14 @@ export async function startDashboard(
               )
               return
             }
-            const room = await client.createRoom(roomName)
+            const project = config.key ? detectProject(config.key) : null
+            if (project) {
+              const existing = await client.findProject(project.projectId)
+              if (!existing) {
+                await client.upsertProject(project.projectId, project.projectName)
+              }
+            }
+            const room = await client.createRoom(roomName, project?.projectId)
             const team = processManager.spawn(room.id, roomName, codingAgent)
             // If spawn failed after room creation, surface the error with the real room ID
             if (team.status === 'error') {
