@@ -10,6 +10,10 @@ import {
 import { TASK_TOOL_SPECS, createTaskToolCallHandler } from '@meet-ai/cli/lib/codex-task-tools'
 import { createHookClient } from '@meet-ai/cli/lib/hooks/client'
 import { createTask, updateTask, listTasks, getTask } from '@meet-ai/cli/lib/hooks/tasks'
+import {
+  registerActiveTeamMember,
+  type TeamMemberRegistrar,
+} from '@meet-ai/cli/lib/team-member-registration'
 import { ListenInput } from './schema'
 import { createTerminalControlHandler, type ListenMessage } from './shared'
 import type { MeetAiClient, Message } from '@meet-ai/cli/types'
@@ -156,7 +160,8 @@ export function listenCodex(
     team?: string
     inbox?: string
   },
-  codexBridgeOverride?: CodexBridge | null
+  codexBridgeOverride?: CodexBridge | null,
+  teamMemberRegistrar: TeamMemberRegistrar = registerActiveTeamMember
 ): WebSocket {
   const parsed = ListenInput.parse(input)
   const { roomId, exclude, senderType, team, inbox } = parsed
@@ -348,6 +353,7 @@ export function listenCodex(
   }
 
   const ws = client.listen(roomId, { exclude, senderType, onMessage })
+  void teamMemberRegistrar({ roomId, agentName: codexSender, role: 'codex' })
 
   if (bootstrapPrompt) {
     const bootstrapRequest: Promise<CodexInjectionResult> = codexBridge.injectPrompt(bootstrapPrompt)

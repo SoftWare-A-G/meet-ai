@@ -121,6 +121,7 @@ describe('listen', () => {
   const originalOn = process.on
   const savedRuntime = process.env.MEET_AI_RUNTIME
   const savedCodexHome = process.env.CODEX_HOME
+  const savedAgentName = process.env.MEET_AI_AGENT_NAME
   const codexHome = '/tmp/meet-ai-listen-codex-home'
 
   function writeCodexSessionTranscript(sessionId: string, cwd: string) {
@@ -140,6 +141,7 @@ describe('listen', () => {
     mkdirSync(codexHome, { recursive: true })
     delete process.env.MEET_AI_RUNTIME
     delete process.env.CODEX_HOME
+    delete process.env.MEET_AI_AGENT_NAME
   })
 
   afterEach(() => {
@@ -152,6 +154,8 @@ describe('listen', () => {
     else process.env.MEET_AI_RUNTIME = savedRuntime
     if (savedCodexHome === undefined) delete process.env.CODEX_HOME
     else process.env.CODEX_HOME = savedCodexHome
+    if (savedAgentName === undefined) delete process.env.MEET_AI_AGENT_NAME
+    else process.env.MEET_AI_AGENT_NAME = savedAgentName
   })
 
   it('calls client.listen with correct roomId and options', () => {
@@ -170,6 +174,31 @@ describe('listen', () => {
       exclude: 'bot',
       senderType: 'human',
       onMessage: expect.any(Function),
+    })
+  })
+
+  it('registers the active Claude member when team listen starts', async () => {
+    const client = mockClient()
+    const registerMember = mock(() => Promise.resolve())
+
+    listen(
+      client,
+      {
+        roomId: 'defd9c7e-cbd0-4653-ade1-1aaf402d1a62',
+        team: 'demo-team',
+        inbox: 'agent-1',
+      },
+      undefined,
+      undefined,
+      registerMember,
+    )
+
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(registerMember).toHaveBeenCalledWith({
+      roomId: 'defd9c7e-cbd0-4653-ade1-1aaf402d1a62',
+      teamName: 'demo-team',
+      agentName: 'agent-1',
     })
   })
 
@@ -217,6 +246,31 @@ describe('listen', () => {
     expect(codexBridge.injectText).toHaveBeenCalledTimes(1)
     expect(logSpy).toHaveBeenCalledWith('[meet-ai->codex] start turn-1\n')
     expect(codexBridge.setEventHandler).toHaveBeenCalledWith(expect.any(Function))
+  })
+
+  it('registers the active Codex member when codex listen starts', async () => {
+    process.env.MEET_AI_RUNTIME = 'codex'
+    process.env.CODEX_HOME = codexHome
+    process.env.MEET_AI_AGENT_NAME = 'my-codex'
+
+    const client = mockClient()
+    const registerMember = mock(() => Promise.resolve())
+
+    listen(
+      client,
+      { roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c', senderType: 'human' },
+      undefined,
+      undefined,
+      registerMember,
+    )
+
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(registerMember).toHaveBeenCalledWith({
+      roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c',
+      agentName: 'my-codex',
+      role: 'codex',
+    })
   })
 
   it('returns the WebSocket from client.listen', () => {

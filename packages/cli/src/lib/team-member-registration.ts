@@ -1,0 +1,126 @@
+import { readdirSync, readFileSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
+import { createHookClient, sendTeamMemberUpsert } from './hooks/client'
+
+type TeamConfigMember = {
+  agentId?: string
+  name?: string
+  agentType?: string
+  model?: string
+  joinedAt?: number
+  color?: string
+}
+
+type TeamConfig = {
+  leadAgentId?: string
+  members?: TeamConfigMember[]
+}
+
+export type TeamMemberRegistrar = (input: {
+  roomId: string
+  agentName?: string
+  teamName?: string
+  color?: string
+  role?: string
+  model?: string
+  joinedAt?: number
+}) => Promise<void>
+
+function getTeamsDir(): string {
+  return join(process.env.HOME ?? homedir(), '.claude', 'teams')
+}
+
+function readJsonFile<T>(filePath: string): T | null {
+  try {
+    return JSON.parse(readFileSync(filePath, 'utf8')) as T
+  } catch {
+    return null
+  }
+}
+
+function findTeamNameByRoomId(roomId: string): string | null {
+  let entries: string[]
+  try {
+    entries = readdirSync(getTeamsDir())
+  } catch {
+    return null
+  }
+
+  for (const entry of entries) {
+    const roomBinding = readJsonFile<{ room_id?: string; team_name?: string }>(
+      join(getTeamsDir(), entry, 'meet-ai.json')
+    )
+    if (roomBinding?.room_id === roomId) {
+      return roomBinding.team_name || entry
+    }
+  }
+
+  return null
+}
+
+function readTeamConfig(teamName: string): TeamConfig | null {
+  return readJsonFile<TeamConfig>(join(getTeamsDir(), teamName, 'config.json'))
+}
+
+function resolveLeadAgentName(config: TeamConfig | null): string | undefined {
+  if (!config) return undefined
+  const explicitLead = config.leadAgentId?.split('@')[0]?.trim()
+  if (explicitLead) return explicitLead
+  return config.members?.[0]?.name?.trim() || undefined
+}
+
+function findConfigMember(
+  config: TeamConfig | null,
+  agentName: string | undefined
+): TeamConfigMember | undefined {
+  if (!config || !agentName) return undefined
+
+  return config.members?.find(member => {
+    if (member.name?.trim() === agentName) return true
+    return member.agentId?.startsWith(`${agentName}@`) ?? false
+  })
+}
+
+function defaultColor(agentName: string, role: string): string {
+  if (agentName === 'codex' || role === 'codex') return '#22c55e'
+  if (role === 'team-lead') return '#3b82f6'
+  return '#818cf8'
+}
+
+export const registerActiveTeamMember: TeamMemberRegistrar = async input => {
+  const url = process.env.MEET_AI_URL?.trim()
+  const key = process.env.MEET_AI_KEY?.trim()
+  if (!url || !key) return
+
+  const resolvedTeamName = input.teamName?.trim() || findTeamNameByRoomId(input.roomId) || undefined
+  const config = resolvedTeamName ? readTeamConfig(resolvedTeamName) : null
+  const resolvedAgentName =
+    input.agentName?.trim() ||
+    process.env.MEET_AI_AGENT_NAME?.trim() ||
+    resolveLeadAgentName(config)
+
+  if (!resolvedAgentName) return
+
+  const member = findConfigMember(config, resolvedAgentName)
+  const teamName = resolvedTeamName || resolvedAgentName
+  const role = input.role || member?.agentType || 'agent'
+  const model = input.model || member?.model || 'unknown'
+  const joinedAt = input.joinedAt ?? member?.joinedAt ?? Date.now()
+  const color =
+    input.color ||
+    member?.color ||
+    process.env.MEET_AI_COLOR?.trim() ||
+    defaultColor(resolvedAgentName, role)
+  const teammateId = member?.agentId || `${resolvedAgentName}@${teamName}`
+
+  await sendTeamMemberUpsert(createHookClient(url, key), input.roomId, teamName, {
+    teammate_id: teammateId,
+    name: resolvedAgentName,
+    color,
+    role,
+    model,
+    status: 'active',
+    joinedAt,
+  })
+}

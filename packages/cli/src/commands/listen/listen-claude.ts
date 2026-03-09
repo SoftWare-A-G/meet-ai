@@ -1,5 +1,9 @@
 import { IDLE_CHECK_INTERVAL_MS } from '@meet-ai/cli/inbox-router'
 import { downloadMessageAttachments } from '@meet-ai/cli/lib/attachments'
+import {
+  registerActiveTeamMember,
+  type TeamMemberRegistrar,
+} from '@meet-ai/cli/lib/team-member-registration'
 import { ListenInput } from './schema'
 import { createTerminalControlHandler, loadTeamExcludeSet, type ListenMessage } from './shared'
 import type IInboxRouter from '@meet-ai/cli/domain/interfaces/IInboxRouter'
@@ -18,7 +22,8 @@ export function listenClaude(
     team?: string
     inbox?: string
   },
-  inboxRouter?: IInboxRouter
+  inboxRouter?: IInboxRouter,
+  teamMemberRegistrar: TeamMemberRegistrar = registerActiveTeamMember
 ): WebSocket {
   const parsed = ListenInput.parse(input)
   const { roomId, exclude, senderType, team, inbox } = parsed
@@ -59,6 +64,7 @@ export function listenClaude(
   }
 
   const ws = client.listen(roomId, { exclude, senderType, onMessage })
+  void teamMemberRegistrar({ roomId, teamName: team, agentName: inbox })
 
   let idleCheckTimeout: ReturnType<typeof setTimeout> | null = null
   const idleNotified = new Set<string>()
