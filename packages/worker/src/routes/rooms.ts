@@ -244,6 +244,26 @@ export const roomsRoute = new Hono<AppEnv>()
     return c.json(map)
   })
 
+  // GET /api/rooms/:id/team-info — get current team info
+  .get('/:id/team-info', requireAuth, async c => {
+    const keyId = c.get('keyId')
+    const roomId = c.req.param('id')
+    const db = queries(c.env.DB)
+
+    const room = await db.findRoom(roomId, keyId)
+    if (!room) {
+      return c.json({ error: 'room not found' }, 404)
+    }
+
+    const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
+    const stub = c.env.CHAT_ROOM.get(doId)
+    const res = await stub.fetch(
+      new Request('http://internal/team-info', { method: 'GET' })
+    )
+    const data = await res.json()
+    return c.json(data)
+  })
+
   // POST /api/rooms/:id/team-info — push team info to ChatRoom DO
   .post('/:id/team-info', requireAuth, zValidator('json', teamInfoSchema), async c => {
     const keyId = c.get('keyId')

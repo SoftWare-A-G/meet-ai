@@ -1,5 +1,5 @@
 import { STORAGE_KEYS } from './constants'
-import type { Message, Room, TaskItem } from './types'
+import type { Message, Room, TaskItem, TasksInfo, TeamInfo } from './types'
 
 export function getApiKey(): string | null {
   if (typeof localStorage === 'undefined') return null
@@ -113,6 +113,19 @@ export async function loadAttachmentCounts(roomId: string): Promise<Record<strin
   const res = await fetch(`/api/rooms/${roomId}/attachment-counts`, { headers: authHeaders() })
   if (!res.ok) return {}
   return res.json()
+}
+
+export async function loadTasks(roomId: string): Promise<TasksInfo | null> {
+  const res = await fetch(`/api/rooms/${roomId}/tasks`, { headers: authHeaders() })
+  if (!res.ok) return null
+  const data: { tasks?: TaskItem[] } = await res.json()
+  return { tasks: data.tasks ?? [] }
+}
+
+export async function loadTeamInfo(roomId: string): Promise<TeamInfo | null> {
+  const res = await fetch(`/api/rooms/${roomId}/team-info`, { headers: authHeaders() })
+  if (!res.ok) return null
+  return await res.json()
 }
 
 export async function checkTtsAvailable(): Promise<boolean> {

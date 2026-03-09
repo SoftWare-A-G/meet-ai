@@ -117,6 +117,16 @@ export class ChatRoom extends DurableObject {
       return new Response('ok')
     }
 
+    // GET /team-info — return current team info
+    if (url.pathname === '/team-info' && request.method === 'GET') {
+      if (!this.teamInfo) {
+        this.teamInfo = (await this.ctx.storage.get<string>('teamInfo')) ?? null
+      }
+      return new Response(this.teamInfo ?? JSON.stringify({ type: 'team_info', members: [] }), {
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
     // /team-info — store and broadcast team info
     if (url.pathname === '/team-info') {
       const body = await request.text()

@@ -40,6 +40,8 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
   const { queue, remove, getForRoom } = useOfflineQueue()
   const { triggerForMessage } = useHaptics()
   const prevMembersRef = useRef<TeamMember[] | null>(null)
+  const wsTasksDeliveredRef = useRef(false)
+  const wsTeamDeliveredRef = useRef(false)
 
   // Check TTS availability once on mount
   useEffect(() => {
@@ -50,6 +52,8 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
   // does not persist while the new room hydrates over WebSocket.
   useEffect(() => {
     prevMembersRef.current = null
+    wsTasksDeliveredRef.current = false
+    wsTeamDeliveredRef.current = false
     onTeamInfo?.(null)
     onTasksInfo?.(null)
     onCommandsInfo?.(null)
@@ -59,10 +63,12 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
   useEffect(() => {
     let cancelled = false
     async function load() {
-      const [history, logs, counts] = await Promise.all([
+      const [history, logs, counts, tasks, team] = await Promise.all([
         api.loadMessages(room.id),
         api.loadLogs(room.id),
         api.loadAttachmentCounts(room.id),
+        api.loadTasks(room.id),
+        api.loadTeamInfo(room.id),
       ])
       if (cancelled) return
       const all = [...history, ...logs].sort(
@@ -112,6 +118,10 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
       if (Object.keys(pDecisions).length > 0) {
         setPermissionDecisions(prev => ({ ...prev, ...pDecisions }))
       }
+
+      // Hydrate sidebar from REST only if WS hasn't delivered fresher data yet
+      if (tasks && !wsTasksDeliveredRef.current) onTasksInfo?.(tasks)
+      if (team && !wsTeamDeliveredRef.current) onTeamInfo?.(team)
 
       // Restore queued offline messages
       try {
@@ -194,6 +204,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
       }
     }
     prevMembersRef.current = info.members
+    wsTeamDeliveredRef.current = true
     onTeamInfo?.(info)
   }, [onTeamInfo])
 
@@ -246,6 +257,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
   })
 
   useEffect(() => {
+    if (tasksInfo) wsTasksDeliveredRef.current = true
     onTasksInfo?.(tasksInfo)
   // eslint-disable-next-line react-hooks/exhaustive-deps -- onTasksInfo is stable
   }, [tasksInfo])
