@@ -396,15 +396,18 @@ function createFakeAppServer() {
       messages.push(msg)
 
       switch (msg.method) {
-        case 'initialize':
+        case 'initialize': {
           stdout.write(`${JSON.stringify({ id: msg.id, result: { userAgent: 'codex-test' } })}\n`)
           break
-        case 'thread/start':
+        }
+        case 'thread/start': {
           stdout.write(`${JSON.stringify({ id: msg.id, result: { thread: { id: 'thread-1', turns: [] } } })}\n`)
           break
-        case 'turn/start':
+        }
+        case 'turn/start': {
           stdout.write(`${JSON.stringify({ id: msg.id, result: { turn: { id: 'turn-1' } } })}\n`)
           break
+        }
       }
     }
   })

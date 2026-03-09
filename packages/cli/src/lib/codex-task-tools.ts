@@ -172,8 +172,9 @@ export function createTaskToolCallHandler(ops: TaskOperations): DynamicToolCallH
         if (!task) return makeToolError('Task not found')
         return makeToolResponse(task)
       }
-      default:
+      default: {
         return makeToolError(`Unknown task tool: ${tool}`)
+      }
     }
   }
 }

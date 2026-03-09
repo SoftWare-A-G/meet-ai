@@ -87,6 +87,33 @@ function mockInboxRouter(): IInboxRouter {
   }
 }
 
+function makeTask(overrides: Partial<{
+  id: string
+  subject: string
+  description?: string
+  status: string
+  assignee: string | null
+  owner: string | null
+  source: string
+  source_id: string | null
+  updated_by: string | null
+  updated_at: number
+}> = {}) {
+  return {
+    id: 'task-1',
+    subject: 'Fix the bug',
+    description: undefined,
+    status: 'pending',
+    assignee: null,
+    owner: null,
+    source: 'meet_ai',
+    source_id: null,
+    updated_by: null,
+    updated_at: Date.now(),
+    ...overrides,
+  }
+}
+
 describe('listen', () => {
   let logSpy: ReturnType<typeof spyOn>
   let errorSpy: ReturnType<typeof spyOn>
@@ -648,31 +675,6 @@ describe('listen', () => {
   })
 
   describe('tasks_info handling', () => {
-    function makeTask(overrides: Partial<{
-      id: string
-      subject: string
-      status: string
-      assignee: string | null
-      owner: string | null
-      source: string
-      source_id: string | null
-      updated_by: string | null
-      updated_at: number
-    }> = {}) {
-      return {
-        id: 'task-1',
-        subject: 'Fix the bug',
-        status: 'pending',
-        assignee: null,
-        owner: null,
-        source: 'meet_ai',
-        source_id: null,
-        updated_by: null,
-        updated_at: Date.now(),
-        ...overrides,
-      }
-    }
-
     it('treats the first tasks_info as a baseline without injecting notifications', async () => {
       process.env.MEET_AI_RUNTIME = 'codex'
       process.env.CODEX_HOME = codexHome
@@ -687,7 +689,13 @@ describe('listen', () => {
       // First tasks_info is the cached snapshot — should be absorbed silently
       handler({
         type: 'tasks_info',
-        tasks: [makeTask({ id: 'task-1', subject: 'Fix the bug', assignee: 'my-codex', status: 'pending' })],
+        tasks: [makeTask({
+          id: 'task-1',
+          subject: 'Fix the bug',
+          description: 'Patch the failing listener path',
+          assignee: 'my-codex',
+          status: 'pending',
+        })],
       } as any)
 
       await new Promise(resolve => setTimeout(resolve, 0))
@@ -718,7 +726,13 @@ describe('listen', () => {
       // Second broadcast: new task assigned
       handler({
         type: 'tasks_info',
-        tasks: [makeTask({ id: 'task-1', subject: 'Fix the bug', assignee: 'my-codex', status: 'pending' })],
+        tasks: [makeTask({
+          id: 'task-1',
+          subject: 'Fix the bug',
+          description: 'Patch the failing listener path',
+          assignee: 'my-codex',
+          status: 'pending',
+        })],
       } as any)
 
       await new Promise(resolve => setTimeout(resolve, 0))
@@ -726,11 +740,25 @@ describe('listen', () => {
       expect(codexBridge.injectText).toHaveBeenCalledWith(
         expect.objectContaining({
           sender: 'meet-ai',
-          content: 'New task assigned to you: Fix the bug (status: pending)',
+          content: [
+            'New task assigned to you:',
+            'task_id: task-1',
+            'subject: Fix the bug',
+            'description: Patch the failing listener path',
+            'status: pending',
+            'assignee: my-codex',
+          ].join('\n'),
         })
       )
       expect(logSpy).toHaveBeenCalledWith(
-        '[meet-ai:tasks] New task assigned to you: Fix the bug (status: pending)\n'
+        [
+          '[meet-ai:tasks] New task assigned to you:',
+          'task_id: task-1',
+          'subject: Fix the bug',
+          'description: Patch the failing listener path',
+          'status: pending',
+          'assignee: my-codex\n',
+        ].join('\n')
       )
     })
 
@@ -785,7 +813,14 @@ describe('listen', () => {
 
       expect(codexBridge.injectText).toHaveBeenCalledWith(
         expect.objectContaining({
-          content: 'Task status changed: Fix the bug (pending → in_progress)',
+          content: [
+            'Task status changed (pending → in_progress):',
+            'task_id: task-1',
+            'subject: Fix the bug',
+            'description: None',
+            'status: in_progress',
+            'assignee: my-codex',
+          ].join('\n'),
         })
       )
     })
@@ -851,7 +886,14 @@ describe('listen', () => {
 
       expect(codexBridge.injectText).toHaveBeenCalledWith(
         expect.objectContaining({
-          content: 'Task assigned to you: Fix the bug (status: pending)',
+          content: [
+            'Task assigned to you:',
+            'task_id: task-1',
+            'subject: Fix the bug',
+            'description: None',
+            'status: pending',
+            'assignee: my-codex',
+          ].join('\n'),
         })
       )
     })

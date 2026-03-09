@@ -10,7 +10,7 @@ type RecordedRequest = {
 }
 
 function createFakeAppServer(options?: {
-  resumeTurns?: Array<{ id: string; status: string }>
+  resumeTurns?: { id: string; status: string }[]
   steerError?: string
 }) {
   const stdin = new PassThrough()
@@ -32,10 +32,11 @@ function createFakeAppServer(options?: {
       requests.push(request)
 
       switch (request.method) {
-        case 'initialize':
+        case 'initialize': {
           stdout.write(`${JSON.stringify({ id: request.id, result: { userAgent: 'codex-test' } })}\n`)
           break
-        case 'thread/resume':
+        }
+        case 'thread/resume': {
           stdout.write(`${JSON.stringify({
             id: request.id,
             result: {
@@ -45,16 +46,19 @@ function createFakeAppServer(options?: {
             },
           })}\n`)
           break
-        case 'turn/start':
+        }
+        case 'turn/start': {
           stdout.write(`${JSON.stringify({ id: request.id, result: { turn: { id: 'turn-started' } } })}\n`)
           break
-        case 'turn/steer':
+        }
+        case 'turn/steer': {
           if (options?.steerError) {
             stdout.write(`${JSON.stringify({ id: request.id, error: { message: options.steerError } })}\n`)
           } else {
             stdout.write(`${JSON.stringify({ id: request.id, result: { turnId: 'turn-steered' } })}\n`)
           }
           break
+        }
       }
     }
   })

@@ -141,7 +141,7 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
     const match = plainText.match(/(?:^|\s)@([\w-]*)$/)
     if (!match) return
     const prefixEnd = match.index! + (match[0].startsWith(' ') ? 1 : 0)
-    const newText = plainText.slice(0, prefixEnd) + `@${name} `
+    const newText = `${plainText.slice(0, prefixEnd)}@${name} `
     setValue(newText)
     setPlainText(newText)
     dismissedMentionQueryRef.current = null

@@ -69,6 +69,19 @@ function isTasksInfoMessage(msg: unknown): msg is TasksInfoMessage {
   )
 }
 
+function formatTaskPayload(task: TaskItem): string {
+  const description = task.description?.trim() ? task.description.trim() : 'None'
+  const assignee = task.assignee ?? 'unassigned'
+
+  return [
+    `task_id: ${task.id}`,
+    `subject: ${task.subject}`,
+    `description: ${description}`,
+    `status: ${task.status}`,
+    `assignee: ${assignee}`,
+  ].join('\n')
+}
+
 function diffTasks(
   prev: Map<string, TaskItem>,
   next: TaskItem[],
@@ -87,7 +100,7 @@ function diffTasks(
     if (!old) {
       // Newly visible task assigned to this agent
       notifications.push(
-        `New task assigned to you: ${task.subject} (status: ${task.status})`
+        `New task assigned to you:\n${formatTaskPayload(task)}`
       )
       continue
     }
@@ -99,14 +112,14 @@ function diffTasks(
     if (!wasAssignedToMe) {
       // Task reassigned to this agent
       notifications.push(
-        `Task assigned to you: ${task.subject} (status: ${task.status})`
+        `Task assigned to you:\n${formatTaskPayload(task)}`
       )
       continue
     }
 
     if (old.status !== task.status) {
       notifications.push(
-        `Task status changed: ${task.subject} (${old.status} → ${task.status})`
+        `Task status changed (${old.status} → ${task.status}):\n${formatTaskPayload(task)}`
       )
     }
   }

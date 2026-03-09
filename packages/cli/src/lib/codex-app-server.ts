@@ -176,10 +176,6 @@ function isSteerPreconditionError(error: unknown): boolean {
   )
 }
 
-function asNonEmptyString(value: unknown): string | null {
-  return typeof value === 'string' && value.length > 0 ? value : null
-}
-
 function isAgentMessageDeltaNotification(params: unknown): params is AgentMessageDeltaNotification {
   return (
     isObject(params) &&
