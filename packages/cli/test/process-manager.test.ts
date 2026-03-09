@@ -21,12 +21,13 @@ describe('ProcessManager', () => {
 
   test('spawn adds a process to the map', () => {
     pm = new ProcessManager({ agentBinaries, dryRun: true })
-    pm.spawn('room-1', 'test-room')
-    const team = pm.get('room-1')
+    const team = pm.spawn('room-1', 'test-room')
     expect(team).toBeDefined()
-    expect(team!.status).toBe('starting')
-    expect(team!.roomName).toBe('test-room')
-    expect(team!.sessionName).toBe('mai-room-1')
+    expect(team.status).toBe('starting')
+    expect(team.roomName).toBe('test-room')
+    expect(team.sessionName).toBe('mai-room-1')
+    expect(team.teamId).toBe('room-1')
+    expect(pm.get('room-1')).toBe(team)
   })
 
   test('list returns all tracked processes', () => {
@@ -58,6 +59,19 @@ describe('ProcessManager', () => {
     expect(team).toBeDefined()
     expect(team!.status).toBe('error')
     expect(team!.lines).toContain('[error] Something failed')
+  })
+
+  test('spawn same room twice creates unique teamIds', () => {
+    pm = new ProcessManager({ agentBinaries, dryRun: true })
+    const team1 = pm.spawn('room-1', 'test-room', 'claude')
+    const team2 = pm.spawn('room-1', 'test-room', 'codex')
+    expect(team1.teamId).toBe('room-1')
+    expect(team2.teamId).toBe('room-1-2')
+    expect(team1.sessionName).toBe('mai-room-1')
+    expect(team2.sessionName).toBe('mai-room-1-2')
+    expect(pm.list().length).toBe(2)
+    expect(pm.get('room-1')).toBe(team1)
+    expect(pm.get('room-1-2')).toBe(team2)
   })
 
   test('spawned counter increments', () => {

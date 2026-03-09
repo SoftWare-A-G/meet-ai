@@ -1,4 +1,4 @@
-import { describe, expect, it, mock } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from 'bun:test'
 import { PassThrough } from 'node:stream'
 import type { ChildProcessWithoutNullStreams, SpawnOptionsWithoutStdio } from 'node:child_process'
 import { CodexAppServerBridge, type CodexAppServerEvent } from './codex-app-server'
@@ -88,6 +88,16 @@ function emitNotification(
 }
 
 describe('CodexAppServerBridge', () => {
+  let logSpy: ReturnType<typeof spyOn>
+
+  beforeEach(() => {
+    logSpy = spyOn(console, 'log').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    logSpy.mockRestore()
+  })
+
   it('starts a new turn when the resumed thread is idle', async () => {
     const fake = createFakeAppServer()
     const bridge = new CodexAppServerBridge({
@@ -365,5 +375,150 @@ describe('CodexAppServerBridge', () => {
         text: 'local completed',
       },
     ])
+  })
+
+  it('routes child stderr lines through evlog output', async () => {
+    const fake = createFakeAppServer()
+    const bridge = new CodexAppServerBridge({
+      threadId: 'thread-1',
+      spawnFn: fake.spawnFn,
+    })
+
+    await bridge.injectText({
+      sender: 'alice',
+      content: 'hello from web',
+    })
+
+    fake.child.stderr.push('app-server warning\n')
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    const output = logSpy.mock.calls.flat().map((value: unknown) => String(value)).join('\n')
+    expect(output).toContain('process.stderr')
+    expect(output).toContain('app-server warning')
+  })
+
+  it('logs additional app-server notification types and non-message items', async () => {
+    const fake = createFakeAppServer()
+    const bridge = new CodexAppServerBridge({
+      threadId: 'thread-1',
+      spawnFn: fake.spawnFn,
+    })
+
+    await bridge.injectText({
+      sender: 'alice',
+      content: 'hello from web',
+    })
+
+    emitNotification(fake.child, {
+      method: 'item/started',
+      params: {
+        threadId: 'thread-1',
+        turnId: 'turn-started',
+        item: {
+          id: 'cmd-1',
+          type: 'commandExecution',
+          command: 'bun test',
+          cwd: '/tmp/demo',
+          processId: 'pty-1',
+          status: 'inProgress',
+          commandActions: [],
+          aggregatedOutput: null,
+          exitCode: null,
+          durationMs: null,
+        },
+      },
+    })
+    emitNotification(fake.child, {
+      method: 'item/commandExecution/outputDelta',
+      params: {
+        threadId: 'thread-1',
+        turnId: 'turn-started',
+        itemId: 'cmd-1',
+        delta: 'running tests',
+      },
+    })
+    emitNotification(fake.child, {
+      method: 'turn/planUpdated',
+      params: {
+        threadId: 'thread-1',
+        turnId: 'turn-started',
+        explanation: 'Working through the implementation',
+        plan: [{ step: 'Add logs', status: 'in_progress' }],
+      },
+    })
+    emitNotification(fake.child, {
+      method: 'item/reasoningSummaryText/delta',
+      params: {
+        threadId: 'thread-1',
+        turnId: 'turn-started',
+        itemId: 'reason-1',
+        summaryIndex: 0,
+        delta: 'Investigating runtime events',
+      },
+    })
+    emitNotification(fake.child, {
+      method: 'terminal/interaction',
+      params: {
+        threadId: 'thread-1',
+        turnId: 'turn-started',
+        itemId: 'cmd-1',
+        processId: 'pty-1',
+        stdin: 'y\n',
+      },
+    })
+    emitNotification(fake.child, {
+      method: 'model/rerouted',
+      params: {
+        threadId: 'thread-1',
+        turnId: 'turn-started',
+        fromModel: 'gpt-5',
+        toModel: 'gpt-5-mini',
+        reason: 'rate_limited',
+      },
+    })
+    emitNotification(fake.child, {
+      method: 'error',
+      params: {
+        threadId: 'thread-1',
+        turnId: 'turn-started',
+        willRetry: true,
+        error: {
+          message: 'temporary failure',
+        },
+      },
+    })
+    emitNotification(fake.child, {
+      method: 'item/completed',
+      params: {
+        threadId: 'thread-1',
+        turnId: 'turn-started',
+        item: {
+          id: 'cmd-1',
+          type: 'commandExecution',
+          command: 'bun test',
+          cwd: '/tmp/demo',
+          processId: 'pty-1',
+          status: 'completed',
+          commandActions: [],
+          aggregatedOutput: '1 pass',
+          exitCode: 0,
+          durationMs: 42,
+        },
+      },
+    })
+
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    const output = logSpy.mock.calls.flat().map((value: unknown) => String(value)).join('\n')
+    expect(output).toContain('notification.received')
+    expect(output).toContain('item.started')
+    expect(output).toContain('item.command_execution_output_delta')
+    expect(output).toContain('turn.plan_updated')
+    expect(output).toContain('item.reasoning_summary_delta')
+    expect(output).toContain('terminal.interaction')
+    expect(output).toContain('model.rerouted')
+    expect(output).toContain('turn.error')
+    expect(output).toContain('item.completed')
+    expect(output).toContain('bun test')
   })
 })

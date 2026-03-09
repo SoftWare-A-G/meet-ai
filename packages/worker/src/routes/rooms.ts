@@ -35,7 +35,7 @@ export const roomsRoute = new Hono<AppEnv>()
 
     const id = crypto.randomUUID()
     const db = queries(c.env.DB)
-    await db.insertRoom(id, keyId, body.name)
+    const room = await db.insertRoom(id, keyId, body.name)
 
     // Notify lobby subscribers
     const doId = c.env.LOBBY.idFromName(keyId)
@@ -49,7 +49,7 @@ export const roomsRoute = new Hono<AppEnv>()
       )
     )
 
-    return c.json({ id, name: body.name }, 201)
+    return c.json(room, 201)
   })
 
   // GET /api/rooms/:id/messages — get message history

@@ -5,7 +5,7 @@ import type { MeetAiClient } from "@meet-ai/cli/types";
 
 function mockClient(overrides: Partial<MeetAiClient> = {}): MeetAiClient {
   return {
-    createRoom: mock(() => Promise.resolve({ id: "room-123", name: "My Room" })),
+    createRoom: mock(() => Promise.resolve({ id: "room-123", name: "My Room", created_at: "2026-01-01 00:00:00" })),
     sendMessage: mock(() => Promise.reject(new Error("not implemented"))),
     getMessages: mock(() => Promise.reject(new Error("not implemented"))),
     listen: mock(() => { throw new Error("not implemented"); }),
@@ -24,14 +24,14 @@ describe("createRoom", () => {
   it("creates a room and returns the result", async () => {
     // GIVEN a client that successfully creates a room
     const client = mockClient({
-      createRoom: mock(() => Promise.resolve({ id: "abc-123", name: "Test Room" })),
+      createRoom: mock(() => Promise.resolve({ id: "abc-123", name: "Test Room", created_at: "2026-01-01 00:00:00" })),
     });
 
     // WHEN we call createRoom with a valid name
     const result = await createRoom(client, { name: "Test Room" });
 
     // THEN it returns the room id and name
-    expect(result).toEqual({ id: "abc-123", name: "Test Room" });
+    expect(result).toEqual({ id: "abc-123", name: "Test Room", created_at: "2026-01-01 00:00:00" });
     expect(client.createRoom).toHaveBeenCalledWith("Test Room");
   });
 

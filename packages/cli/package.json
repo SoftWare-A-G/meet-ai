@@ -1,6 +1,6 @@
 {
   "name": "@meet-ai/cli",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "CLI for meet-ai chat rooms — create rooms, send messages, and stream via WebSocket",
   "keywords": [
     "chat",
@@ -36,6 +36,7 @@
   },
   "dependencies": {
     "citty": "0.2.1",
+    "evlog": "2.4.1",
     "hono": "4.11.8",
     "ink": "6.8.0",
     "picocolors": "1.1.1",

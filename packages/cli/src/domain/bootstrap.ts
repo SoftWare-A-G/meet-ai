@@ -9,6 +9,7 @@ import AttachmentRepository from './repositories/AttachmentRepository'
 import SendMessage from './usecases/SendMessage'
 import CreateRoom from './usecases/CreateRoom'
 import DeleteRoom from './usecases/DeleteRoom'
+import ListRooms from './usecases/ListRooms'
 import SendLog from './usecases/SendLog'
 import SendTeamInfo from './usecases/SendTeamInfo'
 import SendCommands from './usecases/SendCommands'
@@ -66,6 +67,7 @@ function createContainer() {
   // Use cases
   return {
     sendMessage: new SendMessage(messageRepository),
+    listRooms: new ListRooms(roomRepository),
     createRoom: new CreateRoom(roomRepository),
     deleteRoom: new DeleteRoom(roomRepository),
     sendLog: new SendLog(messageRepository),
@@ -102,6 +104,7 @@ export function getContainer() {
 export function getClient(): MeetAiClient {
   const c = getContainer()
   return {
+    listRooms: () => c.listRooms.execute(),
     createRoom: (name) => c.createRoom.execute(name),
     sendMessage: (roomId, sender, content, color) =>
       c.sendMessage.execute(roomId, sender, content, color),

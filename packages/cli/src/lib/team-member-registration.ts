@@ -113,7 +113,6 @@ export const registerActiveTeamMember: TeamMemberRegistrar = async input => {
     process.env.MEET_AI_COLOR?.trim() ||
     defaultColor(resolvedAgentName, role)
   const teammateId = member?.agentId || `${resolvedAgentName}@${teamName}`
-
   await sendTeamMemberUpsert(createHookClient(url, key), input.roomId, teamName, {
     teammate_id: teammateId,
     name: resolvedAgentName,

@@ -16,6 +16,7 @@ export interface PaneCapture {
 }
 
 export interface TeamProcess {
+  teamId: string
   roomId: string
   roomName: string
   codingAgent: CodingAgentId
@@ -138,13 +139,22 @@ export class ProcessManager {
     this.tmux = opts.tmux ?? new TmuxClient({ server: 'meet-ai', scrollback: 10_000 })
   }
 
-  private sessionName(roomId: string): string {
-    return `mai-${roomId}`
+  private sessionName(teamId: string): string {
+    return `mai-${teamId}`
+  }
+
+  private nextTeamId(roomId: string): string {
+    if (!this.teams.has(roomId)) return roomId
+    let suffix = 2
+    while (this.teams.has(`${roomId}-${suffix}`)) suffix++
+    return `${roomId}-${suffix}`
   }
 
   spawn(roomId: string, roomName: string, codingAgent: CodingAgentId = 'claude'): TeamProcess {
-    const sessionName = this.sessionName(roomId)
+    const teamId = this.nextTeamId(roomId)
+    const sessionName = this.sessionName(teamId)
     const team: TeamProcess = {
+      teamId,
       roomId,
       roomName,
       codingAgent,
@@ -155,7 +165,7 @@ export class ProcessManager {
       panes: [],
     }
 
-    this.teams.set(roomId, team)
+    this.teams.set(teamId, team)
     this.spawned++
 
     if (this.opts.dryRun) return team
@@ -221,12 +231,14 @@ export class ProcessManager {
   }
 
   /** Add an error entry so the TUI can display spawn failures. */
-  addError(roomId: string, roomName: string, message: string): void {
-    this.teams.set(roomId, {
-      roomId,
+  addError(errorId: string, roomName: string, message: string): void {
+    const teamId = this.nextTeamId(errorId)
+    this.teams.set(teamId, {
+      teamId,
+      roomId: errorId,
       roomName,
       codingAgent: 'claude',
-      sessionName: this.sessionName(roomId),
+      sessionName: this.sessionName(teamId),
       status: 'error',
       exitCode: null,
       lines: [`[error] ${message}`],
@@ -239,8 +251,8 @@ export class ProcessManager {
    * Discovers panes via listPanes, captures each in parallel.
    * Updates team.panes and team.lines (first pane for backward compat).
    */
-  async capture(roomId: string, lines: number): Promise<string[]> {
-    const team = this.teams.get(roomId)
+  async capture(teamId: string, lines: number): Promise<string[]> {
+    const team = this.teams.get(teamId)
     if (!team) return []
 
     const paneInfos = this.tmux.listPanes(team.sessionName)
@@ -300,8 +312,8 @@ export class ProcessManager {
   }
 
   /** Attach to a session interactively (blocks until detach). */
-  attach(roomId: string): void {
-    const team = this.teams.get(roomId)
+  attach(teamId: string): void {
+    const team = this.teams.get(teamId)
     if (!team) return
     this.tmux.attachSession(team.sessionName)
   }
@@ -322,8 +334,11 @@ export class ProcessManager {
       const entry = registryMap.get(session.name)
       const roomId = entry?.roomId ?? session.name.replace('mai-', '')
       const roomName = entry?.roomName ?? session.name
+      // Derive teamId from session name (already unique across tmux)
+      const teamId = session.name.replace('mai-', '')
 
       const team: TeamProcess = {
+        teamId,
         roomId,
         roomName,
         codingAgent: entry?.codingAgent ?? 'claude',
@@ -334,33 +349,33 @@ export class ProcessManager {
         panes: [],
       }
 
-      this.teams.set(roomId, team)
+      this.teams.set(teamId, team)
       adopted.push(team)
     }
 
     return adopted
   }
 
-  get(roomId: string): TeamProcess | undefined {
-    return this.teams.get(roomId)
+  get(teamId: string): TeamProcess | undefined {
+    return this.teams.get(teamId)
   }
 
   list(): TeamProcess[] {
     return [...this.teams.values()]
   }
 
-  kill(roomId: string): void {
-    const team = this.teams.get(roomId)
+  kill(teamId: string): void {
+    const team = this.teams.get(teamId)
     if (team) {
       this.tmux.killSession(team.sessionName)
       removeFromRegistry(team.sessionName)
     }
-    this.teams.delete(roomId)
+    this.teams.delete(teamId)
   }
 
   killAll(): void {
-    for (const roomId of this.teams.keys()) {
-      this.kill(roomId)
+    for (const teamId of this.teams.keys()) {
+      this.kill(teamId)
     }
   }
 

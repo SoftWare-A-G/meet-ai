@@ -1,5 +1,11 @@
 import type { CodingAgentId } from '@meet-ai/cli/coding-agents';
 
+export type Room = {
+  id: string;
+  name: string;
+  created_at: string;
+};
+
 export type Message = {
   id: string;
   roomId: string;
@@ -17,7 +23,8 @@ export type AttachmentMeta = {
 };
 
 export interface MeetAiClient {
-  createRoom(name: string): Promise<{ id: string; name: string }>;
+  listRooms(): Promise<Room[]>;
+  createRoom(name: string): Promise<Room>;
   sendMessage(roomId: string, sender: string, content: string, color?: string): Promise<Message>;
   getMessages(
     roomId: string,

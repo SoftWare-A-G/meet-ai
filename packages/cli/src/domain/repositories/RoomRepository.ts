@@ -1,12 +1,17 @@
 import type IHttpTransport from '@meet-ai/cli/domain/interfaces/IHttpTransport'
 import type IRoomRepository from '@meet-ai/cli/domain/interfaces/IRoomRepository'
+import type { Room } from '@meet-ai/cli/types'
 
 const RETRY = { maxRetries: 3, baseDelay: 1000 }
 
 export default class RoomRepository implements IRoomRepository {
   constructor(private readonly transport: IHttpTransport) {}
 
-  async create(name: string): Promise<{ id: string; name: string }> {
+  async list(): Promise<Room[]> {
+    return this.transport.getJson('/api/rooms')
+  }
+
+  async create(name: string): Promise<Room> {
     return this.transport.postJson('/api/rooms', { name })
   }
 

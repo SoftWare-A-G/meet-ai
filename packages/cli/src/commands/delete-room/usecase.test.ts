@@ -5,7 +5,8 @@ import type { MeetAiClient } from "@meet-ai/cli/types";
 
 function makeMockClient(overrides: Partial<MeetAiClient> = {}): MeetAiClient {
   return {
-    createRoom: mock(() => Promise.resolve({ id: "r1", name: "test" })),
+    listRooms: mock(() => Promise.resolve([])),
+    createRoom: mock(() => Promise.resolve({ id: "r1", name: "test", created_at: "2026-01-01 00:00:00" })),
     sendMessage: mock(() =>
       Promise.resolve({ id: "m1", roomId: "r1", sender: "s", sender_type: "agent", content: "c" }),
     ),

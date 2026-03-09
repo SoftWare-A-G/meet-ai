@@ -3,18 +3,31 @@ import {
   type ChildProcessWithoutNullStreams,
   type SpawnOptionsWithoutStdio,
 } from 'node:child_process'
-import { stderr } from 'node:process'
 import { createInterface, type Interface as ReadLineInterface } from 'node:readline'
 import type { AgentMessageDeltaNotification } from '@meet-ai/cli/generated/codex-app-server/v2/AgentMessageDeltaNotification'
+import type { CommandExecutionOutputDeltaNotification } from '@meet-ai/cli/generated/codex-app-server/v2/CommandExecutionOutputDeltaNotification'
 import type { DynamicToolCallParams } from '@meet-ai/cli/generated/codex-app-server/v2/DynamicToolCallParams'
 import type { DynamicToolCallResponse } from '@meet-ai/cli/generated/codex-app-server/v2/DynamicToolCallResponse'
 import type { DynamicToolSpec } from '@meet-ai/cli/generated/codex-app-server/v2/DynamicToolSpec'
+import type { ErrorNotification } from '@meet-ai/cli/generated/codex-app-server/v2/ErrorNotification'
+import type { FileChangeOutputDeltaNotification } from '@meet-ai/cli/generated/codex-app-server/v2/FileChangeOutputDeltaNotification'
 import type { ItemCompletedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/ItemCompletedNotification'
+import type { ItemStartedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/ItemStartedNotification'
+import type { ModelReroutedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/ModelReroutedNotification'
+import type { PlanDeltaNotification } from '@meet-ai/cli/generated/codex-app-server/v2/PlanDeltaNotification'
+import type { ReasoningSummaryTextDeltaNotification } from '@meet-ai/cli/generated/codex-app-server/v2/ReasoningSummaryTextDeltaNotification'
+import type { ReasoningTextDeltaNotification } from '@meet-ai/cli/generated/codex-app-server/v2/ReasoningTextDeltaNotification'
+import type { TerminalInteractionNotification } from '@meet-ai/cli/generated/codex-app-server/v2/TerminalInteractionNotification'
 import type { Thread } from '@meet-ai/cli/generated/codex-app-server/v2/Thread'
+import type { ThreadNameUpdatedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/ThreadNameUpdatedNotification'
 import type { ThreadStartedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/ThreadStartedNotification'
+import type { ThreadStatusChangedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/ThreadStatusChangedNotification'
+import type { ThreadTokenUsageUpdatedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/ThreadTokenUsageUpdatedNotification'
 import type { Turn } from '@meet-ai/cli/generated/codex-app-server/v2/Turn'
 import type { TurnCompletedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/TurnCompletedNotification'
+import type { TurnPlanUpdatedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/TurnPlanUpdatedNotification'
 import type { TurnStartedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/TurnStartedNotification'
+import { emitCodexAppServerLog } from './codex-app-server-evlog'
 
 export type CodexAppServerTextInput = {
   sender: string
@@ -72,7 +85,6 @@ export type CodexAppServerBridgeOptions = {
   experimentalApi?: boolean
   env?: NodeJS.ProcessEnv
   spawnFn?: SpawnFn
-  stderr?: Pick<NodeJS.WritableStream, 'write'>
   dynamicTools?: DynamicToolSpec[]
   toolCallHandler?: DynamicToolCallHandler
 }
@@ -137,6 +149,14 @@ function isJsonRpcNotification(value: unknown): value is JsonRpcNotification {
 function toErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message
   return String(error)
+}
+
+function previewText(value: string | null | undefined, limit = 120): string | null {
+  if (typeof value !== 'string') return null
+  const normalized = value.replace(/\s+/g, ' ').trim()
+  if (!normalized) return null
+  if (normalized.length <= limit) return normalized
+  return `${normalized.slice(0, limit)}...`
 }
 
 function formatRoomMessageForCodex(input: CodexAppServerTextInput): string {
@@ -250,6 +270,300 @@ function isTurnCompletedNotification(params: unknown): params is TurnCompletedNo
   )
 }
 
+function isItemStartedNotification(params: unknown): params is ItemStartedNotification {
+  return (
+    isObject(params) &&
+    typeof params.threadId === 'string' &&
+    typeof params.turnId === 'string' &&
+    isObject(params.item) &&
+    typeof params.item.type === 'string' &&
+    typeof params.item.id === 'string'
+  )
+}
+
+function isThreadStatusChangedNotification(params: unknown): params is ThreadStatusChangedNotification {
+  return (
+    isObject(params) &&
+    typeof params.threadId === 'string' &&
+    typeof params.status === 'string'
+  )
+}
+
+function isThreadNameUpdatedNotification(params: unknown): params is ThreadNameUpdatedNotification {
+  return isObject(params) && typeof params.threadId === 'string'
+}
+
+function isThreadTokenUsageUpdatedNotification(params: unknown): params is ThreadTokenUsageUpdatedNotification {
+  return (
+    isObject(params) &&
+    typeof params.threadId === 'string' &&
+    typeof params.turnId === 'string' &&
+    isObject(params.tokenUsage)
+  )
+}
+
+function isTurnPlanUpdatedNotification(params: unknown): params is TurnPlanUpdatedNotification {
+  return (
+    isObject(params) &&
+    typeof params.threadId === 'string' &&
+    typeof params.turnId === 'string' &&
+    Array.isArray(params.plan)
+  )
+}
+
+function isReasoningSummaryTextDeltaNotification(params: unknown): params is ReasoningSummaryTextDeltaNotification {
+  return (
+    isObject(params) &&
+    typeof params.threadId === 'string' &&
+    typeof params.turnId === 'string' &&
+    typeof params.itemId === 'string' &&
+    typeof params.delta === 'string'
+  )
+}
+
+function isReasoningTextDeltaNotification(params: unknown): params is ReasoningTextDeltaNotification {
+  return (
+    isObject(params) &&
+    typeof params.threadId === 'string' &&
+    typeof params.turnId === 'string' &&
+    typeof params.itemId === 'string' &&
+    typeof params.delta === 'string'
+  )
+}
+
+function isPlanDeltaNotification(params: unknown): params is PlanDeltaNotification {
+  return (
+    isObject(params) &&
+    typeof params.threadId === 'string' &&
+    typeof params.turnId === 'string' &&
+    typeof params.itemId === 'string' &&
+    typeof params.delta === 'string'
+  )
+}
+
+function isCommandExecutionOutputDeltaNotification(params: unknown): params is CommandExecutionOutputDeltaNotification {
+  return (
+    isObject(params) &&
+    typeof params.threadId === 'string' &&
+    typeof params.turnId === 'string' &&
+    typeof params.itemId === 'string' &&
+    typeof params.delta === 'string'
+  )
+}
+
+function isFileChangeOutputDeltaNotification(params: unknown): params is FileChangeOutputDeltaNotification {
+  return (
+    isObject(params) &&
+    typeof params.threadId === 'string' &&
+    typeof params.turnId === 'string' &&
+    typeof params.itemId === 'string' &&
+    typeof params.delta === 'string'
+  )
+}
+
+function isModelReroutedNotification(params: unknown): params is ModelReroutedNotification {
+  return (
+    isObject(params) &&
+    typeof params.threadId === 'string' &&
+    typeof params.turnId === 'string' &&
+    typeof params.fromModel === 'string' &&
+    typeof params.toModel === 'string' &&
+    typeof params.reason === 'string'
+  )
+}
+
+function isTerminalInteractionNotification(params: unknown): params is TerminalInteractionNotification {
+  return (
+    isObject(params) &&
+    typeof params.threadId === 'string' &&
+    typeof params.turnId === 'string' &&
+    typeof params.itemId === 'string' &&
+    typeof params.processId === 'string' &&
+    typeof params.stdin === 'string'
+  )
+}
+
+function isErrorNotification(params: unknown): params is ErrorNotification {
+  return (
+    isObject(params) &&
+    typeof params.threadId === 'string' &&
+    typeof params.turnId === 'string' &&
+    typeof params.willRetry === 'boolean' &&
+    isObject(params.error)
+  )
+}
+
+function summarizeThreadItem(item: ItemCompletedNotification['item']): Record<string, unknown> {
+  switch (item.type) {
+    case 'agentMessage':
+      return {
+        itemType: item.type,
+        itemId: item.id,
+        phase: item.phase,
+        textLength: item.text.length,
+        preview: previewText(item.text),
+      }
+    case 'commandExecution':
+      return {
+        itemType: item.type,
+        itemId: item.id,
+        status: item.status,
+        command: item.command,
+        cwd: item.cwd,
+        exitCode: item.exitCode,
+        durationMs: item.durationMs,
+        outputLength: item.aggregatedOutput?.length ?? 0,
+        preview: previewText(item.aggregatedOutput),
+      }
+    case 'fileChange':
+      return {
+        itemType: item.type,
+        itemId: item.id,
+        status: item.status,
+        changeCount: item.changes.length,
+      }
+    case 'dynamicToolCall':
+      return {
+        itemType: item.type,
+        itemId: item.id,
+        tool: item.tool,
+        status: item.status,
+        success: item.success,
+        durationMs: item.durationMs,
+        contentItemCount: item.contentItems?.length ?? 0,
+      }
+    case 'mcpToolCall':
+      return {
+        itemType: item.type,
+        itemId: item.id,
+        server: item.server,
+        tool: item.tool,
+        status: item.status,
+        durationMs: item.durationMs,
+        hasResult: item.result != null,
+        hasError: item.error != null,
+      }
+    case 'collabAgentToolCall':
+      return {
+        itemType: item.type,
+        itemId: item.id,
+        tool: item.tool,
+        status: item.status,
+        receiverCount: item.receiverThreadIds.length,
+        preview: previewText(item.prompt),
+      }
+    case 'plan':
+      return {
+        itemType: item.type,
+        itemId: item.id,
+        textLength: item.text.length,
+        preview: previewText(item.text),
+      }
+    case 'reasoning':
+      return {
+        itemType: item.type,
+        itemId: item.id,
+        summaryCount: item.summary.length,
+        contentCount: item.content.length,
+        preview: previewText(item.summary.join(' ')) ?? previewText(item.content.join(' ')),
+      }
+    case 'webSearch':
+      return {
+        itemType: item.type,
+        itemId: item.id,
+        query: item.query,
+        action: item.action,
+      }
+    case 'imageView':
+      return {
+        itemType: item.type,
+        itemId: item.id,
+        path: item.path,
+      }
+    case 'imageGeneration':
+      return {
+        itemType: item.type,
+        itemId: item.id,
+        status: item.status,
+        resultLength: item.result.length,
+        preview: previewText(item.revisedPrompt ?? item.result),
+      }
+    case 'enteredReviewMode':
+    case 'exitedReviewMode':
+      return {
+        itemType: item.type,
+        itemId: item.id,
+        review: item.review,
+      }
+    case 'userMessage':
+      return {
+        itemType: item.type,
+        itemId: item.id,
+        contentItemCount: item.content.length,
+      }
+    case 'contextCompaction':
+      return {
+        itemType: item.type,
+        itemId: item.id,
+      }
+  }
+}
+
+function summarizeNotificationParams(method: string, params: unknown): Record<string, unknown> {
+  if (!isObject(params)) return {}
+
+  const summary: Record<string, unknown> = {}
+
+  if (typeof params.threadId === 'string') summary.threadId = params.threadId
+  if (typeof params.turnId === 'string') summary.turnId = params.turnId
+  if (typeof params.itemId === 'string') summary.itemId = params.itemId
+  if (typeof params.requestId === 'string' || typeof params.requestId === 'number') summary.requestId = params.requestId
+
+  if ((method === 'item/started' || method === 'item/completed') && isObject(params.item)) {
+    Object.assign(summary, summarizeThreadItem(params.item as ItemCompletedNotification['item']))
+    return summary
+  }
+
+  if ('delta' in params && typeof params.delta === 'string') {
+    summary.deltaLength = params.delta.length
+    summary.preview = previewText(params.delta)
+  }
+
+  if (method === 'turn/planUpdated' && Array.isArray(params.plan)) {
+    summary.planStepCount = params.plan.length
+    if (typeof params.explanation === 'string') summary.preview = previewText(params.explanation)
+  }
+
+  if (method === 'thread/tokenUsageUpdated' && isObject(params.tokenUsage)) {
+    summary.tokenUsage = params.tokenUsage
+  }
+
+  if (method === 'model/rerouted') {
+    if (typeof params.fromModel === 'string') summary.fromModel = params.fromModel
+    if (typeof params.toModel === 'string') summary.toModel = params.toModel
+    if (typeof params.reason === 'string') summary.reason = params.reason
+  }
+
+  if (method === 'terminal/interaction') {
+    if (typeof params.processId === 'string') summary.processId = params.processId
+    if (typeof params.stdin === 'string') {
+      summary.stdinLength = params.stdin.length
+      summary.preview = previewText(params.stdin)
+    }
+  }
+
+  if (method === 'error' && isObject(params.error)) {
+    summary.error = params.error
+    if (typeof params.willRetry === 'boolean') summary.willRetry = params.willRetry
+  }
+
+  if (Object.keys(summary).length === 0) {
+    summary.keys = Object.keys(params).sort()
+  }
+
+  return summary
+}
+
 function matchesActiveThread(threadId: string | null, params: unknown): boolean {
   if (!threadId || !isObject(params) || typeof params.threadId !== 'string') return false
   return params.threadId === threadId
@@ -265,7 +579,6 @@ export class CodexAppServerBridge {
   private readonly experimentalApi: boolean
   private readonly env: NodeJS.ProcessEnv
   private readonly spawnFn: SpawnFn
-  private readonly stderrStream: Pick<NodeJS.WritableStream, 'write'>
   private readonly dynamicTools: DynamicToolSpec[]
   private readonly toolCallHandler: DynamicToolCallHandler | null
 
@@ -292,7 +605,6 @@ export class CodexAppServerBridge {
     this.experimentalApi = options.experimentalApi ?? false
     this.env = options.env ?? process.env
     this.spawnFn = options.spawnFn ?? spawn
-    this.stderrStream = options.stderr ?? stderr
     this.dynamicTools = options.dynamicTools ?? []
     this.toolCallHandler = options.toolCallHandler ?? null
   }
@@ -382,6 +694,13 @@ export class CodexAppServerBridge {
   }
 
   private async startInternal(): Promise<void> {
+    emitCodexAppServerLog('info', 'codex-app-server', 'process.spawn', {
+      cwd: this.cwd ?? process.cwd(),
+      codexBin: this.codexBin,
+      experimentalApi: this.experimentalApi,
+      dynamicToolCount: this.dynamicTools.length,
+    })
+
     const child = this.spawnFn(
       this.codexBin,
       [
@@ -415,11 +734,35 @@ export class CodexAppServerBridge {
       void this.handleLine(line)
     })
 
+    let stderrBuffer = ''
     child.stderr.on('data', chunk => {
-      this.stderrStream.write(chunk)
+      stderrBuffer += chunk.toString()
+      let newlineIndex = stderrBuffer.indexOf('\n')
+      while (newlineIndex >= 0) {
+        const line = stderrBuffer.slice(0, newlineIndex).trim()
+        stderrBuffer = stderrBuffer.slice(newlineIndex + 1)
+        newlineIndex = stderrBuffer.indexOf('\n')
+        if (!line) continue
+        emitCodexAppServerLog('warn', 'codex-app-server', 'process.stderr', {
+          stderr: line,
+        })
+      }
     })
 
     child.on('exit', (_code, signal) => {
+      const details = {
+        signal: signal ?? null,
+        threadId: this.threadId,
+        activeTurnId: this.activeTurnId,
+      }
+      if (stderrBuffer.trim()) {
+        emitCodexAppServerLog('warn', 'codex-app-server', 'process.stderr', {
+          stderr: stderrBuffer.trim(),
+          trailing: true,
+        })
+      }
+      emitCodexAppServerLog('warn', 'codex-app-server', 'process.exit', details)
+
       const reason = new Error(`codex app-server exited${signal ? ` with signal ${signal}` : ''}`)
       for (const pending of this.pendingRequests.values()) {
         pending.reject(reason)
@@ -430,6 +773,7 @@ export class CodexAppServerBridge {
       this.readyPromise = null
     })
 
+    emitCodexAppServerLog('debug', 'codex-app-server', 'rpc.initialize')
     await this.request('initialize', {
       clientInfo: {
         name: this.clientName,
@@ -449,20 +793,30 @@ export class CodexAppServerBridge {
       }
 
       try {
+        emitCodexAppServerLog('info', 'codex-app-server', 'thread.resume.requested', {
+          threadId: this.threadId,
+        })
         const resumeResult = await this.request<CodexThreadResponse>('thread/resume', resumeParams)
         this.threadId =
           typeof resumeResult.thread?.id === 'string' ? resumeResult.thread.id : this.threadId
         this.activeTurnId = maybeActiveTurnId(resumeResult.thread)
+        emitCodexAppServerLog('info', 'codex-app-server', 'thread.resume.succeeded', {
+          threadId: this.threadId,
+          activeTurnId: this.activeTurnId,
+        })
         return
       } catch {
-        this.stderrStream.write(
-          `meet-ai: codex app-server could not resume thread ${this.threadId}, starting fresh\n`
-        )
+        emitCodexAppServerLog('warn', 'codex-app-server', 'thread.resume.failed', {
+          threadId: this.threadId,
+        })
         this.threadId = null
         this.activeTurnId = null
       }
     }
 
+    emitCodexAppServerLog('info', 'codex-app-server', 'thread.start.requested', {
+      cwd: this.cwd ?? process.cwd(),
+    })
     const startResult = await this.request<CodexThreadResponse>('thread/start', {
       cwd: this.cwd,
       experimentalRawEvents: false,
@@ -471,6 +825,10 @@ export class CodexAppServerBridge {
     })
     this.threadId = typeof startResult.thread?.id === 'string' ? startResult.thread.id : null
     this.activeTurnId = maybeActiveTurnId(startResult.thread)
+    emitCodexAppServerLog('info', 'codex-app-server', 'thread.start.succeeded', {
+      threadId: this.threadId,
+      activeTurnId: this.activeTurnId,
+    })
   }
 
   private async handleLine(line: string): Promise<void> {
@@ -481,7 +839,9 @@ export class CodexAppServerBridge {
     try {
       message = JSON.parse(trimmed)
     } catch {
-      this.stderrStream.write(`meet-ai: failed to parse codex app-server line: ${trimmed}\n`)
+      emitCodexAppServerLog('error', 'codex-app-server', 'rpc.parse_failed', {
+        line: trimmed,
+      })
       return
     }
 
@@ -510,8 +870,50 @@ export class CodexAppServerBridge {
   }
 
   private handleNotification(message: JsonRpcNotification) {
+    emitCodexAppServerLog('debug', 'codex-app-server', 'notification.received', {
+      method: message.method,
+      ...summarizeNotificationParams(message.method, message.params),
+    })
+
     if (message.method === 'thread/started') {
-      if (isThreadStartedNotification(message.params)) this.threadId = message.params.thread.id
+      if (isThreadStartedNotification(message.params)) {
+        this.threadId = message.params.thread.id
+        emitCodexAppServerLog('info', 'codex-app-server', 'thread.started', {
+          threadId: message.params.thread.id,
+          turnCount: message.params.thread.turns?.length ?? 0,
+        })
+      }
+      return
+    }
+
+    if (message.method === 'thread/statusChanged') {
+      if (isThreadStatusChangedNotification(message.params)) {
+        emitCodexAppServerLog('info', 'codex-app-server', 'thread.status_changed', {
+          threadId: message.params.threadId,
+          status: message.params.status,
+        })
+      }
+      return
+    }
+
+    if (message.method === 'thread/nameUpdated') {
+      if (isThreadNameUpdatedNotification(message.params)) {
+        emitCodexAppServerLog('info', 'codex-app-server', 'thread.name_updated', {
+          threadId: message.params.threadId,
+          threadName: message.params.threadName ?? null,
+        })
+      }
+      return
+    }
+
+    if (message.method === 'thread/tokenUsageUpdated') {
+      if (isThreadTokenUsageUpdatedNotification(message.params)) {
+        emitCodexAppServerLog('info', 'codex-app-server', 'thread.token_usage_updated', {
+          threadId: message.params.threadId,
+          turnId: message.params.turnId,
+          tokenUsage: message.params.tokenUsage,
+        })
+      }
       return
     }
 
@@ -519,21 +921,60 @@ export class CodexAppServerBridge {
       if (isTurnStartedNotification(message.params) && message.params.threadId === this.threadId) {
         this.activeTurnId = message.params.turn.id
       }
+      if (isTurnStartedNotification(message.params)) {
+        emitCodexAppServerLog('info', 'codex-app-server', 'turn.started', {
+          threadId: message.params.threadId,
+          turnId: message.params.turn.id,
+          status: message.params.turn.status,
+        })
+      }
+      return
+    }
+
+    if (message.method === 'turn/planUpdated') {
+      if (isTurnPlanUpdatedNotification(message.params)) {
+        emitCodexAppServerLog('info', 'codex-app-server', 'turn.plan_updated', {
+          threadId: message.params.threadId,
+          turnId: message.params.turnId,
+          explanation: message.params.explanation,
+          planStepCount: message.params.plan.length,
+        })
+      }
       return
     }
 
     if (message.method === 'turn/completed') {
-      if (
+      const clearedActiveTurn =
         isTurnCompletedNotification(message.params) &&
         message.params.threadId === this.threadId &&
         message.params.turn.id === this.activeTurnId
+      if (
+        clearedActiveTurn
       ) {
         this.activeTurnId = null
+      }
+      if (isTurnCompletedNotification(message.params)) {
+        emitCodexAppServerLog('info', 'codex-app-server', 'turn.completed', {
+          threadId: message.params.threadId,
+          turnId: message.params.turn.id,
+          activeTurnCleared: clearedActiveTurn,
+        })
       }
       this.emitEvent({
         type: 'turn_completed',
         turnId: isTurnCompletedNotification(message.params) ? message.params.turn.id : null,
       })
+      return
+    }
+
+    if (message.method === 'item/started') {
+      if (isItemStartedNotification(message.params)) {
+        emitCodexAppServerLog('info', 'codex-app-server', 'item.started', {
+          threadId: message.params.threadId,
+          turnId: message.params.turnId,
+          ...summarizeThreadItem(message.params.item),
+        })
+      }
       return
     }
 
@@ -551,7 +992,81 @@ export class CodexAppServerBridge {
       return
     }
 
+    if (message.method === 'item/reasoningSummaryText/delta') {
+      if (isReasoningSummaryTextDeltaNotification(message.params)) {
+        emitCodexAppServerLog('debug', 'codex-app-server', 'item.reasoning_summary_delta', {
+          threadId: message.params.threadId,
+          turnId: message.params.turnId,
+          itemId: message.params.itemId,
+          summaryIndex: message.params.summaryIndex,
+          deltaLength: message.params.delta.length,
+          preview: previewText(message.params.delta),
+        })
+      }
+      return
+    }
+
+    if (message.method === 'item/reasoningText/delta') {
+      if (isReasoningTextDeltaNotification(message.params)) {
+        emitCodexAppServerLog('debug', 'codex-app-server', 'item.reasoning_delta', {
+          threadId: message.params.threadId,
+          turnId: message.params.turnId,
+          itemId: message.params.itemId,
+          contentIndex: message.params.contentIndex,
+          deltaLength: message.params.delta.length,
+          preview: previewText(message.params.delta),
+        })
+      }
+      return
+    }
+
+    if (message.method === 'item/plan/delta') {
+      if (isPlanDeltaNotification(message.params)) {
+        emitCodexAppServerLog('debug', 'codex-app-server', 'item.plan_delta', {
+          threadId: message.params.threadId,
+          turnId: message.params.turnId,
+          itemId: message.params.itemId,
+          deltaLength: message.params.delta.length,
+          preview: previewText(message.params.delta),
+        })
+      }
+      return
+    }
+
+    if (message.method === 'item/commandExecution/outputDelta') {
+      if (isCommandExecutionOutputDeltaNotification(message.params)) {
+        emitCodexAppServerLog('debug', 'codex-app-server', 'item.command_execution_output_delta', {
+          threadId: message.params.threadId,
+          turnId: message.params.turnId,
+          itemId: message.params.itemId,
+          deltaLength: message.params.delta.length,
+          preview: previewText(message.params.delta),
+        })
+      }
+      return
+    }
+
+    if (message.method === 'item/fileChange/outputDelta') {
+      if (isFileChangeOutputDeltaNotification(message.params)) {
+        emitCodexAppServerLog('debug', 'codex-app-server', 'item.file_change_output_delta', {
+          threadId: message.params.threadId,
+          turnId: message.params.turnId,
+          itemId: message.params.itemId,
+          deltaLength: message.params.delta.length,
+          preview: previewText(message.params.delta),
+        })
+      }
+      return
+    }
+
     if (message.method === 'item/completed') {
+      if (isItemCompletedNotification(message.params)) {
+        emitCodexAppServerLog('info', 'codex-app-server', 'item.completed', {
+          threadId: message.params.threadId,
+          turnId: message.params.turnId,
+          ...summarizeThreadItem(message.params.item),
+        })
+      }
       if (!matchesActiveThread(this.threadId, message.params)) return
       const event = extractCompletedAgentMessage(message.params)
       if (event?.text) {
@@ -560,6 +1075,45 @@ export class CodexAppServerBridge {
           itemId: event.itemId,
           turnId: event.turnId,
           text: event.text,
+        })
+      }
+      return
+    }
+
+    if (message.method === 'model/rerouted') {
+      if (isModelReroutedNotification(message.params)) {
+        emitCodexAppServerLog('warn', 'codex-app-server', 'model.rerouted', {
+          threadId: message.params.threadId,
+          turnId: message.params.turnId,
+          fromModel: message.params.fromModel,
+          toModel: message.params.toModel,
+          reason: message.params.reason,
+        })
+      }
+      return
+    }
+
+    if (message.method === 'terminal/interaction') {
+      if (isTerminalInteractionNotification(message.params)) {
+        emitCodexAppServerLog('info', 'codex-app-server', 'terminal.interaction', {
+          threadId: message.params.threadId,
+          turnId: message.params.turnId,
+          itemId: message.params.itemId,
+          processId: message.params.processId,
+          stdinLength: message.params.stdin.length,
+          preview: previewText(message.params.stdin),
+        })
+      }
+      return
+    }
+
+    if (message.method === 'error') {
+      if (isErrorNotification(message.params)) {
+        emitCodexAppServerLog('error', 'codex-app-server', 'turn.error', {
+          threadId: message.params.threadId,
+          turnId: message.params.turnId,
+          willRetry: message.params.willRetry,
+          error: message.params.error,
         })
       }
     }
@@ -571,53 +1125,60 @@ export class CodexAppServerBridge {
     try {
       this.eventHandler(event)
     } catch (error) {
-      this.stderrStream.write(
-        `meet-ai: codex app-server event handler failed: ${toErrorMessage(error)}\n`
-      )
+      emitCodexAppServerLog('error', 'codex-app-server', 'event_handler.failed', {
+        error: toErrorMessage(error),
+        eventType: event.type,
+      })
     }
   }
 
   private respondToServerRequest(message: JsonRpcServerRequest) {
     switch (message.method) {
       case 'item/commandExecution/requestApproval': {
-        this.stderrStream.write(
-          `meet-ai: auto-resolving unsupported codex app-server request ${message.method}\n`
-        )
+        emitCodexAppServerLog('warn', 'codex-app-server', 'server_request.auto_resolved', {
+          method: message.method,
+          decision: 'decline',
+        })
         this.writeMessage({ id: message.id, result: { decision: 'decline' } })
         return
       }
       case 'item/fileChange/requestApproval': {
-        this.stderrStream.write(
-          `meet-ai: auto-resolving unsupported codex app-server request ${message.method}\n`
-        )
+        emitCodexAppServerLog('warn', 'codex-app-server', 'server_request.auto_resolved', {
+          method: message.method,
+          decision: 'decline',
+        })
         this.writeMessage({ id: message.id, result: { decision: 'decline' } })
         return
       }
       case 'item/tool/requestUserInput': {
-        this.stderrStream.write(
-          `meet-ai: auto-resolving unsupported codex app-server request ${message.method}\n`
-        )
+        emitCodexAppServerLog('warn', 'codex-app-server', 'server_request.auto_resolved', {
+          method: message.method,
+          decision: 'empty_answers',
+        })
         this.writeMessage({ id: message.id, result: { answers: {} } })
         return
       }
       case 'mcpServer/elicitation/request': {
-        this.stderrStream.write(
-          `meet-ai: auto-resolving unsupported codex app-server request ${message.method}\n`
-        )
+        emitCodexAppServerLog('warn', 'codex-app-server', 'server_request.auto_resolved', {
+          method: message.method,
+          decision: 'cancel',
+        })
         this.writeMessage({ id: message.id, result: { action: 'cancel', content: null } })
         return
       }
       case 'applyPatchApproval': {
-        this.stderrStream.write(
-          `meet-ai: auto-resolving unsupported codex app-server request ${message.method}\n`
-        )
+        emitCodexAppServerLog('warn', 'codex-app-server', 'server_request.auto_resolved', {
+          method: message.method,
+          decision: 'denied',
+        })
         this.writeMessage({ id: message.id, result: { decision: 'denied' } })
         return
       }
       case 'execCommandApproval': {
-        this.stderrStream.write(
-          `meet-ai: auto-resolving unsupported codex app-server request ${message.method}\n`
-        )
+        emitCodexAppServerLog('warn', 'codex-app-server', 'server_request.auto_resolved', {
+          method: message.method,
+          decision: 'denied',
+        })
         this.writeMessage({ id: message.id, result: { decision: 'denied' } })
         return
       }
@@ -626,9 +1187,9 @@ export class CodexAppServerBridge {
         return
       }
       default: {
-        this.stderrStream.write(
-          `meet-ai: rejecting unsupported codex app-server request ${message.method}\n`
-        )
+        emitCodexAppServerLog('error', 'codex-app-server', 'server_request.rejected', {
+          method: message.method,
+        })
         this.writeMessage({
           id: message.id,
           error: {
@@ -654,9 +1215,10 @@ export class CodexAppServerBridge {
     }
 
     if (!this.toolCallHandler) {
-      this.stderrStream.write(
-        `meet-ai: no tool call handler registered, rejecting ${params.tool}\n`
-      )
+      emitCodexAppServerLog('error', 'codex-app-server', 'tool_call.rejected', {
+        tool: params.tool,
+        reason: 'no_handler_registered',
+      })
       this.writeMessage({
         id: message.id,
         result: {
@@ -668,13 +1230,21 @@ export class CodexAppServerBridge {
     }
 
     try {
+      emitCodexAppServerLog('info', 'codex-app-server', 'tool_call.started', {
+        tool: params.tool,
+      })
       const response = await this.toolCallHandler(params.tool, params.arguments)
+      emitCodexAppServerLog('info', 'codex-app-server', 'tool_call.completed', {
+        tool: params.tool,
+        success: response.success,
+      })
       this.writeMessage({ id: message.id, result: response })
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
-      this.stderrStream.write(
-        `meet-ai: tool call ${params.tool} failed: ${errorMessage}\n`
-      )
+      emitCodexAppServerLog('error', 'codex-app-server', 'tool_call.failed', {
+        tool: params.tool,
+        error: errorMessage,
+      })
       this.writeMessage({
         id: message.id,
         result: {
@@ -719,5 +1289,5 @@ export function createCodexAppServerBridge(
 }
 
 export function describeCodexAppServerError(error: unknown): string {
-  return `meet-ai: failed to inject message into Codex via app-server: ${toErrorMessage(error)}`
+  return toErrorMessage(error)
 }

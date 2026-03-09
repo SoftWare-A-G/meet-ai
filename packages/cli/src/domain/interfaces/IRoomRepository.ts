@@ -1,5 +1,9 @@
+import type { Room } from '@meet-ai/cli/types'
+
 export default interface IRoomRepository {
-  create(name: string): Promise<{ id: string; name: string }>
+  list(): Promise<Room[]>
+
+  create(name: string): Promise<Room>
   delete(roomId: string): Promise<void>
   sendTeamInfo(roomId: string, payload: string): Promise<string>
   sendCommands(roomId: string, payload: string): Promise<string>

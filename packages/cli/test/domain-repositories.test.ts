@@ -125,7 +125,7 @@ test('MessageRepository.sendLog omits color and messageId when not provided', as
 // --- RoomRepository ---
 
 test('RoomRepository.create calls postJson with room name', async () => {
-  const fakeRoom = { id: 'room-1', name: 'My Room' }
+  const fakeRoom = { id: 'room-1', name: 'My Room', created_at: '2026-01-01 00:00:00' }
   mock = createMockTransport({ 'postJson:/api/rooms': fakeRoom })
   const repo = new RoomRepository(mock.transport)
 

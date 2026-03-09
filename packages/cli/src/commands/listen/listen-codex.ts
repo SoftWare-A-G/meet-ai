@@ -1,5 +1,5 @@
 import { downloadMessageAttachments } from '@meet-ai/cli/lib/attachments'
-import { appendCodexInboxEntry } from '@meet-ai/cli/lib/codex'
+import { appendCodexInboxEntry, readCurrentCodexSessionId } from '@meet-ai/cli/lib/codex'
 import {
   type CodexAppServerEvent,
   type CodexBridge,
@@ -8,7 +8,9 @@ import {
   describeCodexAppServerError,
 } from '@meet-ai/cli/lib/codex-app-server'
 import { TASK_TOOL_SPECS, createTaskToolCallHandler } from '@meet-ai/cli/lib/codex-task-tools'
+import { emitCodexAppServerLog } from '@meet-ai/cli/lib/codex-app-server-evlog'
 import { createHookClient } from '@meet-ai/cli/lib/hooks/client'
+import { findRoom } from '@meet-ai/cli/lib/hooks/find-room'
 import { createTask, updateTask, listTasks, getTask } from '@meet-ai/cli/lib/hooks/tasks'
 import {
   registerActiveTeamMember,
@@ -18,28 +20,15 @@ import { ListenInput } from './schema'
 import { createTerminalControlHandler, type ListenMessage } from './shared'
 import type { MeetAiClient, Message } from '@meet-ai/cli/types'
 
-function formatCodexListenOutput(
-  msg: Message & { created_at?: string; attachments?: string[] }
-): string {
-  const lines = [
-    `[meet-ai] ${msg.sender} ${msg.created_at ?? new Date().toISOString()}`,
-    msg.content,
-  ]
-
-  if (msg.attachments?.length) {
-    lines.push(`attachments: ${msg.attachments.join(', ')}`)
-  }
-
-  return `${lines.join('\n')}\n`
-}
-
-function formatCodexInjectionOutput(result: { mode: 'start' | 'steer'; turnId: string }): string {
-  return `[meet-ai->codex] ${result.mode} ${result.turnId}\n`
-}
-
 
 function normalizeFinalText(value: string): string {
   return value.replace(/\r\n/g, '\n').trim()
+}
+
+function previewText(value: string, limit = 120): string {
+  const normalized = value.replace(/\s+/g, ' ').trim()
+  if (normalized.length <= limit) return normalized
+  return `${normalized.slice(0, limit)}...`
 }
 
 function isPlainChatMessage(msg: ListenMessage): boolean {
@@ -151,6 +140,15 @@ function buildPublishedText(state: TurnMessageState): string {
   )
 }
 
+async function resolveCodexTeamName(roomId: string): Promise<string | undefined> {
+  const sessionId = readCurrentCodexSessionId()
+  if (!sessionId) return undefined
+
+  const room = await findRoom(sessionId)
+  if (!room || room.roomId !== roomId) return undefined
+  return room.teamName
+}
+
 export function listenCodex(
   client: MeetAiClient,
   input: {
@@ -212,11 +210,39 @@ export function listenCodex(
     const text = state ? buildPublishedText(state) : ''
     if (!state || state.sent || state.sending || !text) return
 
+    emitCodexAppServerLog('info', 'listen-codex', 'room_publish.queued', {
+      turnKey: key,
+      itemCount: state.itemOrder.length,
+      textLength: text.length,
+      preview: previewText(text),
+    })
+
     state.sending = true
     enqueuePublish(async () => {
       try {
+        emitCodexAppServerLog('info', 'listen-codex', 'room_publish.started', {
+          turnKey: key,
+          itemCount: state.itemOrder.length,
+          textLength: text.length,
+          preview: previewText(text),
+        })
         await client.sendMessage(roomId, codexSender, text)
         state.sent = true
+        emitCodexAppServerLog('info', 'listen-codex', 'room_publish.completed', {
+          turnKey: key,
+          itemCount: state.itemOrder.length,
+          textLength: text.length,
+          preview: previewText(text),
+        })
+      } catch (error) {
+        emitCodexAppServerLog('error', 'listen-codex', 'room_publish.failed', {
+          turnKey: key,
+          itemCount: state.itemOrder.length,
+          textLength: text.length,
+          preview: previewText(text),
+          error: error instanceof Error ? error.message : String(error),
+        })
+        throw error
       } finally {
         state.sending = false
       }
@@ -237,6 +263,15 @@ export function listenCodex(
         sent: false,
         sending: false,
       })
+      emitCodexAppServerLog('debug', 'listen-codex', 'message_buffer.created', {
+        turnKey: key,
+        itemKey,
+        eventType: event.type,
+        chunkLength: nextText.length,
+        totalLength: nextText.length,
+        itemCount: 1,
+        preview: previewText(nextText),
+      })
       return
     }
 
@@ -244,10 +279,30 @@ export function listenCodex(
 
     if (event.type === 'agent_message_completed') {
       existing.itemTexts.set(itemKey, nextText)
+      const publishedText = buildPublishedText(existing)
+      emitCodexAppServerLog('debug', 'listen-codex', 'message_buffer.updated', {
+        turnKey: key,
+        itemKey,
+        eventType: event.type,
+        chunkLength: nextText.length,
+        totalLength: publishedText.length,
+        itemCount: existing.itemOrder.length,
+        preview: previewText(publishedText),
+      })
       return
     }
 
     existing.itemTexts.set(itemKey, `${existing.itemTexts.get(itemKey) ?? ''}${nextText}`)
+    const publishedText = buildPublishedText(existing)
+    emitCodexAppServerLog('debug', 'listen-codex', 'message_buffer.updated', {
+      turnKey: key,
+      itemKey,
+      eventType: event.type,
+      chunkLength: nextText.length,
+      totalLength: publishedText.length,
+      itemCount: existing.itemOrder.length,
+      preview: previewText(publishedText),
+    })
   }
 
   codexBridge.setEventHandler((event) => {
@@ -257,6 +312,12 @@ export function listenCodex(
     }
 
     if (event.type === 'turn_completed') {
+      emitCodexAppServerLog('info', 'listen-codex', 'turn_completed.received', {
+        turnId: event.turnId,
+        pendingTurnKeys: Array.from(messageState.entries())
+          .filter(([, state]) => !state.sent)
+          .map(([key]) => key),
+      })
       for (const [key, state] of messageState.entries()) {
         if (key === event.turnId || (!event.turnId && !state.sent)) {
           publishBufferedMessage(key)
@@ -285,10 +346,19 @@ export function listenCodex(
           read: false,
           ...(message.attachments?.length ? { attachments: message.attachments } : {}),
         })
-        console.log(formatCodexInjectionOutput(result))
+        emitCodexAppServerLog('info', 'listen-codex', 'injection.completed', {
+          mode: result.mode,
+          threadId: result.threadId,
+          turnId: result.turnId,
+          sender: message.sender,
+          attachmentCount: message.attachments?.length ?? 0,
+        })
       })
       .catch(error => {
-        console.error(describeCodexAppServerError(error))
+        emitCodexAppServerLog('error', 'listen-codex', 'injection.failed', {
+          sender: message.sender,
+          error: describeCodexAppServerError(error),
+        })
       })
   }
 
@@ -318,7 +388,9 @@ export function listenCodex(
 
     // Inject each notification into the Codex thread
     for (const text of notifications) {
-      console.log(`[meet-ai:tasks] ${text}\n`)
+      emitCodexAppServerLog('info', 'listen-codex', 'task.notification', {
+        notification: text,
+      })
       injectMessage({ sender: 'meet-ai', content: text })
     }
 
@@ -332,10 +404,13 @@ export function listenCodex(
 
     if (msg.id && msg.room_id && (msg.attachment_count ?? 0) > 0) {
       void downloadMessageAttachments(client, msg.room_id, msg.id).then(paths => {
-        const output = paths.length ? { ...msg, attachments: paths } : msg
-        console.log(
-          formatCodexListenOutput(output as Message & { created_at?: string; attachments?: string[] })
-        )
+        const createdAt = (msg as Message & { created_at?: string }).created_at
+        emitCodexAppServerLog('info', 'listen-codex', 'room_message.received', {
+          sender: msg.sender,
+          createdAt: createdAt ?? new Date().toISOString(),
+          attachmentCount: paths.length,
+          contentPreview: msg.content.slice(0, 200),
+        })
         injectMessage({
           sender: msg.sender,
           content: msg.content,
@@ -345,7 +420,13 @@ export function listenCodex(
       return
     }
 
-    console.log(formatCodexListenOutput(msg as Message & { created_at?: string }))
+    const createdAt = (msg as Message & { created_at?: string }).created_at
+    emitCodexAppServerLog('info', 'listen-codex', 'room_message.received', {
+      sender: msg.sender,
+      createdAt: createdAt ?? new Date().toISOString(),
+      attachmentCount: 0,
+      contentPreview: msg.content.slice(0, 200),
+    })
     injectMessage({
       sender: msg.sender,
       content: msg.content,
@@ -353,17 +434,25 @@ export function listenCodex(
   }
 
   const ws = client.listen(roomId, { exclude, senderType, onMessage })
-  void teamMemberRegistrar({ roomId, agentName: codexSender, role: 'codex' })
+  void resolveCodexTeamName(roomId)
+    .then(teamName => teamMemberRegistrar({ roomId, teamName, agentName: codexSender, role: 'codex' }))
+    .catch(() => teamMemberRegistrar({ roomId, agentName: codexSender, role: 'codex' }))
 
   if (bootstrapPrompt) {
     const bootstrapRequest: Promise<CodexInjectionResult> = codexBridge.injectPrompt(bootstrapPrompt)
 
     void bootstrapRequest
       .then((result) => {
-        console.log(formatCodexInjectionOutput(result))
+        emitCodexAppServerLog('info', 'listen-codex', 'bootstrap.completed', {
+          mode: result.mode,
+          threadId: result.threadId,
+          turnId: result.turnId,
+        })
       })
       .catch((error) => {
-        console.error(describeCodexAppServerError(error))
+        emitCodexAppServerLog('error', 'listen-codex', 'bootstrap.failed', {
+          error: describeCodexAppServerError(error),
+        })
       })
   }
 

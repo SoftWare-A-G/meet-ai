@@ -10,6 +10,13 @@ import type IInboxRouter from '@meet-ai/cli/domain/interfaces/IInboxRouter'
 // so we can simulate incoming WebSocket messages in tests
 type OnMessageFn = (msg: Message) => void
 
+function getConsoleOutput(spy: ReturnType<typeof spyOn>): string {
+  return spy.mock.calls
+    .flat()
+    .map((value: unknown) => String(value))
+    .join('\n')
+}
+
 function makeCodexBridgeMock() {
   let eventHandler: ((event: CodexAppServerEvent) => void) | null = null
   return {
@@ -27,6 +34,7 @@ function makeCodexBridgeMock() {
 
 function mockClient(overrides: Partial<MeetAiClient> = {}): MeetAiClient {
   return {
+    listRooms: mock(() => Promise.resolve([])),
     createRoom: mock(() => Promise.reject(new Error('not implemented'))),
     sendMessage: mock(() => Promise.reject(new Error('not implemented'))),
     getMessages: mock(() => Promise.reject(new Error('not implemented'))),
@@ -122,6 +130,7 @@ describe('listen', () => {
   const savedRuntime = process.env.MEET_AI_RUNTIME
   const savedCodexHome = process.env.CODEX_HOME
   const savedAgentName = process.env.MEET_AI_AGENT_NAME
+  const savedHome = process.env.HOME
   const codexHome = '/tmp/meet-ai-listen-codex-home'
 
   function writeCodexSessionTranscript(sessionId: string, cwd: string) {
@@ -156,6 +165,8 @@ describe('listen', () => {
     else process.env.CODEX_HOME = savedCodexHome
     if (savedAgentName === undefined) delete process.env.MEET_AI_AGENT_NAME
     else process.env.MEET_AI_AGENT_NAME = savedAgentName
+    if (savedHome === undefined) delete process.env.HOME
+    else process.env.HOME = savedHome
   })
 
   it('calls client.listen with correct roomId and options', () => {
@@ -216,7 +227,7 @@ describe('listen', () => {
     expect(logSpy).toHaveBeenCalledWith(JSON.stringify(msg))
   })
 
-  it('prints received messages in text format for codex runtime', async () => {
+  it('prints received messages via evlog for codex runtime', async () => {
     process.env.MEET_AI_RUNTIME = 'codex'
     process.env.CODEX_HOME = codexHome
 
@@ -240,11 +251,17 @@ describe('listen', () => {
     )
     await new Promise(resolve => setTimeout(resolve, 0))
 
-    expect(logSpy).toHaveBeenCalledWith(
-      '[meet-ai] alice 2026-03-08T00:00:00.000Z\nhello from meet-ai\n'
-    )
+    const output = getConsoleOutput(logSpy)
+    expect(output).toContain('component:')
+    expect(output).toContain('listen-codex')
+    expect(output).toContain('event:')
+    expect(output).toContain('room_message.received')
+    expect(output).toContain('contentPreview:')
+    expect(output).toContain('hello from meet-ai')
     expect(codexBridge.injectText).toHaveBeenCalledTimes(1)
-    expect(logSpy).toHaveBeenCalledWith('[meet-ai->codex] start turn-1\n')
+    expect(output).toContain('injection.completed')
+    expect(output).toContain('turnId:')
+    expect(output).toContain('turn-1')
     expect(codexBridge.setEventHandler).toHaveBeenCalledWith(expect.any(Function))
   })
 
@@ -268,6 +285,44 @@ describe('listen', () => {
 
     expect(registerMember).toHaveBeenCalledWith({
       roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c',
+      agentName: 'my-codex',
+      role: 'codex',
+    })
+  })
+
+  it('resolves team name programmatically during codex listen', async () => {
+    process.env.MEET_AI_RUNTIME = 'codex'
+    process.env.CODEX_HOME = codexHome
+    process.env.HOME = codexHome
+    process.env.MEET_AI_AGENT_NAME = 'my-codex'
+
+    writeCodexSessionTranscript('sess-team-bound', process.cwd())
+    mkdirSync(`${codexHome}/.claude/teams/demo-team`, { recursive: true })
+    writeFileSync(
+      `${codexHome}/.claude/teams/demo-team/meet-ai.json`,
+      JSON.stringify({
+        session_id: 'sess-team-bound',
+        room_id: 'df75b1db-f583-4d9f-8e34-9b3d614f152c',
+        team_name: 'demo-team',
+      })
+    )
+
+    const client = mockClient()
+    const registerMember = mock(() => Promise.resolve())
+
+    listen(
+      client,
+      { roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c', senderType: 'human' },
+      undefined,
+      undefined,
+      registerMember,
+    )
+
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(registerMember).toHaveBeenCalledWith({
+      roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c',
+      teamName: 'demo-team',
       agentName: 'my-codex',
       role: 'codex',
     })
@@ -409,7 +464,9 @@ describe('listen', () => {
         content: 'ping codex',
       })
     )
-    expect(logSpy).toHaveBeenCalledWith('[meet-ai->codex] start turn-1\n')
+    const output = getConsoleOutput(logSpy)
+    expect(output).toContain('injection.completed')
+    expect(output).toContain('ping codex')
   })
 
   it('preserves attachment paths when queueing Codex inbox entries', async () => {
@@ -446,7 +503,9 @@ describe('listen', () => {
         attachments: ['/tmp/meet-ai-attachments/att-1-file.png'],
       })
     )
-    expect(logSpy).toHaveBeenCalledWith('[meet-ai->codex] start turn-1\n')
+    const output = getConsoleOutput(logSpy)
+    expect(output).toContain('room_message.received')
+    expect(output).toContain('attachmentCount:')
   })
 
   it('does not deliver non-message payloads to the Codex inbox', async () => {
@@ -804,16 +863,10 @@ describe('listen', () => {
           ].join('\n'),
         })
       )
-      expect(logSpy).toHaveBeenCalledWith(
-        [
-          '[meet-ai:tasks] New task assigned to you:',
-          'task_id: task-1',
-          'subject: Fix the bug',
-          'description: Patch the failing listener path',
-          'status: pending',
-          'assignee: my-codex\n',
-        ].join('\n')
-      )
+      const output = getConsoleOutput(logSpy)
+      expect(output).toContain('task.notification')
+      expect(output).toContain('New task assigned to you:')
+      expect(output).toContain('task_id: task-1')
     })
 
     it('does not inject notifications for tasks assigned to other agents', async () => {

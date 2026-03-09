@@ -1,45 +1,80 @@
 import { Box, Text } from 'ink'
 import Sidebar from './Sidebar'
 import MainPane from './MainPane'
-import type { TeamProcess } from '@meet-ai/cli/lib/process-manager'
+import type { ProcessStatus } from '@meet-ai/cli/lib/process-manager'
+import type { RoomGroup } from './room-groups'
 
 interface DashboardProps {
-  teams: TeamProcess[]
-  focusedIndex: number
+  roomGroups: RoomGroup[]
+  focusedRoomIndex: number
+  focusedTeamIndex: number
   height: number
 }
 
 const SIDEBAR_WIDTH = 32
 
-export function Dashboard({ teams, focusedIndex, height }: DashboardProps) {
-  if (teams.length === 0) {
+const STATUS_ICONS: Record<ProcessStatus, { icon: string; color: string }> = {
+  starting: { icon: '...', color: 'yellow' },
+  running: { icon: '>>>', color: 'green' },
+  exited: { icon: '[done]', color: 'gray' },
+  error: { icon: '[err]', color: 'red' },
+}
+
+export function Dashboard({ roomGroups, focusedRoomIndex, focusedTeamIndex, height }: DashboardProps) {
+  if (roomGroups.length === 0) {
     return (
       <Box flexGrow={1} alignItems="center" justifyContent="center">
         <Text dimColor>No teams running. Press </Text>
         <Text bold color="green">n</Text>
-        <Text dimColor> to spawn a new team.</Text>
+        <Text dimColor> to create or connect a team.</Text>
       </Box>
     )
   }
 
-  const focused = teams[focusedIndex]
-  if (!focused) return null
+  const focusedGroup = roomGroups[focusedRoomIndex]
+  if (!focusedGroup) return null
+
+  const focusedTeam = focusedGroup.teams[focusedTeamIndex]
+  if (!focusedTeam) return null
+
+  const showTabs = focusedGroup.teams.length > 1
+  const tabHeight = showTabs ? 1 : 0
+  const mainPaneHeight = height - tabHeight
 
   return (
     <Box flexGrow={1} flexDirection="row">
       <Sidebar
-        sessions={teams}
-        focusedIndex={focusedIndex}
+        roomGroups={roomGroups}
+        focusedIndex={focusedRoomIndex}
         width={SIDEBAR_WIDTH}
         height={height}
       />
-      <MainPane
-        roomName={focused.roomName}
-        status={focused.status}
-        lines={focused.lines}
-        panes={focused.panes}
-        height={height}
-      />
+      <Box flexDirection="column" flexGrow={1}>
+        {showTabs && (
+          <Box paddingX={1} gap={1}>
+            {focusedGroup.teams.map((team, i) => {
+              const isFocused = i === focusedTeamIndex
+              const label = team.codingAgent === 'codex' ? 'Codex' : 'Claude'
+              const { icon, color } = STATUS_ICONS[team.status]
+              return (
+                <Text key={team.teamId}>
+                  <Text bold={isFocused} color={isFocused ? 'cyan' : undefined} dimColor={!isFocused}>
+                    {isFocused ? '▸' : ' '}{label}
+                  </Text>
+                  <Text color={color} dimColor={!isFocused}> {icon}</Text>
+                </Text>
+              )
+            })}
+          </Box>
+        )}
+        <MainPane
+          roomName={focusedTeam.roomName}
+          status={focusedTeam.status}
+          lines={focusedTeam.lines}
+          panes={focusedTeam.panes}
+          height={mainPaneHeight}
+        />
+      </Box>
     </Box>
   )
 }

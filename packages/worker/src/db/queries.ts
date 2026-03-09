@@ -28,9 +28,9 @@ export function queries(db: D1Database) {
     },
 
     async insertRoom(id: string, keyId: string, name: string) {
-      await db.prepare(
-        'INSERT INTO rooms (id, key_id, name) VALUES (?, ?, ?)'
-      ).bind(id, keyId, name).run()
+      return db.prepare(
+        'INSERT INTO rooms (id, key_id, name) VALUES (?, ?, ?) RETURNING id, name, created_at'
+      ).bind(id, keyId, name).first<Pick<Room, 'id' | 'name' | 'created_at'>>() as Promise<Pick<Room, 'id' | 'name' | 'created_at'>>
     },
 
     async findRoom(roomId: string, keyId: string) {
