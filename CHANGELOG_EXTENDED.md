@@ -1,6 +1,18 @@
 # Changelog
 
-## [0.5.1](https://github.com/SoftWare-A-G/meet-ai/compare/0.5.0...HEAD) (2026-03-09)
+## [0.5.2](https://github.com/SoftWare-A-G/meet-ai/compare/0.5.1...HEAD) (2026-03-10)
+
+### Bug Fixes
+
+* fix auto-update `update failed` error under Node.js runtime by replacing the Bun-only `Bun.which('npm')` call in `detectInstaller()` with a portable `spawnSync('which', ['npm'])` lookup
+* auto-apply pending D1 migrations during `bun run deploy` so schema changes land without a separate `wrangler d1 migrations apply` step
+
+### Code Refactoring
+
+* remove Bun-specific APIs from the auto-update module so the bundled CLI works correctly under the `#!/usr/bin/env node` shebang
+* replace `Bun.write()` with `writeFileSync()` in config tests to eliminate runtime-specific test helpers
+
+## [0.5.1](https://github.com/SoftWare-A-G/meet-ai/compare/0.5.0...0.5.1) (2026-03-09)
 
 ### Bug Fixes
 

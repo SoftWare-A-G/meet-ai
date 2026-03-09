@@ -25,7 +25,8 @@ export function isNewer(remote: string, local: string): boolean {
 }
 
 export function detectInstaller(): { supported: true; npmPath: string } | { supported: false; reason: string } {
-  const npmPath = Bun.which('npm')
+  const whichResult = spawnSync('which', ['npm'])
+  const npmPath = whichResult.status === 0 ? whichResult.stdout.toString().trim() : null
   if (!npmPath) return { supported: false, reason: 'npm not found in PATH' }
 
   const prefixResult = spawnSync('npm', ['prefix', '-g'])

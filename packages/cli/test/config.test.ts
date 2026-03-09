@@ -1,5 +1,5 @@
 import { test, expect, beforeEach, afterEach, spyOn } from "bun:test";
-import { mkdirSync, rmSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { z } from "zod";
 import {
   getMeetAiConfig,
@@ -100,7 +100,7 @@ test("loads MEET_AI_* from Codex config.toml env section when runtime is codex",
   const codexHome = "/tmp/meet-ai-codex-config";
   rmSync(codexHome, { recursive: true, force: true });
   mkdirSync(codexHome, { recursive: true });
-  await Bun.write(
+  writeFileSync(
     `${codexHome}/config.toml`,
     [
       'model = "gpt-5.4"',
@@ -131,13 +131,13 @@ test("project settings override Codex config when runtime is codex", async () =>
   mkdirSync(codexHome, { recursive: true });
   mkdirSync(projectRoot, { recursive: true });
 
-  await Bun.write(
+  writeFileSync(
     `${codexHome}/config.toml`,
     ['[env]', 'MEET_AI_URL = "https://codex-config.example.com"', 'MEET_AI_KEY = "mai_codex_123"', ""].join("\n"),
   );
 
   const projectSettingsPath = `${projectRoot}/settings.json`;
-  await Bun.write(
+  writeFileSync(
     projectSettingsPath,
     JSON.stringify({
       env: {

@@ -1,6 +1,17 @@
 # Changelog
 
-## [0.5.1](https://github.com/SoftWare-A-G/meet-ai/compare/0.5.0...HEAD) (2026-03-09)
+## [0.5.2](https://github.com/SoftWare-A-G/meet-ai/compare/0.5.1...HEAD) (2026-03-10)
+
+### Bug Fixes
+
+* fix auto-update crash under Node.js by replacing Bun-only `Bun.which()` with portable `which` lookup
+* auto-apply D1 migrations during deploy so new tables land without a separate manual step
+
+### Tests
+
+* replace `Bun.write()` with `writeFileSync()` in config tests for Node.js compatibility
+
+## [0.5.1](https://github.com/SoftWare-A-G/meet-ai/compare/0.5.0...0.5.1) (2026-03-09)
 
 ### Bug Fixes
 
