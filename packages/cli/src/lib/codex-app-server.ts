@@ -408,7 +408,7 @@ function isErrorNotification(params: unknown): params is ErrorNotification {
 
 function summarizeThreadItem(item: ItemCompletedNotification['item']): Record<string, unknown> {
   switch (item.type) {
-    case 'agentMessage':
+    case 'agentMessage': {
       return {
         itemType: item.type,
         itemId: item.id,
@@ -416,7 +416,8 @@ function summarizeThreadItem(item: ItemCompletedNotification['item']): Record<st
         textLength: item.text.length,
         preview: previewText(item.text),
       }
-    case 'commandExecution':
+    }
+    case 'commandExecution': {
       return {
         itemType: item.type,
         itemId: item.id,
@@ -428,14 +429,16 @@ function summarizeThreadItem(item: ItemCompletedNotification['item']): Record<st
         outputLength: item.aggregatedOutput?.length ?? 0,
         preview: previewText(item.aggregatedOutput),
       }
-    case 'fileChange':
+    }
+    case 'fileChange': {
       return {
         itemType: item.type,
         itemId: item.id,
         status: item.status,
         changeCount: item.changes.length,
       }
-    case 'dynamicToolCall':
+    }
+    case 'dynamicToolCall': {
       return {
         itemType: item.type,
         itemId: item.id,
@@ -445,7 +448,8 @@ function summarizeThreadItem(item: ItemCompletedNotification['item']): Record<st
         durationMs: item.durationMs,
         contentItemCount: item.contentItems?.length ?? 0,
       }
-    case 'mcpToolCall':
+    }
+    case 'mcpToolCall': {
       return {
         itemType: item.type,
         itemId: item.id,
@@ -456,7 +460,8 @@ function summarizeThreadItem(item: ItemCompletedNotification['item']): Record<st
         hasResult: item.result != null,
         hasError: item.error != null,
       }
-    case 'collabAgentToolCall':
+    }
+    case 'collabAgentToolCall': {
       return {
         itemType: item.type,
         itemId: item.id,
@@ -465,14 +470,16 @@ function summarizeThreadItem(item: ItemCompletedNotification['item']): Record<st
         receiverCount: item.receiverThreadIds.length,
         preview: previewText(item.prompt),
       }
-    case 'plan':
+    }
+    case 'plan': {
       return {
         itemType: item.type,
         itemId: item.id,
         textLength: item.text.length,
         preview: previewText(item.text),
       }
-    case 'reasoning':
+    }
+    case 'reasoning': {
       return {
         itemType: item.type,
         itemId: item.id,
@@ -480,20 +487,23 @@ function summarizeThreadItem(item: ItemCompletedNotification['item']): Record<st
         contentCount: item.content.length,
         preview: previewText(item.summary.join(' ')) ?? previewText(item.content.join(' ')),
       }
-    case 'webSearch':
+    }
+    case 'webSearch': {
       return {
         itemType: item.type,
         itemId: item.id,
         query: item.query,
         action: item.action,
       }
-    case 'imageView':
+    }
+    case 'imageView': {
       return {
         itemType: item.type,
         itemId: item.id,
         path: item.path,
       }
-    case 'imageGeneration':
+    }
+    case 'imageGeneration': {
       return {
         itemType: item.type,
         itemId: item.id,
@@ -501,24 +511,28 @@ function summarizeThreadItem(item: ItemCompletedNotification['item']): Record<st
         resultLength: item.result.length,
         preview: previewText(item.revisedPrompt ?? item.result),
       }
+    }
     case 'enteredReviewMode':
-    case 'exitedReviewMode':
+    case 'exitedReviewMode': {
       return {
         itemType: item.type,
         itemId: item.id,
         review: item.review,
       }
-    case 'userMessage':
+    }
+    case 'userMessage': {
       return {
         itemType: item.type,
         itemId: item.id,
         contentItemCount: item.content.length,
       }
-    case 'contextCompaction':
+    }
+    case 'contextCompaction': {
       return {
         itemType: item.type,
         itemId: item.id,
       }
+    }
   }
 }
 

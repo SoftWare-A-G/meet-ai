@@ -37,19 +37,19 @@ export function emitCodexAppServerLog(
   switch (level) {
     case 'debug': {
       log.debug(payload)
-      return
+      break
     }
     case 'info': {
       log.info(payload)
-      return
+      break
     }
     case 'warn': {
       log.warn(payload)
-      return
+      break
     }
     case 'error': {
       log.error(payload)
-      return
+      break
     }
   }
 }

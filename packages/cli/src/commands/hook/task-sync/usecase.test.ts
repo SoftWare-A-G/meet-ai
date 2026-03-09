@@ -106,8 +106,8 @@ describe('TaskHookInput schema', () => {
 })
 
 // Mock the hooks module for processTaskSync tests
-const mockFindRoom = mock(() => Promise.resolve({ roomId: 'room-123', teamName: 'test-team' }))
-const mockPost = mock(() => Promise.resolve({ ok: true }))
+const mockFindRoom = mock(() => Promise.resolve({ roomId: 'room-123', teamName: 'test-team' } as any))
+const mockPost = mock(() => Promise.resolve({ ok: true } as any))
 const mockCreateHookClient = mock(() => ({
   api: {
     rooms: {
@@ -131,6 +131,18 @@ mock.module('@meet-ai/cli/lib/hooks', () => ({
 const { processTaskSync } = await import('./usecase')
 
 describe('processTaskSync', () => {
+  type UpsertCall = {
+    param: { id: string }
+    json: {
+      source: string
+      source_id: string
+      subject?: string
+      description?: string
+      status?: string
+      assignee?: string | null
+    }
+  }
+
   beforeEach(() => {
     mockFindRoom.mockClear()
     mockPost.mockClear()
@@ -147,7 +159,8 @@ describe('processTaskSync', () => {
     expect(result).toBe('sent')
     expect(mockPost).toHaveBeenCalledTimes(1)
 
-    const call = mockPost.mock.calls[0][0]
+    const call = (mockPost.mock.calls as unknown as [UpsertCall][]).at(0)?.[0]
+    if (!call) throw new Error('expected tasks.upsert to be called once')
     expect(call.param.id).toBe('room-123')
     expect(call.json.source).toBe('claude')
     expect(call.json.source_id).toBe('3')
@@ -162,7 +175,8 @@ describe('processTaskSync', () => {
     expect(result).toBe('sent')
     expect(mockPost).toHaveBeenCalledTimes(1)
 
-    const call = mockPost.mock.calls[0][0]
+    const call = (mockPost.mock.calls as unknown as [UpsertCall][]).at(0)?.[0]
+    if (!call) throw new Error('expected tasks.upsert to be called once')
     expect(call.param.id).toBe('room-123')
     expect(call.json.source).toBe('claude')
     expect(call.json.source_id).toBe('2')

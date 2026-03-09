@@ -5,11 +5,11 @@
     "packages/*"
   ],
   "scripts": {
-    "lint": "oxlint",
-    "lint-changed": "oxlint $(git diff --name-only)",
-    "lint-changed:fix": "oxlint $(git diff --name-only) --fix",
-    "lint-staged": "oxlint $(git diff --cached --name-only)",
-    "lint-staged:fix": "oxlint $(git diff --cached --name-only) --fix",
+    "lint": "oxlint -f json",
+    "lint-changed": "oxlint $(git diff --name-only) -f json",
+    "lint-changed:fix": "oxlint $(git diff --name-only) --fix -f json",
+    "lint-staged": "oxlint $(git diff --cached --name-only) -f json",
+    "lint-staged:fix": "oxlint $(git diff --cached --name-only) --fix -f json",
     "typecheck": "bun --filter '*' typecheck"
   },
   "devDependencies": {
