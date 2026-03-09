@@ -11,6 +11,20 @@ export type ListenMessage = Message & {
   cols?: number
 }
 
+const HOOK_ANCHOR_SENDER = 'hook'
+const HOOK_ANCHOR_CONTENT = 'Agent activity'
+const HOOK_ANCHOR_COLOR = '#6b7280'
+
+export function isHookAnchorMessage(msg: ListenMessage): boolean {
+  const isPlainMessage = msg.type == null || msg.type === 'message'
+  return (
+    isPlainMessage &&
+    msg.sender === HOOK_ANCHOR_SENDER &&
+    msg.content === HOOK_ANCHOR_CONTENT &&
+    msg.color === HOOK_ANCHOR_COLOR
+  )
+}
+
 export function loadTeamExcludeSet(teamName?: string): Set<string> {
   if (!teamName) return new Set()
   const configPath = `${process.env.HOME}/.claude/teams/${teamName}/config.json`

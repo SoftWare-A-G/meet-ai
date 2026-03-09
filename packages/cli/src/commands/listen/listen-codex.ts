@@ -17,7 +17,7 @@ import {
   type TeamMemberRegistrar,
 } from '@meet-ai/cli/lib/team-member-registration'
 import { ListenInput } from './schema'
-import { createTerminalControlHandler, type ListenMessage } from './shared'
+import { createTerminalControlHandler, isHookAnchorMessage, type ListenMessage } from './shared'
 import type { MeetAiClient, Message } from '@meet-ai/cli/types'
 
 
@@ -401,6 +401,7 @@ export function listenCodex(
     if (terminal.handle(msg)) return
     if (handleTasksInfo(msg)) return
     if (!isPlainChatMessage(msg)) return
+    if (isHookAnchorMessage(msg)) return
 
     if (msg.id && msg.room_id && (msg.attachment_count ?? 0) > 0) {
       void downloadMessageAttachments(client, msg.room_id, msg.id).then(paths => {

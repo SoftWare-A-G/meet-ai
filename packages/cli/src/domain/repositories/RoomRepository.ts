@@ -11,8 +11,10 @@ export default class RoomRepository implements IRoomRepository {
     return this.transport.getJson('/api/rooms')
   }
 
-  async create(name: string): Promise<Room> {
-    return this.transport.postJson('/api/rooms', { name })
+  async create(name: string, projectId?: string): Promise<Room> {
+    const body: Record<string, string> = { name }
+    if (projectId) body.project_id = projectId
+    return this.transport.postJson('/api/rooms', body)
   }
 
   async delete(roomId: string): Promise<void> {

@@ -24,6 +24,8 @@ function makeMockClient(overrides: Partial<MeetAiClient> = {}): MeetAiClient {
     generateKey: mock(() => Promise.resolve({ key: "k", prefix: "p" })),
     deleteRoom: mock(() => Promise.resolve()),
     sendTerminalData: mock(() => Promise.resolve()),
+    findProject: mock(() => Promise.resolve(null)),
+    upsertProject: mock(() => Promise.resolve({ id: "p1", name: "test" })),
     ...overrides,
   };
 }

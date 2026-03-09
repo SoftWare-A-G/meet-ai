@@ -5,7 +5,12 @@ import {
   type TeamMemberRegistrar,
 } from '@meet-ai/cli/lib/team-member-registration'
 import { ListenInput } from './schema'
-import { createTerminalControlHandler, loadTeamExcludeSet, type ListenMessage } from './shared'
+import {
+  createTerminalControlHandler,
+  isHookAnchorMessage,
+  loadTeamExcludeSet,
+  type ListenMessage,
+} from './shared'
 import type IInboxRouter from '@meet-ai/cli/domain/interfaces/IInboxRouter'
 import type { MeetAiClient } from '@meet-ai/cli/types'
 
@@ -38,6 +43,7 @@ export function listenClaude(
   const onMessage = (msg: ListenMessage) => {
     if (terminal.handle(msg)) return
     if (!isPlainChatMessage(msg)) return
+    if (isHookAnchorMessage(msg)) return
     if (teamExcludeSet.has(msg.sender)) return
 
     if (msg.id && msg.room_id && (msg.attachment_count ?? 0) > 0) {

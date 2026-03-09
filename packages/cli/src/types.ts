@@ -24,7 +24,9 @@ export type AttachmentMeta = {
 
 export interface MeetAiClient {
   listRooms(): Promise<Room[]>;
-  createRoom(name: string): Promise<Room>;
+  createRoom(name: string, projectId?: string): Promise<Room>;
+  findProject(id: string): Promise<{ id: string; name: string } | null>;
+  upsertProject(id: string, name: string): Promise<{ id: string; name: string }>;
   sendMessage(roomId: string, sender: string, content: string, color?: string): Promise<Message>;
   getMessages(
     roomId: string,

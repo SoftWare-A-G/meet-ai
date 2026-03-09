@@ -5,6 +5,7 @@ import { queries } from './db/queries'
 import { authRoute } from './routes/auth'
 import { keysRoute } from './routes/keys'
 import { lobbyRoute } from './routes/lobby'
+import { projectsRoute } from './routes/projects'
 import { roomsRoute } from './routes/rooms'
 import { planReviewsRoute } from './routes/plan-reviews'
 import { questionReviewsRoute } from './routes/question-reviews'
@@ -36,6 +37,7 @@ export const app = new Hono<AppEnv>()
 
   .route('/api/auth', authRoute)
   .route('/api/keys', keysRoute)
+  .route('/api/projects', projectsRoute)
   .route('/api/rooms', roomsRoute)
   .route('/api/rooms', planReviewsRoute)
   .route('/api/rooms', questionReviewsRoute)

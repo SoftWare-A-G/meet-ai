@@ -32,6 +32,27 @@ async function sendMessage(key: string, roomId: string, sender: string, content:
   })
 }
 
+async function createRoomWithProject(
+  key: string,
+  name: string,
+  projectId: string,
+  projectName: string
+): Promise<string> {
+  const projectRes = await SELF.fetch('http://localhost/api/projects', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: projectId, name: projectName }),
+  })
+  expect(projectRes.status).toBe(201)
+  const res = await SELF.fetch('http://localhost/api/rooms', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, project_id: projectId }),
+  })
+  const body = await res.json() as { id: string }
+  return body.id
+}
+
 async function sendLog(key: string, roomId: string, sender: string, content: string, color?: string, messageId?: string) {
   return SELF.fetch(`http://localhost/api/rooms/${roomId}/logs`, {
     method: 'POST',
@@ -1048,5 +1069,225 @@ describe('Lobby', () => {
     const body = await res.json() as { id: string; name: string }
     expect(body.id).toBeTruthy()
     expect(body.name).toBe('lobby-test')
+  })
+})
+
+describe('Projects', () => {
+  it('POST /api/projects creates a project and POST /api/rooms links the room', async () => {
+    const key = await createKey()
+    const roomId = await createRoomWithProject(key, 'test-room', 'abc1230000000001', 'My Project')
+
+    // Verify project was created
+    const projRes = await SELF.fetch('http://localhost/api/projects', {
+      headers: { Authorization: `Bearer ${key}` },
+    })
+    expect(projRes.status).toBe(200)
+    const projects = await projRes.json() as { id: string; name: string }[]
+    expect(projects).toHaveLength(1)
+    expect(projects[0].id).toBe('abc1230000000001')
+    expect(projects[0].name).toBe('My Project')
+
+    // Verify room is linked
+    const roomsRes = await SELF.fetch('http://localhost/api/rooms', {
+      headers: { Authorization: `Bearer ${key}` },
+    })
+    const rooms = await roomsRes.json() as { id: string; project_id: string | null }[]
+    const room = rooms.find(r => r.id === roomId)
+    expect(room?.project_id).toBe('abc1230000000001')
+  })
+
+  it('GET /api/projects returns empty for new key', async () => {
+    const key = await createKey()
+    const res = await SELF.fetch('http://localhost/api/projects', {
+      headers: { Authorization: `Bearer ${key}` },
+    })
+    expect(res.status).toBe(200)
+    const projects = await res.json()
+    expect(projects).toEqual([])
+  })
+
+  it('POST /api/projects upserts an existing project', async () => {
+    const key = await createKey()
+
+    let res = await SELF.fetch('http://localhost/api/projects', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: 'a000000000000001', name: 'Old Name' }),
+    })
+    expect(res.status).toBe(201)
+
+    res = await SELF.fetch('http://localhost/api/projects', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: 'a000000000000001', name: 'New Name' }),
+    })
+    expect(res.status).toBe(201)
+    const project = await res.json() as { id: string; name: string }
+    expect(project.id).toBe('a000000000000001')
+    expect(project.name).toBe('New Name')
+  })
+
+  it('PATCH /api/projects/:id renames a project', async () => {
+    const key = await createKey()
+    const createRes = await SELF.fetch('http://localhost/api/projects', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: 'b000000000000001', name: 'Old Name' }),
+    })
+    expect(createRes.status).toBe(201)
+
+    const res = await SELF.fetch('http://localhost/api/projects/b000000000000001', {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'New Name' }),
+    })
+    expect(res.status).toBe(200)
+    const project = await res.json() as { name: string }
+    expect(project.name).toBe('New Name')
+  })
+
+  it('PATCH /api/projects/:id returns 404 for unknown project', async () => {
+    const key = await createKey()
+    const res = await SELF.fetch('http://localhost/api/projects/c000000000000001', {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'New Name' }),
+    })
+    expect(res.status).toBe(404)
+  })
+
+  it('projects are scoped by API key', async () => {
+    const key1 = await createKey()
+    const key2 = await createKey()
+    await createRoomWithProject(key1, 'room1', 'd00000000000000a', 'Key1 Project')
+    await createRoomWithProject(key2, 'room2', 'd00000000000000b', 'Key2 Project')
+
+    const res1 = await SELF.fetch('http://localhost/api/projects', {
+      headers: { Authorization: `Bearer ${key1}` },
+    })
+    const projects1 = await res1.json() as { id: string }[]
+    expect(projects1).toHaveLength(1)
+    expect(projects1[0].id).toBe('d00000000000000a')
+
+    const res2 = await SELF.fetch('http://localhost/api/projects', {
+      headers: { Authorization: `Bearer ${key2}` },
+    })
+    const projects2 = await res2.json() as { id: string }[]
+    expect(projects2).toHaveLength(1)
+    expect(projects2[0].id).toBe('d00000000000000b')
+  })
+
+  it('multiple rooms can share the same project', async () => {
+    const key = await createKey()
+    await createRoomWithProject(key, 'room-a', 'e000000000000001', 'Shared')
+    await createRoomWithProject(key, 'room-b', 'e000000000000001', 'Shared')
+
+    const projRes = await SELF.fetch('http://localhost/api/projects', {
+      headers: { Authorization: `Bearer ${key}` },
+    })
+    const projects = await projRes.json() as { id: string }[]
+    expect(projects).toHaveLength(1)
+
+    const roomsRes = await SELF.fetch('http://localhost/api/rooms', {
+      headers: { Authorization: `Bearer ${key}` },
+    })
+    const rooms = await roomsRes.json() as { project_id: string }[]
+    const projectRooms = rooms.filter(r => r.project_id === 'e000000000000001')
+    expect(projectRooms).toHaveLength(2)
+  })
+
+  it('rooms without project_id have null project_id', async () => {
+    const key = await createKey()
+    await createRoom(key, 'plain-room')
+
+    const res = await SELF.fetch('http://localhost/api/rooms', {
+      headers: { Authorization: `Bearer ${key}` },
+    })
+    const rooms = await res.json() as { name: string; project_id: string | null }[]
+    const room = rooms.find(r => r.name === 'plain-room')
+    expect(room?.project_id).toBeNull()
+  })
+
+  it('GET /api/rooms?project_id= filters rooms by project', async () => {
+    const key = await createKey()
+    await createRoomWithProject(key, 'proj-room', 'f000000000000001', 'Filter Project')
+    await createRoom(key, 'no-proj-room')
+
+    const res = await SELF.fetch('http://localhost/api/rooms?project_id=f000000000000001', {
+      headers: { Authorization: `Bearer ${key}` },
+    })
+    const rooms = await res.json() as { name: string; project_id: string }[]
+    expect(rooms).toHaveLength(1)
+    expect(rooms[0].name).toBe('proj-room')
+    expect(rooms[0].project_id).toBe('f000000000000001')
+  })
+
+  it('GET /api/projects/:id returns project when exists', async () => {
+    const key = await createKey()
+    await createRoomWithProject(key, 'test-room', 'aa00000000000001', 'Get Project')
+
+    const res = await SELF.fetch('http://localhost/api/projects/aa00000000000001', {
+      headers: { Authorization: `Bearer ${key}` },
+    })
+    expect(res.status).toBe(200)
+    const project = await res.json() as { id: string; name: string }
+    expect(project.id).toBe('aa00000000000001')
+    expect(project.name).toBe('Get Project')
+  })
+
+  it('GET /api/projects/:id returns 404 when not found', async () => {
+    const key = await createKey()
+    const res = await SELF.fetch('http://localhost/api/projects/bb00000000000001', {
+      headers: { Authorization: `Bearer ${key}` },
+    })
+    expect(res.status).toBe(404)
+  })
+
+  it('GET /api/projects/:id is scoped by API key', async () => {
+    const key1 = await createKey()
+    const key2 = await createKey()
+    await createRoomWithProject(key1, 'room1', 'cc00000000000001', 'Key1 Project')
+
+    // key1 can see it
+    const res1 = await SELF.fetch('http://localhost/api/projects/cc00000000000001', {
+      headers: { Authorization: `Bearer ${key1}` },
+    })
+    expect(res1.status).toBe(200)
+
+    // key2 cannot
+    const res2 = await SELF.fetch('http://localhost/api/projects/cc00000000000001', {
+      headers: { Authorization: `Bearer ${key2}` },
+    })
+    expect(res2.status).toBe(404)
+  })
+
+  it('POST /api/rooms with unknown project_id returns 404', async () => {
+    const key = await createKey()
+    const res = await SELF.fetch('http://localhost/api/rooms', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'bad-room', project_id: 'dd00000000000001' }),
+    })
+    expect(res.status).toBe(404)
+  })
+
+  it('POST /api/projects rejects invalid project id', async () => {
+    const key = await createKey()
+    const res = await SELF.fetch('http://localhost/api/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+      body: JSON.stringify({ id: 'INVALID!', name: 'Bad Project' }),
+    })
+    expect(res.status).toBe(400)
+  })
+
+  it('POST /api/rooms rejects invalid project_id format', async () => {
+    const key = await createKey()
+    const res = await SELF.fetch('http://localhost/api/rooms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+      body: JSON.stringify({ name: 'bad room', project_id: 'NOT-VALID-HEX!' }),
+    })
+    expect(res.status).toBe(400)
   })
 })

@@ -19,7 +19,7 @@ import { ChatContext } from '../lib/chat-context'
 import { STORAGE_KEYS, DEFAULT_SCHEMA } from '../lib/constants'
 import { getOrCreateHandle } from '../lib/handle'
 import { applySchema } from '../lib/theme'
-import type { Room, TeamInfo, TasksInfo, CommandInfo } from '../lib/types'
+import type { Project, Room, TeamInfo, TasksInfo, CommandInfo } from '../lib/types'
 
 export const Route = createFileRoute('/chat')({
   component: ChatPage,
@@ -98,6 +98,7 @@ function ChatLayout({
   onSchemaChange,
 }: ChatLayoutProps) {
   const [rooms, setRooms] = useState<Room[]>([])
+  const [projects, setProjects] = useState<Project[]>([])
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [showSpawnModal, setShowSpawnModal] = useState(false)
   const [showQRModal, setShowQRModal] = useState(false)
@@ -113,12 +114,15 @@ function ChatLayout({
     (window.navigator as any).standalone === true ||
     window.matchMedia('(display-mode: standalone)').matches
 
-  // Load rooms on mount
+  // Load rooms and projects on mount
   useEffect(() => {
     let cancelled = false
     async function load() {
-      const loaded = await api.loadRooms()
-      if (!cancelled) setRooms(loaded)
+      const [loadedRooms, loadedProjects] = await Promise.all([api.loadRooms(), api.loadProjects()])
+      if (!cancelled) {
+        setRooms(loadedRooms)
+        setProjects(loadedProjects)
+      }
     }
     load()
     return () => {
@@ -148,10 +152,22 @@ function ChatLayout({
   }, [rooms, removeRoom, navigate, params.id])
 
   // Lobby WebSocket for new room events
-  const onRoomCreated = useCallback((id: string, name: string) => {
-    setRooms(prev => (prev.some(r => r.id === id) ? prev : [{ id, name }, ...prev]))
+  const onRoomCreated = useCallback((id: string, name: string, projectId?: string | null, projectName?: string | null) => {
+    setRooms(prev => (prev.some(r => r.id === id) ? prev : [{ id, name, project_id: projectId ?? null }, ...prev]))
+    if (projectId && projectName) {
+      setProjects(prev => prev.some(p => p.id === projectId) ? prev : [...prev, { id: projectId, name: projectName, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }])
+    }
   }, [])
   const { send: lobbySend } = useLobbyWebSocket(apiKey, onRoomCreated)
+
+  const handleRenameProject = useCallback(async (id: string, name: string) => {
+    try {
+      const updated = await api.renameProject(id, name)
+      setProjects(prev => prev.map(p => p.id === id ? updated : p))
+    } catch {
+      toast.error('Failed to rename project.')
+    }
+  }, [])
 
   const handleInstallClick = useCallback(() => {
     setShowIOSInstallModal(true)
@@ -208,12 +224,14 @@ function ChatLayout({
       <SidebarProvider defaultOpen className="h-dvh min-h-0">
         <Sidebar
           rooms={rooms}
+          projects={projects}
           userName={userName}
           onNameChange={onNameChange}
           onSettingsClick={() => setShowSettingsModal(true)}
           onSpawnClick={() => setShowSpawnModal(true)}
           onInstallClick={handleInstallClick}
           onDeleteRoom={handleDeleteRoom}
+          onRenameProject={handleRenameProject}
         />
         <SidebarInset className="bg-transparent">
           <Outlet />

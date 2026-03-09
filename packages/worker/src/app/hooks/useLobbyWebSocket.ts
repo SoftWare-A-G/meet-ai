@@ -1,12 +1,12 @@
 import { useEffect, useRef, useCallback } from 'react'
 
 type LobbyEvent =
-  | { type: 'room_created'; id: string; name: string }
+  | { type: 'room_created'; id: string; name: string; project_id?: string | null; project_name?: string | null }
   | { type: 'room_deleted'; id: string }
 
 export function useLobbyWebSocket(
   apiKey: string | null,
-  onRoomCreated: (id: string, name: string) => void
+  onRoomCreated: (id: string, name: string, projectId?: string | null, projectName?: string | null) => void
 ) {
   const wsRef = useRef<WebSocket | null>(null)
   const onRoomCreatedRef = useRef(onRoomCreated)
@@ -24,7 +24,7 @@ export function useLobbyWebSocket(
         try {
           const evt = JSON.parse(e.data) as LobbyEvent
           if (evt.type === 'room_created') {
-            onRoomCreatedRef.current?.(evt.id, evt.name)
+            onRoomCreatedRef.current?.(evt.id, evt.name, evt.project_id, evt.project_name)
           }
         } catch {
           /* ignore */

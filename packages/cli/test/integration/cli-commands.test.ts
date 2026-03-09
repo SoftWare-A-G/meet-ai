@@ -39,10 +39,17 @@ beforeAll(async () => {
     const url = new URL(req.url ?? '/', 'http://127.0.0.1')
     const method = req.method ?? 'GET'
 
+    // POST /api/projects — upsert project
+    if (method === 'POST' && url.pathname === '/api/projects') {
+      const body = (await readJsonBody(req)) as { id: string; name: string }
+      sendJson(res, 201, { id: body.id, name: body.name })
+      return
+    }
+
     // POST /api/rooms — create room
     if (method === 'POST' && url.pathname === '/api/rooms') {
-      const body = (await readJsonBody(req)) as { name: string }
-      sendJson(res, 200, { id: 'room-abc-123', name: body.name })
+      const body = (await readJsonBody(req)) as { name: string; project_id?: string }
+      sendJson(res, 200, { id: 'room-abc-123', name: body.name, project_id: body.project_id ?? null })
       return
     }
 

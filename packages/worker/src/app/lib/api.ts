@@ -1,5 +1,5 @@
 import { STORAGE_KEYS } from './constants'
-import type { Message, Room, TaskItem, TasksInfo, TeamInfo } from './types'
+import type { Message, Project, Room, TaskItem, TasksInfo, TeamInfo } from './types'
 
 export function getApiKey(): string | null {
   if (typeof localStorage === 'undefined') return null
@@ -30,6 +30,22 @@ export async function loadRooms(): Promise<Room[]> {
     location.href = '/key'
     return []
   }
+  return res.json()
+}
+
+export async function loadProjects(): Promise<Project[]> {
+  const res = await fetch('/api/projects', { headers: authHeaders() })
+  if (!res.ok) return []
+  return res.json()
+}
+
+export async function renameProject(projectId: string, name: string): Promise<Project> {
+  const res = await fetch(`/api/projects/${projectId}`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify({ name }),
+  })
+  if (!res.ok) throw new Error(`Rename project failed: HTTP ${res.status}`)
   return res.json()
 }
 

@@ -4,6 +4,7 @@ import HttpTransport from './adapters/HttpTransport'
 import ConnectionAdapter from './adapters/ConnectionAdapter'
 import FileSystemAdapter from './adapters/FileSystemAdapter'
 import MessageRepository from './repositories/MessageRepository'
+import ProjectRepository from './repositories/ProjectRepository'
 import RoomRepository from './repositories/RoomRepository'
 import AttachmentRepository from './repositories/AttachmentRepository'
 import SendMessage from './usecases/SendMessage'
@@ -15,6 +16,7 @@ import SendTeamInfo from './usecases/SendTeamInfo'
 import SendCommands from './usecases/SendCommands'
 import SendTasks from './usecases/SendTasks'
 import SendTerminalData from './usecases/SendTerminalData'
+import UpsertProject from './usecases/UpsertProject'
 import InboxRouter from './services/InboxRouter'
 import Listen from './usecases/Listen'
 import ListenLobby from './usecases/ListenLobby'
@@ -54,6 +56,7 @@ function createContainer() {
 
   // Repositories
   const messageRepository = new MessageRepository(transport)
+  const projectRepository = new ProjectRepository(transport)
   const roomRepository = new RoomRepository(transport)
   const attachmentRepository = new AttachmentRepository(transport)
 
@@ -69,6 +72,8 @@ function createContainer() {
     sendMessage: new SendMessage(messageRepository),
     listRooms: new ListRooms(roomRepository),
     createRoom: new CreateRoom(roomRepository),
+    findProject: (id: string) => projectRepository.find(id),
+    upsertProject: new UpsertProject(projectRepository),
     deleteRoom: new DeleteRoom(roomRepository),
     sendLog: new SendLog(messageRepository),
     sendTeamInfo: new SendTeamInfo(roomRepository),
@@ -105,7 +110,9 @@ export function getClient(): MeetAiClient {
   const c = getContainer()
   return {
     listRooms: () => c.listRooms.execute(),
-    createRoom: (name) => c.createRoom.execute(name),
+    createRoom: (name, projectId) => c.createRoom.execute(name, projectId),
+    findProject: (id) => c.findProject(id),
+    upsertProject: (id, name) => c.upsertProject.execute(id, name),
     sendMessage: (roomId, sender, content, color) =>
       c.sendMessage.execute(roomId, sender, content, color),
     getMessages: (roomId, options) =>

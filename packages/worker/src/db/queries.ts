@@ -1,4 +1,4 @@
-import type { ApiKey, Room, Message, Log, Attachment, PlanDecision, QuestionReview, PermissionReview } from '../lib/types'
+import type { ApiKey, Room, Message, Log, Attachment, PlanDecision, QuestionReview, PermissionReview, Project } from '../lib/types'
 
 export function queries(db: D1Database) {
   return {
@@ -20,17 +20,22 @@ export function queries(db: D1Database) {
       ).bind(id).run()
     },
 
-    async listRooms(keyId: string) {
-      const result = await db.prepare(
-        'SELECT id, name, created_at FROM rooms WHERE key_id = ? ORDER BY created_at DESC'
-      ).bind(keyId).all<Pick<Room, 'id' | 'name' | 'created_at'>>()
+    async listRooms(keyId: string, projectId?: string) {
+      let sql = 'SELECT id, name, project_id, created_at FROM rooms WHERE key_id = ?'
+      const params: string[] = [keyId]
+      if (projectId) {
+        sql += ' AND project_id = ?'
+        params.push(projectId)
+      }
+      sql += ' ORDER BY created_at DESC'
+      const result = await db.prepare(sql).bind(...params).all<Pick<Room, 'id' | 'name' | 'project_id' | 'created_at'>>()
       return result.results
     },
 
-    async insertRoom(id: string, keyId: string, name: string) {
+    async insertRoom(id: string, keyId: string, name: string, projectId?: string) {
       return db.prepare(
-        'INSERT INTO rooms (id, key_id, name) VALUES (?, ?, ?) RETURNING id, name, created_at'
-      ).bind(id, keyId, name).first<Pick<Room, 'id' | 'name' | 'created_at'>>() as Promise<Pick<Room, 'id' | 'name' | 'created_at'>>
+        'INSERT INTO rooms (id, key_id, name, project_id) VALUES (?, ?, ?, ?) RETURNING id, name, project_id, created_at'
+      ).bind(id, keyId, name, projectId ?? null).first<Pick<Room, 'id' | 'name' | 'project_id' | 'created_at'>>() as Promise<Pick<Room, 'id' | 'name' | 'project_id' | 'created_at'>>
     },
 
     async findRoom(roomId: string, keyId: string) {
@@ -222,6 +227,41 @@ export function queries(db: D1Database) {
         'UPDATE permission_reviews SET status = "expired", decided_at = datetime("now") WHERE id = ? AND room_id = ? AND key_id = ? AND status = "pending"'
       ).bind(id, roomId, keyId).run()
       return result.meta.changes > 0
+    },
+
+    async listProjects(keyId: string) {
+      const result = await db.prepare(
+        'SELECT id, name, created_at, updated_at FROM projects WHERE key_id = ? ORDER BY rowid DESC'
+      ).bind(keyId).all<Pick<Project, 'id' | 'name' | 'created_at' | 'updated_at'>>()
+      return result.results
+    },
+
+    async upsertProject(id: string, keyId: string, name: string) {
+      return db.prepare(
+        `INSERT INTO projects (id, key_id, name)
+         VALUES (?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET name = excluded.name, updated_at = datetime('now')
+         RETURNING id, name, created_at, updated_at`
+      ).bind(id, keyId, name).first<Pick<Project, 'id' | 'name' | 'created_at' | 'updated_at'>>() as Promise<Pick<Project, 'id' | 'name' | 'created_at' | 'updated_at'>>
+    },
+
+    async updateProject(id: string, keyId: string, name: string) {
+      const result = await db.prepare(
+        `UPDATE projects SET name = ?, updated_at = datetime('now')
+         WHERE id = ? AND key_id = ?`
+      ).bind(name, id, keyId).run()
+      if (!result.meta.changes) {
+        return null
+      }
+      return db.prepare(
+        'SELECT id, name, created_at, updated_at FROM projects WHERE id = ? AND key_id = ?'
+      ).bind(id, keyId).first<Pick<Project, 'id' | 'name' | 'created_at' | 'updated_at'>>()
+    },
+
+    async findProject(id: string, keyId: string) {
+      return db.prepare(
+        'SELECT id, name, created_at, updated_at FROM projects WHERE id = ? AND key_id = ?'
+      ).bind(id, keyId).first<Pick<Project, 'id' | 'name' | 'created_at' | 'updated_at'>>()
     },
 
     async deleteRoom(keyId: string, roomId: string) {

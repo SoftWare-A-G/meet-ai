@@ -371,6 +371,35 @@ describe('listen', () => {
     expect(logSpy).not.toHaveBeenCalledWith(JSON.stringify(expect.objectContaining({ id: 'msg-log' })))
   })
 
+  it('does not route hook anchor messages into Claude inboxes', () => {
+    const { client, getHandler } = mockClientCapturingHandler()
+    const inboxRouter = mockInboxRouter()
+
+    listen(
+      client,
+      {
+        roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c',
+        team: 'my-team',
+        inbox: 'team-lead',
+      },
+      inboxRouter,
+    )
+
+    const handler = getHandler()
+    handler({
+      ...makeMessage({
+        id: 'msg-anchor',
+        sender: 'hook',
+        content: 'Agent activity',
+        color: '#6b7280',
+      }),
+      type: 'message',
+    } as any)
+
+    expect(inboxRouter.route).not.toHaveBeenCalled()
+    expect(logSpy).not.toHaveBeenCalledWith(JSON.stringify(expect.objectContaining({ id: 'msg-anchor' })))
+  })
+
   describe('validation', () => {
     it('throws ZodError when roomId is empty', () => {
       // GIVEN a client (won't be called because validation fails first)
@@ -525,6 +554,31 @@ describe('listen', () => {
     handler({
       ...makeMessage({ id: 'msg-log', sender: 'hook', content: 'Agent activity' }),
       type: 'log',
+    } as any)
+
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(codexBridge.injectText).not.toHaveBeenCalled()
+    expect(() => readFileSync(`${codexHome}/meet-ai/inbox/thread-1.json`, 'utf-8')).toThrow()
+  })
+
+  it('does not deliver hook anchor messages to the Codex inbox', async () => {
+    process.env.MEET_AI_RUNTIME = 'codex'
+    process.env.CODEX_HOME = codexHome
+
+    const { client, getHandler } = mockClientCapturingHandler()
+    const codexBridge = makeCodexBridgeMock()
+
+    listen(client, { roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c' }, undefined, codexBridge)
+    const handler = getHandler()
+    handler({
+      ...makeMessage({
+        id: 'msg-anchor',
+        sender: 'hook',
+        content: 'Agent activity',
+        color: '#6b7280',
+      }),
+      type: 'message',
     } as any)
 
     await new Promise(resolve => setTimeout(resolve, 0))

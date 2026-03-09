@@ -2,6 +2,7 @@ import { test, expect, beforeEach } from 'bun:test'
 import type IHttpTransport from '@meet-ai/cli/domain/interfaces/IHttpTransport'
 import type { RequestOptions } from '@meet-ai/cli/domain/interfaces/IHttpTransport'
 import MessageRepository from '@meet-ai/cli/domain/repositories/MessageRepository'
+import ProjectRepository from '@meet-ai/cli/domain/repositories/ProjectRepository'
 import RoomRepository from '@meet-ai/cli/domain/repositories/RoomRepository'
 
 interface Call {
@@ -137,6 +138,31 @@ test('RoomRepository.create calls postJson with room name', async () => {
   expect(call.method).toBe('postJson')
   expect(call.path).toBe('/api/rooms')
   expect(call.body).toEqual({ name: 'My Room' })
+})
+
+test('RoomRepository.create includes project_id when provided', async () => {
+  const fakeRoom = { id: 'room-1', name: 'My Room', created_at: '2026-01-01 00:00:00' }
+  mock = createMockTransport({ 'postJson:/api/rooms': fakeRoom })
+  const repo = new RoomRepository(mock.transport)
+
+  await repo.create('My Room', 'proj-1')
+
+  expect(mock.calls).toHaveLength(1)
+  expect(mock.calls[0].body).toEqual({ name: 'My Room', project_id: 'proj-1' })
+})
+
+test('ProjectRepository.upsert calls postJson with project id and name', async () => {
+  const fakeProject = { id: 'proj-1', name: 'Repo Name' }
+  mock = createMockTransport({ 'postJson:/api/projects': fakeProject })
+  const repo = new ProjectRepository(mock.transport)
+
+  const result = await repo.upsert('proj-1', 'Repo Name')
+
+  expect(result).toEqual(fakeProject)
+  expect(mock.calls).toHaveLength(1)
+  expect(mock.calls[0].method).toBe('postJson')
+  expect(mock.calls[0].path).toBe('/api/projects')
+  expect(mock.calls[0].body).toEqual({ id: 'proj-1', name: 'Repo Name' })
 })
 
 test('RoomRepository.delete calls del with correct path', async () => {

@@ -2,6 +2,7 @@ import { z } from 'zod/v4'
 
 export const createRoomSchema = z.object({
   name: z.string().min(1),
+  project_id: z.string().regex(/^[0-9a-f]{16}$/).optional(),
 })
 
 export const sendMessageSchema = z.object({

@@ -24,8 +24,9 @@ export const roomsRoute = new Hono<AppEnv>()
   // GET /api/rooms — list rooms scoped to this API key
   .get('/', requireAuth, async c => {
     const keyId = c.get('keyId')
+    const projectId = c.req.query('project_id')
     const db = queries(c.env.DB)
-    const rooms = await db.listRooms(keyId)
+    const rooms = await db.listRooms(keyId, projectId || undefined)
     return c.json(rooms)
   })
 
@@ -36,7 +37,18 @@ export const roomsRoute = new Hono<AppEnv>()
 
     const id = crypto.randomUUID()
     const db = queries(c.env.DB)
-    const room = await db.insertRoom(id, keyId, body.name)
+    let projectName: string | null = null
+
+    // Validate project exists if project_id is provided
+    if (body.project_id) {
+      const project = await db.findProject(body.project_id, keyId)
+      if (!project) {
+        return c.json({ error: 'project not found' }, 404)
+      }
+      projectName = project.name
+    }
+
+    const room = await db.insertRoom(id, keyId, body.name, body.project_id)
 
     // Notify lobby subscribers
     const doId = c.env.LOBBY.idFromName(keyId)
@@ -45,7 +57,13 @@ export const roomsRoute = new Hono<AppEnv>()
       stub.fetch(
         new Request('http://internal/broadcast', {
           method: 'POST',
-          body: JSON.stringify({ type: 'room_created', id, name: body.name }),
+          body: JSON.stringify({
+            type: 'room_created',
+            id,
+            name: body.name,
+            project_id: body.project_id ?? null,
+            project_name: projectName,
+          }),
         })
       )
     )

@@ -29,7 +29,16 @@ export type Room = {
   id: string
   key_id: string
   name: string
+  project_id: string | null
   created_at: string
+}
+
+export type Project = {
+  id: string
+  key_id: string
+  name: string
+  created_at: string
+  updated_at: string
 }
 
 export type Message = {
