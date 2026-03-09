@@ -1,4 +1,4 @@
-import { spawn as nodeSpawn, spawnSync } from 'node:child_process'
+import { execFileSync, spawn as nodeSpawn, spawnSync } from 'node:child_process'
 import { realpathSync } from 'node:fs'
 import { version as CURRENT_VERSION } from '../../package.json'
 
@@ -48,6 +48,20 @@ export function detectInstaller(): { supported: true; npmPath: string } | { supp
   }
 
   return { supported: true, npmPath }
+}
+
+export function getInstalledVersion(): string | null {
+  try {
+    const output = execFileSync('npm', ['ls', '-g', '@meet-ai/cli', '--json'], {
+      encoding: 'utf-8',
+      timeout: 5000,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
+    const parsed = JSON.parse(output) as { dependencies?: { '@meet-ai/cli'?: { version?: string } } }
+    return parsed?.dependencies?.['@meet-ai/cli']?.version ?? null
+  } catch {
+    return null
+  }
 }
 
 export async function checkForUpdate(): Promise<

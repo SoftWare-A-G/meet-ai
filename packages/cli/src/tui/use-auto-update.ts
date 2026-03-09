@@ -1,6 +1,11 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import type { UpdateState } from '@meet-ai/cli/lib/auto-update'
-import { checkForUpdate, detectInstaller, downloadUpdate } from '@meet-ai/cli/lib/auto-update'
+import {
+  checkForUpdate,
+  detectInstaller,
+  downloadUpdate,
+  getInstalledVersion,
+} from '@meet-ai/cli/lib/auto-update'
 
 export function useAutoUpdate(): {
   state: UpdateState
@@ -37,13 +42,29 @@ export function useAutoUpdate(): {
         return
       }
 
+      // Check if the target version is already installed globally
+      // (e.g., user ran `npm i -g` manually while this process was running)
+      const installedBefore = getInstalledVersion()
+      if (installedBefore === result.version) {
+        setState({ status: 'ready_to_restart', version: result.version })
+        inFlight.current = false
+        return
+      }
+
       setState({ status: 'downloading', version: result.version })
       const dl = await downloadUpdate(result.version)
 
       if (dl.ok) {
         setState({ status: 'ready_to_restart', version: result.version })
       } else {
-        setState({ status: 'failed', error: dl.error })
+        // Download failed — but check if the version is now installed
+        // (e.g., npm succeeded partially or was already installed)
+        const installedAfter = getInstalledVersion()
+        if (installedAfter === result.version) {
+          setState({ status: 'ready_to_restart', version: result.version })
+        } else {
+          setState({ status: 'failed', error: dl.error })
+        }
       }
     } catch (error) {
       setState({ status: 'failed', error: error instanceof Error ? error.message : String(error) })
