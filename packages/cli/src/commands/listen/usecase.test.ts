@@ -23,6 +23,7 @@ function makeCodexBridgeMock() {
     injectText: mock(() => Promise.resolve({ mode: 'start' as const, threadId: 'thread-1', turnId: 'turn-1' })),
     injectPrompt: mock(() => Promise.resolve({ mode: 'start' as const, threadId: 'thread-1', turnId: 'turn-1' })),
     close: mock(() => Promise.resolve()),
+    getCurrentModel: mock(() => 'gpt-5.4 (high)'),
     setEventHandler: mock((handler: ((event: CodexAppServerEvent) => void) | null) => {
       eventHandler = handler
     }),
@@ -271,13 +272,14 @@ describe('listen', () => {
     process.env.MEET_AI_AGENT_NAME = 'my-codex'
 
     const client = mockClient()
+    const codexBridge = makeCodexBridgeMock()
     const registerMember = mock(() => Promise.resolve())
 
     listen(
       client,
       { roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c', senderType: 'human' },
       undefined,
-      undefined,
+      codexBridge,
       registerMember,
     )
 
@@ -287,6 +289,7 @@ describe('listen', () => {
       roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c',
       agentName: 'my-codex',
       role: 'codex',
+      model: 'gpt-5.4 (high)',
     })
   })
 
@@ -308,13 +311,14 @@ describe('listen', () => {
     )
 
     const client = mockClient()
+    const codexBridge = makeCodexBridgeMock()
     const registerMember = mock(() => Promise.resolve())
 
     listen(
       client,
       { roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c', senderType: 'human' },
       undefined,
-      undefined,
+      codexBridge,
       registerMember,
     )
 
@@ -325,6 +329,7 @@ describe('listen', () => {
       teamName: 'demo-team',
       agentName: 'my-codex',
       role: 'codex',
+      model: 'gpt-5.4 (high)',
     })
   })
 

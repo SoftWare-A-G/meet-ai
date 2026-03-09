@@ -434,9 +434,10 @@ export function listenCodex(
   }
 
   const ws = client.listen(roomId, { exclude, senderType, onMessage })
+  const codexModel = codexBridge.getCurrentModel() ?? undefined
   void resolveCodexTeamName(roomId)
-    .then(teamName => teamMemberRegistrar({ roomId, teamName, agentName: codexSender, role: 'codex' }))
-    .catch(() => teamMemberRegistrar({ roomId, agentName: codexSender, role: 'codex' }))
+    .then(teamName => teamMemberRegistrar({ roomId, teamName, agentName: codexSender, role: 'codex', model: codexModel }))
+    .catch(() => teamMemberRegistrar({ roomId, agentName: codexSender, role: 'codex', model: codexModel }))
 
   if (bootstrapPrompt) {
     const bootstrapRequest: Promise<CodexInjectionResult> = codexBridge.injectPrompt(bootstrapPrompt)

@@ -2,10 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test'
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 
 const mockCreateHookClient = mock(() => ({ api: {} }))
+const mockGetTeamInfo = mock(() => Promise.resolve(null as any))
 const mockSendTeamMemberUpsert = mock(() => Promise.resolve())
 
 mock.module('./hooks/client', () => ({
   createHookClient: mockCreateHookClient,
+  getTeamInfo: mockGetTeamInfo,
   sendTeamMemberUpsert: mockSendTeamMemberUpsert,
 }))
 
@@ -28,6 +30,8 @@ describe('registerActiveTeamMember', () => {
     delete process.env.MEET_AI_AGENT_NAME
     delete process.env.MEET_AI_COLOR
     mockCreateHookClient.mockClear()
+    mockGetTeamInfo.mockClear()
+    mockGetTeamInfo.mockResolvedValue(null as any)
     mockSendTeamMemberUpsert.mockClear()
   })
 
@@ -97,6 +101,7 @@ describe('registerActiveTeamMember', () => {
       roomId: '30c9e52e-5f4d-4298-a995-efb5c27623d6',
       agentName: 'codex',
       role: 'codex',
+      model: 'gpt-5.4 (high)',
     })
 
     expect(mockSendTeamMemberUpsert).toHaveBeenCalledWith(
@@ -108,7 +113,47 @@ describe('registerActiveTeamMember', () => {
         name: 'codex',
         color: '#22c55e',
         role: 'codex',
-        model: 'unknown',
+        model: 'gpt-5.4 (high)',
+        status: 'active',
+        joinedAt: expect.any(Number),
+      }
+    )
+  })
+
+  it('reuses the existing room member id when local room bindings are missing', async () => {
+    mockGetTeamInfo.mockResolvedValue({
+      type: 'team_info',
+      team_name: 'demo-team',
+      members: [
+        {
+          teammate_id: 'codex@demo-team',
+          name: 'codex',
+          color: '#22c55e',
+          role: 'codex',
+          model: 'unknown',
+          status: 'active',
+          joinedAt: 111,
+        },
+      ],
+    } as any)
+
+    await registerActiveTeamMember({
+      roomId: '30c9e52e-5f4d-4298-a995-efb5c27623d6',
+      agentName: 'codex',
+      role: 'codex',
+      model: 'gpt-5',
+    })
+
+    expect(mockSendTeamMemberUpsert).toHaveBeenCalledWith(
+      { api: {} },
+      '30c9e52e-5f4d-4298-a995-efb5c27623d6',
+      'demo-team',
+      {
+        teammate_id: 'codex@demo-team',
+        name: 'codex',
+        color: '#22c55e',
+        role: 'codex',
+        model: 'gpt-5',
         status: 'active',
         joinedAt: expect.any(Number),
       }

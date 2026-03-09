@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import { createHookClient, sendTeamMemberUpsert } from './hooks/client'
+import { createHookClient, getTeamInfo, sendTeamMemberUpsert } from './hooks/client'
 
 type TeamConfigMember = {
   agentId?: string
@@ -93,7 +93,13 @@ export const registerActiveTeamMember: TeamMemberRegistrar = async input => {
   const key = process.env.MEET_AI_KEY?.trim()
   if (!url || !key) return
 
-  const resolvedTeamName = input.teamName?.trim() || findTeamNameByRoomId(input.roomId) || undefined
+  const client = createHookClient(url, key)
+  const roomTeamInfo = await getTeamInfo(client, input.roomId)
+  const resolvedTeamName =
+    input.teamName?.trim() ||
+    findTeamNameByRoomId(input.roomId) ||
+    roomTeamInfo?.team_name?.trim() ||
+    undefined
   const config = resolvedTeamName ? readTeamConfig(resolvedTeamName) : null
   const resolvedAgentName =
     input.agentName?.trim() ||
@@ -105,6 +111,10 @@ export const registerActiveTeamMember: TeamMemberRegistrar = async input => {
   const member = findConfigMember(config, resolvedAgentName)
   const teamName = resolvedTeamName || resolvedAgentName
   const role = input.role || member?.agentType || 'agent'
+  const existingRoomMember = roomTeamInfo?.members?.find(existing => {
+    if (existing.name?.trim() !== resolvedAgentName) return false
+    return !input.role || existing.role === role
+  })
   const model = input.model || member?.model || 'unknown'
   const joinedAt = input.joinedAt ?? member?.joinedAt ?? Date.now()
   const color =
@@ -112,8 +122,8 @@ export const registerActiveTeamMember: TeamMemberRegistrar = async input => {
     member?.color ||
     process.env.MEET_AI_COLOR?.trim() ||
     defaultColor(resolvedAgentName, role)
-  const teammateId = member?.agentId || `${resolvedAgentName}@${teamName}`
-  await sendTeamMemberUpsert(createHookClient(url, key), input.roomId, teamName, {
+  const teammateId = existingRoomMember?.teammate_id || member?.agentId || `${resolvedAgentName}@${teamName}`
+  await sendTeamMemberUpsert(client, input.roomId, teamName, {
     teammate_id: teammateId,
     name: resolvedAgentName,
     color,

@@ -118,10 +118,23 @@ export interface CodexBridge {
   injectPrompt(text: string): Promise<CodexInjectionResult>
   close(): Promise<void>
   setEventHandler(handler: ((event: CodexAppServerEvent) => void) | null): void
+  getCurrentModel(): string | null
 }
 
 type CodexThreadResponse = {
   thread?: Thread
+  model?: string | null
+  reasoningEffort?: string | null
+}
+
+function formatModelLabel(model: string | null | undefined, reasoningEffort: string | null | undefined): string | null {
+  const normalizedModel = typeof model === 'string' ? model.trim() : ''
+  if (!normalizedModel) return null
+
+  const normalizedEffort = typeof reasoningEffort === 'string' ? reasoningEffort.trim() : ''
+  if (!normalizedEffort) return normalizedModel
+
+  return `${normalizedModel} (${normalizedEffort})`
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -588,6 +601,7 @@ export class CodexAppServerBridge {
   private pendingRequests = new Map<string | number, PendingRequest>()
   private nextRequestId = 1
   private activeTurnId: string | null = null
+  private currentModel: string | null = null
   private injectionQueue: Promise<unknown> = Promise.resolve()
   private eventHandler: ((event: CodexAppServerEvent) => void) | null = null
 
@@ -660,6 +674,10 @@ export class CodexAppServerBridge {
 
   getThreadId(): string | null {
     return this.threadId
+  }
+
+  getCurrentModel(): string | null {
+    return this.currentModel
   }
 
   async close(): Promise<void> {
@@ -800,9 +818,12 @@ export class CodexAppServerBridge {
         this.threadId =
           typeof resumeResult.thread?.id === 'string' ? resumeResult.thread.id : this.threadId
         this.activeTurnId = maybeActiveTurnId(resumeResult.thread)
+        this.currentModel =
+          formatModelLabel(resumeResult.model, resumeResult.reasoningEffort) ?? this.currentModel
         emitCodexAppServerLog('info', 'codex-app-server', 'thread.resume.succeeded', {
           threadId: this.threadId,
           activeTurnId: this.activeTurnId,
+          model: this.currentModel,
         })
         return
       } catch {
@@ -825,9 +846,12 @@ export class CodexAppServerBridge {
     })
     this.threadId = typeof startResult.thread?.id === 'string' ? startResult.thread.id : null
     this.activeTurnId = maybeActiveTurnId(startResult.thread)
+    this.currentModel =
+      formatModelLabel(startResult.model, startResult.reasoningEffort) ?? this.currentModel
     emitCodexAppServerLog('info', 'codex-app-server', 'thread.start.succeeded', {
       threadId: this.threadId,
       activeTurnId: this.activeTurnId,
+      model: this.currentModel,
     })
   }
 

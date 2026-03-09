@@ -41,6 +41,8 @@ export const teamInfoSchema = z.object({
   members: z.array(teamInfoMemberSchema),
 })
 
+export type TeamInfoPayload = z.infer<typeof teamInfoSchema>
+
 export const teamInfoUpsertSchema = z.object({
   team_name: z.string(),
   member: teamInfoMemberSchema.extend({ teammate_id: z.string() }),

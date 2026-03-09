@@ -16,6 +16,7 @@ import {
   upsertTaskSchema,
   terminalDataSchema,
 } from '../schemas/rooms'
+import type { TeamInfoPayload } from '../schemas/rooms'
 import type { AppEnv } from '../lib/types'
 
 export const roomsRoute = new Hono<AppEnv>()
@@ -260,8 +261,8 @@ export const roomsRoute = new Hono<AppEnv>()
     const res = await stub.fetch(
       new Request('http://internal/team-info', { method: 'GET' })
     )
-    const data = await res.json()
-    return c.json(data)
+    const data = await res.json() as TeamInfoPayload
+    return c.json<TeamInfoPayload>(data)
   })
 
   // POST /api/rooms/:id/team-info — push team info to ChatRoom DO

@@ -1,10 +1,11 @@
-import { hc } from 'hono/client'
+import { hc, type InferResponseType } from 'hono/client'
 import type { AppType } from '../../../../worker/src/index'
 
 const HOOK_COLOR = '#6b7280'
 const HOOK_SENDER = 'hook'
 
 export type HookClient = ReturnType<typeof hc<AppType>>
+export type HookTeamInfo = InferResponseType<HookClient['api']['rooms'][':id']['team-info']['$get'], 200>
 
 export function createHookClient(url: string, key: string): HookClient {
   return hc<AppType>(url, {
@@ -29,6 +30,18 @@ export async function sendParentMessage(client: HookClient, roomId: string): Pro
     if (!res.ok) return null
     const data = (await res.json()) as { id: string }
     return data.id
+  } catch {
+    return null
+  }
+}
+
+export async function getTeamInfo(client: HookClient, roomId: string): Promise<HookTeamInfo | null> {
+  try {
+    const res = await client.api.rooms[':id']['team-info'].$get({
+      param: { id: roomId },
+    })
+    if (!res.ok) return null
+    return await res.json()
   } catch {
     return null
   }
