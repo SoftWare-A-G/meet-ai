@@ -5,6 +5,7 @@ import { requireAuth } from '../middleware/auth'
 import { rateLimitByKey } from '../middleware/rate-limit'
 import {
   createRoomSchema,
+  updateRoomSchema,
   sendMessageSchema,
   sendLogSchema,
   teamInfoSchema,
@@ -627,6 +628,33 @@ export const roomsRoute = new Hono<AppEnv>()
     )
 
     return c.json({ ok: true })
+  })
+
+  // PATCH /api/rooms/:id — update room name and/or project
+  .patch('/:id', requireAuth, zValidator('json', updateRoomSchema), async c => {
+    const keyId = c.get('keyId')
+    const roomId = c.req.param('id')
+    const body = c.req.valid('json')
+    const db = queries(c.env.DB)
+
+    // Validate project exists if project_id is provided
+    if (body.project_id) {
+      const project = await db.findProject(body.project_id, keyId)
+      if (!project) {
+        return c.json({ error: 'project not found' }, 422)
+      }
+    }
+
+    const updated = await db.updateRoom(roomId, keyId, {
+      name: body.name,
+      projectId: body.project_id,
+    })
+
+    if (!updated) {
+      return c.json({ error: 'room not found' }, 404)
+    }
+
+    return c.json(updated)
   })
 
   // DELETE /api/rooms/:id — delete a room and all its messages, logs, and attachments

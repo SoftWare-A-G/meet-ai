@@ -23,13 +23,16 @@ function ChatLobby() {
   return (
     <div className="bg-chat-bg text-msg-text flex h-dvh min-w-0 flex-1 flex-col">
       <MainHeader
+        room={undefined}
+        projects={[]}
         roomName="Select a channel"
         showInvite={false}
         showTeamToggle={false}
-        showDelete={false}
         onTeamToggle={() => {}}
         onInviteClick={() => {}}
-        onDeleteConfirm={() => {}}
+        onRename={() => {}}
+        onAttachProject={() => {}}
+        onDelete={() => {}}
       />
       <LobbyView rooms={rooms} onSelectRoom={handleSelectRoom} />
     </div>

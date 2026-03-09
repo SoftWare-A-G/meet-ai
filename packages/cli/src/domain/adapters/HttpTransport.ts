@@ -104,6 +104,20 @@ export default class HttpTransport implements IHttpTransport {
     return opts?.retry ? withRetry(doRequest, opts.retry) : doRequest()
   }
 
+  async patchJson<T>(path: string, body?: unknown, opts?: RequestOptions): Promise<T> {
+    const doRequest = async () => {
+      const res = await fetch(this.buildUrl(path, opts?.query), {
+        method: 'PATCH',
+        headers: this.headers(),
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+      })
+      if (!res.ok) throw new Error(await parseErrorMessage(res))
+      return res.json() as Promise<T>
+    }
+
+    return opts?.retry ? withRetry(doRequest, opts.retry) : doRequest()
+  }
+
   async getJson<T>(path: string, opts?: RequestOptions): Promise<T> {
     const doRequest = async () => {
       const res = await fetch(this.buildUrl(path, opts?.query), {

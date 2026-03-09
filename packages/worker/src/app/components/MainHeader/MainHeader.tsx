@@ -1,30 +1,37 @@
 import { Tooltip } from '@base-ui/react/tooltip'
-import { IconQrcode, IconTerminal, IconTrash, IconUsers } from '../../icons'
-import DeleteConfirmPopover from '../DeleteConfirmPopover'
+import { IconQrcode, IconTerminal, IconUsers } from '../../icons'
+import RoomSettings from '../RoomSettings'
 import { useHaptics } from '../../hooks/useHaptics'
 import { SidebarTrigger } from '../ui/sidebar'
+import type { Project, Room } from '../../lib/types'
 
 type MainHeaderProps = {
+  room: Room | undefined
+  projects: Project[]
   roomName: string
   showInvite: boolean
   showTeamToggle: boolean
-  showDelete: boolean
   onTeamToggle: () => void
   onInviteClick: () => void
-  onDeleteConfirm: () => void
+  onRename: (name: string) => void
+  onAttachProject: (projectId: string | null) => void
+  onDelete: () => void
   onTerminalClick?: () => void
 }
 
 const tooltipPopupClass = "rounded bg-gray-900 px-2 py-1 text-xs text-white shadow-lg"
 
 export default function MainHeader({
+  room,
+  projects,
   roomName,
   showInvite,
   showTeamToggle,
-  showDelete,
   onTeamToggle,
   onInviteClick,
-  onDeleteConfirm,
+  onRename,
+  onAttachProject,
+  onDelete,
   onTerminalClick,
 }: MainHeaderProps) {
   const { trigger } = useHaptics()
@@ -33,16 +40,14 @@ export default function MainHeader({
       <div className="border-border bg-header-bg text-header-text flex h-14 shrink-0 items-center justify-between border-b px-4">
         <div className="flex items-center gap-2">
           <SidebarTrigger className="text-header-text md:hidden" />
-          {showDelete && (
-            <DeleteConfirmPopover roomName={roomName} onConfirm={onDeleteConfirm}>
-              <button
-                type="button"
-                aria-label="Delete room"
-                className="text-header-text flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-lg hover:bg-white/10 hover:text-red-400"
-              >
-                <IconTrash size={18} />
-              </button>
-            </DeleteConfirmPopover>
+          {room && (
+            <RoomSettings
+              room={room}
+              projects={projects}
+              onRename={onRename}
+              onAttachProject={onAttachProject}
+              onDelete={onDelete}
+            />
           )}
           <span className="text-base font-bold">{roomName}</span>
         </div>

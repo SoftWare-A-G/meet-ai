@@ -134,6 +134,10 @@ function ChatLayout({
     setRooms(prev => prev.filter(r => r.id !== id))
   }, [])
 
+  const updateRoom = useCallback((id: string, updates: Partial<Room>) => {
+    setRooms(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r))
+  }, [])
+
   const navigate = useNavigate()
   const params = useParams({ strict: false }) as { id?: string }
 
@@ -184,7 +188,9 @@ function ChatLayout({
   const ctx = useMemo(
     () => ({
       rooms,
+      projects,
       removeRoom,
+      updateRoom,
       apiKey,
       userName,
       colorSchema,
@@ -205,7 +211,9 @@ function ChatLayout({
     }),
     [
       rooms,
+      projects,
       removeRoom,
+      updateRoom,
       apiKey,
       userName,
       colorSchema,

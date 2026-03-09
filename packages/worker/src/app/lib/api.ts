@@ -49,6 +49,26 @@ export async function renameProject(projectId: string, name: string): Promise<Pr
   return res.json()
 }
 
+export async function renameRoom(roomId: string, name: string): Promise<Room> {
+  const res = await fetch(`/api/rooms/${roomId}`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify({ name }),
+  })
+  if (!res.ok) throw new Error(`Rename room failed: HTTP ${res.status}`)
+  return res.json()
+}
+
+export async function updateRoomProject(roomId: string, projectId: string | null): Promise<Room> {
+  const res = await fetch(`/api/rooms/${roomId}`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify({ project_id: projectId }),
+  })
+  if (!res.ok) throw new Error(`Update room project failed: HTTP ${res.status}`)
+  return res.json()
+}
+
 export async function deleteRoom(roomId: string): Promise<void> {
   const res = await fetch(`/api/rooms/${roomId}`, {
     method: 'DELETE',

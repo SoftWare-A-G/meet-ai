@@ -1,9 +1,11 @@
 import { createContext, useContext } from 'react'
-import type { Room, TeamInfo, TasksInfo, CommandInfo } from './types'
+import type { Project, Room, TeamInfo, TasksInfo, CommandInfo } from './types'
 
 export type ChatContextValue = {
   rooms: Room[]
+  projects: Project[]
   removeRoom: (id: string) => void
+  updateRoom: (id: string, updates: Partial<Room>) => void
   apiKey: string
   userName: string
   colorSchema: string

@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { useChatContext } from '../../lib/chat-context'
-import { deleteRoom } from '../../lib/api'
+import { deleteRoom, renameRoom, updateRoomProject } from '../../lib/api'
 import MainHeader from '../../components/MainHeader'
 import ChatView from '../../components/ChatView'
 
@@ -13,7 +13,7 @@ export const Route = createFileRoute('/chat/$id')({
 function ChatRoom() {
   const { id } = Route.useParams()
   const navigate = useNavigate()
-  const { rooms, removeRoom, apiKey, userName, isStandalone, teamInfo, setTeamSidebarOpen, setTeamInfo, setTasksInfo, setCommandsInfo, showQR } = useChatContext()
+  const { rooms, projects, removeRoom, updateRoom, apiKey, userName, isStandalone, teamInfo, setTeamSidebarOpen, setTeamInfo, setTasksInfo, setCommandsInfo, showQR } = useChatContext()
   const [terminalOpen, setTerminalOpen] = useState(false)
 
   const room = rooms.find(r => r.id === id)
@@ -36,16 +36,41 @@ function ChatRoom() {
     }
   }, [room, removeRoom, navigate])
 
+  const handleRename = useCallback(async (name: string) => {
+    if (!room) return
+    try {
+      await renameRoom(room.id, name)
+      updateRoom(room.id, { name })
+      toast.success('Room renamed')
+    } catch {
+      toast.error('Failed to rename room.')
+    }
+  }, [room, updateRoom])
+
+  const handleAttachProject = useCallback(async (projectId: string | null) => {
+    if (!room) return
+    try {
+      await updateRoomProject(room.id, projectId)
+      updateRoom(room.id, { project_id: projectId })
+      toast.success(projectId ? 'Room attached to project' : 'Room detached from project')
+    } catch {
+      toast.error('Failed to update project.')
+    }
+  }, [room, updateRoom])
+
   return (
     <div className="flex-1 flex flex-col bg-chat-bg text-msg-text min-w-0 h-dvh">
       <MainHeader
+        room={room}
+        projects={projects}
         roomName={roomName}
         showInvite={!isStandalone && !!room}
         showTeamToggle={!!teamInfo}
-        showDelete={!!room}
         onTeamToggle={() => setTeamSidebarOpen(prev => !prev)}
         onInviteClick={() => showQR()}
-        onDeleteConfirm={handleDeleteConfirm}
+        onRename={handleRename}
+        onAttachProject={handleAttachProject}
+        onDelete={handleDeleteConfirm}
         onTerminalClick={() => setTerminalOpen(true)}
       />
       {room && (

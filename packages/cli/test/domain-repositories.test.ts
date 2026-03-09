@@ -24,6 +24,10 @@ function createMockTransport(responses: Record<string, unknown> = {}) {
       calls.push({ method: 'postText', path, body, opts })
       return (responses[`postText:${path}`] ?? 'ok') as string
     },
+    async patchJson<T>(path: string, body?: unknown, opts?: RequestOptions): Promise<T> {
+      calls.push({ method: 'patchJson', path, body, opts })
+      return (responses[`patchJson:${path}`] ?? {}) as T
+    },
     async getJson<T>(path: string, opts?: RequestOptions): Promise<T> {
       calls.push({ method: 'getJson', path, opts })
       return (responses[`getJson:${path}`] ?? []) as T
@@ -223,6 +227,7 @@ test('RoomRepository.sendTerminalData calls postJson and silences errors', async
       throw new Error('network failure')
     },
     async postText() { return '' },
+    async patchJson() { return {} as never },
     async getJson() { return {} as never },
     async getRaw() { return new Response() },
     async del() {},

@@ -17,6 +17,10 @@ export default class RoomRepository implements IRoomRepository {
     return this.transport.postJson('/api/rooms', body)
   }
 
+  async update(roomId: string, fields: { name?: string; project_id?: string | null }): Promise<Room> {
+    return this.transport.patchJson(`/api/rooms/${roomId}`, fields)
+  }
+
   async delete(roomId: string): Promise<void> {
     return this.transport.del(`/api/rooms/${roomId}`)
   }

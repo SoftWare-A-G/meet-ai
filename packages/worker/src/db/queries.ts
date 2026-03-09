@@ -264,6 +264,33 @@ export function queries(db: D1Database) {
       ).bind(id, keyId).first<Pick<Project, 'id' | 'name' | 'created_at' | 'updated_at'>>()
     },
 
+    async updateRoom(roomId: string, keyId: string, update: { name?: string; projectId?: string | null }) {
+      const sets: string[] = []
+      const params: (string | null)[] = []
+
+      if (update.name !== undefined) {
+        sets.push('name = ?')
+        params.push(update.name)
+      }
+      if (update.projectId !== undefined) {
+        sets.push('project_id = ?')
+        params.push(update.projectId)
+      }
+
+      if (sets.length === 0) return null
+
+      params.push(roomId, keyId)
+      const result = await db.prepare(
+        `UPDATE rooms SET ${sets.join(', ')} WHERE id = ? AND key_id = ?`
+      ).bind(...params).run()
+
+      if (!result.meta.changes) return null
+
+      return db.prepare(
+        'SELECT id, name, project_id, created_at FROM rooms WHERE id = ? AND key_id = ?'
+      ).bind(roomId, keyId).first<Pick<Room, 'id' | 'name' | 'project_id' | 'created_at'>>()
+    },
+
     async deleteRoom(keyId: string, roomId: string) {
       // Delete in order: permission_reviews, question_reviews, plan_decisions, attachments, logs, messages, then room
       await db.prepare('DELETE FROM permission_reviews WHERE room_id = ?').bind(roomId).run()

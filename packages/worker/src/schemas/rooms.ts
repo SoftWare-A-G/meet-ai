@@ -92,3 +92,8 @@ export const upsertTaskSchema = z.object({
 export const terminalDataSchema = z.object({
   data: z.string().max(1_000_000),
 })
+
+export const updateRoomSchema = z.object({
+  name: z.string().min(1).optional(),
+  project_id: z.string().regex(/^[0-9a-f]{16}$/).nullable().optional(),
+})

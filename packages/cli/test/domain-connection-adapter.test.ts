@@ -11,6 +11,7 @@ function createMockTransport(overrides: Partial<IHttpTransport> = {}): IHttpTran
   return {
     postJson: mock(() => Promise.resolve({})) as IHttpTransport['postJson'],
     postText: mock(() => Promise.resolve('')) as IHttpTransport['postText'],
+    patchJson: mock(() => Promise.resolve({})) as IHttpTransport['patchJson'],
     getJson: mock(() => Promise.resolve([])) as IHttpTransport['getJson'],
     getRaw: mock(() => Promise.resolve(new Response())),
     del: mock(() => Promise.resolve()),
