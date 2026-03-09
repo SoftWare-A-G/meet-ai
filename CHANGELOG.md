@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.5.1](https://github.com/SoftWare-A-G/meet-ai/compare/0.5.0...HEAD) (2026-03-09)
+
+### Bug Fixes
+
+* treat already-installed newer CLI versions as restart-ready instead of showing `update failed`
+
+## [0.5.0](https://github.com/SoftWare-A-G/meet-ai/compare/0.4.0...0.5.0) (2026-03-09)
+
+### Features
+
+* add first-class user projects across worker, CLI, and web UI
+* auto-detect the current repo in CLI room creation and link new rooms to the matching project
+* group sidebar rooms by project and add explicit project rename controls in the web app
+
+### Bug Fixes
+
+* filter technical hook anchor messages out of Claude inbox routing and Codex injection
+* keep room creation project-aware while restricting it to relation-only validation instead of project upsert
+* validate project ids consistently as 16-char lowercase hex across project and room APIs
+
+### Tests
+
+* expand project API, CLI project flow, and listener coverage
+
 ## [0.4.0](https://github.com/SoftWare-A-G/meet-ai/compare/0.3.1...HEAD) (2026-03-09)
 
 ### Features

@@ -1,5 +1,51 @@
 # Changelog
 
+## [0.5.1](https://github.com/SoftWare-A-G/meet-ai/compare/0.5.0...HEAD) (2026-03-09)
+
+### Bug Fixes
+
+* treat externally installed newer CLI versions as the same restart-ready state used after internal update preparation instead of surfacing a false `update failed` error
+* keep true updater failures red and actionable while reclassifying already-installed newer versions as a restart-required state
+
+### Code Refactoring
+
+* reuse the existing restart-ready updater state for both internal installs and externally installed newer CLI versions
+
+### Tests
+
+* keep updater, listener, and repository surfaces typechecked and lint-clean after the state-handling fix
+
+## [0.5.0](https://github.com/SoftWare-A-G/meet-ai/compare/0.4.0...0.5.0) (2026-03-09)
+
+### Features
+
+* add first-class user projects with a dedicated `projects` table and nullable `rooms.project_id` link
+* add project APIs for create/upsert, list, get-by-id, and rename
+* auto-detect the current repository in `meet-ai create-room`, derive a deterministic project id, ensure the project exists, then create the room linked to it
+* group sidebar rooms by project in the web UI and add explicit project rename actions through a dropdown/dialog flow
+* enrich lobby `room_created` events with project metadata so project-scoped rooms hydrate immediately in the sidebar
+
+### Bug Fixes
+
+* keep room creation restricted to creating only the room-project relation instead of upserting projects in the room route
+* validate project existence before linking a room and return `404` when the referenced project is missing
+* filter technical hook anchor messages from Claude inbox routing and Codex injection without hiding real hook review cards
+* validate project ids consistently as fixed-width lowercase hex across project and room inputs
+* fix project upsert SQL so project names update correctly on conflict
+
+### Code Refactoring
+
+* split project lifecycle ownership cleanly between `POST /api/projects` and `POST /api/rooms`
+* add CLI project repository/usecase support for find-or-create project flow before room creation
+* move project rename UI away from inline double-click editing to an explicit dropdown/dialog interaction
+* centralize hook-anchor filtering in shared listener helpers so Claude and Codex runtimes use the same suppression rule
+
+### Tests
+
+* add project API coverage for create, lookup, rename, filtering, scoping, and invalid id handling
+* add CLI coverage for project repository calls and create-room project flow
+* add listener coverage proving hook anchor messages do not route into Claude inboxes or Codex inbox injection
+
 ## [0.4.0](https://github.com/SoftWare-A-G/meet-ai/compare/0.3.1...HEAD) (2026-03-09)
 
 ### Features
