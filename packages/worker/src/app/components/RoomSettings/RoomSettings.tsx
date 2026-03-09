@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { IconSettings } from '../../icons'
 import {
   DropdownMenu,
@@ -26,15 +26,20 @@ import {
 } from '../ui/alert-dialog'
 import {
   Combobox,
+  ComboboxEmpty,
   ComboboxInput,
   ComboboxContent,
   ComboboxList,
   ComboboxItem,
-  ComboboxEmpty,
 } from '../ui/combobox'
 import { Input } from '../ui/input'
 import { Button } from '../ui/button'
 import type { Project, Room } from '../../lib/types'
+
+type ProjectOption = {
+  label: string
+  value: string
+}
 
 interface RoomSettingsProps {
   room: Room
@@ -49,15 +54,9 @@ export default function RoomSettings({ room, projects, onRename, onAttachProject
   const [attachOpen, setAttachOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [name, setName] = useState(room.name)
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(room.project_id ?? null)
-
-  useEffect(() => {
-    setName(room.name)
-  }, [room.name])
-
-  useEffect(() => {
-    setSelectedProjectId(room.project_id ?? null)
-  }, [room.project_id])
+  const projectOptions: ProjectOption[] = projects.map(p => ({ label: p.name, value: p.id }))
+  const currentProject = projectOptions.find(p => p.value === room.project_id) ?? null
+  const [selectedProject, setSelectedProject] = useState<ProjectOption | null>(currentProject)
 
   const handleRenameSave = useCallback(() => {
     const trimmed = name.trim()
@@ -68,11 +67,12 @@ export default function RoomSettings({ room, projects, onRename, onAttachProject
   }, [name, room.name, onRename])
 
   const handleAttachSave = useCallback(() => {
-    if (selectedProjectId !== (room.project_id ?? null)) {
-      onAttachProject(selectedProjectId)
+    const newId = selectedProject?.value ?? null
+    if (newId !== (room.project_id ?? null)) {
+      onAttachProject(newId)
     }
     setAttachOpen(false)
-  }, [selectedProjectId, room.project_id, onAttachProject])
+  }, [selectedProject, room.project_id, onAttachProject])
 
   const handleDeleteConfirm = useCallback(() => {
     setDeleteOpen(false)
@@ -88,11 +88,11 @@ export default function RoomSettings({ room, projects, onRename, onAttachProject
         >
           <IconSettings size={18} />
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" sideOffset={8}>
+        <DropdownMenuContent align="start" sideOffset={8} className="min-w-48">
           <DropdownMenuItem onClick={() => { setName(room.name); setRenameOpen(true) }}>
             Rename
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => { setSelectedProjectId(room.project_id ?? null); setAttachOpen(true) }}>
+          <DropdownMenuItem onClick={() => { setSelectedProject(projectOptions.find(p => p.value === room.project_id) ?? null); setAttachOpen(true) }}>
             Attach to Project
           </DropdownMenuItem>
           <DropdownMenuSeparator />
@@ -125,20 +125,24 @@ export default function RoomSettings({ room, projects, onRename, onAttachProject
           <DialogHeader>
             <DialogTitle>Attach to project</DialogTitle>
           </DialogHeader>
-          <Combobox<string>
-            value={selectedProjectId}
-            onValueChange={setSelectedProjectId}
+          <Combobox<ProjectOption>
+            items={projectOptions}
+            value={selectedProject}
+            onValueChange={setSelectedProject}
+            itemToStringValue={(option) => option.label}
           >
-            <ComboboxInput placeholder="Search projects..." showClear={!!selectedProjectId} />
+            <ComboboxInput placeholder="Search projects..." showClear={!!selectedProject} />
             <ComboboxContent>
+              {projects.length === 0 ? (
+                <ComboboxEmpty className="flex">No projects found</ComboboxEmpty>
+              ) : null}
               <ComboboxList>
-                {projects.map(p => (
-                  <ComboboxItem key={p.id} value={p.id}>
-                    {p.name}
+                {(option) => (
+                  <ComboboxItem key={option.value} value={option}>
+                    {option.label}
                   </ComboboxItem>
-                ))}
+                )}
               </ComboboxList>
-              <ComboboxEmpty>No projects found</ComboboxEmpty>
             </ComboboxContent>
           </Combobox>
           <DialogFooter>
