@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.6.0](https://github.com/SoftWare-A-G/meet-ai/compare/0.5.6...0.6.0) (2026-03-10)
+
+### Features
+
+* rebuild the chat sidebar around the shadcn `sidebar-05` pattern, adding project submenus, integrated search, and a cleaner touch-friendly navigation layout
+* publish Codex app-server activity into the existing room log stream so command execution, file edits, MCP calls, web search, and image view actions can surface in the UI alongside Claude hook logs
+
+### Bug Fixes
+
+* fix markdown inline formatting in chat messages so bold and other inline markup render correctly even when mention highlighting is enabled
+* fix project action menu composition and positioning so the 3-dots control stays clickable, aligned, and visible in collapsed and expanded sidebar states
+* refine sidebar interaction details across hover states, active indicators, search clear behavior, touch target sizing, and row alignment for projects and chats
+* launch the Codex app-server with `--dangerously-bypass-approvals-and-sandbox` so the Meet AI Codex runtime matches the intended approval/sandbox mode
+
+### Tests
+
+* add Codex bridge and listener coverage for app-server activity-log publishing
+* keep repository lint and typecheck green after the sidebar, markdown, and Codex activity logging changes
+
 ## [0.5.6](https://github.com/SoftWare-A-G/meet-ai/compare/0.5.5...0.5.6) (2026-03-10)
 
 ### Bug Fixes

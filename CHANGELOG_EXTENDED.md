@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.6.0](https://github.com/SoftWare-A-G/meet-ai/compare/0.5.6...0.6.0) (2026-03-10)
+
+### Features
+
+* rebuild the worker chat sidebar around the shadcn `sidebar-05` structure, including project-based collapsible submenus, integrated search, and touch-friendly item sizing
+* align sidebar project rows and chat rows to a shared layout contract with consistent heights, stable right-side action slots, active chat indicators, and rotating project chevrons
+* add a quick-clear action to sidebar search and update the search prompt to "Search chats..."
+* publish Codex app-server telemetry into the existing room log pipeline so command execution, file changes, MCP calls, web search, and image-view actions appear in the Meet AI activity UI
+
+### Bug Fixes
+
+* fix markdown rendering in chat messages by restoring `marked` inline parsing before applying mention markup, so `**bold**`, italics, links, and mentions render correctly together
+* fix the sidebar project ellipsis action by removing invalid nested-button composition and anchoring the action to the project header row instead of the expanded collapsible container
+* keep project row hover highlighting active while hovering the 3-dots action, and restyle the action hover to use a subtle border treatment instead of replacing the parent row background
+* flatten sidebar row chrome by removing redundant rounded corners, softening divider lines, and moving spacing responsibility into the clickable items instead of padded wrappers
+* add larger tap targets for project rows, chat rows, and delete actions to improve touch usability on mobile-sized layouts
+* start the Codex app-server with `--dangerously-bypass-approvals-and-sandbox` and add Codex listener publishing for activity summaries without changing Claude hook behavior
+
+### Tests
+
+* add Codex app-server regression coverage proving command and file-change items emit normalized activity-log events
+* add Codex listener coverage proving activity-log events publish through the existing hook-style parent/log message transport
+* keep targeted Codex app-server/listener suites, repository lint, and workspace typecheck green after the release changes
+
 ## [0.5.6](https://github.com/SoftWare-A-G/meet-ai/compare/0.5.5...0.5.6) (2026-03-10)
 
 ### Bug Fixes

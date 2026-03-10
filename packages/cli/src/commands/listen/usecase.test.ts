@@ -127,6 +127,7 @@ function makeTask(overrides: Partial<{
 describe('listen', () => {
   let logSpy: ReturnType<typeof spyOn>
   let errorSpy: ReturnType<typeof spyOn>
+  const originalFetch = globalThis.fetch
   const originalExit = process.exit
   const originalOn = process.on
   const savedRuntime = process.env.MEET_AI_RUNTIME
@@ -158,6 +159,7 @@ describe('listen', () => {
   afterEach(() => {
     logSpy.mockRestore()
     errorSpy.mockRestore()
+    globalThis.fetch = originalFetch
     process.exit = originalExit
     process.on = originalOn
     rmSync(codexHome, { recursive: true, force: true })
@@ -265,6 +267,60 @@ describe('listen', () => {
     expect(output).toContain('turnId:')
     expect(output).toContain('turn-1')
     expect(codexBridge.setEventHandler).toHaveBeenCalledWith(expect.any(Function))
+  })
+
+  it('publishes codex activity events through the hook log transport', async () => {
+    process.env.MEET_AI_RUNTIME = 'codex'
+    process.env.CODEX_HOME = codexHome
+    process.env.MEET_AI_URL = 'http://localhost:8787'
+    process.env.MEET_AI_KEY = 'mai_test123'
+
+    const client = mockClient()
+    const codexBridge = makeCodexBridgeMock()
+    const fetchMock = mock(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ id: 'msg-parent' }), {
+          status: 201,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+    )
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+
+    listen(
+      client,
+      { roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c', senderType: 'human' },
+      undefined,
+      codexBridge
+    )
+
+    codexBridge.emitEvent({
+      type: 'activity_log',
+      itemId: 'cmd-1',
+      turnId: 'turn-1',
+      summary: 'Bash: bun test packages/cli/src/lib/codex-app-server.test.ts',
+    })
+    codexBridge.emitEvent({
+      type: 'activity_log',
+      itemId: 'web-1',
+      turnId: 'turn-1',
+      summary: 'WebSearch: codex app-server logs',
+    })
+
+    await new Promise(resolve => setTimeout(resolve, 0))
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    const requestUrls = fetchMock.mock.calls.map((call) => {
+      const [input] = call as unknown as [string | URL | Request, RequestInit | undefined]
+      return input?.toString() ?? ''
+    })
+    expect(requestUrls.filter((url: string) => url.includes('/messages'))).toHaveLength(1)
+    expect(requestUrls.filter((url: string) => url.includes('/logs'))).toHaveLength(2)
+
+    const output = getConsoleOutput(logSpy)
+    expect(output).toContain('activity_log.received')
+    expect(output).toContain('Bash: bun test packages/cli/src/lib/codex-app-server.test.ts')
+    expect(output).toContain('WebSearch: codex app-server logs')
   })
 
   it('registers the active Codex member when codex listen starts', async () => {

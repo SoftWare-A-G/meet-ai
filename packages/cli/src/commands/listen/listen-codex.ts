@@ -9,7 +9,7 @@ import {
 } from '@meet-ai/cli/lib/codex-app-server'
 import { TASK_TOOL_SPECS, createTaskToolCallHandler } from '@meet-ai/cli/lib/codex-task-tools'
 import { emitCodexAppServerLog } from '@meet-ai/cli/lib/codex-app-server-evlog'
-import { createHookClient } from '@meet-ai/cli/lib/hooks/client'
+import { createHookClient, sendLogEntry, sendParentMessage } from '@meet-ai/cli/lib/hooks/client'
 import { findRoom } from '@meet-ai/cli/lib/hooks/find-room'
 import { createTask, updateTask, listTasks, getTask } from '@meet-ai/cli/lib/hooks/tasks'
 import {
@@ -177,6 +177,8 @@ export function listenCodex(
   const meetAiUrl = process.env.MEET_AI_URL ?? ''
   const meetAiKey = process.env.MEET_AI_KEY ?? ''
   const hookClient = meetAiUrl && meetAiKey ? createHookClient(meetAiUrl, meetAiKey) : null
+  let activityParentId: string | null = null
+  let activityLogQueue: Promise<void> = Promise.resolve()
   const taskToolCallHandler = hookClient && roomId
     ? createTaskToolCallHandler({
         createTask: params => createTask(hookClient, roomId, { ...params, source: 'codex' }),
@@ -202,6 +204,18 @@ export function listenCodex(
   const enqueuePublish = (task: () => Promise<void>) => {
     publishQueue = publishQueue.then(task, task).catch(error => {
       console.error(`meet-ai: failed to publish Codex output to room: ${error instanceof Error ? error.message : String(error)}`)
+    })
+  }
+
+  const enqueueActivityLog = (summary: string) => {
+    if (!hookClient) return
+    activityLogQueue = activityLogQueue.then(async () => {
+      if (!activityParentId) {
+        activityParentId = await sendParentMessage(hookClient, roomId)
+      }
+      await sendLogEntry(hookClient, roomId, summary, activityParentId ?? undefined)
+    }).catch(error => {
+      console.error(`meet-ai: failed to publish Codex activity log: ${error instanceof Error ? error.message : String(error)}`)
     })
   }
 
@@ -308,6 +322,16 @@ export function listenCodex(
   codexBridge.setEventHandler((event) => {
     if (event.type === 'agent_message_delta' || event.type === 'agent_message_completed') {
       mergeEventText(event)
+      return
+    }
+
+    if (event.type === 'activity_log') {
+      emitCodexAppServerLog('info', 'listen-codex', 'activity_log.received', {
+        turnId: event.turnId,
+        itemId: event.itemId,
+        summary: event.summary,
+      })
+      enqueueActivityLog(event.summary)
       return
     }
 

@@ -3,6 +3,7 @@ import {
   type ChildProcessWithoutNullStreams,
   type SpawnOptionsWithoutStdio,
 } from 'node:child_process'
+import { basename } from 'node:path'
 import { createInterface, type Interface as ReadLineInterface } from 'node:readline'
 import type { AgentMessageDeltaNotification } from '@meet-ai/cli/generated/codex-app-server/v2/AgentMessageDeltaNotification'
 import type { CommandExecutionOutputDeltaNotification } from '@meet-ai/cli/generated/codex-app-server/v2/CommandExecutionOutputDeltaNotification'
@@ -112,6 +113,12 @@ export type CodexAppServerEvent =
       type: 'turn_completed'
       turnId: string | null
     }
+  | {
+      type: 'activity_log'
+      itemId: string | null
+      turnId: string | null
+      summary: string
+    }
 
 export interface CodexBridge {
   start(): Promise<void>
@@ -171,6 +178,11 @@ function previewText(value: string | null | undefined, limit = 120): string | nu
   if (!normalized) return null
   if (normalized.length <= limit) return normalized
   return `${normalized.slice(0, limit)}...`
+}
+
+function truncate(value: string, limit = 60): string {
+  if (value.length <= limit) return value
+  return `${value.slice(0, limit)}...`
 }
 
 function formatRoomMessageForCodex(input: CodexAppServerTextInput): string {
@@ -537,6 +549,40 @@ function summarizeThreadItem(item: ItemCompletedNotification['item']): Record<st
   }
 }
 
+function summarizeActivityItem(
+  item: ItemCompletedNotification['item'],
+  phase: 'started' | 'completed'
+): string | null {
+  switch (item.type) {
+    case 'commandExecution': {
+      if (phase !== 'started') return null
+      return `Bash: ${truncate(item.command)}`
+    }
+    case 'fileChange': {
+      if (phase !== 'completed') return null
+      const paths = Array.from(new Set(item.changes.map(change => basename(change.path) || '?')))
+      if (paths.length === 0) return 'Edit'
+      if (paths.length === 1) return `Edit: ${paths[0]}`
+      return `Edit: ${paths[0]} (+${paths.length - 1} more)`
+    }
+    case 'mcpToolCall': {
+      if (phase !== 'started') return null
+      return `MCP: ${item.server}/${item.tool}`
+    }
+    case 'webSearch': {
+      if (phase !== 'started') return null
+      return `WebSearch: ${item.query}`
+    }
+    case 'imageView': {
+      if (phase !== 'started') return null
+      return `ViewImage: ${basename(item.path) || '?'}`
+    }
+    default: {
+      return null
+    }
+  }
+}
+
 function summarizeNotificationParams(method: string, params: unknown): Record<string, unknown> {
   if (!isObject(params)) return {}
 
@@ -738,6 +784,7 @@ export class CodexAppServerBridge {
       this.codexBin,
       [
         'app-server',
+        '--dangerously-bypass-approvals-and-sandbox',
         '--enable',
         'multi_agent',
         '--enable',
@@ -1013,6 +1060,17 @@ export class CodexAppServerBridge {
           turnId: message.params.turnId,
           ...summarizeThreadItem(message.params.item),
         })
+        if (matchesActiveThread(this.threadId, message.params)) {
+          const summary = summarizeActivityItem(message.params.item, 'started')
+          if (summary) {
+            this.emitEvent({
+              type: 'activity_log',
+              itemId: message.params.item.id,
+              turnId: message.params.turnId,
+              summary,
+            })
+          }
+        }
       }
       return
     }
@@ -1105,6 +1163,17 @@ export class CodexAppServerBridge {
           turnId: message.params.turnId,
           ...summarizeThreadItem(message.params.item),
         })
+        if (matchesActiveThread(this.threadId, message.params)) {
+          const summary = summarizeActivityItem(message.params.item, 'completed')
+          if (summary) {
+            this.emitEvent({
+              type: 'activity_log',
+              itemId: message.params.item.id,
+              turnId: message.params.turnId,
+              summary,
+            })
+          }
+        }
       }
       if (!matchesActiveThread(this.threadId, message.params)) return
       const event = extractCompletedAgentMessage(message.params)

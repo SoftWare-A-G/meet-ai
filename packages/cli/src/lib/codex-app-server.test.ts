@@ -145,6 +145,7 @@ describe('CodexAppServerBridge', () => {
 
     expect(spawnArgs.slice(1)).toEqual([
       'app-server',
+      '--dangerously-bypass-approvals-and-sandbox',
       '--enable',
       'multi_agent',
       '--enable',
@@ -295,6 +296,73 @@ describe('CodexAppServerBridge', () => {
         turnId: 'turn-started',
       },
     ])
+  })
+
+  it('emits activity log events for command and file change items', async () => {
+    const fake = createFakeAppServer()
+    const events: CodexAppServerEvent[] = []
+    const bridge = new CodexAppServerBridge({
+      threadId: 'thread-1',
+      spawnFn: fake.spawnFn,
+    })
+
+    bridge.setEventHandler((event) => {
+      events.push(event)
+    })
+
+    await bridge.injectText({
+      sender: 'alice',
+      content: 'hello from web',
+    })
+
+    emitNotification(fake.child, {
+      method: 'item/started',
+      params: {
+        threadId: 'thread-1',
+        turnId: 'turn-started',
+        item: {
+          type: 'commandExecution',
+          id: 'cmd-1',
+          command: 'bun test packages/cli/src/lib/codex-app-server.test.ts',
+          cwd: '/repo',
+          processId: null,
+          status: 'inProgress',
+          commandActions: [],
+          aggregatedOutput: null,
+          exitCode: null,
+          durationMs: null,
+        },
+      },
+    })
+
+    emitNotification(fake.child, {
+      method: 'item/completed',
+      params: {
+        threadId: 'thread-1',
+        turnId: 'turn-started',
+        item: {
+          type: 'fileChange',
+          id: 'file-1',
+          changes: [
+            { path: '/repo/packages/cli/src/lib/codex-app-server.ts', kind: 'modified', diff: '@@ -1 +1 @@' },
+          ],
+          status: 'completed',
+        },
+      },
+    })
+
+    expect(events).toContainEqual({
+      type: 'activity_log',
+      itemId: 'cmd-1',
+      turnId: 'turn-started',
+      summary: 'Bash: bun test packages/cli/src/lib/codex-app-server.test.ts',
+    })
+    expect(events).toContainEqual({
+      type: 'activity_log',
+      itemId: 'file-1',
+      turnId: 'turn-started',
+      summary: 'Edit: codex-app-server.ts',
+    })
   })
 
   it('ignores agent message notifications from other threads', async () => {
