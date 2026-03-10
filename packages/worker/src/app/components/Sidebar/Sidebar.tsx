@@ -222,8 +222,8 @@ export default function Sidebar({ rooms, projects, userName, onNameChange, onSet
                 className="group/collapsible"
               >
                 <SidebarMenuItem className="border-b border-sidebar-border/30">
-                  <div className="relative">
-                    <SidebarMenuButton className="h-11" render={<CollapsibleTrigger />}>
+                  <div className="group/project-row relative">
+                    <SidebarMenuButton className="h-11 group-hover/project-row:bg-sidebar-accent group-hover/project-row:text-sidebar-accent-foreground" render={<CollapsibleTrigger />}>
                       <ChevronRightIcon className="size-4 shrink-0 transition-transform duration-150 group-aria-expanded/menu-button:rotate-90" />
                       {project.name}
                     </SidebarMenuButton>
