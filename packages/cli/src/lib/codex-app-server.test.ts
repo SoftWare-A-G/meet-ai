@@ -2,11 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from 'bun:te
 import { PassThrough } from 'node:stream'
 import { CodexAppServerBridge, type CodexAppServerEvent } from './codex-app-server'
 import type { ChildProcessWithoutNullStreams, SpawnOptionsWithoutStdio } from 'node:child_process'
+import type { ToolRequestUserInputParams } from '@meet-ai/cli/generated/codex-app-server/v2/ToolRequestUserInputParams'
 
 type RecordedRequest = {
-  method: string
+  method?: string
   id?: string | number
   params?: any
+  result?: any
 }
 
 function createFakeAppServer(options?: {
@@ -606,5 +608,56 @@ describe('CodexAppServerBridge', () => {
     expect(output).toContain('turn.error')
     expect(output).toContain('item.completed')
     expect(output).toContain('bun test')
+  })
+
+  it('routes request_user_input server requests through the registered handler', async () => {
+    const fake = createFakeAppServer()
+    const requestUserInputHandler = mock(async (_params: ToolRequestUserInputParams) => ({
+      answers: {
+        'question-1': { answers: ['Red'] },
+      },
+    }))
+    const bridge = new CodexAppServerBridge({
+      threadId: 'thread-1',
+      spawnFn: fake.spawnFn,
+      requestUserInputHandler,
+    })
+
+    await bridge.injectText({
+      sender: 'alice',
+      content: 'hello from web',
+    })
+
+    emitNotification(fake.child, {
+      method: 'item/tool/requestUserInput',
+      id: 'request-user-input-1',
+      params: {
+        threadId: 'thread-1',
+        turnId: 'turn-started',
+        itemId: 'item-question-1',
+        questions: [
+          {
+            id: 'question-1',
+            header: 'Color',
+            question: 'Pick a color',
+            isOther: false,
+            isSecret: false,
+            options: [{ label: 'Red', description: 'Warm' }],
+          },
+        ],
+      },
+    })
+
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(requestUserInputHandler).toHaveBeenCalledTimes(1)
+    expect(fake.requests.at(-1)).toEqual({
+      id: 'request-user-input-1',
+      result: {
+        answers: {
+          'question-1': { answers: ['Red'] },
+        },
+      },
+    })
   })
 })

@@ -12,6 +12,7 @@ import { emitCodexAppServerLog } from '@meet-ai/cli/lib/codex-app-server-evlog'
 import { createHookClient, sendLogEntry, sendParentMessage } from '@meet-ai/cli/lib/hooks/client'
 import { findRoom } from '@meet-ai/cli/lib/hooks/find-room'
 import { createTask, updateTask, listTasks, getTask } from '@meet-ai/cli/lib/hooks/tasks'
+import { requestRoomQuestionReview, type QuestionReviewQuestion } from '@meet-ai/cli/lib/question-review'
 import {
   registerActiveTeamMember,
   type TeamMemberRegistrar,
@@ -19,6 +20,7 @@ import {
 import { ListenInput } from './schema'
 import { createTerminalControlHandler, isHookAnchorMessage, type ListenMessage } from './shared'
 import type { MeetAiClient, Message } from '@meet-ai/cli/types'
+import type { ToolRequestUserInputParams, ToolRequestUserInputResponse } from '@meet-ai/cli/generated/codex-app-server/v2'
 
 
 function normalizeFinalText(value: string): string {
@@ -149,6 +151,72 @@ async function resolveCodexTeamName(roomId: string): Promise<string | undefined>
   return room.teamName
 }
 
+function toQuestionReviewQuestions(params: ToolRequestUserInputParams): QuestionReviewQuestion[] | null {
+  const questions: QuestionReviewQuestion[] = []
+
+  for (const question of params.questions) {
+    if (!Array.isArray(question.options) || question.options.length === 0 || question.isSecret) {
+      return null
+    }
+
+    const options = question.options.map(option => ({
+      label: option.label,
+      description: option.description || undefined,
+    }))
+
+    if (question.isOther) {
+      options.push({
+        label: 'Other',
+        description: 'Choose this only if you need to answer outside the listed options.',
+      })
+    }
+
+    questions.push({
+      question: question.question,
+      header: question.header || undefined,
+      options,
+    })
+  }
+
+  return questions
+}
+
+async function requestCodexUserInputViaRoom(
+  hookClient: ReturnType<typeof createHookClient>,
+  roomId: string,
+  params: ToolRequestUserInputParams,
+): Promise<ToolRequestUserInputResponse> {
+  const questions = toQuestionReviewQuestions(params)
+  if (!questions) {
+    emitCodexAppServerLog('warn', 'listen-codex', 'request_user_input.unsupported', {
+      reason: 'missing_options_or_secret_question',
+      questionCount: params.questions.length,
+    })
+    return { answers: {} }
+  }
+
+  const result = await requestRoomQuestionReview(hookClient, roomId, questions)
+  if (result.status !== 'answered') {
+    emitCodexAppServerLog('warn', 'listen-codex', 'request_user_input.unanswered', {
+      status: result.status,
+      questionCount: questions.length,
+    })
+    return { answers: {} }
+  }
+
+  const answers: ToolRequestUserInputResponse['answers'] = {}
+  for (const question of params.questions) {
+    const answer = result.answers[question.question]
+    if (!answer) continue
+
+    answers[question.id] = {
+      answers: [answer],
+    }
+  }
+
+  return { answers }
+}
+
 export function listenCodex(
   client: MeetAiClient,
   input: {
@@ -187,6 +255,9 @@ export function listenCodex(
         getTask: taskId => getTask(hookClient, roomId, taskId),
       })
     : undefined
+  const requestUserInputHandler = hookClient && roomId
+    ? (params: ToolRequestUserInputParams) => requestCodexUserInputViaRoom(hookClient, roomId, params)
+    : undefined
 
   const codexBridge: CodexBridge =
     codexBridgeOverride ??
@@ -195,6 +266,7 @@ export function listenCodex(
       cwd: process.cwd(),
       experimentalApi: true,
       ...(taskToolCallHandler ? { dynamicTools: TASK_TOOL_SPECS, toolCallHandler: taskToolCallHandler } : {}),
+      ...(requestUserInputHandler ? { requestUserInputHandler } : {}),
     })
   const bootstrapPrompt = process.env.MEET_AI_CODEX_BOOTSTRAP_PROMPT?.trim()
   const codexSender = process.env.MEET_AI_AGENT_NAME?.trim() || 'codex'

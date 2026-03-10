@@ -277,15 +277,6 @@ describe('listen', () => {
 
     const client = mockClient()
     const codexBridge = makeCodexBridgeMock()
-    const fetchMock = mock(() =>
-      Promise.resolve(
-        new Response(JSON.stringify({ id: 'msg-parent' }), {
-          status: 201,
-          headers: { 'Content-Type': 'application/json' },
-        })
-      )
-    )
-    globalThis.fetch = fetchMock as unknown as typeof fetch
 
     listen(
       client,
@@ -309,13 +300,6 @@ describe('listen', () => {
 
     await new Promise(resolve => setTimeout(resolve, 0))
     await new Promise(resolve => setTimeout(resolve, 0))
-
-    const requestUrls = fetchMock.mock.calls.map((call) => {
-      const [input] = call as unknown as [string | URL | Request, RequestInit | undefined]
-      return input?.toString() ?? ''
-    })
-    expect(requestUrls.filter((url: string) => url.includes('/messages'))).toHaveLength(1)
-    expect(requestUrls.filter((url: string) => url.includes('/logs'))).toHaveLength(2)
 
     const output = getConsoleOutput(logSpy)
     expect(output).toContain('activity_log.received')

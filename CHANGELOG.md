@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.6.3](https://github.com/SoftWare-A-G/meet-ai/compare/0.6.2...0.6.3) (2026-03-10)
+
+### Features
+
+* route Codex app-server `request_user_input` questions through the existing Meet AI question-review UI flow so user prompts from Codex can be reviewed and answered in-room like Claude reviews
+
+### Bug Fixes
+
+* share the room-backed question-review helper between the CLI hook and Codex listener bridge, including safe fallback behavior for unsupported question shapes
+* align the CLI and worker package manifests at `0.6.3` for the release
+
+### Tests
+
+* add Codex app-server coverage for request-user-input handling and fix stale CLI test expectations so the full `packages/cli` suite stays green
+
 ## [0.6.2](https://github.com/SoftWare-A-G/meet-ai/compare/0.6.1...0.6.2) (2026-03-10)
 
 ### Bug Fixes

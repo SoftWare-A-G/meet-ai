@@ -21,6 +21,8 @@ import type { ReasoningSummaryTextDeltaNotification } from '@meet-ai/cli/generat
 import type { ReasoningTextDeltaNotification } from '@meet-ai/cli/generated/codex-app-server/v2/ReasoningTextDeltaNotification'
 import type { TerminalInteractionNotification } from '@meet-ai/cli/generated/codex-app-server/v2/TerminalInteractionNotification'
 import type { Thread } from '@meet-ai/cli/generated/codex-app-server/v2/Thread'
+import type { ToolRequestUserInputParams } from '@meet-ai/cli/generated/codex-app-server/v2/ToolRequestUserInputParams'
+import type { ToolRequestUserInputResponse } from '@meet-ai/cli/generated/codex-app-server/v2/ToolRequestUserInputResponse'
 import type { ThreadNameUpdatedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/ThreadNameUpdatedNotification'
 import type { ThreadStartedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/ThreadStartedNotification'
 import type { ThreadStatusChangedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/ThreadStatusChangedNotification'
@@ -76,6 +78,10 @@ export type DynamicToolCallHandler = (
   args: unknown
 ) => Promise<DynamicToolCallResponse>
 
+export type RequestUserInputHandler = (
+  params: ToolRequestUserInputParams
+) => Promise<ToolRequestUserInputResponse>
+
 export type CodexAppServerBridgeOptions = {
   threadId?: string | null
   cwd?: string
@@ -88,6 +94,7 @@ export type CodexAppServerBridgeOptions = {
   spawnFn?: SpawnFn
   dynamicTools?: DynamicToolSpec[]
   toolCallHandler?: DynamicToolCallHandler
+  requestUserInputHandler?: RequestUserInputHandler
 }
 
 export type CodexInjectionResult = {
@@ -672,6 +679,7 @@ export class CodexAppServerBridge {
   private readonly spawnFn: SpawnFn
   private readonly dynamicTools: DynamicToolSpec[]
   private readonly toolCallHandler: DynamicToolCallHandler | null
+  private readonly requestUserInputHandler: RequestUserInputHandler | null
 
   private child: ChildProcessWithoutNullStreams | null = null
   private stdoutReader: ReadLineInterface | null = null
@@ -699,6 +707,7 @@ export class CodexAppServerBridge {
     this.spawnFn = options.spawnFn ?? spawn
     this.dynamicTools = options.dynamicTools ?? []
     this.toolCallHandler = options.toolCallHandler ?? null
+    this.requestUserInputHandler = options.requestUserInputHandler ?? null
   }
 
   async start(): Promise<void> {
@@ -1275,11 +1284,7 @@ export class CodexAppServerBridge {
         return
       }
       case 'item/tool/requestUserInput': {
-        emitCodexAppServerLog('warn', 'codex-app-server', 'server_request.auto_resolved', {
-          method: message.method,
-          decision: 'empty_answers',
-        })
-        this.writeMessage({ id: message.id, result: { answers: {} } })
+        void this.handleRequestUserInput(message)
         return
       }
       case 'mcpServer/elicitation/request': {
@@ -1321,6 +1326,52 @@ export class CodexAppServerBridge {
           },
         })
       }
+    }
+  }
+
+  private async handleRequestUserInput(message: JsonRpcServerRequest): Promise<void> {
+    const params = message.params as ToolRequestUserInputParams | undefined
+
+    if (!params || !Array.isArray(params.questions)) {
+      emitCodexAppServerLog('warn', 'codex-app-server', 'server_request.auto_resolved', {
+        method: message.method,
+        decision: 'empty_answers',
+        reason: 'invalid_request_user_input_params',
+      })
+      this.writeMessage({ id: message.id, result: { answers: {} } })
+      return
+    }
+
+    if (!this.requestUserInputHandler) {
+      emitCodexAppServerLog('warn', 'codex-app-server', 'server_request.auto_resolved', {
+        method: message.method,
+        decision: 'empty_answers',
+        reason: 'no_request_user_input_handler',
+      })
+      this.writeMessage({ id: message.id, result: { answers: {} } })
+      return
+    }
+
+    try {
+      emitCodexAppServerLog('info', 'codex-app-server', 'request_user_input.started', {
+        questionCount: params.questions.length,
+        turnId: params.turnId,
+        itemId: params.itemId,
+      })
+      const response = await this.requestUserInputHandler(params)
+      emitCodexAppServerLog('info', 'codex-app-server', 'request_user_input.completed', {
+        answerCount: Object.keys(response.answers ?? {}).length,
+        turnId: params.turnId,
+        itemId: params.itemId,
+      })
+      this.writeMessage({ id: message.id, result: response })
+    } catch (error) {
+      emitCodexAppServerLog('error', 'codex-app-server', 'request_user_input.failed', {
+        error: toErrorMessage(error),
+        turnId: params.turnId,
+        itemId: params.itemId,
+      })
+      this.writeMessage({ id: message.id, result: { answers: {} } })
     }
   }
 

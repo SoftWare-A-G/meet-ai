@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.6.3](https://github.com/SoftWare-A-G/meet-ai/compare/0.6.2...0.6.3) (2026-03-10)
+
+### Features
+
+* add Codex app-server support for `item/tool/requestUserInput` by routing supported question sets through the same Meet AI room-backed question-review flow already used by Claude hooks, allowing UI-reviewed answers to flow back into the Codex bridge by question id
+
+### Bug Fixes
+
+* extract the room review lifecycle into a shared `question-review.ts` helper so the hook implementation and the Codex listener path reuse the same create, poll, expire, and timeout-message behavior instead of maintaining separate review logic
+* keep unsupported Codex question shapes conservative by returning empty answers for secret prompts or prompts without predefined options instead of attempting to synthesize a broken UI flow
+* align the CLI and worker package manifests at `0.6.3` for the release
+
+### Tests
+
+* add `codex-app-server.test.ts` coverage proving request-user-input server requests are handed to the registered bridge handler and translated back into app-server responses
+* refresh `create-room/usecase.test.ts` to match the current project-aware room creation path and client surface
+* remove brittle `globalThis.fetch` count assertions from the Codex listen hook-log test so the full `packages/cli` suite remains stable under the complete Bun test run
+
 ## [0.6.2](https://github.com/SoftWare-A-G/meet-ai/compare/0.6.1...0.6.2) (2026-03-10)
 
 ### Bug Fixes
