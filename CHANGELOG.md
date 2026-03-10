@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.7.0](https://github.com/SoftWare-A-G/meet-ai/compare/0.6.5...0.7.0) (2026-03-11)
+
+### Features
+
+* route Codex plan-mode updates into the existing Meet AI `plan-reviews` UI flow so app-server `turn/planUpdated` events create room review cards and approved or rejected decisions are fed back into the active Codex thread
+
+### Bug Fixes
+
+* extract the room-backed plan review lifecycle into a shared CLI helper so the legacy `plan-review` hook and the Codex listener reuse the same create, poll, and expire behavior while preserving hook diagnostics on failure
+* align the CLI and worker package manifests at `0.7.0` for the release
+
+### Tests
+
+* add Codex app-server coverage for active-thread `turn/planUpdated` events and listener coverage for the room plan-review round trip
+* harden the Codex listen plan-review regression test by stubbing internal review dependencies instead of relying on `globalThis.fetch`, keeping the full `packages/cli` suite stable under complete Bun runs
+
 ## [0.6.5](https://github.com/SoftWare-A-G/meet-ai/compare/0.6.4...0.6.5) (2026-03-11)
 
 ### Bug Fixes

@@ -660,4 +660,63 @@ describe('CodexAppServerBridge', () => {
       },
     })
   })
+
+  it('emits turn plan update events for the active thread', async () => {
+    const fake = createFakeAppServer()
+    const events: CodexAppServerEvent[] = []
+    const bridge = new CodexAppServerBridge({
+      threadId: 'thread-1',
+      spawnFn: fake.spawnFn,
+    })
+
+    bridge.setEventHandler(event => {
+      events.push(event)
+    })
+
+    await bridge.injectText({
+      sender: 'alice',
+      content: 'hello from web',
+    })
+
+    emitNotification(fake.child, {
+      method: 'turn/planUpdated',
+      params: {
+        threadId: 'thread-1',
+        turnId: 'turn-started',
+        explanation: 'Ship the plan UI',
+        plan: [
+          { step: 'Emit bridge event', status: 'inProgress' },
+          { step: 'Create review card', status: 'pending' },
+        ],
+      },
+    })
+    emitNotification(fake.child, {
+      method: 'turn/planUpdated',
+      params: {
+        threadId: 'thread-2',
+        turnId: 'turn-foreign',
+        explanation: 'Ignore this thread',
+        plan: [{ step: 'No-op', status: 'pending' }],
+      },
+    })
+
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(events).toContainEqual({
+      type: 'turn_plan_updated',
+      threadId: 'thread-1',
+      turnId: 'turn-started',
+      explanation: 'Ship the plan UI',
+      plan: [
+        { step: 'Emit bridge event', status: 'inProgress' },
+        { step: 'Create review card', status: 'pending' },
+      ],
+    })
+    expect(events).not.toContainEqual(
+      expect.objectContaining({
+        type: 'turn_plan_updated',
+        threadId: 'thread-2',
+      }),
+    )
+  })
 })

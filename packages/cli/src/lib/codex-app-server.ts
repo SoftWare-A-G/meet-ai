@@ -27,6 +27,7 @@ import type { ThreadNameUpdatedNotification } from '@meet-ai/cli/generated/codex
 import type { ThreadStartedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/ThreadStartedNotification'
 import type { ThreadStatusChangedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/ThreadStatusChangedNotification'
 import type { ThreadTokenUsageUpdatedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/ThreadTokenUsageUpdatedNotification'
+import type { TurnPlanStep } from '@meet-ai/cli/generated/codex-app-server/v2/TurnPlanStep'
 import type { Turn } from '@meet-ai/cli/generated/codex-app-server/v2/Turn'
 import type { TurnCompletedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/TurnCompletedNotification'
 import type { TurnPlanUpdatedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/TurnPlanUpdatedNotification'
@@ -119,6 +120,13 @@ export type CodexAppServerEvent =
   | {
       type: 'turn_completed'
       turnId: string | null
+    }
+  | {
+      type: 'turn_plan_updated'
+      threadId: string
+      turnId: string
+      explanation: string | null
+      plan: TurnPlanStep[]
     }
   | {
       type: 'activity_log'
@@ -1052,6 +1060,15 @@ export class CodexAppServerBridge {
           explanation: message.params.explanation,
           planStepCount: message.params.plan.length,
         })
+        if (matchesActiveThread(this.threadId, message.params)) {
+          this.emitEvent({
+            type: 'turn_plan_updated',
+            threadId: message.params.threadId,
+            turnId: message.params.turnId,
+            explanation: message.params.explanation,
+            plan: message.params.plan,
+          })
+        }
       }
       return
     }

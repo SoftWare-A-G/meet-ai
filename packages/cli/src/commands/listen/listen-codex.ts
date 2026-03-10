@@ -12,6 +12,12 @@ import { emitCodexAppServerLog } from '@meet-ai/cli/lib/codex-app-server-evlog'
 import { createHookClient, sendLogEntry, sendParentMessage } from '@meet-ai/cli/lib/hooks/client'
 import { findRoom } from '@meet-ai/cli/lib/hooks/find-room'
 import { createTask, updateTask, listTasks, getTask } from '@meet-ai/cli/lib/hooks/tasks'
+import {
+  createPlanReview,
+  expirePlanReview,
+  formatCodexPlanReviewContent,
+  pollForPlanDecision,
+} from '@meet-ai/cli/lib/plan-review'
 import { requestRoomQuestionReview, type QuestionReviewQuestion } from '@meet-ai/cli/lib/question-review'
 import {
   registerActiveTeamMember,
@@ -22,6 +28,19 @@ import { createTerminalControlHandler, isHookAnchorMessage, type ListenMessage }
 import type { MeetAiClient, Message } from '@meet-ai/cli/types'
 import type { ToolRequestUserInputParams, ToolRequestUserInputResponse } from '@meet-ai/cli/generated/codex-app-server/v2'
 
+type CodexListenDeps = {
+  createHookClient: typeof createHookClient
+  createPlanReview: typeof createPlanReview
+  pollForPlanDecision: typeof pollForPlanDecision
+  expirePlanReview: typeof expirePlanReview
+}
+
+const DEFAULT_CODEX_LISTEN_DEPS: CodexListenDeps = {
+  createHookClient,
+  createPlanReview,
+  pollForPlanDecision,
+  expirePlanReview,
+}
 
 function normalizeFinalText(value: string): string {
   return value.replace(/\r\n/g, '\n').trim()
@@ -133,6 +152,12 @@ type TurnMessageState = {
   sending: boolean
 }
 
+type TurnPlanReviewState = {
+  sequence: number
+  content: string
+  reviewId: string | null
+}
+
 function buildPublishedText(state: TurnMessageState): string {
   return normalizeFinalText(
     state.itemOrder
@@ -217,6 +242,35 @@ async function requestCodexUserInputViaRoom(
   return { answers }
 }
 
+function buildCodexPlanDecisionPrompt(input: {
+  status: 'approved' | 'denied' | 'expired'
+  feedback?: string
+  permissionMode?: string
+}): string {
+  if (input.status === 'approved') {
+    const lines = [
+      'Your plan was approved in the Meet AI review UI. Continue with implementation now.',
+    ]
+    if (input.permissionMode && input.permissionMode !== 'default') {
+      lines.push(`Requested permission mode: ${input.permissionMode}.`)
+    }
+    return lines.join('\n')
+  }
+
+  const feedback = input.feedback?.trim()
+  const lines = [
+    input.status === 'expired'
+      ? 'Your plan review was dismissed in the Meet AI UI. Revise the plan before continuing.'
+      : 'Your plan was rejected in the Meet AI review UI. Revise the plan before continuing.',
+  ]
+
+  if (feedback) {
+    lines.push('', 'Feedback:', feedback)
+  }
+
+  return lines.join('\n')
+}
+
 export function listenCodex(
   client: MeetAiClient,
   input: {
@@ -227,7 +281,8 @@ export function listenCodex(
     inbox?: string
   },
   codexBridgeOverride?: CodexBridge | null,
-  teamMemberRegistrar: TeamMemberRegistrar = registerActiveTeamMember
+  teamMemberRegistrar: TeamMemberRegistrar = registerActiveTeamMember,
+  deps: CodexListenDeps = DEFAULT_CODEX_LISTEN_DEPS,
 ): WebSocket {
   const parsed = ListenInput.parse(input)
   const { roomId, exclude, senderType, team, inbox } = parsed
@@ -244,7 +299,7 @@ export function listenCodex(
 
   const meetAiUrl = process.env.MEET_AI_URL ?? ''
   const meetAiKey = process.env.MEET_AI_KEY ?? ''
-  const hookClient = meetAiUrl && meetAiKey ? createHookClient(meetAiUrl, meetAiKey) : null
+  const hookClient = meetAiUrl && meetAiKey ? deps.createHookClient(meetAiUrl, meetAiKey) : null
   let activityParentId: string | null = null
   let activityLogQueue: Promise<void> = Promise.resolve()
   const taskToolCallHandler = hookClient && roomId
@@ -271,6 +326,7 @@ export function listenCodex(
   const bootstrapPrompt = process.env.MEET_AI_CODEX_BOOTSTRAP_PROMPT?.trim()
   const codexSender = process.env.MEET_AI_AGENT_NAME?.trim() || 'codex'
   const messageState = new Map<string, TurnMessageState>()
+  const turnPlanReviews = new Map<string, TurnPlanReviewState>()
   let publishQueue: Promise<void> = Promise.resolve()
 
   const enqueuePublish = (task: () => Promise<void>) => {
@@ -289,6 +345,134 @@ export function listenCodex(
     }).catch(error => {
       console.error(`meet-ai: failed to publish Codex activity log: ${error instanceof Error ? error.message : String(error)}`)
     })
+  }
+
+  const injectPlanDecisionPrompt = (turnId: string, prompt: string) => {
+    void codexBridge
+      .injectPrompt(prompt)
+      .then(result => {
+        emitCodexAppServerLog('info', 'listen-codex', 'plan_review.decision_injected', {
+          sourceTurnId: turnId,
+          mode: result.mode,
+          threadId: result.threadId,
+          turnId: result.turnId,
+          preview: previewText(prompt),
+        })
+      })
+      .catch(error => {
+        emitCodexAppServerLog('error', 'listen-codex', 'plan_review.decision_injection_failed', {
+          sourceTurnId: turnId,
+          error: describeCodexAppServerError(error),
+          preview: previewText(prompt),
+        })
+      })
+  }
+
+  const isCurrentPlanReviewState = (turnId: string, sequence: number): boolean =>
+    turnPlanReviews.get(turnId)?.sequence === sequence
+
+  const handleTurnPlanUpdated = (event: Extract<CodexAppServerEvent, { type: 'turn_plan_updated' }>) => {
+    if (!hookClient) {
+      emitCodexAppServerLog('warn', 'listen-codex', 'plan_review.unavailable', {
+        turnId: event.turnId,
+        reason: 'missing_hook_client',
+      })
+      return
+    }
+
+    const content = formatCodexPlanReviewContent({
+      explanation: event.explanation,
+      plan: event.plan,
+    })
+    const previousState = turnPlanReviews.get(event.turnId)
+    if (previousState?.content === content) {
+      emitCodexAppServerLog('debug', 'listen-codex', 'plan_review.unchanged', {
+        turnId: event.turnId,
+        reviewId: previousState.reviewId,
+      })
+      return
+    }
+
+    const nextState: TurnPlanReviewState = {
+      sequence: (previousState?.sequence ?? 0) + 1,
+      content,
+      reviewId: null,
+    }
+    turnPlanReviews.set(event.turnId, nextState)
+
+    void (async () => {
+      if (previousState?.reviewId) {
+        await deps.expirePlanReview(hookClient, roomId, previousState.reviewId)
+      }
+
+      if (!isCurrentPlanReviewState(event.turnId, nextState.sequence)) {
+        return
+      }
+
+      emitCodexAppServerLog('info', 'listen-codex', 'plan_review.started', {
+        turnId: event.turnId,
+        threadId: event.threadId,
+        sequence: nextState.sequence,
+        planStepCount: event.plan.length,
+      })
+      const review = await deps.createPlanReview(hookClient, roomId, content)
+      if (!review.ok) {
+        emitCodexAppServerLog('error', 'listen-codex', 'plan_review.create_failed', {
+          turnId: event.turnId,
+          threadId: event.threadId,
+          sequence: nextState.sequence,
+          ...(review.error ? { error: String(review.error) } : { status: review.status, text: review.text }),
+        })
+        return
+      }
+
+      if (!isCurrentPlanReviewState(event.turnId, nextState.sequence)) {
+        await deps.expirePlanReview(hookClient, roomId, review.review.id)
+        return
+      }
+
+      const current = turnPlanReviews.get(event.turnId)
+      if (!current || current.sequence !== nextState.sequence) {
+        await deps.expirePlanReview(hookClient, roomId, review.review.id)
+        return
+      }
+      current.reviewId = review.review.id
+
+      const decision = await deps.pollForPlanDecision(hookClient, roomId, review.review.id)
+      if (!isCurrentPlanReviewState(event.turnId, nextState.sequence)) {
+        return
+      }
+
+      if (!decision) {
+        emitCodexAppServerLog('warn', 'listen-codex', 'plan_review.timeout', {
+          turnId: event.turnId,
+          threadId: event.threadId,
+          reviewId: review.review.id,
+        })
+        await deps.expirePlanReview(hookClient, roomId, review.review.id)
+        turnPlanReviews.delete(event.turnId)
+        return
+      }
+
+      emitCodexAppServerLog('info', 'listen-codex', 'plan_review.completed', {
+        turnId: event.turnId,
+        threadId: event.threadId,
+        reviewId: review.review.id,
+        status: decision.status,
+      })
+
+      turnPlanReviews.delete(event.turnId)
+      if (decision.status === 'approved' || decision.status === 'denied' || decision.status === 'expired') {
+        injectPlanDecisionPrompt(
+          event.turnId,
+          buildCodexPlanDecisionPrompt({
+            status: decision.status,
+            feedback: decision.feedback,
+            permissionMode: decision.permission_mode,
+          }),
+        )
+      }
+    })()
   }
 
   const publishBufferedMessage = (key: string) => {
@@ -404,6 +588,11 @@ export function listenCodex(
         summary: event.summary,
       })
       enqueueActivityLog(event.summary)
+      return
+    }
+
+    if (event.type === 'turn_plan_updated') {
+      handleTurnPlanUpdated(event)
       return
     }
 

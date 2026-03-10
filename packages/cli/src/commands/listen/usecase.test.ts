@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { ZodError } from 'zod'
 import { listen } from './usecase'
 import type { CodexAppServerEvent } from '@meet-ai/cli/lib/codex-app-server'
+import type { HookClient } from '@meet-ai/cli/lib/hooks/client'
 import type { MeetAiClient, Message } from '@meet-ai/cli/types'
 import type IInboxRouter from '@meet-ai/cli/domain/interfaces/IInboxRouter'
 
@@ -305,6 +306,67 @@ describe('listen', () => {
     expect(output).toContain('activity_log.received')
     expect(output).toContain('Bash: bun test packages/cli/src/lib/codex-app-server.test.ts')
     expect(output).toContain('WebSearch: codex app-server logs')
+  })
+
+  it('routes codex plan updates through room plan reviews and injects the approved decision', async () => {
+    process.env.MEET_AI_RUNTIME = 'codex'
+    process.env.CODEX_HOME = codexHome
+    process.env.MEET_AI_URL = 'http://localhost:8787'
+    process.env.MEET_AI_KEY = 'mai_test123'
+
+    const client = mockClient()
+    const codexBridge = makeCodexBridgeMock()
+    const registerMember = mock(() => Promise.resolve())
+    const createPlanReviewMock = mock(
+      async (_client: HookClient, _roomId: string, _content: string) => ({
+        ok: true as const,
+        review: { id: 'review-1', message_id: 'msg-plan-1' },
+      }),
+    )
+    const pollForPlanDecisionMock = mock(
+      async (_client: HookClient, _roomId: string, _reviewId: string) => ({
+        id: 'review-1',
+        status: 'approved' as const,
+        permission_mode: 'acceptEdits',
+      }),
+    )
+
+    listen(
+      client,
+      { roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c', senderType: 'human' },
+      undefined,
+      codexBridge,
+      registerMember,
+      {
+        createHookClient: mock(() => ({}) as HookClient),
+        createPlanReview: createPlanReviewMock as any,
+        pollForPlanDecision: pollForPlanDecisionMock as any,
+        expirePlanReview: mock(async () => {}),
+      },
+    )
+
+    codexBridge.emitEvent({
+      type: 'turn_plan_updated',
+      threadId: 'thread-1',
+      turnId: 'turn-1',
+      explanation: 'Bind plan mode to the room UI',
+      plan: [
+        { step: 'Emit the bridge event', status: 'inProgress' },
+        { step: 'Reuse existing plan reviews', status: 'pending' },
+      ],
+    })
+
+    await new Promise(resolve => setTimeout(resolve, 0))
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(createPlanReviewMock).toHaveBeenCalledTimes(1)
+    expect(pollForPlanDecisionMock).toHaveBeenCalledTimes(1)
+    expect(codexBridge.injectPrompt).toHaveBeenCalledWith(
+      expect.stringContaining('Your plan was approved in the Meet AI review UI. Continue with implementation now.'),
+    )
+    expect(codexBridge.injectPrompt).toHaveBeenCalledWith(
+      expect.stringContaining('Requested permission mode: acceptEdits.'),
+    )
   })
 
   it('registers the active Codex member when codex listen starts', async () => {

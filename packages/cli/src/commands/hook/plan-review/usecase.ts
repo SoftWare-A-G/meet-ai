@@ -1,6 +1,11 @@
 import { setTimeout as delay } from 'node:timers/promises'
-import { createHookClient, type HookClient } from '@meet-ai/cli/lib/hooks/client'
+import { createHookClient } from '@meet-ai/cli/lib/hooks/client'
 import { findRoomId } from '@meet-ai/cli/lib/hooks/find-room'
+import {
+  createPlanReview,
+  expirePlanReview,
+  pollForPlanDecision,
+} from '@meet-ai/cli/lib/plan-review'
 
 type PlanReviewInput = {
   session_id: string
@@ -21,69 +26,8 @@ type HookOutput = {
   }
 }
 
-type PlanReviewResponse = {
-  id: string
-  message_id?: string
-}
-
-type PlanDecision = {
-  status: string
-  feedback?: string
-  permission_mode?: string
-}
-
 const POLL_INTERVAL_MS = 2000
 const POLL_TIMEOUT_MS = 2_592_000_000 // 30 days
-
-async function createPlanReview(
-  client: HookClient,
-  roomId: string,
-  planContent: string,
-): Promise<PlanReviewResponse | null> {
-  try {
-    const res = await client.api.rooms[':id']['plan-reviews'].$post({
-      param: { id: roomId },
-      json: { plan_content: planContent },
-    })
-    if (!res.ok) {
-      const text = await res.text()
-      process.stderr.write(`[plan-review] create failed: ${res.status} ${text}\n`)
-      return null
-    }
-    return (await res.json()) as PlanReviewResponse
-  } catch (error) {
-    process.stderr.write(`[plan-review] create error: ${error}\n`)
-    return null
-  }
-}
-
-async function pollForDecision(
-  client: HookClient,
-  roomId: string,
-  reviewId: string,
-): Promise<PlanDecision | null> {
-  const deadline = Date.now() + POLL_TIMEOUT_MS
-
-  while (Date.now() < deadline) {
-    try {
-      const res = await client.api.rooms[':id']['plan-reviews'][':reviewId'].$get({
-        param: { id: roomId, reviewId },
-      })
-      if (res.ok) {
-        const data = (await res.json()) as PlanDecision
-        if (data.status !== 'pending') {
-          return data
-        }
-      }
-    } catch (error) {
-      process.stderr.write(`[plan-review] poll error: ${error}\n`)
-    }
-
-    await delay(POLL_INTERVAL_MS)
-  }
-
-  return null
-}
 
 function getPromptsByMode(mode?: string): AllowedPrompt[] | undefined {
   switch (mode) {
@@ -127,20 +71,6 @@ function buildDenyOutput(feedback: string): HookOutput {
   }
 }
 
-async function expirePlanReview(
-  client: HookClient,
-  roomId: string,
-  reviewId: string,
-): Promise<void> {
-  try {
-    await client.api.rooms[':id']['plan-reviews'][':reviewId'].expire.$post({
-      param: { id: roomId, reviewId },
-    })
-  } catch {
-    // Never throw — hook must not block the agent
-  }
-}
-
 export async function processPlanReview(rawInput: string, teamsDir?: string): Promise<void> {
   let input: PlanReviewInput
   try {
@@ -177,14 +107,21 @@ export async function processPlanReview(rawInput: string, teamsDir?: string): Pr
 
   process.stderr.write(`[plan-review] sending plan to room ${roomId} via ${url}\n`)
   const review = await createPlanReview(client, roomId, planContent)
-  if (!review) return
+  if (!review.ok) {
+    if (review.error) {
+      process.stderr.write(`[plan-review] create error: ${review.error}\n`)
+    } else {
+      process.stderr.write(`[plan-review] create failed: ${review.status} ${review.text ?? ''}\n`)
+    }
+    return
+  }
 
-  process.stderr.write(`[plan-review] plan review created: ${review.id}, polling for decision...\n`)
-  const decision = await pollForDecision(client, roomId, review.id)
+  process.stderr.write(`[plan-review] plan review created: ${review.review.id}, polling for decision...\n`)
+  const decision = await pollForPlanDecision(client, roomId, review.review.id, POLL_INTERVAL_MS, POLL_TIMEOUT_MS)
 
   if (!decision) {
     process.stderr.write('[plan-review] timed out waiting for decision\n')
-    await expirePlanReview(client, roomId, review.id)
+    await expirePlanReview(client, roomId, review.review.id)
     return
   }
 

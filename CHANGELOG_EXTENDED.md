@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.7.0](https://github.com/SoftWare-A-G/meet-ai/compare/0.6.5...0.7.0) (2026-03-11)
+
+### Features
+
+* add first-class Codex plan review support by translating app-server `turn/planUpdated` notifications into the same room-backed `plan-reviews` flow already used by Claude's exit-plan-mode path, allowing plan approvals and change requests to happen in the existing Meet AI review UI instead of being logged silently
+
+### Bug Fixes
+
+* extract the shared plan review lifecycle into `packages/cli/src/lib/plan-review.ts`, consolidating plan review create, poll, format, and expire behavior so the CLI hook path and Codex listener path do not drift
+* keep the original `plan-review` hook stderr behavior intact while moving it onto the shared helper, preserving clear `create failed` vs `create error` diagnostics for network and API failures
+* align the CLI and worker package manifests at `0.7.0` for the release
+
+### Tests
+
+* add `codex-app-server.test.ts` coverage proving active-thread `turn/planUpdated` notifications emit a dedicated bridge event instead of remaining log-only
+* add `listen/usecase.test.ts` coverage proving Codex plan updates create a room plan review and inject the approved review result back into the Codex thread
+* remove the new plan-review regression test's dependency on `globalThis.fetch` by stubbing internal listener review dependencies directly, keeping the full `packages/cli` suite green under the complete Bun run
+
 ## [0.6.5](https://github.com/SoftWare-A-G/meet-ai/compare/0.6.4...0.6.5) (2026-03-11)
 
 ### Bug Fixes
