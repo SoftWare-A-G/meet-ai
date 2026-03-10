@@ -63,7 +63,7 @@ function ProjectActions({ project, onRename }: { project: Project; onRename?: (i
     <>
       <DropdownMenu>
         <DropdownMenuTrigger
-          render={<SidebarMenuAction showOnHover />}
+          render={<SidebarMenuAction />}
           onClick={e => e.stopPropagation()}
         >
           <EllipsisIcon className="size-4" />
@@ -222,11 +222,13 @@ export default function Sidebar({ rooms, projects, userName, onNameChange, onSet
                 className="group/collapsible"
               >
                 <SidebarMenuItem className="border-b border-sidebar-border/30">
-                  <SidebarMenuButton className="h-11" render={<CollapsibleTrigger />}>
-                    <ChevronRightIcon className="size-4 shrink-0 transition-transform duration-150 group-aria-expanded/menu-button:rotate-90" />
-                    {project.name}
-                  </SidebarMenuButton>
-                  <ProjectActions project={project} onRename={onRenameProject} />
+                  <div className="relative">
+                    <SidebarMenuButton className="h-11" render={<CollapsibleTrigger />}>
+                      <ChevronRightIcon className="size-4 shrink-0 transition-transform duration-150 group-aria-expanded/menu-button:rotate-90" />
+                      {project.name}
+                    </SidebarMenuButton>
+                    <ProjectActions project={project} onRename={onRenameProject} />
+                  </div>
                   <CollapsibleContent>
                     <SidebarMenuSub>
                       {projectRooms.map(room => (
