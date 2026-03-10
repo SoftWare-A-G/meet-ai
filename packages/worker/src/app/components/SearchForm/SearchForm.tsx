@@ -27,7 +27,7 @@ export default function SearchForm({ value, onValueChange, ...props }: SearchFor
           </Label>
           <SidebarInput
             id="search"
-            placeholder="Search rooms..."
+            placeholder="Search chats..."
             className="pl-8 pr-8"
             value={value}
             onChange={e => onValueChange(e.target.value)}

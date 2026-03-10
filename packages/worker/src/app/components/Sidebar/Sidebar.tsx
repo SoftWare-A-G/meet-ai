@@ -30,7 +30,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog'
 import { Input } from '../ui/input'
 import { Button } from '../ui/button'
-import { EllipsisIcon, PlusIcon, MinusIcon } from 'lucide-react'
+import { EllipsisIcon, ChevronRightIcon } from 'lucide-react'
 import type { Project, Room } from '../../lib/types'
 
 type SidebarProps = {
@@ -105,23 +105,29 @@ function RoomSubItem({ room, isActive, onDelete, onLinkClick }: {
     <SidebarMenuSubItem className="group/room relative border-b border-sidebar-border/30 last:border-b-0">
       <SidebarMenuSubButton
         isActive={isActive}
+        className="pr-14"
         render={<Link to="/chat/$id" params={{ id: room.id }} />}
         onClick={onLinkClick}
       >
         <span className="truncate">{room.name}</span>
       </SidebarMenuSubButton>
-      {onDelete && (
-        <DeleteConfirmPopover roomName={room.name} onConfirm={() => onDelete(room.id)}>
-          <button
-            type="button"
-            aria-label={`Delete ${room.name}`}
-            className="absolute right-1 top-1/2 -translate-y-1/2 flex h-7 w-7 cursor-pointer items-center justify-center rounded border-none bg-transparent text-gray-500 opacity-0 transition-opacity duration-100 group-hover/room:opacity-100 group-has-data-popup-open/room:opacity-100 hover:text-red-400 data-[popup-open]:text-red-400"
-            onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
-          >
-            <IconTrash size={14} />
-          </button>
-        </DeleteConfirmPopover>
-      )}
+      <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center gap-0.5">
+        {onDelete ? (
+          <DeleteConfirmPopover roomName={room.name} onConfirm={() => onDelete(room.id)}>
+            <button
+              type="button"
+              aria-label={`Delete ${room.name}`}
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded border-none bg-transparent text-gray-500 opacity-0 transition-opacity duration-100 group-hover/room:opacity-100 group-has-data-popup-open/room:opacity-100 hover:text-red-400 data-[popup-open]:text-red-400"
+              onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
+            >
+              <IconTrash size={14} />
+            </button>
+          </DeleteConfirmPopover>
+        ) : (
+          <div className="h-7 w-7" />
+        )}
+        <ChevronRightIcon className={`size-4 shrink-0 ${isActive ? 'text-sidebar-accent-foreground' : 'invisible'}`} />
+      </div>
     </SidebarMenuSubItem>
   )
 }
@@ -135,25 +141,30 @@ function RoomMenuItem({ room, isActive, onDelete, onLinkClick }: {
   return (
     <SidebarMenuItem className="group/room relative border-b border-sidebar-border/30 last:border-b-0">
       <SidebarMenuButton
-        className="h-11"
+        className="h-11 pr-14"
         isActive={isActive}
         render={<Link to="/chat/$id" params={{ id: room.id }} />}
         onClick={onLinkClick}
       >
         <span className="truncate">{room.name}</span>
       </SidebarMenuButton>
-      {onDelete && (
-        <DeleteConfirmPopover roomName={room.name} onConfirm={() => onDelete(room.id)}>
-          <button
-            type="button"
-            aria-label={`Delete ${room.name}`}
-            className="absolute right-1 top-1/2 -translate-y-1/2 flex h-7 w-7 cursor-pointer items-center justify-center rounded border-none bg-transparent text-gray-500 opacity-0 transition-opacity duration-100 group-hover/room:opacity-100 group-has-data-popup-open/room:opacity-100 hover:text-red-400 data-[popup-open]:text-red-400"
-            onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
-          >
-            <IconTrash size={14} />
-          </button>
-        </DeleteConfirmPopover>
-      )}
+      <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center gap-0.5">
+        {onDelete ? (
+          <DeleteConfirmPopover roomName={room.name} onConfirm={() => onDelete(room.id)}>
+            <button
+              type="button"
+              aria-label={`Delete ${room.name}`}
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded border-none bg-transparent text-gray-500 opacity-0 transition-opacity duration-100 group-hover/room:opacity-100 group-has-data-popup-open/room:opacity-100 hover:text-red-400 data-[popup-open]:text-red-400"
+              onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
+            >
+              <IconTrash size={14} />
+            </button>
+          </DeleteConfirmPopover>
+        ) : (
+          <div className="h-7 w-7" />
+        )}
+        <ChevronRightIcon className={`size-4 shrink-0 ${isActive ? 'text-sidebar-accent-foreground' : 'invisible'}`} />
+      </div>
     </SidebarMenuItem>
   )
 }
@@ -211,10 +222,9 @@ export default function Sidebar({ rooms, projects, userName, onNameChange, onSet
                 className="group/collapsible"
               >
                 <SidebarMenuItem className="border-b border-sidebar-border/30">
-                  <SidebarMenuButton size="lg" render={<CollapsibleTrigger />}>
+                  <SidebarMenuButton className="h-11" render={<CollapsibleTrigger />}>
+                    <ChevronRightIcon className="size-4 shrink-0 transition-transform duration-150 group-aria-expanded/menu-button:rotate-90" />
                     {project.name}
-                    <PlusIcon className="ml-auto size-4 group-aria-expanded/menu-button:hidden" />
-                    <MinusIcon className="ml-auto hidden size-4 group-aria-expanded/menu-button:block" />
                   </SidebarMenuButton>
                   <ProjectActions project={project} onRename={onRenameProject} />
                   <CollapsibleContent>
