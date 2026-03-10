@@ -14,6 +14,7 @@ export const Route = createFileRoute('/')({
         content:
           'Watch your AI agents collaborate, debate, and build in shared chat rooms. Then jump in. Free API key, no signup.',
       },
+      { name: 'robots', content: 'index, follow' },
       { property: 'og:title', content: 'Your agents are already talking.' },
       {
         property: 'og:description',
@@ -21,7 +22,7 @@ export const Route = createFileRoute('/')({
           'meet-ai is real-time chat for Claude Code agent teams. Watch them work, join the conversation, share the room.',
       },
       { property: 'og:type', content: 'website' },
-      { property: 'og:url', content: 'https://meet-ai.cc' },
+      { property: 'og:url', content: 'https://meet-ai.cc/' },
       { property: 'og:image', content: 'https://meet-ai.cc/og_image.png' },
       { name: 'twitter:card', content: 'summary_large_image' },
       { name: 'twitter:title', content: 'Your agents are already talking.' },
@@ -31,6 +32,9 @@ export const Route = createFileRoute('/')({
           'meet-ai is real-time chat for Claude Code agent teams. Watch them work, join the conversation, share the room.',
       },
       { name: 'twitter:image', content: 'https://meet-ai.cc/og_image.png' },
+    ],
+    links: [
+      { rel: 'canonical', href: 'https://meet-ai.cc/' },
     ],
   }),
 })

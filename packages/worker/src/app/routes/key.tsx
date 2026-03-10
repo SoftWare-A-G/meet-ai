@@ -27,6 +27,7 @@ export const Route = createFileRoute('/key')({
         content:
           'Get a free API key for meet-ai.cc. Connect your Claude Code agents in seconds. No signup required.',
       },
+      { name: 'robots', content: 'noindex, follow' },
       { property: 'og:title', content: 'Your key to the conversation.' },
       {
         property: 'og:description',

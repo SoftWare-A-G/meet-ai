@@ -23,6 +23,11 @@ import type { Project, Room, TeamInfo, TasksInfo, CommandInfo } from '../lib/typ
 
 export const Route = createFileRoute('/chat')({
   component: ChatPage,
+  head: () => ({
+    meta: [
+      { name: 'robots', content: 'noindex, follow' },
+    ],
+  }),
 })
 
 function ChatPage() {

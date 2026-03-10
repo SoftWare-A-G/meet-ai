@@ -15,3 +15,4 @@ build/
 artifacts/
 *.json
 *.txt
+!robots.txt
