@@ -234,7 +234,7 @@ describe('plan-review usecase', () => {
     expect(stdoutCapture).toBe('')
   })
 
-  it('outputs allow on expired status', async () => {
+  it('outputs deny on expired (dismissed) status', async () => {
     mockFetch.mockResolvedValueOnce(
       new Response(JSON.stringify({ id: 'pr-5' }), {
         status: 201,
@@ -252,6 +252,7 @@ describe('plan-review usecase', () => {
     await processPlanReview(makeInput(), TEST_DIR)
 
     const output = JSON.parse(stdoutCapture)
-    expect(output.hookSpecificOutput.decision.behavior).toBe('allow')
+    expect(output.hookSpecificOutput.decision.behavior).toBe('deny')
+    expect(output.hookSpecificOutput.decision.message).toContain('dismissed')
   })
 })

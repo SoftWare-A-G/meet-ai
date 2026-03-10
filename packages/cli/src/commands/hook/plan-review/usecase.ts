@@ -190,11 +190,13 @@ export async function processPlanReview(rawInput: string, teamsDir?: string): Pr
 
   process.stderr.write(`[plan-review] decision: ${decision.status}\n`)
 
-  if (decision.status === 'approved' || decision.status === 'expired') {
+  if (decision.status === 'approved') {
     process.stdout.write(JSON.stringify(buildAllowOutput(decision.permission_mode)))
-  } else if (decision.status === 'denied') {
+  } else if (decision.status === 'denied' || decision.status === 'expired') {
     const feedback =
-      decision.feedback || 'Plan was rejected. Please revise the plan based on the feedback.'
+      decision.feedback || (decision.status === 'expired'
+        ? 'Plan was dismissed. Please revise the plan or ask for guidance.'
+        : 'Plan was rejected. Please revise the plan based on the feedback.')
     process.stdout.write(JSON.stringify(buildDenyOutput(feedback)))
   }
 }

@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.6.5](https://github.com/SoftWare-A-G/meet-ai/compare/0.6.4...0.6.5) (2026-03-11)
+
+### Bug Fixes
+
+* fix plan review dismiss bug so the "Dismiss" button correctly denies the plan instead of approving it, by treating the `expired` status as `denied` in the plan-review hook
+
 ## [0.6.4](https://github.com/SoftWare-A-G/meet-ai/compare/0.6.3...0.6.4) (2026-03-10)
 
 ### Bug Fixes
