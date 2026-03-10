@@ -1,97 +1,93 @@
-import { useState, useEffect } from 'react'
-import { createHighlighterCore } from 'shiki/core'
-import { createJavaScriptRegexEngine } from 'shiki/engine/javascript'
-import { bundledLanguages } from 'shiki/langs'
-import type { HighlighterCore, ShikiTransformer } from 'shiki/core'
+import { useEffect, useState } from 'react'
 import type { JSX } from 'react'
+import { highlighter } from '@git-diff-view/react'
 
-type ShikiCodeProps = {
+declare global {
+  interface ImportMetaEnv {
+    readonly SSR: boolean
+  }
+
+  interface ImportMeta {
+    readonly env: ImportMetaEnv
+  }
+}
+
+type Lowlight = ReturnType<typeof highlighter.getHighlighterEngine>
+type LowlightTree = ReturnType<Lowlight['highlight']>
+
+type CodeBlockProps = {
   code: string
   lang: string
-  transformers?: ShikiTransformer[]
 }
 
-// Singleton highlighter — created once with the tokyo-night theme.
-// Languages are loaded on demand per code block.
-let highlighterPromise: Promise<HighlighterCore> | null = null
+const IS_SERVER = import.meta.env.SSR
 
-function getHighlighter() {
-  if (!highlighterPromise) {
-    highlighterPromise = createHighlighterCore({
-      themes: [import('@shikijs/themes/tokyo-night')],
-      langs: [],
-      engine: createJavaScriptRegexEngine(),
-    })
-  }
-  return highlighterPromise
+let getLowlight: (() => Promise<Lowlight>) | null = null
+
+if (!IS_SERVER) {
+  getLowlight = async () => highlighter.getHighlighterEngine()
 }
 
-export default function ShikiCode({ code, lang, transformers }: ShikiCodeProps) {
+function renderFallback(code: string) {
+  return (
+    <pre className="shiki" style={{ background: '#1a1b26' }}>
+      <code>{code}</code>
+    </pre>
+  )
+}
+
+export default function ShikiCode({ code, lang }: CodeBlockProps) {
   const [element, setElement] = useState<JSX.Element | null>(null)
 
   useEffect(() => {
+    const loadLowlight = getLowlight
+    if (IS_SERVER || !loadLowlight) return
+
     let cancelled = false
 
     async function highlight() {
       try {
-        const [highlighter, { toJsxRuntime }, { Fragment, jsx, jsxs }] =
-          await Promise.all([
-            getHighlighter(),
-            import('hast-util-to-jsx-runtime'),
-            import('react/jsx-runtime'),
-          ])
+        const [lowlight, { toJsxRuntime }, { Fragment, jsx, jsxs }] = await Promise.all([
+          loadLowlight!(),
+          import('hast-util-to-jsx-runtime'),
+          import('react/jsx-runtime'),
+        ])
 
         if (cancelled) return
 
-        const loadedLangs = highlighter.getLoadedLanguages()
-        if (!loadedLangs.includes(lang)) {
-          try {
-            const loader = bundledLanguages[lang as keyof typeof bundledLanguages]
-            if (!loader) throw new Error(`Unknown language: ${lang}`)
-            await highlighter.loadLanguage(await loader())
-          } catch {
-            // Language not available - render as plain text
-            if (!cancelled) setElement(null)
-            return
-          }
-        }
+        const normalizedLang = lang.toLowerCase()
+        const tree: LowlightTree = lowlight.registered(normalizedLang)
+          ? lowlight.highlight(normalizedLang, code)
+          : lowlight.highlightAuto(code)
 
-        if (cancelled) return
-
-        const hast = highlighter.codeToHast(code, {
-          lang,
-          theme: 'tokyo-night',
-          transformers: transformers ?? [],
-        })
-
-        const jsxElement = toJsxRuntime(hast, {
+        const highlighted = toJsxRuntime(tree, {
           Fragment,
           jsx,
           jsxs,
         }) as JSX.Element
 
         if (!cancelled) {
-          setElement(jsxElement)
+          setElement(
+            <div className="diff-tailwindcss-wrapper" data-theme="dark">
+              <div className="diff-line-syntax-raw">
+                <pre className="shiki" style={{ background: '#1a1b26' }}>
+                  <code className="hljs">{highlighted}</code>
+                </pre>
+              </div>
+            </div>
+          )
         }
       } catch {
-        // On any error, keep showing the fallback
+        if (!cancelled) setElement(null)
       }
     }
 
     highlight()
+
     return () => {
       cancelled = true
     }
-  }, [code, lang, transformers])
+  }, [code, lang])
 
-  // Fallback: plain code block while shiki loads (or if lang fails)
-  if (!element) {
-    return (
-      <pre className="shiki" style={{ background: '#1a1b26' }}>
-        <code>{code}</code>
-      </pre>
-    )
-  }
-
-  return element
+  return element ?? renderFallback(code)
 }
