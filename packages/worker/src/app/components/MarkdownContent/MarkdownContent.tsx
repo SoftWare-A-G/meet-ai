@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import DOMPurify from 'dompurify'
-import { Renderer, parse } from 'marked'
+import { Renderer, parse, type Token } from 'marked'
 import ShikiCode from '../ShikiCode'
 import { useChatContext } from '../../lib/chat-context'
 import { ensureSenderContrast } from '../../lib/colors'
@@ -107,9 +107,11 @@ function parseContent(
     // Render as a <pre> with a data attribute - DOMPurify will preserve it
     return `<pre ${MARKER_ATTR}="${idx}"></pre>`
   }
-  renderer.text = function (token: string | { text?: string }) {
-    const text = typeof token === 'string' ? token : (token.text ?? '')
-    return renderMentionMarkup(text, mentionLookup, currentUser)
+  renderer.text = function (this: Renderer, token: { text?: string; tokens?: Token[] }) {
+    const rendered = token.tokens
+      ? this.parser.parseInline(token.tokens)
+      : (token.text ?? '')
+    return renderMentionMarkup(rendered, mentionLookup, currentUser)
   }
 
   const rawHtml = parse(content, { breaks: true, renderer }).toString()
