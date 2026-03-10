@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.6](https://github.com/SoftWare-A-G/meet-ai/compare/0.5.5...0.5.6) (2026-03-10)
+
+### Bug Fixes
+
+* fix Codex room member registration so the listener waits for the app-server bridge to resolve the current model before upserting team info, avoiding `unknown` model labels
+* replace Shiki with the shared lowlight/highlight.js engine used by `@git-diff-view/react`, reducing bundle weight while keeping code-block highlighting
+* add Slack-style mention highlighting in chat messages with differentiated styling for self, team lead, Codex, agents, group mentions, and generic mentions
+
 ## [0.5.5](https://github.com/SoftWare-A-G/meet-ai/compare/0.5.4...0.5.5) (2026-03-10)
 
 ### Bug Fixes

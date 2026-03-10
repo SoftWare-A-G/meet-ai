@@ -114,6 +114,7 @@ export type CodexAppServerEvent =
     }
 
 export interface CodexBridge {
+  start(): Promise<void>
   injectText(input: CodexAppServerTextInput): Promise<CodexInjectionResult>
   injectPrompt(text: string): Promise<CodexInjectionResult>
   close(): Promise<void>

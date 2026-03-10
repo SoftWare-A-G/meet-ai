@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.5.6](https://github.com/SoftWare-A-G/meet-ai/compare/0.5.5...0.5.6) (2026-03-10)
+
+### Bug Fixes
+
+* fix the Codex listener startup race in `listen-codex.ts` by waiting for `codexBridge.start()` before reading `getCurrentModel()`, so room member registration no longer reports the current Codex model as `unknown`
+* add a regression test covering the pre-start null-model case and verifying that registration uses the resolved model after bridge startup
+* replace `ShikiCode` with the lowlight/highlight.js engine already exposed by `@git-diff-view/react`, removing the Shiki runtime from the worker rendering path while preserving highlighted code blocks
+* remove Shiki-specific worker dependencies from the package manifest and keep the SSR output free of the old Shiki runtime chunks
+* add mention-aware message rendering in `MarkdownContent.tsx`, with UI-only styling for `@you`, `@team-lead`, `@codex`, other agents, group mentions, and generic mentions
+
+### Code Refactoring
+
+* reuse the diff viewer's shared highlighting engine instead of maintaining a second syntax-highlighting stack in the worker package
+* keep mention rendering purely presentational in the worker UI so message payloads and backend storage remain unchanged
+
+### Tests
+
+* add Codex listener regression coverage for delayed model availability during startup
+* keep worker build and typecheck green after the highlighting and mention-rendering changes
+
 ## [0.5.5](https://github.com/SoftWare-A-G/meet-ai/compare/0.5.4...0.5.5) (2026-03-10)
 
 ### Bug Fixes

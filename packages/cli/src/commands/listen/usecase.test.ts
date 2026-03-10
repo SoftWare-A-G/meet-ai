@@ -20,10 +20,11 @@ function getConsoleOutput(spy: ReturnType<typeof spyOn>): string {
 function makeCodexBridgeMock() {
   let eventHandler: ((event: CodexAppServerEvent) => void) | null = null
   return {
+    start: mock(() => Promise.resolve()),
     injectText: mock(() => Promise.resolve({ mode: 'start' as const, threadId: 'thread-1', turnId: 'turn-1' })),
     injectPrompt: mock(() => Promise.resolve({ mode: 'start' as const, threadId: 'thread-1', turnId: 'turn-1' })),
     close: mock(() => Promise.resolve()),
-    getCurrentModel: mock(() => 'gpt-5.4 (high)'),
+    getCurrentModel: mock((): string | null => 'gpt-5.4 (high)'),
     setEventHandler: mock((handler: ((event: CodexAppServerEvent) => void) | null) => {
       eventHandler = handler
     }),
@@ -291,6 +292,40 @@ describe('listen', () => {
       role: 'codex',
       model: 'gpt-5.4 (high)',
     })
+  })
+
+  it('reads model after bridge start so it is not unknown', async () => {
+    process.env.MEET_AI_RUNTIME = 'codex'
+    process.env.CODEX_HOME = codexHome
+    process.env.MEET_AI_AGENT_NAME = 'my-codex'
+
+    const client = mockClient()
+    const codexBridge = makeCodexBridgeMock()
+    const registerMember = mock(() => Promise.resolve())
+
+    // Before start(), getCurrentModel() returns null (simulating the race)
+    let started = false
+    codexBridge.getCurrentModel.mockImplementation(() => (started ? 'gpt-5.4 (high)' : null))
+    codexBridge.start.mockImplementation(() => {
+      started = true
+      return Promise.resolve()
+    })
+
+    listen(
+      client,
+      { roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c', senderType: 'human' },
+      undefined,
+      codexBridge,
+      registerMember,
+    )
+
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(registerMember).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: 'gpt-5.4 (high)',
+      })
+    )
   })
 
   it('resolves team name programmatically during codex listen', async () => {
