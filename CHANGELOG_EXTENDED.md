@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.6.2](https://github.com/SoftWare-A-G/meet-ai/compare/0.6.1...0.6.2) (2026-03-10)
+
+### Bug Fixes
+
+* fix the dashboard restart-after-update flow by moving restart execution out of the Ink input handler and into the dashboard entrypoint after `instance.waitUntilExit()` completes, eliminating the race where a new TUI could start while the old Ink instance was still tearing down the shared terminal
+* relaunch the replacement CLI process on inherited stdio without `detached: true`, keeping the restarted TUI in the same foreground terminal session so shells like Fish do not reclaim keyboard input
+* keep restart cleanup explicit in the dashboard path by closing the lobby websocket and removing restart-time signal handlers before launching the replacement process
+* keep the CLI and worker package manifests versioned at `0.6.2` for the release
+
+### Tests
+
+* add `auto-update` regression coverage proving restart spawns on inherited stdio without detached-session behavior and mirrors child signal exits back through the parent process
+
 ## [0.6.1](https://github.com/SoftWare-A-G/meet-ai/compare/0.6.0...0.6.1) (2026-03-10)
 
 ### Bug Fixes

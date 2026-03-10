@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.6.2](https://github.com/SoftWare-A-G/meet-ai/compare/0.6.1...0.6.2) (2026-03-10)
+
+### Bug Fixes
+
+* fix TUI restart-after-update so the replacement dashboard relaunches only after Ink has fully exited, preserving terminal ownership and keyboard input in the foreground session
+
+### Tests
+
+* add restart coverage proving the replacement process relaunches on inherited stdio without detached-session behavior and mirrors child signal exits correctly
+
 ## [0.6.1](https://github.com/SoftWare-A-G/meet-ai/compare/0.6.0...0.6.1) (2026-03-10)
 
 ### Bug Fixes
