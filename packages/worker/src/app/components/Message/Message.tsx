@@ -40,7 +40,7 @@ type MessageProps = {
 
 export default function Message({ sender, content, color, timestamp, tempId, status = 'sent', onRetry, attachmentCount, voiceAvailable }: MessageProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
-  const { commandsInfo } = useChatContext()
+  const { commandsInfo, insertMention } = useChatContext()
   const { trigger } = useHaptics()
   const senderColor = color ? ensureSenderContrast(color) : hashColor(sender)
   const slashMatch = useMemo(() => parseSlashCommand(content, commandsInfo), [content, commandsInfo])
@@ -115,7 +115,15 @@ export default function Message({ sender, content, color, timestamp, tempId, sta
     )} data-temp-id={tempId} data-content={tempId ? content : undefined}>
       <div className="min-w-0">
         <div className="flex items-center gap-2 mb-0.5">
-          <span className="font-bold text-sm" style={{ color: senderColor }}>{sender}</span>
+          <button
+            type="button"
+            className="inline-flex items-center rounded-full border border-transparent bg-transparent px-1.5 py-0.5 text-sm font-bold cursor-pointer transition-colors hover:bg-white/[0.08]"
+            style={{ color: senderColor }}
+            onClick={() => insertMention(sender)}
+            title={`Mention @${sender}`}
+          >
+            @{sender}
+          </button>
           <span className={clsx('text-xs', status === 'failed' ? 'text-red-400/80' : 'text-[#8b8fa3]')}>
             {timeText}
             {status === 'failed' && ' \u274C'}

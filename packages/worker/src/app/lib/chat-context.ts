@@ -17,6 +17,7 @@ export type ChatContextValue = {
   setCommandsInfo: (commands: CommandInfo[] | null) => void
   teamSidebarOpen: boolean
   setTeamSidebarOpen: (open: boolean | ((prev: boolean) => boolean)) => void
+  insertMention: (name: string) => void
   onNameChange: (name: string) => void
   onSchemaChange: (schema: string) => void
   showSettings: () => void

@@ -202,6 +202,9 @@ function ChatLayout({
       setCommandsInfo,
       teamSidebarOpen,
       setTeamSidebarOpen,
+      insertMention: (name: string) => {
+        window.dispatchEvent(new CustomEvent('meet-ai:insert-mention', { detail: { name } }))
+      },
       onNameChange,
       onSchemaChange,
       showSettings: () => setShowSettingsModal(true),

@@ -535,6 +535,9 @@ html {
   font-weight: 700;
   line-height: 1.5;
   text-decoration: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 .msg-content .mention-token--current-user {
@@ -543,24 +546,24 @@ html {
   box-shadow: inset 0 0 0 1px rgba(14, 116, 144, 0.25);
 }
 .msg-content .mention-token--team-lead {
-  color: #dbeafe;
-  background: rgba(37, 99, 235, 0.32);
+  color: var(--mention-accent, #dbeafe);
+  background: color-mix(in srgb, var(--mention-accent, #3b82f6) 26%, transparent);
 }
 .msg-content .mention-token--codex {
-  color: #dcfce7;
-  background: rgba(34, 197, 94, 0.28);
+  color: var(--mention-accent, #dcfce7);
+  background: color-mix(in srgb, var(--mention-accent, #22c55e) 24%, transparent);
 }
 .msg-content .mention-token--agent {
-  color: #f5f3ff;
-  background: rgba(139, 92, 246, 0.28);
+  color: var(--mention-accent, #f5f3ff);
+  background: color-mix(in srgb, var(--mention-accent, #8b5cf6) 24%, transparent);
 }
 .msg-content .mention-token--group {
   color: #fef3c7;
   background: rgba(245, 158, 11, 0.28);
 }
 .msg-content .mention-token--generic {
-  color: #e0f2fe;
-  background: rgba(14, 165, 233, 0.18);
+  color: var(--mention-accent, #e0f2fe);
+  background: color-mix(in srgb, var(--mention-accent, #0ea5e9) 18%, transparent);
 }
 .msg-content .mention-token--tone-0 {
   filter: saturate(0.96) brightness(0.98);
@@ -579,6 +582,9 @@ html {
 }
 .msg-content .mention-token--tone-5 {
   filter: hue-rotate(14deg) brightness(1.01);
+}
+.msg-content .mention-token:hover {
+  filter: brightness(1.08);
 }
 
 /* git-diff-view dark theme overrides for DiffBlock */

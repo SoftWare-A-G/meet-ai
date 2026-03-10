@@ -1,4 +1,4 @@
-import { useRef, useCallback, useState, useMemo, type RefObject } from 'react'
+import { useRef, useCallback, useState, useMemo, useEffect, type RefObject } from 'react'
 import clsx from 'clsx'
 import { MentionsInput, Mention } from 'react-mentions-ts'
 import type { MentionsInputClassNames, MentionsInputChangeEvent } from 'react-mentions-ts'
@@ -24,6 +24,8 @@ type ChatInputProps = {
   onSend: (content: string, attachmentIds: string[]) => void
   onUploadFile: (file: File) => Promise<{ id: string }>
 }
+
+type InsertMentionEvent = CustomEvent<{ name: string }>
 
 const mentionsClassNames: MentionsInputClassNames = {
   control: 'relative border-none',
@@ -149,10 +151,45 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
     requestAnimationFrame(() => inputRef.current?.focus())
   }, [plainText])
 
+  const insertMentionAtCursor = useCallback((name: string) => {
+    const textarea = inputRef.current
+    const mentionText = `@${name} `
+    const start = textarea?.selectionStart ?? plainText.length
+    const end = textarea?.selectionEnd ?? plainText.length
+    const nextText = `${plainText.slice(0, start)}${mentionText}${plainText.slice(end)}`
+
+    setValue(nextText)
+    setPlainText(nextText)
+    dismissedMentionQueryRef.current = null
+    setSelectedMentionIndex(0)
+
+    requestAnimationFrame(() => {
+      const active = inputRef.current
+      if (!active) return
+      const nextCaret = start + mentionText.length
+      active.focus()
+      active.setSelectionRange(nextCaret, nextCaret)
+      active.scrollIntoView({ block: 'nearest' })
+    })
+  }, [plainText])
+
   const handleMentionsChange = useCallback((event: MentionsInputChangeEvent) => {
     setValue(event.value)
     setPlainText(event.plainTextValue)
   }, [])
+
+  useEffect(() => {
+    const handleInsertMention = (event: Event) => {
+      const name = (event as InsertMentionEvent).detail?.name?.trim()
+      if (!name) return
+      insertMentionAtCursor(name)
+    }
+
+    window.addEventListener('meet-ai:insert-mention', handleInsertMention as EventListener)
+    return () => {
+      window.removeEventListener('meet-ai:insert-mention', handleInsertMention as EventListener)
+    }
+  }, [insertMentionAtCursor])
 
   const addFiles = useCallback(async (files: File[]) => {
     const valid: PendingFile[] = []

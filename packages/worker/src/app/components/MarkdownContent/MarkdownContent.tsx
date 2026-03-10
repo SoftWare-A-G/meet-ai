@@ -3,6 +3,7 @@ import DOMPurify from 'dompurify'
 import { Renderer, parse } from 'marked'
 import ShikiCode from '../ShikiCode'
 import { useChatContext } from '../../lib/chat-context'
+import { ensureSenderContrast } from '../../lib/colors'
 
 type MarkdownContentProps = {
   content: string
@@ -18,6 +19,7 @@ const MARKER_ATTR = 'data-shiki-idx'
 type MentionMeta = {
   kind: 'current-user' | 'team-lead' | 'codex' | 'agent' | 'group' | 'generic'
   tone: number
+  color?: string
 }
 
 const MENTION_REGEX = /(^|[^@\w])(@[A-Za-z0-9][\w-]*)/g
@@ -33,7 +35,7 @@ function hashTone(value: string): number {
 
 function getMentionMeta(
   mention: string,
-  mentionLookup: Map<string, { role: string; name: string }>,
+  mentionLookup: Map<string, { role: string; name: string; color: string }>,
   currentUser: string
 ): MentionMeta {
   const normalizedMention = mention.toLowerCase()
@@ -55,32 +57,41 @@ function getMentionMeta(
 
   const role = member.role.trim().toLowerCase()
   if (role === 'team-lead') {
-    return { kind: 'team-lead', tone: hashTone(member.name) }
+    return { kind: 'team-lead', tone: hashTone(member.name), color: member.color }
   }
   if (role === 'codex') {
-    return { kind: 'codex', tone: hashTone(member.name) }
+    return { kind: 'codex', tone: hashTone(member.name), color: member.color }
   }
   if (role.includes('agent')) {
-    return { kind: 'agent', tone: hashTone(member.name) }
+    return { kind: 'agent', tone: hashTone(member.name), color: member.color }
   }
 
-  return { kind: 'generic', tone: hashTone(member.name) }
+  return { kind: 'generic', tone: hashTone(member.name), color: member.color }
+}
+
+function escapeAttribute(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
 }
 
 function renderMentionMarkup(
   text: string,
-  mentionLookup: Map<string, { role: string; name: string }>,
+  mentionLookup: Map<string, { role: string; name: string; color: string }>,
   currentUser: string
 ): string {
   return text.replace(MENTION_REGEX, (full, prefix: string, mention: string) => {
     const meta = getMentionMeta(mention, mentionLookup, currentUser)
-    return `${prefix}<span class="mention-token mention-token--${meta.kind} mention-token--tone-${meta.tone}">${mention}</span>`
+    const memberName = mention.slice(1)
+    const colorStyle = meta.color ? ` style="--mention-accent:${escapeAttribute(ensureSenderContrast(meta.color))}"` : ''
+    return `${prefix}<button type="button" class="mention-token mention-token--${meta.kind} mention-token--tone-${meta.tone}" data-mention-name="${escapeAttribute(memberName)}"${colorStyle}>${mention}</button>`
   })
 }
 
 function parseContent(
   content: string,
-  mentionLookup: Map<string, { role: string; name: string }>,
+  mentionLookup: Map<string, { role: string; name: string; color: string }>,
   currentUser: string
 ): Segment[] {
   const codeBlocks: { code: string; lang: string }[] = []
@@ -141,13 +152,13 @@ function parseContent(
 }
 
 export default function MarkdownContent({ content, className }: MarkdownContentProps) {
-  const { teamInfo, userName } = useChatContext()
+  const { teamInfo, userName, insertMention } = useChatContext()
   const mentionLookup = useMemo(
     () =>
       new Map(
         (teamInfo?.members ?? []).map(member => [
           member.name.trim().toLowerCase(),
-          { role: member.role, name: member.name },
+          { role: member.role, name: member.name, color: member.color },
         ])
       ),
     [teamInfo]
@@ -158,7 +169,18 @@ export default function MarkdownContent({ content, className }: MarkdownContentP
   )
 
   return (
-    <div className={className}>
+    <div
+      className={className}
+      onClick={event => {
+        const target = event.target
+        if (!(target instanceof HTMLElement)) return
+        const trigger = target.closest<HTMLElement>('[data-mention-name]')
+        const mentionName = trigger?.dataset.mentionName?.trim()
+        if (!mentionName) return
+        event.preventDefault()
+        insertMention(mentionName)
+      }}
+    >
       {segments.map((seg, i) =>
         seg.type === 'code' ? (
           <ShikiCode key={i} code={seg.code} lang={seg.lang} />
