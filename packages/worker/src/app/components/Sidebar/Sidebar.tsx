@@ -102,7 +102,7 @@ function RoomSubItem({ room, isActive, onDelete, onLinkClick }: {
   onLinkClick: () => void
 }) {
   return (
-    <SidebarMenuSubItem className="group/room relative">
+    <SidebarMenuSubItem className="group/room relative border-b border-sidebar-border last:border-b-0">
       <SidebarMenuSubButton
         isActive={isActive}
         render={<Link to="/chat/$id" params={{ id: room.id }} />}
@@ -115,10 +115,10 @@ function RoomSubItem({ room, isActive, onDelete, onLinkClick }: {
           <button
             type="button"
             aria-label={`Delete ${room.name}`}
-            className="absolute right-1 top-1/2 -translate-y-1/2 flex h-5 w-5 cursor-pointer items-center justify-center rounded border-none bg-transparent text-gray-500 opacity-0 transition-opacity duration-100 group-hover/room:opacity-100 group-has-data-popup-open/room:opacity-100 hover:text-red-400 data-[popup-open]:text-red-400"
+            className="absolute right-1 top-1/2 -translate-y-1/2 flex h-7 w-7 cursor-pointer items-center justify-center rounded border-none bg-transparent text-gray-500 opacity-0 transition-opacity duration-100 group-hover/room:opacity-100 group-has-data-popup-open/room:opacity-100 hover:text-red-400 data-[popup-open]:text-red-400"
             onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
           >
-            <IconTrash size={12} />
+            <IconTrash size={14} />
           </button>
         </DeleteConfirmPopover>
       )}
@@ -133,8 +133,9 @@ function RoomMenuItem({ room, isActive, onDelete, onLinkClick }: {
   onLinkClick: () => void
 }) {
   return (
-    <SidebarMenuItem className="group/room relative">
+    <SidebarMenuItem className="group/room relative border-b border-sidebar-border last:border-b-0">
       <SidebarMenuButton
+        className="h-11"
         isActive={isActive}
         render={<Link to="/chat/$id" params={{ id: room.id }} />}
         onClick={onLinkClick}
@@ -146,7 +147,7 @@ function RoomMenuItem({ room, isActive, onDelete, onLinkClick }: {
           <button
             type="button"
             aria-label={`Delete ${room.name}`}
-            className="absolute right-1 top-1/2 -translate-y-1/2 flex h-5 w-5 cursor-pointer items-center justify-center rounded border-none bg-transparent text-gray-500 opacity-0 transition-opacity duration-100 group-hover/room:opacity-100 group-has-data-popup-open/room:opacity-100 hover:text-red-400 data-[popup-open]:text-red-400"
+            className="absolute right-1 top-1/2 -translate-y-1/2 flex h-7 w-7 cursor-pointer items-center justify-center rounded border-none bg-transparent text-gray-500 opacity-0 transition-opacity duration-100 group-hover/room:opacity-100 group-has-data-popup-open/room:opacity-100 hover:text-red-400 data-[popup-open]:text-red-400"
             onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
           >
             <IconTrash size={14} />
@@ -209,8 +210,8 @@ export default function Sidebar({ rooms, projects, userName, onNameChange, onSet
                 defaultOpen
                 className="group/collapsible"
               >
-                <SidebarMenuItem>
-                  <SidebarMenuButton render={<CollapsibleTrigger />}>
+                <SidebarMenuItem className="border-b border-sidebar-border">
+                  <SidebarMenuButton size="lg" render={<CollapsibleTrigger />}>
                     {project.name}
                     <PlusIcon className="ml-auto size-4 group-aria-expanded/menu-button:hidden" />
                     <MinusIcon className="ml-auto hidden size-4 group-aria-expanded/menu-button:block" />
