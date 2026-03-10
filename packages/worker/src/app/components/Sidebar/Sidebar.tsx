@@ -102,7 +102,7 @@ function RoomSubItem({ room, isActive, onDelete, onLinkClick }: {
   onLinkClick: () => void
 }) {
   return (
-    <SidebarMenuSubItem className="group/room relative border-b border-sidebar-border last:border-b-0">
+    <SidebarMenuSubItem className="group/room relative border-b border-sidebar-border/30 last:border-b-0">
       <SidebarMenuSubButton
         isActive={isActive}
         render={<Link to="/chat/$id" params={{ id: room.id }} />}
@@ -133,7 +133,7 @@ function RoomMenuItem({ room, isActive, onDelete, onLinkClick }: {
   onLinkClick: () => void
 }) {
   return (
-    <SidebarMenuItem className="group/room relative border-b border-sidebar-border last:border-b-0">
+    <SidebarMenuItem className="group/room relative border-b border-sidebar-border/30 last:border-b-0">
       <SidebarMenuButton
         className="h-11"
         isActive={isActive}
@@ -194,7 +194,7 @@ export default function Sidebar({ rooms, projects, userName, onNameChange, onSet
 
   return (
     <ShadcnSidebar className="pb-[env(safe-area-inset-bottom,0px)]">
-      <ShadcnSidebarHeader className="border-b border-sidebar-border gap-3">
+      <ShadcnSidebarHeader className="border-b border-sidebar-border/30 gap-3">
         <div className="flex h-8 items-center justify-between px-2">
           <span className="text-base font-bold">Chats</span>
           <SidebarHeaderContent onSettingsClick={onSettingsClick} onSpawnClick={onSpawnClick} />
@@ -210,7 +210,7 @@ export default function Sidebar({ rooms, projects, userName, onNameChange, onSet
                 defaultOpen
                 className="group/collapsible"
               >
-                <SidebarMenuItem className="border-b border-sidebar-border">
+                <SidebarMenuItem className="border-b border-sidebar-border/30">
                   <SidebarMenuButton size="lg" render={<CollapsibleTrigger />}>
                     {project.name}
                     <PlusIcon className="ml-auto size-4 group-aria-expanded/menu-button:hidden" />
@@ -245,7 +245,7 @@ export default function Sidebar({ rooms, projects, userName, onNameChange, onSet
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
-      <ShadcnSidebarFooter className="border-t border-sidebar-border p-0">
+      <ShadcnSidebarFooter className="border-t border-sidebar-border/30 p-0">
         <SidebarFooterContent userName={userName} onNameChange={onNameChange} onInstallClick={onInstallClick} />
       </ShadcnSidebarFooter>
     </ShadcnSidebar>
