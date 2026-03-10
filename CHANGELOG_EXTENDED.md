@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.6.4](https://github.com/SoftWare-A-G/meet-ai/compare/0.6.3...0.6.4) (2026-03-10)
+
+### Bug Fixes
+
+* fix the remaining post-update TUI input lag in the dashboard restart path by cleaning up the parent process stdin before spawning the replacement CLI in `auto-update.ts`, specifically calling `setRawMode(false)` and `pause()` so the restarted process does not inherit a half-initialized raw-mode state
+* rearm stdin in the restarted dashboard before Ink mounts in `dashboard/usecase.ts`, explicitly cycling `setRawMode(false)` -> `setRawMode(true)` and `resume()` before `render(element)` so arrow-key escape sequences are recognized immediately after an in-app restart
+* keep the CLI and worker package manifests versioned at `0.6.4` for the release
+
+### Tests
+
+* keep `auto-update` restart coverage green while landing the stdin cleanup change in the restart path
+* keep the full `packages/cli` suite green after the final stdin rearm fix, with `439/439` tests passing alongside lint and workspace typecheck
+
 ## [0.6.3](https://github.com/SoftWare-A-G/meet-ai/compare/0.6.2...0.6.3) (2026-03-10)
 
 ### Features

@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.6.4](https://github.com/SoftWare-A-G/meet-ai/compare/0.6.3...0.6.4) (2026-03-10)
+
+### Bug Fixes
+
+* fix delayed and unreliable keyboard input after in-app dashboard restart by cleaning stdin raw mode before spawning the replacement CLI and rearming stdin before Ink `render()` in the restarted dashboard
+* align the CLI and worker package manifests at `0.6.4` for the release
+
+### Tests
+
+* keep the full `packages/cli` suite green after the stdin restart fix, including the restart regression coverage and the broader `439/439` CLI test pass
+
 ## [0.6.3](https://github.com/SoftWare-A-G/meet-ai/compare/0.6.2...0.6.3) (2026-03-10)
 
 ### Features

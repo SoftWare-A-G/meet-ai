@@ -142,6 +142,14 @@ export function restartApp(options: RestartAppOptions = {}): Promise<never> {
     }
   }
 
+  // Clean up stdin before spawning child — ensures child inherits clean TTY state
+  if (process.stdin.isTTY) {
+    try {
+      process.stdin.setRawMode(false)
+      process.stdin.pause()
+    } catch {}
+  }
+
   const child = spawn(execPath, argv, spawnOptions)
   if (!child.pid) {
     throw new Error('Failed to spawn replacement process')

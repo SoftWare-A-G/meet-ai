@@ -156,6 +156,15 @@ export async function startDashboard(
       removeSignalHandlers()
     },
   })
+  // Reset stdin state before Ink takes over — fixes input lag after in-app restart
+  if (process.stdin.isTTY) {
+    try {
+      process.stdin.setRawMode(false)
+      process.stdin.setRawMode(true)
+      process.stdin.resume()
+    } catch {}
+  }
+
   const instance = render(element)
   await instance.waitUntilExit()
 
