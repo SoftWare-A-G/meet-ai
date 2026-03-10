@@ -7,7 +7,7 @@ import { SpawnDialog } from './spawn-dialog'
 import { StatusBar } from './status-bar'
 import { groupTeamsByRoom } from './room-groups'
 import { useAutoUpdate } from './use-auto-update'
-import { CURRENT_VERSION, restartApp } from '@meet-ai/cli/lib/auto-update'
+import { CURRENT_VERSION } from '@meet-ai/cli/lib/auto-update'
 import { createRoom } from '@meet-ai/cli/commands/create-room/usecase'
 import type { MeetAiClient, Room } from '@meet-ai/cli/types'
 import type { SpawnDialogSelection } from './spawn-dialog-state'
@@ -39,11 +39,11 @@ interface AppProps {
   /** Called before attach to close WebSocket, and after to reconnect. */
   onAttach?: () => void
   onDetach?: () => void
-  /** Called before restart to close WebSocket and unmount Ink. */
-  onBeforeRestart?: () => void
+  /** Called when the user confirms restart so the parent can relaunch after Ink exits. */
+  onRequestRestart?: () => void
 }
 
-function AppInner({ processManager, client, codingAgents, onAttach, onDetach, onBeforeRestart }: AppProps) {
+function AppInner({ processManager, client, codingAgents, onAttach, onDetach, onRequestRestart }: AppProps) {
   const { exit } = useApp()
   const { stdout } = useStdout()
   const { setRawMode } = useStdin()
@@ -186,12 +186,10 @@ function AppInner({ processManager, client, codingAgents, onAttach, onDetach, on
     // Restart confirmation mode
     if (restartConfirm) {
       if (input === 'y' || input === 'Y') {
-        try {
-          // Cleanup callback runs inside restartApp() only after child is confirmed spawned
-          restartApp(onBeforeRestart)
-        } catch {
-          // spawn failed — TUI is still intact, stay in ready_to_restart
-        }
+        setRestartConfirm(false)
+        onRequestRestart?.()
+        exit()
+        return
       }
       setRestartConfirm(false)
       return

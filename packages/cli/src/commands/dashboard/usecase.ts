@@ -1,6 +1,7 @@
 import { CODING_AGENT_DEFINITIONS } from '@meet-ai/cli/coding-agents'
 import { createRoom } from '@meet-ai/cli/commands/create-room/usecase'
 import { ProcessManager } from '@meet-ai/cli/lib/process-manager'
+import { restartApp } from '@meet-ai/cli/lib/auto-update'
 import { TmuxClient, parseVersion } from '@meet-ai/cli/lib/tmux-client'
 import { findClaudeCli, findCodexCli } from '@meet-ai/cli/spawner'
 import { App } from '@meet-ai/cli/tui/app'
@@ -115,16 +116,27 @@ export async function startDashboard(
 
   startLobby()
 
-  // Cleanup on exit (close WS but leave tmux sessions running for reconnection)
-  function cleanup() {
+  function closeLobby() {
     lobbyWs?.close()
+    lobbyWs = null
+  }
+
+  function cleanup() {
+    closeLobby()
     process.exit(0)
   }
+
+  function removeSignalHandlers() {
+    process.off('SIGINT', cleanup)
+    process.off('SIGTERM', cleanup)
+  }
+
+  let restartRequested = false
+
   process.on('SIGINT', cleanup)
   process.on('SIGTERM', cleanup)
 
   // 4. Launch TUI with attach/detach callbacks for WebSocket lifecycle
-  let inkInstance: ReturnType<typeof render> | null = null
   const element = React.createElement(App, {
     processManager,
     client,
@@ -138,15 +150,22 @@ export async function startDashboard(
       // Reconnect lobby WS after detach
       startLobby()
     },
-    onBeforeRestart: () => {
-      // Close lobby WS and unmount Ink before spawning replacement process
-      lobbyWs?.close()
-      lobbyWs = null
-      inkInstance?.unmount()
+    onRequestRestart: () => {
+      restartRequested = true
+      closeLobby()
+      removeSignalHandlers()
     },
   })
   const instance = render(element)
-  inkInstance = instance
   await instance.waitUntilExit()
-  cleanup()
+
+  closeLobby()
+  removeSignalHandlers()
+
+  if (restartRequested) {
+    await restartApp()
+    return
+  }
+
+  process.exit(0)
 }

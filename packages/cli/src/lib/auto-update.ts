@@ -1,4 +1,4 @@
-import { execFileSync, spawn as nodeSpawn, spawnSync } from 'node:child_process'
+import { execFileSync, spawn as nodeSpawn, spawnSync, type ChildProcess, type SpawnOptions } from 'node:child_process'
 import { realpathSync } from 'node:fs'
 import { version as CURRENT_VERSION } from '../../package.json'
 
@@ -117,26 +117,48 @@ export async function downloadUpdate(
   })
 }
 
-export function restartApp(onBeforeExit?: () => void): never {
-  let execPath: string
-  try {
-    execPath = realpathSync(process.argv[0])
-  } catch {
-    execPath = process.argv[0]
+type RestartAppOptions = {
+  argv?: string[]
+  execPath?: string
+  spawn?: (command: string, args: readonly string[], options: SpawnOptions) => ChildProcess
+  spawnOptions?: SpawnOptions
+  exit?: (code?: number) => never | void
+  kill?: (pid: number, signal?: string | number) => boolean
+}
+
+export function restartApp(options: RestartAppOptions = {}): Promise<never> {
+  const argv = options.argv ?? process.argv.slice(1)
+  const spawn = options.spawn ?? nodeSpawn
+  const spawnOptions = options.spawnOptions ?? { stdio: 'inherit' }
+  const exit = options.exit ?? process.exit
+  const kill = options.kill ?? process.kill
+
+  let execPath = options.execPath
+  if (!execPath) {
+    try {
+      execPath = realpathSync(process.argv[0])
+    } catch {
+      execPath = process.argv[0]
+    }
   }
 
-  // Spawn first — if this throws, the caller's TUI is still intact
-  const child = nodeSpawn(execPath, process.argv.slice(1), {
-    stdio: 'inherit',
-    detached: true,
-  })
-
+  const child = spawn(execPath, argv, spawnOptions)
   if (!child.pid) {
     throw new Error('Failed to spawn replacement process')
   }
 
-  // Child confirmed spawned — now safe to tear down the current process
-  onBeforeExit?.()
-  child.unref()
-  process.exit(0)
+  return new Promise<never>((_resolve, reject) => {
+    child.once('error', (err: Error) => {
+      reject(err)
+    })
+
+    child.once('exit', (code: number | null, signal: NodeJS.Signals | null) => {
+      if (signal) {
+        kill(process.pid, signal)
+        return
+      }
+
+      exit(code ?? 0)
+    })
+  })
 }
