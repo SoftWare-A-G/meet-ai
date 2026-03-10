@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.5.5](https://github.com/SoftWare-A-G/meet-ai/compare/0.5.4...0.5.5) (2026-03-10)
+
+### Bug Fixes
+
+* prevent Claude `listen --team --inbox` from receiving and replaying the listener's own room messages by defaulting `exclude` to the inbox name in `listen-claude.ts`
+* replace the one-shot `loadTeamExcludeSet()` snapshot with `createTeamExcludeChecker()` so team listeners recover when `~/.claude/teams/<team>/config.json` appears after startup
+* always exclude the inbox agent name locally even when team config is still missing, eliminating the startup race that left self-message filtering empty
+* preserve `exclude` and `sender_type` filters during websocket reconnect catch-up requests in `ConnectionAdapter`, so reconnects do not reintroduce messages that were filtered in the live stream
+
+### Code Refactoring
+
+* extract reusable team-member name parsing and TTL-based refresh logic into the shared listener helpers
+* keep Claude listener filtering aligned across transport-level exclude handling and local team-based suppression
+* bump CLI and worker package versions to `0.5.5`
+* refresh workspace dependency pins, including `hono`, `@cloudflare/workers-types`, `@cloudflare/vite-plugin`, `wrangler`, `shadcn`, and related worker/CLI package updates
+
+### Tests
+
+* add regression coverage for team-member filtering from config, inbox self-filtering before config exists, and live config refresh after listener startup
+
 ## [0.5.3](https://github.com/SoftWare-A-G/meet-ai/compare/0.5.2...HEAD) (2026-03-10)
 
 ### Bug Fixes

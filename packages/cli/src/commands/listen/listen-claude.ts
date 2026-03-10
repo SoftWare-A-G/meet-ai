@@ -6,9 +6,9 @@ import {
 } from '@meet-ai/cli/lib/team-member-registration'
 import { ListenInput } from './schema'
 import {
+  createTeamExcludeChecker,
   createTerminalControlHandler,
   isHookAnchorMessage,
-  loadTeamExcludeSet,
   type ListenMessage,
 } from './shared'
 import type IInboxRouter from '@meet-ai/cli/domain/interfaces/IInboxRouter'
@@ -31,8 +31,9 @@ export function listenClaude(
   teamMemberRegistrar: TeamMemberRegistrar = registerActiveTeamMember
 ): WebSocket {
   const parsed = ListenInput.parse(input)
-  const { roomId, exclude, senderType, team, inbox } = parsed
-  const teamExcludeSet = loadTeamExcludeSet(team)
+  const { roomId, senderType, team, inbox } = parsed
+  const exclude = parsed.exclude ?? inbox
+  const isTeamExcluded = createTeamExcludeChecker(team, inbox)
 
   const inboxDir = team ? `${process.env.HOME}/.claude/teams/${team}/inboxes` : null
   const defaultInboxPath = inboxDir && inbox ? `${inboxDir}/${inbox}.json` : null
@@ -44,7 +45,7 @@ export function listenClaude(
     if (terminal.handle(msg)) return
     if (!isPlainChatMessage(msg)) return
     if (isHookAnchorMessage(msg)) return
-    if (teamExcludeSet.has(msg.sender)) return
+    if (isTeamExcluded(msg.sender)) return
 
     if (msg.id && msg.room_id && (msg.attachment_count ?? 0) > 0) {
       void downloadMessageAttachments(client, msg.room_id, msg.id).then(paths => {

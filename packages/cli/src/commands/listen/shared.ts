@@ -25,24 +25,55 @@ export function isHookAnchorMessage(msg: ListenMessage): boolean {
   )
 }
 
-export function loadTeamExcludeSet(teamName?: string): Set<string> {
-  if (!teamName) return new Set()
-  const configPath = `${process.env.HOME}/.claude/teams/${teamName}/config.json`
+function readTeamMemberNames(configPath: string): string[] {
   let raw: string
   try {
     raw = readFileSync(configPath, 'utf-8')
   } catch {
-    // Config doesn't exist yet — team may still be initializing
-    return new Set()
+    return []
   }
-  let config: { members?: { name: string }[] }
   try {
-    config = JSON.parse(raw)
+    const config: { members?: { name: string }[] } = JSON.parse(raw)
+    return (config.members ?? []).map(m => m.name).filter(Boolean)
   } catch {
-    console.error(`Error: Malformed JSON in team config at ${configPath}`)
-    process.exit(1)
+    return []
   }
-  return new Set(config.members?.map(m => m.name) || [])
+}
+
+const TEAM_CACHE_TTL_MS = 5_000
+
+/**
+ * Create a function that checks whether a sender should be excluded.
+ * Re-reads the team config periodically so that members added after the
+ * listener started are still filtered.  The `inbox` name (the listener's
+ * own agent identity) is *always* excluded regardless of the config.
+ */
+export function createTeamExcludeChecker(
+  teamName?: string,
+  inbox?: string
+): (sender: string) => boolean {
+  if (!teamName && !inbox) return () => false
+
+  const configPath = teamName ? `${process.env.HOME}/.claude/teams/${teamName}/config.json` : null
+
+  let cached: Set<string> = new Set()
+  let lastRead = 0
+
+  function refresh(): Set<string> {
+    const now = Date.now()
+    if (now - lastRead < TEAM_CACHE_TTL_MS && cached.size > 0) return cached
+    lastRead = now
+
+    const names: string[] = configPath ? readTeamMemberNames(configPath) : []
+    if (inbox && !names.includes(inbox)) names.push(inbox)
+    cached = new Set(names)
+    return cached
+  }
+
+  // Initial load
+  refresh()
+
+  return (sender: string) => refresh().has(sender)
 }
 
 export function createTerminalControlHandler(input: {

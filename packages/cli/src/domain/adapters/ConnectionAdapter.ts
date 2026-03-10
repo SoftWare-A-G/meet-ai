@@ -82,9 +82,12 @@ export default class ConnectionAdapter implements IConnectionAdapter {
 
         if (lastSeenId) {
           try {
+            const query: Record<string, string> = { after: lastSeenId }
+            if (options?.exclude) query.exclude = options.exclude
+            if (options?.senderType) query.sender_type = options.senderType
             const missed = await transport.getJson<Message[]>(
               `/api/rooms/${roomId}/messages`,
-              { query: { after: lastSeenId } }
+              { query }
             )
             if (missed.length) wsLog({ event: 'catchup', count: missed.length })
             for (const msg of missed) deliver(msg)

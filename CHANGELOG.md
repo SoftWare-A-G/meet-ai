@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.5.5](https://github.com/SoftWare-A-G/meet-ai/compare/0.5.4...0.5.5) (2026-03-10)
+
+### Bug Fixes
+
+* prevent Claude `listen --team --inbox` from echoing the listener's own messages by auto-deriving `exclude` from `inbox`, dynamically refreshing team exclusion state, and preserving those filters during reconnect catch-up
+
+### Tests
+
+* add listener coverage for late team config initialization, dynamic team member refresh, and inbox self-filtering
+
 ## [0.5.3](https://github.com/SoftWare-A-G/meet-ai/compare/0.5.2...HEAD) (2026-03-10)
 
 ### Bug Fixes

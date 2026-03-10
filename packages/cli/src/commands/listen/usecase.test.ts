@@ -400,6 +400,111 @@ describe('listen', () => {
     expect(logSpy).not.toHaveBeenCalledWith(JSON.stringify(expect.objectContaining({ id: 'msg-anchor' })))
   })
 
+  describe('--team filtering', () => {
+    const teamHome = '/tmp/meet-ai-listen-team-home'
+
+    function writeTeamConfig(teamName: string, members: { name: string }[]) {
+      mkdirSync(`${teamHome}/.claude/teams/${teamName}/inboxes`, { recursive: true })
+      writeFileSync(
+        `${teamHome}/.claude/teams/${teamName}/config.json`,
+        JSON.stringify({ members })
+      )
+    }
+
+    function parsedLogCalls(): { id: string; sender: string }[] {
+      return (logSpy as any).mock.calls.map((args: unknown[]) => JSON.parse(String(args[0])))
+    }
+
+    beforeEach(() => {
+      rmSync(teamHome, { recursive: true, force: true })
+      mkdirSync(teamHome, { recursive: true })
+      process.env.HOME = teamHome
+    })
+
+    afterEach(() => {
+      rmSync(teamHome, { recursive: true, force: true })
+    })
+
+    it('filters messages from team members listed in config', () => {
+      writeTeamConfig('demo-team', [
+        { name: 'team-lead' },
+        { name: 'coder' },
+      ])
+
+      const { client, getHandler } = mockClientCapturingHandler()
+      listen(client, {
+        roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c',
+        team: 'demo-team',
+        inbox: 'team-lead',
+      })
+
+      const handler = getHandler()
+      handler(makeMessage({ id: 'msg-own', sender: 'team-lead', content: 'my own message' }))
+      handler(makeMessage({ id: 'msg-coder', sender: 'coder', content: 'coder message' }))
+      handler(makeMessage({ id: 'msg-human', sender: 'alice', sender_type: 'human', content: 'hello' }))
+
+      const calls = parsedLogCalls()
+      expect(calls).toHaveLength(1)
+      expect(calls[0].id).toBe('msg-human')
+      expect(calls[0].sender).toBe('alice')
+    })
+
+    it('filters the inbox agent even when config does not exist yet', () => {
+      // Config directory exists but no config.json — simulates a race
+      // where the listener starts before the team config is fully written.
+      mkdirSync(`${teamHome}/.claude/teams/new-team/inboxes`, { recursive: true })
+
+      const { client, getHandler } = mockClientCapturingHandler()
+      listen(client, {
+        roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c',
+        team: 'new-team',
+        inbox: 'team-lead',
+      })
+
+      const handler = getHandler()
+      handler(makeMessage({ id: 'msg-own', sender: 'team-lead', content: 'my own message' }))
+      handler(makeMessage({ id: 'msg-human', sender: 'bob', sender_type: 'human', content: 'hi' }))
+
+      // team-lead's own message should still be filtered via inbox fallback
+      const calls = parsedLogCalls()
+      expect(calls).toHaveLength(1)
+      expect(calls[0].id).toBe('msg-human')
+    })
+
+    it('picks up new members added to config after listener started', async () => {
+      writeTeamConfig('live-team', [
+        { name: 'team-lead' },
+      ])
+
+      const { client, getHandler } = mockClientCapturingHandler()
+      listen(client, {
+        roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c',
+        team: 'live-team',
+        inbox: 'team-lead',
+      })
+
+      const handler = getHandler()
+
+      // Before config update: coder is not yet in config — passes through
+      handler(makeMessage({ id: 'msg-coder-1', sender: 'coder', content: 'first message' }))
+      expect(parsedLogCalls()).toHaveLength(1)
+      logSpy.mockClear()
+
+      // Update config to include coder
+      writeTeamConfig('live-team', [
+        { name: 'team-lead' },
+        { name: 'coder' },
+      ])
+
+      // Wait for cache TTL to expire
+      await new Promise(resolve => setTimeout(resolve, 5200))
+
+      handler(makeMessage({ id: 'msg-coder-2', sender: 'coder', content: 'second message' }))
+      // After config refresh: coder should be filtered
+      expect(parsedLogCalls()).toHaveLength(0)
+    }, 10_000)
+  })
+
   describe('validation', () => {
     it('throws ZodError when roomId is empty', () => {
       // GIVEN a client (won't be called because validation fails first)

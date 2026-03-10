@@ -1,5 +1,5 @@
-import { createHmac } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
+import { createHmac } from 'node:crypto'
 import { realpathSync } from 'node:fs'
 import { basename } from 'node:path'
 
