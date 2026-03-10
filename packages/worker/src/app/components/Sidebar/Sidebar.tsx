@@ -61,21 +61,19 @@ function ProjectActions({ project, onRename }: { project: Project; onRename?: (i
 
   return (
     <>
-      <SidebarMenuAction showOnHover>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            className="flex size-5 items-center justify-center"
-            onClick={e => e.stopPropagation()}
-          >
-            <EllipsisIcon className="size-4" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent side="bottom" align="start">
-            <DropdownMenuItem onClick={() => { setName(project.name); setRenameOpen(true) }}>
-              Rename
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </SidebarMenuAction>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={<SidebarMenuAction showOnHover />}
+          onClick={e => e.stopPropagation()}
+        >
+          <EllipsisIcon className="size-4" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent side="bottom" align="start">
+          <DropdownMenuItem onClick={() => { setName(project.name); setRenameOpen(true) }}>
+            Rename
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
       <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
         <DialogContent showCloseButton={false}>
           <DialogHeader>
