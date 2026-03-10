@@ -5,6 +5,7 @@ import {
 } from 'node:child_process'
 import { basename } from 'node:path'
 import { createInterface, type Interface as ReadLineInterface } from 'node:readline'
+import { emitCodexAppServerLog } from './codex-app-server-evlog'
 import type { AgentMessageDeltaNotification } from '@meet-ai/cli/generated/codex-app-server/v2/AgentMessageDeltaNotification'
 import type { CommandExecutionOutputDeltaNotification } from '@meet-ai/cli/generated/codex-app-server/v2/CommandExecutionOutputDeltaNotification'
 import type { DynamicToolCallParams } from '@meet-ai/cli/generated/codex-app-server/v2/DynamicToolCallParams'
@@ -28,7 +29,6 @@ import type { Turn } from '@meet-ai/cli/generated/codex-app-server/v2/Turn'
 import type { TurnCompletedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/TurnCompletedNotification'
 import type { TurnPlanUpdatedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/TurnPlanUpdatedNotification'
 import type { TurnStartedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/TurnStartedNotification'
-import { emitCodexAppServerLog } from './codex-app-server-evlog'
 
 export type CodexAppServerTextInput = {
   sender: string
@@ -135,7 +135,10 @@ type CodexThreadResponse = {
   reasoningEffort?: string | null
 }
 
-function formatModelLabel(model: string | null | undefined, reasoningEffort: string | null | undefined): string | null {
+function formatModelLabel(
+  model: string | null | undefined,
+  reasoningEffort: string | null | undefined
+): string | null {
   const normalizedModel = typeof model === 'string' ? model.trim() : ''
   if (!normalizedModel) return null
 
@@ -307,11 +310,11 @@ function isItemStartedNotification(params: unknown): params is ItemStartedNotifi
   )
 }
 
-function isThreadStatusChangedNotification(params: unknown): params is ThreadStatusChangedNotification {
+function isThreadStatusChangedNotification(
+  params: unknown
+): params is ThreadStatusChangedNotification {
   return (
-    isObject(params) &&
-    typeof params.threadId === 'string' &&
-    typeof params.status === 'string'
+    isObject(params) && typeof params.threadId === 'string' && typeof params.status === 'string'
   )
 }
 
@@ -319,7 +322,9 @@ function isThreadNameUpdatedNotification(params: unknown): params is ThreadNameU
   return isObject(params) && typeof params.threadId === 'string'
 }
 
-function isThreadTokenUsageUpdatedNotification(params: unknown): params is ThreadTokenUsageUpdatedNotification {
+function isThreadTokenUsageUpdatedNotification(
+  params: unknown
+): params is ThreadTokenUsageUpdatedNotification {
   return (
     isObject(params) &&
     typeof params.threadId === 'string' &&
@@ -337,7 +342,9 @@ function isTurnPlanUpdatedNotification(params: unknown): params is TurnPlanUpdat
   )
 }
 
-function isReasoningSummaryTextDeltaNotification(params: unknown): params is ReasoningSummaryTextDeltaNotification {
+function isReasoningSummaryTextDeltaNotification(
+  params: unknown
+): params is ReasoningSummaryTextDeltaNotification {
   return (
     isObject(params) &&
     typeof params.threadId === 'string' &&
@@ -347,7 +354,9 @@ function isReasoningSummaryTextDeltaNotification(params: unknown): params is Rea
   )
 }
 
-function isReasoningTextDeltaNotification(params: unknown): params is ReasoningTextDeltaNotification {
+function isReasoningTextDeltaNotification(
+  params: unknown
+): params is ReasoningTextDeltaNotification {
   return (
     isObject(params) &&
     typeof params.threadId === 'string' &&
@@ -367,7 +376,9 @@ function isPlanDeltaNotification(params: unknown): params is PlanDeltaNotificati
   )
 }
 
-function isCommandExecutionOutputDeltaNotification(params: unknown): params is CommandExecutionOutputDeltaNotification {
+function isCommandExecutionOutputDeltaNotification(
+  params: unknown
+): params is CommandExecutionOutputDeltaNotification {
   return (
     isObject(params) &&
     typeof params.threadId === 'string' &&
@@ -377,7 +388,9 @@ function isCommandExecutionOutputDeltaNotification(params: unknown): params is C
   )
 }
 
-function isFileChangeOutputDeltaNotification(params: unknown): params is FileChangeOutputDeltaNotification {
+function isFileChangeOutputDeltaNotification(
+  params: unknown
+): params is FileChangeOutputDeltaNotification {
   return (
     isObject(params) &&
     typeof params.threadId === 'string' &&
@@ -398,7 +411,9 @@ function isModelReroutedNotification(params: unknown): params is ModelReroutedNo
   )
 }
 
-function isTerminalInteractionNotification(params: unknown): params is TerminalInteractionNotification {
+function isTerminalInteractionNotification(
+  params: unknown
+): params is TerminalInteractionNotification {
   return (
     isObject(params) &&
     typeof params.threadId === 'string' &&
@@ -591,7 +606,9 @@ function summarizeNotificationParams(method: string, params: unknown): Record<st
   if (typeof params.threadId === 'string') summary.threadId = params.threadId
   if (typeof params.turnId === 'string') summary.turnId = params.turnId
   if (typeof params.itemId === 'string') summary.itemId = params.itemId
-  if (typeof params.requestId === 'string' || typeof params.requestId === 'number') summary.requestId = params.requestId
+  if (typeof params.requestId === 'string' || typeof params.requestId === 'number') {
+    summary.requestId = params.requestId
+  }
 
   if ((method === 'item/started' || method === 'item/completed') && isObject(params.item)) {
     Object.assign(summary, summarizeThreadItem(params.item as ItemCompletedNotification['item']))
@@ -784,7 +801,6 @@ export class CodexAppServerBridge {
       this.codexBin,
       [
         'app-server',
-        '--dangerously-bypass-approvals-and-sandbox',
         '--enable',
         'multi_agent',
         '--enable',
@@ -793,6 +809,8 @@ export class CodexAppServerBridge {
         'realtime_conversation',
         '-c',
         'sandbox_mode="workspace-write"',
+        '-c',
+        'ask_for_approval="never"',
         '-c',
         'sandbox_workspace_write.network_access=true',
         '-c',
@@ -1034,9 +1052,7 @@ export class CodexAppServerBridge {
         isTurnCompletedNotification(message.params) &&
         message.params.threadId === this.threadId &&
         message.params.turn.id === this.activeTurnId
-      if (
-        clearedActiveTurn
-      ) {
+      if (clearedActiveTurn) {
         this.activeTurnId = null
       }
       if (isTurnCompletedNotification(message.params)) {
@@ -1315,7 +1331,12 @@ export class CodexAppServerBridge {
       this.writeMessage({
         id: message.id,
         result: {
-          contentItems: [{ type: 'inputText', text: JSON.stringify({ error: 'Invalid tool call: missing tool name' }) }],
+          contentItems: [
+            {
+              type: 'inputText',
+              text: JSON.stringify({ error: 'Invalid tool call: missing tool name' }),
+            },
+          ],
           success: false,
         } satisfies DynamicToolCallResponse,
       })
@@ -1330,7 +1351,12 @@ export class CodexAppServerBridge {
       this.writeMessage({
         id: message.id,
         result: {
-          contentItems: [{ type: 'inputText', text: JSON.stringify({ error: 'No handler registered for dynamic tool calls' }) }],
+          contentItems: [
+            {
+              type: 'inputText',
+              text: JSON.stringify({ error: 'No handler registered for dynamic tool calls' }),
+            },
+          ],
           success: false,
         } satisfies DynamicToolCallResponse,
       })

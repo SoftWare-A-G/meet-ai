@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from 'bun:test'
 import { PassThrough } from 'node:stream'
-import type { ChildProcessWithoutNullStreams, SpawnOptionsWithoutStdio } from 'node:child_process'
 import { CodexAppServerBridge, type CodexAppServerEvent } from './codex-app-server'
+import type { ChildProcessWithoutNullStreams, SpawnOptionsWithoutStdio } from 'node:child_process'
 
 type RecordedRequest = {
   method: string
@@ -19,7 +19,7 @@ function createFakeAppServer(options?: {
   const requests: RecordedRequest[] = []
 
   let buffered = ''
-  stdin.on('data', (chunk) => {
+  stdin.on('data', chunk => {
     buffered += chunk.toString()
     let newlineIndex = buffered.indexOf('\n')
     while (newlineIndex >= 0) {
@@ -33,29 +33,39 @@ function createFakeAppServer(options?: {
 
       switch (request.method) {
         case 'initialize': {
-          stdout.write(`${JSON.stringify({ id: request.id, result: { userAgent: 'codex-test' } })}\n`)
+          stdout.write(
+            `${JSON.stringify({ id: request.id, result: { userAgent: 'codex-test' } })}\n`
+          )
           break
         }
         case 'thread/resume': {
-          stdout.write(`${JSON.stringify({
-            id: request.id,
-            result: {
-              thread: {
-                turns: options?.resumeTurns ?? [],
+          stdout.write(
+            `${JSON.stringify({
+              id: request.id,
+              result: {
+                thread: {
+                  turns: options?.resumeTurns ?? [],
+                },
               },
-            },
-          })}\n`)
+            })}\n`
+          )
           break
         }
         case 'turn/start': {
-          stdout.write(`${JSON.stringify({ id: request.id, result: { turn: { id: 'turn-started' } } })}\n`)
+          stdout.write(
+            `${JSON.stringify({ id: request.id, result: { turn: { id: 'turn-started' } } })}\n`
+          )
           break
         }
         case 'turn/steer': {
           if (options?.steerError) {
-            stdout.write(`${JSON.stringify({ id: request.id, error: { message: options.steerError } })}\n`)
+            stdout.write(
+              `${JSON.stringify({ id: request.id, error: { message: options.steerError } })}\n`
+            )
           } else {
-            stdout.write(`${JSON.stringify({ id: request.id, result: { turnId: 'turn-steered' } })}\n`)
+            stdout.write(
+              `${JSON.stringify({ id: request.id, result: { turnId: 'turn-steered' } })}\n`
+            )
           }
           break
         }
@@ -71,11 +81,8 @@ function createFakeAppServer(options?: {
     on: mock((_event: string, _handler: (...args: any[]) => void) => child),
   } as unknown as ChildProcessWithoutNullStreams
 
-  const spawnFn = (
-    _command: string,
-    _args: string[],
-    _spawnOptions: SpawnOptionsWithoutStdio,
-  ) => child
+  const spawnFn = (_command: string, _args: string[], _spawnOptions: SpawnOptionsWithoutStdio) =>
+    child
 
   return { child, spawnFn, requests }
 }
@@ -112,7 +119,7 @@ describe('CodexAppServerBridge', () => {
     })
 
     expect(result).toEqual({ mode: 'start', threadId: 'thread-1', turnId: 'turn-started' })
-    expect(fake.requests.map((request) => request.method)).toEqual([
+    expect(fake.requests.map(request => request.method)).toEqual([
       'initialize',
       'initialized',
       'thread/resume',
@@ -145,7 +152,6 @@ describe('CodexAppServerBridge', () => {
 
     expect(spawnArgs.slice(1)).toEqual([
       'app-server',
-      '--dangerously-bypass-approvals-and-sandbox',
       '--enable',
       'multi_agent',
       '--enable',
@@ -154,6 +160,8 @@ describe('CodexAppServerBridge', () => {
       'realtime_conversation',
       '-c',
       'sandbox_mode="workspace-write"',
+      '-c',
+      'ask_for_approval="never"',
       '-c',
       'sandbox_workspace_write.network_access=true',
       '-c',
@@ -220,7 +228,7 @@ describe('CodexAppServerBridge', () => {
     })
 
     expect(result).toEqual({ mode: 'start', threadId: 'thread-1', turnId: 'turn-started' })
-    expect(fake.requests.map((request) => request.method)).toEqual([
+    expect(fake.requests.map(request => request.method)).toEqual([
       'initialize',
       'initialized',
       'thread/resume',
@@ -237,7 +245,7 @@ describe('CodexAppServerBridge', () => {
       spawnFn: fake.spawnFn,
     })
 
-    bridge.setEventHandler((event) => {
+    bridge.setEventHandler(event => {
       events.push(event)
     })
 
@@ -306,7 +314,7 @@ describe('CodexAppServerBridge', () => {
       spawnFn: fake.spawnFn,
     })
 
-    bridge.setEventHandler((event) => {
+    bridge.setEventHandler(event => {
       events.push(event)
     })
 
@@ -344,7 +352,11 @@ describe('CodexAppServerBridge', () => {
           type: 'fileChange',
           id: 'file-1',
           changes: [
-            { path: '/repo/packages/cli/src/lib/codex-app-server.ts', kind: 'modified', diff: '@@ -1 +1 @@' },
+            {
+              path: '/repo/packages/cli/src/lib/codex-app-server.ts',
+              kind: 'modified',
+              diff: '@@ -1 +1 @@',
+            },
           ],
           status: 'completed',
         },
@@ -373,7 +385,7 @@ describe('CodexAppServerBridge', () => {
       spawnFn: fake.spawnFn,
     })
 
-    bridge.setEventHandler((event) => {
+    bridge.setEventHandler(event => {
       events.push(event)
     })
 
@@ -460,7 +472,10 @@ describe('CodexAppServerBridge', () => {
     fake.child.stderr.push('app-server warning\n')
     await new Promise(resolve => setTimeout(resolve, 0))
 
-    const output = logSpy.mock.calls.flat().map((value: unknown) => String(value)).join('\n')
+    const output = logSpy.mock.calls
+      .flat()
+      .map((value: unknown) => String(value))
+      .join('\n')
     expect(output).toContain('process.stderr')
     expect(output).toContain('app-server warning')
   })
@@ -577,7 +592,10 @@ describe('CodexAppServerBridge', () => {
 
     await new Promise(resolve => setTimeout(resolve, 0))
 
-    const output = logSpy.mock.calls.flat().map((value: unknown) => String(value)).join('\n')
+    const output = logSpy.mock.calls
+      .flat()
+      .map((value: unknown) => String(value))
+      .join('\n')
     expect(output).toContain('notification.received')
     expect(output).toContain('item.started')
     expect(output).toContain('item.command_execution_output_delta')

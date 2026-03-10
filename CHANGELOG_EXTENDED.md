@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.6.1](https://github.com/SoftWare-A-G/meet-ai/compare/0.6.0...0.6.1) (2026-03-10)
+
+### Bug Fixes
+
+* replace the removed `--dangerously-bypass-approvals-and-sandbox` Codex app-server launch flag with explicit config settings in `CodexAppServerBridge`, setting `ask_for_approval="never"` while preserving `sandbox_mode="workspace-write"`, workspace network access, and live web search
+* keep the CLI and worker package manifests versioned at `0.6.1` for the release
+
+### Tests
+
+* update `codex-app-server.test.ts` to assert the new app-server argument list so the bridge cannot regress back to the removed bypass flag
+
 ## [0.6.0](https://github.com/SoftWare-A-G/meet-ai/compare/0.5.6...0.6.0) (2026-03-10)
 
 ### Features
