@@ -308,7 +308,7 @@ describe('CodexAppServerBridge', () => {
     ])
   })
 
-  it('emits activity log events for command and file change items', async () => {
+  it('emits activity log events for command and turn diff notifications', async () => {
     const fake = createFakeAppServer()
     const events: CodexAppServerEvent[] = []
     const bridge = new CodexAppServerBridge({
@@ -346,22 +346,39 @@ describe('CodexAppServerBridge', () => {
     })
 
     emitNotification(fake.child, {
-      method: 'item/completed',
+      method: 'turn/diff/updated',
       params: {
         threadId: 'thread-1',
         turnId: 'turn-started',
-        item: {
-          type: 'fileChange',
-          id: 'file-1',
-          changes: [
-            {
-              path: '/repo/packages/cli/src/lib/codex-app-server.ts',
-              kind: 'modified',
-              diff: '@@ -1 +1 @@',
-            },
-          ],
-          status: 'completed',
-        },
+        diff: [
+          'diff --git a/src/lib/codex-app-server.ts b/src/lib/codex-app-server.ts',
+          '--- a/src/lib/codex-app-server.ts',
+          '+++ b/src/lib/codex-app-server.ts',
+          '@@ -1 +1 @@',
+          'diff --git a/src/lib/new-file.ts b/src/lib/new-file.ts',
+          '--- /dev/null',
+          '+++ b/src/lib/new-file.ts',
+          '@@ -0,0 +1,1 @@',
+          '+export const created = true',
+        ].join('\n'),
+      },
+    })
+    emitNotification(fake.child, {
+      method: 'turn/diff/updated',
+      params: {
+        threadId: 'thread-1',
+        turnId: 'turn-started',
+        diff: [
+          'diff --git a/src/lib/codex-app-server.ts b/src/lib/codex-app-server.ts',
+          '--- a/src/lib/codex-app-server.ts',
+          '+++ b/src/lib/codex-app-server.ts',
+          '@@ -1 +1 @@',
+          'diff --git a/src/lib/new-file.ts b/src/lib/new-file.ts',
+          '--- /dev/null',
+          '+++ b/src/lib/new-file.ts',
+          '@@ -0,0 +1,1 @@',
+          '+export const created = true',
+        ].join('\n'),
       },
     })
 
@@ -373,10 +390,24 @@ describe('CodexAppServerBridge', () => {
     })
     expect(events).toContainEqual({
       type: 'activity_log',
-      itemId: 'file-1',
+      itemId: null,
       turnId: 'turn-started',
-      summary: 'Edit: codex-app-server.ts',
+      summary:
+        '[diff:src/lib/codex-app-server.ts]\n--- a/src/lib/codex-app-server.ts\n+++ b/src/lib/codex-app-server.ts\n@@ -1,1 +1,1 @@\n',
     })
+    expect(events).toContainEqual({
+      type: 'activity_log',
+      itemId: null,
+      turnId: 'turn-started',
+      summary:
+        '[diff:src/lib/new-file.ts]\n--- /dev/null\n+++ b/src/lib/new-file.ts\n@@ -0,0 +1,1 @@\n+export const created = true',
+    })
+    expect(
+      events.filter(
+        event =>
+          event.type === 'activity_log' && event.turnId === 'turn-started' && event.itemId === null
+      )
+    ).toHaveLength(2)
   })
 
   it('ignores agent message notifications from other threads', async () => {
@@ -523,7 +554,7 @@ describe('CodexAppServerBridge', () => {
       },
     })
     emitNotification(fake.child, {
-      method: 'turn/planUpdated',
+      method: 'turn/plan/updated',
       params: {
         threadId: 'thread-1',
         turnId: 'turn-started',
@@ -679,7 +710,7 @@ describe('CodexAppServerBridge', () => {
     })
 
     emitNotification(fake.child, {
-      method: 'turn/planUpdated',
+      method: 'turn/plan/updated',
       params: {
         threadId: 'thread-1',
         turnId: 'turn-started',
@@ -718,5 +749,52 @@ describe('CodexAppServerBridge', () => {
         threadId: 'thread-2',
       }),
     )
+  })
+
+  it('accepts generated notification method names for thread metadata updates', async () => {
+    const fake = createFakeAppServer()
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {})
+    const bridge = new CodexAppServerBridge({
+      threadId: 'thread-1',
+      spawnFn: fake.spawnFn,
+    })
+
+    await bridge.start()
+
+    emitNotification(fake.child, {
+      method: 'thread/status/changed',
+      params: {
+        threadId: 'thread-1',
+        status: 'running',
+      },
+    })
+    emitNotification(fake.child, {
+      method: 'thread/name/updated',
+      params: {
+        threadId: 'thread-1',
+        threadName: 'Generated Method Name',
+      },
+    })
+    emitNotification(fake.child, {
+      method: 'thread/tokenUsage/updated',
+      params: {
+        threadId: 'thread-1',
+        turnId: 'turn-1',
+        tokenUsage: {
+          inputTokens: 10,
+          outputTokens: 20,
+          totalTokens: 30,
+        },
+      },
+    })
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    const output = logSpy.mock.calls
+      .flat()
+      .map((value: unknown) => String(value))
+      .join('\n')
+    expect(output).toContain('thread.status_changed')
+    expect(output).toContain('thread.name_updated')
+    expect(output).toContain('thread.token_usage_updated')
   })
 })

@@ -1,12 +1,12 @@
 {
   "name": "@meet-ai/worker",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "private": true,
   "scripts": {
     "dev": "vite dev --force",
     "build": "vite build",
     "deploy": "bun run build && wrangler deploy",
-    "test": "vitest",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "cf-typegen": "wrangler types"
   },

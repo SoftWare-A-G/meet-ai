@@ -7,8 +7,8 @@ import {
   createCodexAppServerBridge,
   describeCodexAppServerError,
 } from '@meet-ai/cli/lib/codex-app-server'
-import { TASK_TOOL_SPECS, createTaskToolCallHandler } from '@meet-ai/cli/lib/codex-task-tools'
 import { emitCodexAppServerLog } from '@meet-ai/cli/lib/codex-app-server-evlog'
+import { TASK_TOOL_SPECS, createTaskToolCallHandler } from '@meet-ai/cli/lib/codex-task-tools'
 import { createHookClient, sendLogEntry, sendParentMessage } from '@meet-ai/cli/lib/hooks/client'
 import { findRoom } from '@meet-ai/cli/lib/hooks/find-room'
 import { createTask, updateTask, listTasks, getTask } from '@meet-ai/cli/lib/hooks/tasks'
@@ -18,15 +18,21 @@ import {
   formatCodexPlanReviewContent,
   pollForPlanDecision,
 } from '@meet-ai/cli/lib/plan-review'
-import { requestRoomQuestionReview, type QuestionReviewQuestion } from '@meet-ai/cli/lib/question-review'
+import {
+  requestRoomQuestionReview,
+  type QuestionReviewQuestion,
+} from '@meet-ai/cli/lib/question-review'
 import {
   registerActiveTeamMember,
   type TeamMemberRegistrar,
 } from '@meet-ai/cli/lib/team-member-registration'
 import { ListenInput } from './schema'
 import { createTerminalControlHandler, isHookAnchorMessage, type ListenMessage } from './shared'
+import type {
+  ToolRequestUserInputParams,
+  ToolRequestUserInputResponse,
+} from '@meet-ai/cli/generated/codex-app-server/v2'
 import type { MeetAiClient, Message } from '@meet-ai/cli/types'
-import type { ToolRequestUserInputParams, ToolRequestUserInputResponse } from '@meet-ai/cli/generated/codex-app-server/v2'
 
 type CodexListenDeps = {
   createHookClient: typeof createHookClient
@@ -50,6 +56,32 @@ function previewText(value: string, limit = 120): string {
   const normalized = value.replace(/\s+/g, ' ').trim()
   if (normalized.length <= limit) return normalized
   return `${normalized.slice(0, limit)}...`
+}
+
+function formatPlanUpdateLogSummary(input: {
+  explanation: string | null
+  plan: { step: string; status: string }[]
+}): string {
+  const planStepCount = input.plan.length
+  const explanation = input.explanation?.trim() ? previewText(input.explanation, 160) : null
+  const firstStep = input.plan[0]?.step?.trim() ? previewText(input.plan[0].step, 120) : null
+  const statusCounts = input.plan.reduce<Record<string, number>>((counts, step) => {
+    counts[step.status] = (counts[step.status] ?? 0) + 1
+    return counts
+  }, {})
+  const statusSummary = Object.entries(statusCounts)
+    .map(([status, count]) => `${status}=${count}`)
+    .join(', ')
+
+  return [
+    explanation
+      ? `Codex plan updated: ${explanation}`
+      : `Codex plan updated (${planStepCount} steps)`,
+    `steps: ${planStepCount}${statusSummary ? ` (${statusSummary})` : ''}`,
+    firstStep ? `first_step: ${firstStep}` : null,
+  ]
+    .filter(Boolean)
+    .join('\n')
 }
 
 function isPlainChatMessage(msg: ListenMessage): boolean {
@@ -96,38 +128,28 @@ function formatTaskPayload(task: TaskItem): string {
   ].join('\n')
 }
 
-function diffTasks(
-  prev: Map<string, TaskItem>,
-  next: TaskItem[],
-  agentName: string
-): string[] {
+function diffTasks(prev: Map<string, TaskItem>, next: TaskItem[], agentName: string): string[] {
   const notifications: string[] = []
 
   for (const task of next) {
     const isAssignedToMe =
-      task.assignee != null &&
-      task.assignee.toLowerCase() === agentName.toLowerCase()
+      task.assignee != null && task.assignee.toLowerCase() === agentName.toLowerCase()
     if (!isAssignedToMe) continue
 
     const old = prev.get(task.id)
 
     if (!old) {
       // Newly visible task assigned to this agent
-      notifications.push(
-        `New task assigned to you:\n${formatTaskPayload(task)}`
-      )
+      notifications.push(`New task assigned to you:\n${formatTaskPayload(task)}`)
       continue
     }
 
     const wasAssignedToMe =
-      old.assignee != null &&
-      old.assignee.toLowerCase() === agentName.toLowerCase()
+      old.assignee != null && old.assignee.toLowerCase() === agentName.toLowerCase()
 
     if (!wasAssignedToMe) {
       // Task reassigned to this agent
-      notifications.push(
-        `Task assigned to you:\n${formatTaskPayload(task)}`
-      )
+      notifications.push(`Task assigned to you:\n${formatTaskPayload(task)}`)
       continue
     }
 
@@ -176,7 +198,9 @@ async function resolveCodexTeamName(roomId: string): Promise<string | undefined>
   return room.teamName
 }
 
-function toQuestionReviewQuestions(params: ToolRequestUserInputParams): QuestionReviewQuestion[] | null {
+function toQuestionReviewQuestions(
+  params: ToolRequestUserInputParams
+): QuestionReviewQuestion[] | null {
   const questions: QuestionReviewQuestion[] = []
 
   for (const question of params.questions) {
@@ -209,7 +233,7 @@ function toQuestionReviewQuestions(params: ToolRequestUserInputParams): Question
 async function requestCodexUserInputViaRoom(
   hookClient: ReturnType<typeof createHookClient>,
   roomId: string,
-  params: ToolRequestUserInputParams,
+  params: ToolRequestUserInputParams
 ): Promise<ToolRequestUserInputResponse> {
   const questions = toQuestionReviewQuestions(params)
   if (!questions) {
@@ -282,7 +306,7 @@ export function listenCodex(
   },
   codexBridgeOverride?: CodexBridge | null,
   teamMemberRegistrar: TeamMemberRegistrar = registerActiveTeamMember,
-  deps: CodexListenDeps = DEFAULT_CODEX_LISTEN_DEPS,
+  deps: CodexListenDeps = DEFAULT_CODEX_LISTEN_DEPS
 ): WebSocket {
   const parsed = ListenInput.parse(input)
   const { roomId, exclude, senderType, team, inbox } = parsed
@@ -302,17 +326,21 @@ export function listenCodex(
   const hookClient = meetAiUrl && meetAiKey ? deps.createHookClient(meetAiUrl, meetAiKey) : null
   let activityParentId: string | null = null
   let activityLogQueue: Promise<void> = Promise.resolve()
-  const taskToolCallHandler = hookClient && roomId
-    ? createTaskToolCallHandler({
-        createTask: params => createTask(hookClient, roomId, { ...params, source: 'codex' }),
-        updateTask: (taskId, params) => updateTask(hookClient, roomId, taskId, { ...params, source: 'codex' }),
-        listTasks: filters => listTasks(hookClient, roomId, filters),
-        getTask: taskId => getTask(hookClient, roomId, taskId),
-      })
-    : undefined
-  const requestUserInputHandler = hookClient && roomId
-    ? (params: ToolRequestUserInputParams) => requestCodexUserInputViaRoom(hookClient, roomId, params)
-    : undefined
+  const taskToolCallHandler =
+    hookClient && roomId
+      ? createTaskToolCallHandler({
+          createTask: params => createTask(hookClient, roomId, { ...params, source: 'codex' }),
+          updateTask: (taskId, params) =>
+            updateTask(hookClient, roomId, taskId, { ...params, source: 'codex' }),
+          listTasks: filters => listTasks(hookClient, roomId, filters),
+          getTask: taskId => getTask(hookClient, roomId, taskId),
+        })
+      : undefined
+  const requestUserInputHandler =
+    hookClient && roomId
+      ? (params: ToolRequestUserInputParams) =>
+          requestCodexUserInputViaRoom(hookClient, roomId, params)
+      : undefined
 
   const codexBridge: CodexBridge =
     codexBridgeOverride ??
@@ -320,7 +348,9 @@ export function listenCodex(
       threadId: null,
       cwd: process.cwd(),
       experimentalApi: true,
-      ...(taskToolCallHandler ? { dynamicTools: TASK_TOOL_SPECS, toolCallHandler: taskToolCallHandler } : {}),
+      ...(taskToolCallHandler
+        ? { dynamicTools: TASK_TOOL_SPECS, toolCallHandler: taskToolCallHandler }
+        : {}),
       ...(requestUserInputHandler ? { requestUserInputHandler } : {}),
     })
   const bootstrapPrompt = process.env.MEET_AI_CODEX_BOOTSTRAP_PROMPT?.trim()
@@ -331,20 +361,26 @@ export function listenCodex(
 
   const enqueuePublish = (task: () => Promise<void>) => {
     publishQueue = publishQueue.then(task, task).catch(error => {
-      console.error(`meet-ai: failed to publish Codex output to room: ${error instanceof Error ? error.message : String(error)}`)
+      console.error(
+        `meet-ai: failed to publish Codex output to room: ${error instanceof Error ? error.message : String(error)}`
+      )
     })
   }
 
   const enqueueActivityLog = (summary: string) => {
     if (!hookClient) return
-    activityLogQueue = activityLogQueue.then(async () => {
-      if (!activityParentId) {
-        activityParentId = await sendParentMessage(hookClient, roomId)
-      }
-      await sendLogEntry(hookClient, roomId, summary, activityParentId ?? undefined)
-    }).catch(error => {
-      console.error(`meet-ai: failed to publish Codex activity log: ${error instanceof Error ? error.message : String(error)}`)
-    })
+    activityLogQueue = activityLogQueue
+      .then(async () => {
+        if (!activityParentId) {
+          activityParentId = await sendParentMessage(hookClient, roomId)
+        }
+        await sendLogEntry(hookClient, roomId, summary, activityParentId ?? undefined)
+      })
+      .catch(error => {
+        console.error(
+          `meet-ai: failed to publish Codex activity log: ${error instanceof Error ? error.message : String(error)}`
+        )
+      })
   }
 
   const injectPlanDecisionPrompt = (turnId: string, prompt: string) => {
@@ -371,7 +407,9 @@ export function listenCodex(
   const isCurrentPlanReviewState = (turnId: string, sequence: number): boolean =>
     turnPlanReviews.get(turnId)?.sequence === sequence
 
-  const handleTurnPlanUpdated = (event: Extract<CodexAppServerEvent, { type: 'turn_plan_updated' }>) => {
+  const handleTurnPlanUpdated = (
+    event: Extract<CodexAppServerEvent, { type: 'turn_plan_updated' }>
+  ) => {
     if (!hookClient) {
       emitCodexAppServerLog('warn', 'listen-codex', 'plan_review.unavailable', {
         turnId: event.turnId,
@@ -399,6 +437,18 @@ export function listenCodex(
       reviewId: null,
     }
     turnPlanReviews.set(event.turnId, nextState)
+    const logSummary = formatPlanUpdateLogSummary({
+      explanation: event.explanation,
+      plan: event.plan,
+    })
+    emitCodexAppServerLog('info', 'listen-codex', 'plan_update.logged', {
+      turnId: event.turnId,
+      threadId: event.threadId,
+      sequence: nextState.sequence,
+      planStepCount: event.plan.length,
+      summary: logSummary,
+    })
+    enqueueActivityLog(logSummary)
 
     void (async () => {
       if (previousState?.reviewId) {
@@ -421,7 +471,9 @@ export function listenCodex(
           turnId: event.turnId,
           threadId: event.threadId,
           sequence: nextState.sequence,
-          ...(review.error ? { error: String(review.error) } : { status: review.status, text: review.text }),
+          ...(review.error
+            ? { error: String(review.error) }
+            : { status: review.status, text: review.text }),
         })
         return
       }
@@ -462,14 +514,18 @@ export function listenCodex(
       })
 
       turnPlanReviews.delete(event.turnId)
-      if (decision.status === 'approved' || decision.status === 'denied' || decision.status === 'expired') {
+      if (
+        decision.status === 'approved' ||
+        decision.status === 'denied' ||
+        decision.status === 'expired'
+      ) {
         injectPlanDecisionPrompt(
           event.turnId,
           buildCodexPlanDecisionPrompt({
             status: decision.status,
             feedback: decision.feedback,
             permissionMode: decision.permission_mode,
-          }),
+          })
         )
       }
     })()
@@ -519,7 +575,9 @@ export function listenCodex(
     })
   }
 
-  const mergeEventText = (event: Extract<CodexAppServerEvent, { type: 'agent_message_delta' | 'agent_message_completed' }>) => {
+  const mergeEventText = (
+    event: Extract<CodexAppServerEvent, { type: 'agent_message_delta' | 'agent_message_completed' }>
+  ) => {
     const key = makeTurnKey(event)
     const itemKey = event.itemId ?? key
     const nextText = event.text.replace(/\r\n/g, '\n')
@@ -575,7 +633,7 @@ export function listenCodex(
     })
   }
 
-  codexBridge.setEventHandler((event) => {
+  codexBridge.setEventHandler(event => {
     if (event.type === 'agent_message_delta' || event.type === 'agent_message_completed') {
       mergeEventText(event)
       return
@@ -611,11 +669,7 @@ export function listenCodex(
     }
   })
 
-  const injectMessage = (message: {
-    sender: string
-    content: string
-    attachments?: string[]
-  }) => {
+  const injectMessage = (message: { sender: string; content: string; attachments?: string[] }) => {
     void codexBridge
       .injectText({
         sender: message.sender,
@@ -720,27 +774,39 @@ export function listenCodex(
   }
 
   const ws = client.listen(roomId, { exclude, senderType, onMessage })
-  void codexBridge.start()
+  void codexBridge
+    .start()
     .catch(() => {})
     .then(() => {
       const codexModel = codexBridge.getCurrentModel() ?? undefined
       return resolveCodexTeamName(roomId)
-        .then(teamName => teamMemberRegistrar({ roomId, teamName, agentName: codexSender, role: 'codex', model: codexModel }))
-        .catch(() => teamMemberRegistrar({ roomId, agentName: codexSender, role: 'codex', model: codexModel }))
+        .then(teamName =>
+          teamMemberRegistrar({
+            roomId,
+            teamName,
+            agentName: codexSender,
+            role: 'codex',
+            model: codexModel,
+          })
+        )
+        .catch(() =>
+          teamMemberRegistrar({ roomId, agentName: codexSender, role: 'codex', model: codexModel })
+        )
     })
 
   if (bootstrapPrompt) {
-    const bootstrapRequest: Promise<CodexInjectionResult> = codexBridge.injectPrompt(bootstrapPrompt)
+    const bootstrapRequest: Promise<CodexInjectionResult> =
+      codexBridge.injectPrompt(bootstrapPrompt)
 
     void bootstrapRequest
-      .then((result) => {
+      .then(result => {
         emitCodexAppServerLog('info', 'listen-codex', 'bootstrap.completed', {
           mode: result.mode,
           threadId: result.threadId,
           turnId: result.turnId,
         })
       })
-      .catch((error) => {
+      .catch(error => {
         emitCodexAppServerLog('error', 'listen-codex', 'bootstrap.failed', {
           error: describeCodexAppServerError(error),
         })

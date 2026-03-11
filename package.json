@@ -5,6 +5,7 @@
     "packages/*"
   ],
   "scripts": {
+    "test": "bun --filter '*' test",
     "lint": "oxlint -f json",
     "lint-changed": "oxlint $(git diff --name-only) -f json",
     "lint-changed:fix": "oxlint $(git diff --name-only) --fix -f json",

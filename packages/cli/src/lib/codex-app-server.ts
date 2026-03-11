@@ -6,6 +6,7 @@ import {
 import { basename } from 'node:path'
 import { createInterface, type Interface as ReadLineInterface } from 'node:readline'
 import { emitCodexAppServerLog } from './codex-app-server-evlog'
+import { formatCodexTurnDiff } from './hooks/format-diff'
 import type { AgentMessageDeltaNotification } from '@meet-ai/cli/generated/codex-app-server/v2/AgentMessageDeltaNotification'
 import type { CommandExecutionOutputDeltaNotification } from '@meet-ai/cli/generated/codex-app-server/v2/CommandExecutionOutputDeltaNotification'
 import type { DynamicToolCallParams } from '@meet-ai/cli/generated/codex-app-server/v2/DynamicToolCallParams'
@@ -30,6 +31,7 @@ import type { ThreadTokenUsageUpdatedNotification } from '@meet-ai/cli/generated
 import type { TurnPlanStep } from '@meet-ai/cli/generated/codex-app-server/v2/TurnPlanStep'
 import type { Turn } from '@meet-ai/cli/generated/codex-app-server/v2/Turn'
 import type { TurnCompletedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/TurnCompletedNotification'
+import type { TurnDiffUpdatedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/TurnDiffUpdatedNotification'
 import type { TurnPlanUpdatedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/TurnPlanUpdatedNotification'
 import type { TurnStartedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/TurnStartedNotification'
 
@@ -62,6 +64,11 @@ type JsonRpcResponse = {
 }
 
 type JsonRpcServerRequest = JsonRpcRequest
+
+const THREAD_STATUS_CHANGED_METHOD = 'thread/status/changed'
+const THREAD_NAME_UPDATED_METHOD = 'thread/name/updated'
+const THREAD_TOKEN_USAGE_UPDATED_METHOD = 'thread/tokenUsage/updated'
+const TURN_PLAN_UPDATED_METHOD = 'turn/plan/updated'
 
 type PendingRequest = {
   resolve: (value: unknown) => void
@@ -357,6 +364,15 @@ function isTurnPlanUpdatedNotification(params: unknown): params is TurnPlanUpdat
   )
 }
 
+function isTurnDiffUpdatedNotification(params: unknown): params is TurnDiffUpdatedNotification {
+  return (
+    isObject(params) &&
+    typeof params.threadId === 'string' &&
+    typeof params.turnId === 'string' &&
+    typeof params.diff === 'string'
+  )
+}
+
 function isReasoningSummaryTextDeltaNotification(
   params: unknown
 ): params is ReasoningSummaryTextDeltaNotification {
@@ -579,36 +595,32 @@ function summarizeThreadItem(item: ItemCompletedNotification['item']): Record<st
   }
 }
 
-function summarizeActivityItem(
+function formatActivityLogs(
   item: ItemCompletedNotification['item'],
   phase: 'started' | 'completed'
-): string | null {
+): string[] {
   switch (item.type) {
     case 'commandExecution': {
-      if (phase !== 'started') return null
-      return `Bash: ${truncate(item.command)}`
+      if (phase !== 'started') return []
+      return [`Bash: ${truncate(item.command)}`]
     }
     case 'fileChange': {
-      if (phase !== 'completed') return null
-      const paths = Array.from(new Set(item.changes.map(change => basename(change.path) || '?')))
-      if (paths.length === 0) return 'Edit'
-      if (paths.length === 1) return `Edit: ${paths[0]}`
-      return `Edit: ${paths[0]} (+${paths.length - 1} more)`
+      return []
     }
     case 'mcpToolCall': {
-      if (phase !== 'started') return null
-      return `MCP: ${item.server}/${item.tool}`
+      if (phase !== 'started') return []
+      return [`MCP: ${item.server}/${item.tool}`]
     }
     case 'webSearch': {
-      if (phase !== 'started') return null
-      return `WebSearch: ${item.query}`
+      if (phase !== 'started') return []
+      return [`WebSearch: ${item.query}`]
     }
     case 'imageView': {
-      if (phase !== 'started') return null
-      return `ViewImage: ${basename(item.path) || '?'}`
+      if (phase !== 'started') return []
+      return [`ViewImage: ${basename(item.path) || '?'}`]
     }
     default: {
-      return null
+      return []
     }
   }
 }
@@ -635,12 +647,12 @@ function summarizeNotificationParams(method: string, params: unknown): Record<st
     summary.preview = previewText(params.delta)
   }
 
-  if (method === 'turn/planUpdated' && Array.isArray(params.plan)) {
+  if (method === TURN_PLAN_UPDATED_METHOD && Array.isArray(params.plan)) {
     summary.planStepCount = params.plan.length
     if (typeof params.explanation === 'string') summary.preview = previewText(params.explanation)
   }
 
-  if (method === 'thread/tokenUsageUpdated' && isObject(params.tokenUsage)) {
+  if (method === THREAD_TOKEN_USAGE_UPDATED_METHOD && isObject(params.tokenUsage)) {
     summary.tokenUsage = params.tokenUsage
   }
 
@@ -696,6 +708,7 @@ export class CodexAppServerBridge {
   private nextRequestId = 1
   private activeTurnId: string | null = null
   private currentModel: string | null = null
+  private emittedTurnDiffLogs = new Map<string, Set<string>>()
   private injectionQueue: Promise<unknown> = Promise.resolve()
   private eventHandler: ((event: CodexAppServerEvent) => void) | null = null
 
@@ -778,6 +791,7 @@ export class CodexAppServerBridge {
   async close(): Promise<void> {
     this.readyPromise = null
     this.activeTurnId = null
+    this.emittedTurnDiffLogs.clear()
 
     if (this.stdoutReader) {
       this.stdoutReader.close()
@@ -1007,7 +1021,7 @@ export class CodexAppServerBridge {
       return
     }
 
-    if (message.method === 'thread/statusChanged') {
+    if (message.method === THREAD_STATUS_CHANGED_METHOD) {
       if (isThreadStatusChangedNotification(message.params)) {
         emitCodexAppServerLog('info', 'codex-app-server', 'thread.status_changed', {
           threadId: message.params.threadId,
@@ -1017,7 +1031,7 @@ export class CodexAppServerBridge {
       return
     }
 
-    if (message.method === 'thread/nameUpdated') {
+    if (message.method === THREAD_NAME_UPDATED_METHOD) {
       if (isThreadNameUpdatedNotification(message.params)) {
         emitCodexAppServerLog('info', 'codex-app-server', 'thread.name_updated', {
           threadId: message.params.threadId,
@@ -1027,7 +1041,7 @@ export class CodexAppServerBridge {
       return
     }
 
-    if (message.method === 'thread/tokenUsageUpdated') {
+    if (message.method === THREAD_TOKEN_USAGE_UPDATED_METHOD) {
       if (isThreadTokenUsageUpdatedNotification(message.params)) {
         emitCodexAppServerLog('info', 'codex-app-server', 'thread.token_usage_updated', {
           threadId: message.params.threadId,
@@ -1052,7 +1066,7 @@ export class CodexAppServerBridge {
       return
     }
 
-    if (message.method === 'turn/planUpdated') {
+    if (message.method === TURN_PLAN_UPDATED_METHOD) {
       if (isTurnPlanUpdatedNotification(message.params)) {
         emitCodexAppServerLog('info', 'codex-app-server', 'turn.plan_updated', {
           threadId: message.params.threadId,
@@ -1082,6 +1096,7 @@ export class CodexAppServerBridge {
         this.activeTurnId = null
       }
       if (isTurnCompletedNotification(message.params)) {
+        this.emittedTurnDiffLogs.delete(message.params.turn.id)
         emitCodexAppServerLog('info', 'codex-app-server', 'turn.completed', {
           threadId: message.params.threadId,
           turnId: message.params.turn.id,
@@ -1095,6 +1110,34 @@ export class CodexAppServerBridge {
       return
     }
 
+    if (message.method === 'turn/diff/updated') {
+      if (isTurnDiffUpdatedNotification(message.params)) {
+        emitCodexAppServerLog('debug', 'codex-app-server', 'turn.diff_updated', {
+          threadId: message.params.threadId,
+          turnId: message.params.turnId,
+          diffLength: message.params.diff.length,
+          preview: previewText(message.params.diff),
+        })
+        if (matchesActiveThread(this.threadId, message.params)) {
+          const logs = formatCodexTurnDiff(message.params.diff)
+          const emittedLogs =
+            this.emittedTurnDiffLogs.get(message.params.turnId) ?? new Set<string>()
+          this.emittedTurnDiffLogs.set(message.params.turnId, emittedLogs)
+          for (const summary of logs) {
+            if (emittedLogs.has(summary)) continue
+            emittedLogs.add(summary)
+            this.emitEvent({
+              type: 'activity_log',
+              itemId: null,
+              turnId: message.params.turnId,
+              summary,
+            })
+          }
+        }
+      }
+      return
+    }
+
     if (message.method === 'item/started') {
       if (isItemStartedNotification(message.params)) {
         emitCodexAppServerLog('info', 'codex-app-server', 'item.started', {
@@ -1103,8 +1146,8 @@ export class CodexAppServerBridge {
           ...summarizeThreadItem(message.params.item),
         })
         if (matchesActiveThread(this.threadId, message.params)) {
-          const summary = summarizeActivityItem(message.params.item, 'started')
-          if (summary) {
+          const logs = formatActivityLogs(message.params.item, 'started')
+          for (const summary of logs) {
             this.emitEvent({
               type: 'activity_log',
               itemId: message.params.item.id,
@@ -1206,8 +1249,8 @@ export class CodexAppServerBridge {
           ...summarizeThreadItem(message.params.item),
         })
         if (matchesActiveThread(this.threadId, message.params)) {
-          const summary = summarizeActivityItem(message.params.item, 'completed')
-          if (summary) {
+          const logs = formatActivityLogs(message.params.item, 'completed')
+          for (const summary of logs) {
             this.emitEvent({
               type: 'activity_log',
               itemId: message.params.item.id,

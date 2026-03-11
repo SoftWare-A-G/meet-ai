@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.7.1](https://github.com/SoftWare-A-G/meet-ai/compare/0.7.0...0.7.1) (2026-03-11)
+
+### Features
+
+* surface Codex write and edit diffs directly in Meet AI rooms by translating app-server turn diff updates into room-visible diff logs, including file create vs edit labeling in the worker UI
+
+### Bug Fixes
+
+* merge incremental Codex diff updates for the same file without duplicating earlier hunks, so room diff cards stay readable as a turn streams more edits
+* align the CLI and worker package manifests at `0.7.1` for the release
+
+### Tests
+
+* add CLI coverage for turn diff formatting and bridge emission, plus worker coverage for diff block rendering and merged diff log behavior
+
 ## [0.7.0](https://github.com/SoftWare-A-G/meet-ai/compare/0.6.5...0.7.0) (2026-03-11)
 
 ### Features

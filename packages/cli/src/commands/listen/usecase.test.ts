@@ -2,10 +2,10 @@ import { describe, it, expect, mock, beforeEach, afterEach, spyOn } from 'bun:te
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { ZodError } from 'zod'
 import { listen } from './usecase'
+import type IInboxRouter from '@meet-ai/cli/domain/interfaces/IInboxRouter'
 import type { CodexAppServerEvent } from '@meet-ai/cli/lib/codex-app-server'
 import type { HookClient } from '@meet-ai/cli/lib/hooks/client'
 import type { MeetAiClient, Message } from '@meet-ai/cli/types'
-import type IInboxRouter from '@meet-ai/cli/domain/interfaces/IInboxRouter'
 
 // Capture the onMessage callback passed to client.listen()
 // so we can simulate incoming WebSocket messages in tests
@@ -22,8 +22,12 @@ function makeCodexBridgeMock() {
   let eventHandler: ((event: CodexAppServerEvent) => void) | null = null
   return {
     start: mock(() => Promise.resolve()),
-    injectText: mock(() => Promise.resolve({ mode: 'start' as const, threadId: 'thread-1', turnId: 'turn-1' })),
-    injectPrompt: mock(() => Promise.resolve({ mode: 'start' as const, threadId: 'thread-1', turnId: 'turn-1' })),
+    injectText: mock(() =>
+      Promise.resolve({ mode: 'start' as const, threadId: 'thread-1', turnId: 'turn-1' })
+    ),
+    injectPrompt: mock(() =>
+      Promise.resolve({ mode: 'start' as const, threadId: 'thread-1', turnId: 'turn-1' })
+    ),
     close: mock(() => Promise.resolve()),
     getCurrentModel: mock((): string | null => 'gpt-5.4 (high)'),
     setEventHandler: mock((handler: ((event: CodexAppServerEvent) => void) | null) => {
@@ -98,18 +102,20 @@ function mockInboxRouter(): IInboxRouter {
   }
 }
 
-function makeTask(overrides: Partial<{
-  id: string
-  subject: string
-  description?: string
-  status: string
-  assignee: string | null
-  owner: string | null
-  source: string
-  source_id: string | null
-  updated_by: string | null
-  updated_at: number
-}> = {}) {
+function makeTask(
+  overrides: Partial<{
+    id: string
+    subject: string
+    description?: string
+    status: string
+    assignee: string | null
+    owner: string | null
+    source: string
+    source_id: string | null
+    updated_by: string | null
+    updated_at: number
+  }> = {}
+) {
   return {
     id: 'task-1',
     subject: 'Fix the bug',
@@ -206,7 +212,7 @@ describe('listen', () => {
       },
       undefined,
       undefined,
-      registerMember,
+      registerMember
     )
 
     await new Promise(resolve => setTimeout(resolve, 0))
@@ -317,18 +323,23 @@ describe('listen', () => {
     const client = mockClient()
     const codexBridge = makeCodexBridgeMock()
     const registerMember = mock(() => Promise.resolve())
+    const postMessageMock = mock(async () => ({
+      ok: true,
+      json: async () => ({ id: 'msg-parent-1' }),
+    }))
+    const postLogMock = mock(async () => ({ ok: true }))
     const createPlanReviewMock = mock(
       async (_client: HookClient, _roomId: string, _content: string) => ({
         ok: true as const,
         review: { id: 'review-1', message_id: 'msg-plan-1' },
-      }),
+      })
     )
     const pollForPlanDecisionMock = mock(
       async (_client: HookClient, _roomId: string, _reviewId: string) => ({
         id: 'review-1',
         status: 'approved' as const,
         permission_mode: 'acceptEdits',
-      }),
+      })
     )
 
     listen(
@@ -338,11 +349,23 @@ describe('listen', () => {
       codexBridge,
       registerMember,
       {
-        createHookClient: mock(() => ({}) as HookClient),
+        createHookClient: mock(
+          () =>
+            ({
+              api: {
+                rooms: {
+                  ':id': {
+                    messages: { $post: postMessageMock },
+                    logs: { $post: postLogMock },
+                  },
+                },
+              },
+            }) as unknown as HookClient
+        ),
         createPlanReview: createPlanReviewMock as any,
         pollForPlanDecision: pollForPlanDecisionMock as any,
         expirePlanReview: mock(async () => {}),
-      },
+      }
     )
 
     codexBridge.emitEvent({
@@ -361,11 +384,22 @@ describe('listen', () => {
 
     expect(createPlanReviewMock).toHaveBeenCalledTimes(1)
     expect(pollForPlanDecisionMock).toHaveBeenCalledTimes(1)
+    expect(postMessageMock).toHaveBeenCalledTimes(1)
+    expect(postLogMock).toHaveBeenCalledTimes(1)
+    expect(postLogMock).toHaveBeenCalledWith({
+      param: { id: 'df75b1db-f583-4d9f-8e34-9b3d614f152c' },
+      json: expect.objectContaining({
+        sender: 'hook',
+        content: expect.stringContaining('Codex plan updated: Bind plan mode to the room UI'),
+      }),
+    })
     expect(codexBridge.injectPrompt).toHaveBeenCalledWith(
-      expect.stringContaining('Your plan was approved in the Meet AI review UI. Continue with implementation now.'),
+      expect.stringContaining(
+        'Your plan was approved in the Meet AI review UI. Continue with implementation now.'
+      )
     )
     expect(codexBridge.injectPrompt).toHaveBeenCalledWith(
-      expect.stringContaining('Requested permission mode: acceptEdits.'),
+      expect.stringContaining('Requested permission mode: acceptEdits.')
     )
   })
 
@@ -383,7 +417,7 @@ describe('listen', () => {
       { roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c', senderType: 'human' },
       undefined,
       codexBridge,
-      registerMember,
+      registerMember
     )
 
     await new Promise(resolve => setTimeout(resolve, 0))
@@ -418,7 +452,7 @@ describe('listen', () => {
       { roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c', senderType: 'human' },
       undefined,
       codexBridge,
-      registerMember,
+      registerMember
     )
 
     await new Promise(resolve => setTimeout(resolve, 0))
@@ -456,7 +490,7 @@ describe('listen', () => {
       { roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c', senderType: 'human' },
       undefined,
       codexBridge,
-      registerMember,
+      registerMember
     )
 
     await new Promise(resolve => setTimeout(resolve, 0))
@@ -495,7 +529,7 @@ describe('listen', () => {
         team: 'my-team',
         inbox: 'team-lead',
       },
-      inboxRouter,
+      inboxRouter
     )
 
     const handler = getHandler()
@@ -505,7 +539,9 @@ describe('listen', () => {
     } as any)
 
     expect(inboxRouter.route).not.toHaveBeenCalled()
-    expect(logSpy).not.toHaveBeenCalledWith(JSON.stringify(expect.objectContaining({ id: 'msg-log' })))
+    expect(logSpy).not.toHaveBeenCalledWith(
+      JSON.stringify(expect.objectContaining({ id: 'msg-log' }))
+    )
   })
 
   it('does not route hook anchor messages into Claude inboxes', () => {
@@ -519,7 +555,7 @@ describe('listen', () => {
         team: 'my-team',
         inbox: 'team-lead',
       },
-      inboxRouter,
+      inboxRouter
     )
 
     const handler = getHandler()
@@ -534,7 +570,9 @@ describe('listen', () => {
     } as any)
 
     expect(inboxRouter.route).not.toHaveBeenCalled()
-    expect(logSpy).not.toHaveBeenCalledWith(JSON.stringify(expect.objectContaining({ id: 'msg-anchor' })))
+    expect(logSpy).not.toHaveBeenCalledWith(
+      JSON.stringify(expect.objectContaining({ id: 'msg-anchor' }))
+    )
   })
 
   describe('--team filtering', () => {
@@ -563,10 +601,7 @@ describe('listen', () => {
     })
 
     it('filters messages from team members listed in config', () => {
-      writeTeamConfig('demo-team', [
-        { name: 'team-lead' },
-        { name: 'coder' },
-      ])
+      writeTeamConfig('demo-team', [{ name: 'team-lead' }, { name: 'coder' }])
 
       const { client, getHandler } = mockClientCapturingHandler()
       listen(client, {
@@ -578,7 +613,9 @@ describe('listen', () => {
       const handler = getHandler()
       handler(makeMessage({ id: 'msg-own', sender: 'team-lead', content: 'my own message' }))
       handler(makeMessage({ id: 'msg-coder', sender: 'coder', content: 'coder message' }))
-      handler(makeMessage({ id: 'msg-human', sender: 'alice', sender_type: 'human', content: 'hello' }))
+      handler(
+        makeMessage({ id: 'msg-human', sender: 'alice', sender_type: 'human', content: 'hello' })
+      )
 
       const calls = parsedLogCalls()
       expect(calls).toHaveLength(1)
@@ -609,9 +646,7 @@ describe('listen', () => {
     })
 
     it('picks up new members added to config after listener started', async () => {
-      writeTeamConfig('live-team', [
-        { name: 'team-lead' },
-      ])
+      writeTeamConfig('live-team', [{ name: 'team-lead' }])
 
       const { client, getHandler } = mockClientCapturingHandler()
       listen(client, {
@@ -628,10 +663,7 @@ describe('listen', () => {
       logSpy.mockClear()
 
       // Update config to include coder
-      writeTeamConfig('live-team', [
-        { name: 'team-lead' },
-        { name: 'coder' },
-      ])
+      writeTeamConfig('live-team', [{ name: 'team-lead' }, { name: 'coder' }])
 
       // Wait for cache TTL to expire
       await new Promise(resolve => setTimeout(resolve, 5200))
@@ -1103,21 +1135,21 @@ describe('listen', () => {
       // First tasks_info is the cached snapshot — should be absorbed silently
       handler({
         type: 'tasks_info',
-        tasks: [makeTask({
-          id: 'task-1',
-          subject: 'Fix the bug',
-          description: 'Patch the failing listener path',
-          assignee: 'my-codex',
-          status: 'pending',
-        })],
+        tasks: [
+          makeTask({
+            id: 'task-1',
+            subject: 'Fix the bug',
+            description: 'Patch the failing listener path',
+            assignee: 'my-codex',
+            status: 'pending',
+          }),
+        ],
       } as any)
 
       await new Promise(resolve => setTimeout(resolve, 0))
 
       expect(codexBridge.injectText).not.toHaveBeenCalled()
-      expect(logSpy).not.toHaveBeenCalledWith(
-        expect.stringContaining('[meet-ai:tasks]')
-      )
+      expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining('[meet-ai:tasks]'))
     })
 
     it('injects a notification when a task is newly assigned after the baseline', async () => {
@@ -1140,13 +1172,15 @@ describe('listen', () => {
       // Second broadcast: new task assigned
       handler({
         type: 'tasks_info',
-        tasks: [makeTask({
-          id: 'task-1',
-          subject: 'Fix the bug',
-          description: 'Patch the failing listener path',
-          assignee: 'my-codex',
-          status: 'pending',
-        })],
+        tasks: [
+          makeTask({
+            id: 'task-1',
+            subject: 'Fix the bug',
+            description: 'Patch the failing listener path',
+            assignee: 'my-codex',
+            status: 'pending',
+          }),
+        ],
       } as any)
 
       await new Promise(resolve => setTimeout(resolve, 0))

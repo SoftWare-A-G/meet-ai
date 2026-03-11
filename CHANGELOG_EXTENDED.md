@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.7.1](https://github.com/SoftWare-A-G/meet-ai/compare/0.7.0...0.7.1) (2026-03-11)
+
+### Features
+
+* add first-class Codex turn diff visibility in Meet AI rooms by teaching the app-server bridge to emit dedicated turn diff events, formatting those diffs into room log entries on the listener side, and rendering them in the worker UI as collapsible file-level diff cards
+* distinguish file creation from file edits in the diff UI by detecting `/dev/null` and zero-line hunks, so newly created files are labeled "Created" instead of looking like ordinary edits
+
+### Bug Fixes
+
+* collapse incremental diff updates for the same file in `MessageList` when a later room log extends the previous diff payload, preventing duplicate stacked diff cards during a single Codex turn
+* harden diff formatting and publishing so room-visible write and edit events stay consistent across the Codex app-server, listener, and worker surfaces
+* align the CLI and worker package manifests at `0.7.1` for the release
+
+### Tests
+
+* add `format-diff.test.ts` coverage for the listener-side diff formatter that turns Codex turn diff payloads into room log content
+* extend `codex-app-server.test.ts` and `listen/usecase.test.ts` to cover bridge emission, room publish behavior, and end-to-end handling of turn diff updates
+* add worker unit coverage for new-file detection in `DiffBlock` and replacement logic for merged diff logs in `MessageList`
+
 ## [0.7.0](https://github.com/SoftWare-A-G/meet-ai/compare/0.6.5...0.7.0) (2026-03-11)
 
 ### Features

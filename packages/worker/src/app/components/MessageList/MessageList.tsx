@@ -9,6 +9,7 @@ import PermissionCard from '../PermissionCard'
 import SpawnRequestCard from '../SpawnRequestCard'
 import NewMessagesPill from '../NewMessagesPill'
 import type { Message as MessageType } from '../../lib/types'
+import { getDiffFilename, shouldReplaceMergedDiff } from './diff-logs'
 
 type DisplayMessage = MessageType & {
   tempId?: string
@@ -44,11 +45,6 @@ type RenderItem =
   | { kind: 'spawn-request'; msg: DisplayMessage; index: number; roomName: string; codingAgent?: string }
   | { kind: 'log-group'; logs: DisplayMessage[] }
   | { kind: 'diff-log'; logs: DisplayMessage[] }
-
-function getDiffFilename(content: string): string | null {
-  const match = content.match(/^\[diff:(.+?)\]/)
-  return match ? match[1] : null
-}
 
 function groupMessages(messages: DisplayMessage[]): RenderItem[] {
   // Build a map of message_id -> child logs for parent-child grouping
@@ -145,6 +141,12 @@ function groupMessages(messages: DisplayMessage[]): RenderItem[] {
         const prevFile = getDiffFilename(prev.logs[0].content)
         const curFile = getDiffFilename(item.logs[0].content)
         if (prevFile && curFile && prevFile === curFile) {
+          const prevLastLog = prev.logs[prev.logs.length - 1]
+          const nextFirstLog = item.logs[0]
+          if (prevLastLog && nextFirstLog && shouldReplaceMergedDiff(prevLastLog.content, nextFirstLog.content)) {
+            prev.logs = [...prev.logs.slice(0, -1), nextFirstLog]
+            continue
+          }
           prev.logs.push(...item.logs)
           continue
         }
