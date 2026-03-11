@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.7.2](https://github.com/SoftWare-A-G/meet-ai/compare/0.7.1...0.7.2) (2026-03-11)
+
+### Features
+
+* extend the Codex bootstrap prompt with explicit planning instructions so plan previews use `update_plan` and pre-plan clarifications use `request_user_input` instead of plain-text replies
+
+### Bug Fixes
+
+* rename Codex room review copy from "plan review" to "plan preview" and render pending plan steps as `draft` so the Meet AI UI matches the intended review flow
+* when a plan preview is dismissed in Meet AI, tell Codex not to propose another plan unless the user explicitly asks for one
+* align the CLI and worker package manifests at `0.7.2` for the release
+
+### Tests
+
+* add formatter coverage for plan preview wording and draft-status rendering, plus listener regression coverage for dismissed Codex plan previews
+
 ## [0.7.1](https://github.com/SoftWare-A-G/meet-ai/compare/0.7.0...0.7.1) (2026-03-11)
 
 ### Features

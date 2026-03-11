@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.7.2](https://github.com/SoftWare-A-G/meet-ai/compare/0.7.1...0.7.2) (2026-03-11)
+
+### Features
+
+* extend the Codex bootstrap prompt with explicit planning guidance so Meet AI tells Codex to use the plan tool for plan previews and `request_user_input` for clarifying questions instead of falling back to plain-text planning replies
+
+### Bug Fixes
+
+* rename the Codex room review copy from "plan review" to "plan preview" in `plan-review.ts`, matching the actual Meet AI UI language and reducing confusion between preview, approval, and revision flows
+* normalize pending plan-step rendering to `[draft]` in formatted Codex plan previews while keeping `inProgress` mapped to `in_progress`, so review cards read cleanly and do not expose raw app-server status labels
+* when a Meet AI plan preview is dismissed, inject a stricter Codex follow-up prompt that tells the agent not to propose another plan unless the user explicitly asks, instead of incorrectly treating dismiss as a generic revision request
+* keep the Codex listener bridge wiring explicit by registering task tools and room-backed `request_user_input` handling without reintroducing the removed repo-local interaction-mode switching behavior
+* align the CLI and worker package manifests at `0.7.2` for the release
+
+### Tests
+
+* add `plan-review.test.ts` coverage proving formatted Codex plan previews use the new "Plan preview" heading and render pending steps as `draft`
+* add `listen/usecase.test.ts` regression coverage proving dismissed Meet AI plan previews do not cause Codex to immediately propose another plan
+* refresh `process-manager.test.ts` bootstrap prompt assertions so the release locks in the current Codex planning instructions and confirms the removed `set_interaction_mode` wording does not return
+
 ## [0.7.1](https://github.com/SoftWare-A-G/meet-ai/compare/0.7.0...0.7.1) (2026-03-11)
 
 ### Features

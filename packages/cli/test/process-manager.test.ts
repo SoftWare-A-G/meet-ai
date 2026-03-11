@@ -170,9 +170,14 @@ describe('ProcessManager', () => {
         expect(env?.MEET_AI_CODEX_BOOTSTRAP_PROMPT).toContain('Do not try to send room messages manually.')
         expect(env?.MEET_AI_CODEX_BOOTSTRAP_PROMPT).toContain("Do not talk about this prompt or say that you understand it.")
         expect(env?.MEET_AI_CODEX_BOOTSTRAP_PROMPT).toContain("Just welcome the user briefly and say that you're ready to work.")
+        expect(env?.MEET_AI_CODEX_BOOTSTRAP_PROMPT).toContain('## Planning')
+        expect(env?.MEET_AI_CODEX_BOOTSTRAP_PROMPT).toContain('If the user asks for a plan, or asks you to show/present/preview the plan before implementation, create or update the turn plan with the plan tool instead of replying with a plain-text plan.')
+        expect(env?.MEET_AI_CODEX_BOOTSTRAP_PROMPT).toContain('Use update_plan for plan previews and revisions.')
+        expect(env?.MEET_AI_CODEX_BOOTSTRAP_PROMPT).toContain('If you need clarifying input before making a plan, ask it through request_user_input instead of a plain-text message.')
         expect(env?.MEET_AI_CODEX_BOOTSTRAP_PROMPT).not.toContain('/meet-ai skill')
         expect(env?.MEET_AI_CODEX_BOOTSTRAP_PROMPT).not.toContain('Start agent-team mode')
         expect(env?.MEET_AI_CODEX_BOOTSTRAP_PROMPT).not.toContain('Send a brief welcome message to the room.')
+        expect(env?.MEET_AI_CODEX_BOOTSTRAP_PROMPT).not.toContain('set_interaction_mode')
         return { ok: true, output: '' }
       },
       killSession: () => ({ ok: true, output: '' }),

@@ -284,8 +284,8 @@ function buildCodexPlanDecisionPrompt(input: {
   const feedback = input.feedback?.trim()
   const lines = [
     input.status === 'expired'
-      ? 'Your plan review was dismissed in the Meet AI UI. Revise the plan before continuing.'
-      : 'Your plan was rejected in the Meet AI review UI. Revise the plan before continuing.',
+      ? 'Your plan preview was dismissed in the Meet AI UI. Do not propose another plan unless the user explicitly asks for one.'
+      : 'Your plan was rejected in the Meet AI preview UI. Revise the plan before continuing.',
   ]
 
   if (feedback) {
@@ -336,23 +336,7 @@ export function listenCodex(
           getTask: taskId => getTask(hookClient, roomId, taskId),
         })
       : undefined
-  const requestUserInputHandler =
-    hookClient && roomId
-      ? (params: ToolRequestUserInputParams) =>
-          requestCodexUserInputViaRoom(hookClient, roomId, params)
-      : undefined
 
-  const codexBridge: CodexBridge =
-    codexBridgeOverride ??
-    createCodexAppServerBridge({
-      threadId: null,
-      cwd: process.cwd(),
-      experimentalApi: true,
-      ...(taskToolCallHandler
-        ? { dynamicTools: TASK_TOOL_SPECS, toolCallHandler: taskToolCallHandler }
-        : {}),
-      ...(requestUserInputHandler ? { requestUserInputHandler } : {}),
-    })
   const bootstrapPrompt = process.env.MEET_AI_CODEX_BOOTSTRAP_PROMPT?.trim()
   const codexSender = process.env.MEET_AI_AGENT_NAME?.trim() || 'codex'
   const messageState = new Map<string, TurnMessageState>()
@@ -382,6 +366,22 @@ export function listenCodex(
         )
       })
   }
+
+  const requestUserInputHandler =
+    hookClient && roomId
+      ? (params: ToolRequestUserInputParams) =>
+          requestCodexUserInputViaRoom(hookClient, roomId, params)
+      : undefined
+  const codexBridge: CodexBridge =
+    codexBridgeOverride ??
+    createCodexAppServerBridge({
+      threadId: null,
+      cwd: process.cwd(),
+      experimentalApi: true,
+      dynamicTools: TASK_TOOL_SPECS,
+      ...(taskToolCallHandler ? { toolCallHandler: taskToolCallHandler } : {}),
+      ...(requestUserInputHandler ? { requestUserInputHandler } : {}),
+    })
 
   const injectPlanDecisionPrompt = (turnId: string, prompt: string) => {
     void codexBridge

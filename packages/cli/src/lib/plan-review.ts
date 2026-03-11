@@ -28,6 +28,9 @@ function formatPlanStepStatus(status: TurnPlanStep['status']): string {
     case 'inProgress': {
       return 'in_progress'
     }
+    case 'pending': {
+      return 'draft'
+    }
     default: {
       return status
     }
@@ -38,7 +41,7 @@ export function formatCodexPlanReviewContent(input: {
   explanation?: string | null
   plan: TurnPlanStep[]
 }): string {
-  const sections: string[] = ['**Plan review**']
+  const sections: string[] = ['**Plan preview**']
 
   const explanation = input.explanation?.trim()
   if (explanation) {
