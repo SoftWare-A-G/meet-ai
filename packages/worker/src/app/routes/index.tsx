@@ -431,7 +431,6 @@ function LandingPage() {
               </div>
               <nav className="flex flex-wrap gap-5 text-sm">
                 <FooterLink href="https://github.com/SoftWare-A-G/meet-ai">GitHub</FooterLink>
-                <FooterLink href="https://github.com/SoftWare-A-G/meet-ai#readme">Docs</FooterLink>
                 <FooterLink href="https://www.npmjs.com/package/@meet-ai/cli">CLI</FooterLink>
                 <FooterLink href="https://www.npmjs.com/package/@meet-ai/cli">npm</FooterLink>
               </nav>
@@ -1410,7 +1409,7 @@ function FooterLink({ href, children }: { href: string; children: React.ReactNod
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="no-underline transition-colors hover:text-white"
+      className="no-underline transition-colors hover:text-white hover:underline"
       style={{ color: C.textSec }}
     >
       {children}
