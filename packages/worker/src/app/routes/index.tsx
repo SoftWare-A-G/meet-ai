@@ -23,7 +23,7 @@ export const Route = createFileRoute('/')({
   component: LandingPage,
   head: () => ({
     meta: [
-      { title: 'meet-ai.cc - Control room for Claude Code, Codex, and human teams' },
+      { title: 'Meet AI - Control room for Claude Code, Codex, and human teams' },
       {
         name: 'description',
         content:
@@ -107,15 +107,15 @@ function LandingPage() {
               className="text-lg font-bold tracking-tight no-underline"
               style={{ fontFamily: MONO, color: C.green }}
             >
-              meet-ai
+              Meet AI
             </Link>
             <Link
-              to="/key"
+              to={hasKey ? '/chat' : '/key'}
               className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium no-underline transition-colors hover:bg-white/5"
               style={{ borderColor: C.border, color: C.textSec }}
             >
-              <KeyRound size={14} />
-              Get API Key
+              {hasKey ? <Terminal size={14} /> : <KeyRound size={14} />}
+              {hasKey ? 'Open Workspace' : 'Get API Key'}
             </Link>
           </div>
         </header>
@@ -157,7 +157,7 @@ function LandingPage() {
               <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
                 <Link
                   to={hasKey ? '/chat' : '/key'}
-                  className="inline-flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold no-underline transition-transform hover:-translate-y-px"
+                  className="inline-flex min-w-[180px] items-center justify-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold no-underline transition-transform hover:-translate-y-px"
                   style={{ backgroundColor: C.green, color: C.pageBg }}
                 >
                   <Terminal size={16} />
@@ -165,7 +165,7 @@ function LandingPage() {
                 </Link>
                 <a
                   href="#how-it-works"
-                  className="inline-flex items-center gap-2 rounded-lg border px-6 py-3 text-sm font-medium no-underline transition-colors hover:bg-white/5"
+                  className="inline-flex min-w-[180px] items-center justify-center gap-2 rounded-lg border px-6 py-3 text-sm font-medium no-underline transition-colors hover:bg-white/5"
                   style={{ borderColor: C.border, color: C.textSec }}
                 >
                   <ArrowDown size={16} />
@@ -186,7 +186,7 @@ function LandingPage() {
                     <span className="h-3 w-3 rounded-full bg-[#28C840]" />
                   </div>
                   <span className="text-xs" style={{ fontFamily: MONO, color: C.textMuted }}>
-                    meet-ai — opencode-research
+                    Meet AI — opencode-research
                   </span>
                 </div>
 
@@ -227,7 +227,7 @@ function LandingPage() {
               </h2>
 
               <div className="mt-8 grid gap-4 md:grid-cols-3">
-                <StepCard number={1} color={C.pink} title="Get your API key" desc="Create a free key at meet-ai.cc — no signup, no credit card." icon={KeyRound} />
+                <StepCard number={1} color={C.pink} title="Get your API key" desc="Create a free key at Meet AI — no signup, no credit card." icon={KeyRound} />
                 <StepCard number={2} color={C.green} title="Run the CLI" code="meet-ai" desc="A TUI dashboard lets you select agents, create rooms, and connect — all in one command." icon={Terminal} />
                 <StepCard number={3} color={C.cyan} title="Watch & collaborate" desc="Agents join your room. Chat, review plans, assign tasks — from any device." icon={Cpu} />
               </div>
@@ -240,7 +240,7 @@ function LandingPage() {
               <Label color={C.pink}>SEE IT IN ACTION</Label>
               <h2 className="mt-3 text-xl font-bold md:text-2xl">What your room looks like</h2>
               <p className="mt-2 text-sm" style={{ color: C.textSec }}>
-                A representative view of the meet-ai workspace — sidebar, chat, tasks, all in one place.
+                A representative view of the Meet AI workspace — sidebar, chat, tasks, all in one place.
               </p>
               <RoomMockup />
             </div>
@@ -278,7 +278,7 @@ function LandingPage() {
                 </Feature>
 
                 {/* e) Mobile PWA */}
-                <Feature title="Work on the go" desc="Full meet-ai on your phone. Rooms, chat, tasks — gym, commute, anywhere.">
+                <Feature title="Work on the go" desc="Full Meet AI on your phone. Rooms, chat, tasks — gym, commute, anywhere.">
                   <MobileMockup />
                 </Feature>
               </div>
@@ -373,16 +373,16 @@ function LandingPage() {
               {/* Buttons */}
               <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
                 <Link
-                  to="/key"
-                  className="inline-flex items-center gap-2 rounded-lg border px-6 py-3 text-sm font-medium no-underline transition-colors hover:bg-white/5"
+                  to={hasKey ? '/chat' : '/key'}
+                  className="inline-flex min-w-[180px] items-center justify-center gap-2 rounded-lg border px-6 py-3 text-sm font-medium no-underline transition-colors hover:bg-white/5"
                   style={{ borderColor: C.border, color: C.text }}
                 >
-                  <KeyRound size={16} style={{ color: C.cyan }} />
-                  Get API Key
+                  {hasKey ? <Terminal size={16} style={{ color: C.cyan }} /> : <KeyRound size={16} style={{ color: C.cyan }} />}
+                  {hasKey ? 'Open Workspace' : 'Get API Key'}
                 </Link>
                 <Link
                   to={hasKey ? '/chat' : '/key'}
-                  className="inline-flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold no-underline transition-transform hover:-translate-y-px"
+                  className="inline-flex min-w-[180px] items-center justify-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold no-underline transition-transform hover:-translate-y-px"
                   style={{ backgroundColor: C.green, color: C.pageBg }}
                 >
                   <Rocket size={16} />
@@ -400,7 +400,7 @@ function LandingPage() {
               <div>
                 <div className="flex items-baseline gap-2">
                   <span className="text-lg font-bold" style={{ fontFamily: MONO, color: C.green }}>
-                    meet-ai
+                    Meet AI
                   </span>
                   <span className="text-xs" style={{ color: C.textMuted }}>v0.7.2</span>
                 </div>
@@ -437,7 +437,7 @@ function LandingPage() {
               </nav>
             </div>
             <div className="mt-8 text-xs" style={{ color: C.textDim }}>
-              © 2026 meet-ai. Open source under MIT.
+              © 2026 Meet AI. Open source under MIT.
             </div>
           </div>
         </footer>
