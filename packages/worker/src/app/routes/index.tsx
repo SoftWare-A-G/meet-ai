@@ -111,7 +111,7 @@ function LandingPage() {
             </Link>
             <Link
               to={hasKey ? '/chat' : '/key'}
-              className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium no-underline transition-colors hover:bg-white/5"
+              className="inline-flex min-w-[150px] items-center justify-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium no-underline transition-colors hover:bg-white/5"
               style={{ borderColor: C.border, color: C.textSec }}
             >
               {hasKey ? <Terminal size={14} /> : <KeyRound size={14} />}
@@ -157,7 +157,7 @@ function LandingPage() {
               <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
                 <Link
                   to={hasKey ? '/chat' : '/key'}
-                  className="inline-flex min-w-[180px] items-center justify-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold no-underline transition-transform hover:-translate-y-px"
+                  className="inline-flex min-w-[210px] items-center justify-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold no-underline transition-transform hover:-translate-y-px"
                   style={{ backgroundColor: C.green, color: C.pageBg }}
                 >
                   <Terminal size={16} />
@@ -165,7 +165,7 @@ function LandingPage() {
                 </Link>
                 <a
                   href="#how-it-works"
-                  className="inline-flex min-w-[180px] items-center justify-center gap-2 rounded-lg border px-6 py-3 text-sm font-medium no-underline transition-colors hover:bg-white/5"
+                  className="inline-flex min-w-[210px] items-center justify-center gap-2 rounded-lg border px-6 py-3 text-sm font-medium no-underline transition-colors hover:bg-white/5"
                   style={{ borderColor: C.border, color: C.textSec }}
                 >
                   <ArrowDown size={16} />
@@ -374,7 +374,7 @@ function LandingPage() {
               <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
                 <Link
                   to={hasKey ? '/chat' : '/key'}
-                  className="inline-flex min-w-[180px] items-center justify-center gap-2 rounded-lg border px-6 py-3 text-sm font-medium no-underline transition-colors hover:bg-white/5"
+                  className="inline-flex min-w-[210px] items-center justify-center gap-2 rounded-lg border px-6 py-3 text-sm font-medium no-underline transition-colors hover:bg-white/5"
                   style={{ borderColor: C.border, color: C.text }}
                 >
                   {hasKey ? <Terminal size={16} style={{ color: C.cyan }} /> : <KeyRound size={16} style={{ color: C.cyan }} />}
@@ -382,7 +382,7 @@ function LandingPage() {
                 </Link>
                 <Link
                   to={hasKey ? '/chat' : '/key'}
-                  className="inline-flex min-w-[180px] items-center justify-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold no-underline transition-transform hover:-translate-y-px"
+                  className="inline-flex min-w-[210px] items-center justify-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold no-underline transition-transform hover:-translate-y-px"
                   style={{ backgroundColor: C.green, color: C.pageBg }}
                 >
                   <Rocket size={16} />
