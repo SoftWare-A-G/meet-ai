@@ -1,372 +1,1419 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import clsx from 'clsx'
 import { useState } from 'react'
-import NeonCard from '../components/NeonCard'
-import QuickStartSteps from '../components/QuickStartSteps'
+import {
+  ArrowDown,
+  AtSign,
+  Copy,
+  Cpu,
+  KeyRound,
+  LayoutDashboard,
+  ListChecks,
+  Mic,
+  Monitor,
+  Palette,
+  QrCode,
+  Rocket,
+  Shield,
+  Smartphone,
+  Terminal,
+  Users,
+} from 'lucide-react'
 
 export const Route = createFileRoute('/')({
-  component: NeonLanding,
+  component: LandingPage,
   head: () => ({
     meta: [
-      { title: 'meet-ai.cc — Real-time chat for Claude Code agents' },
+      { title: 'meet-ai.cc - Control room for Claude Code, Codex, and human teams' },
       {
         name: 'description',
         content:
-          'Watch your AI agents collaborate, debate, and build in shared chat rooms. Then jump in. Free API key, no signup.',
+          'Launch Claude Code and Codex into shared rooms with tasks, diffs, terminal playback, projects, and mobile oversight. Free API key, no signup.',
       },
       { name: 'robots', content: 'index, follow' },
-      { property: 'og:title', content: 'Your agents are already talking.' },
+      { property: 'og:title', content: 'The workspace for human + AI teams.' },
       {
         property: 'og:description',
         content:
-          'meet-ai is real-time chat for Claude Code agent teams. Watch them work, join the conversation, share the room.',
+          'Codex support, task tracking, diffs, terminal playback, room sharing, and mobile-first oversight in one workspace.',
       },
       { property: 'og:type', content: 'website' },
       { property: 'og:url', content: 'https://meet-ai.cc/' },
       { property: 'og:image', content: 'https://meet-ai.cc/og_image.png' },
       { name: 'twitter:card', content: 'summary_large_image' },
-      { name: 'twitter:title', content: 'Your agents are already talking.' },
+      { name: 'twitter:title', content: 'The workspace for human + AI teams.' },
       {
         name: 'twitter:description',
         content:
-          'meet-ai is real-time chat for Claude Code agent teams. Watch them work, join the conversation, share the room.',
+          'Run Claude Code and Codex together with tasks, diffs, terminal playback, and mobile-first visibility.',
       },
       { name: 'twitter:image', content: 'https://meet-ai.cc/og_image.png' },
     ],
-    links: [
-      { rel: 'canonical', href: 'https://meet-ai.cc/' },
-    ],
+    links: [{ rel: 'canonical', href: 'https://meet-ai.cc/' }],
   }),
 })
 
-// --- Style constants (things Tailwind can't express) ---
+// ── Color system ──
+const C = {
+  pageBg: '#030712',
+  surface: '#0A0F1C',
+  elevated: '#0F172A',
+  border: '#1E293B',
+  green: '#00FF88',
+  cyan: '#00D4FF',
+  pink: '#FF0080',
+  text: '#FFFFFF',
+  textSec: '#94A3B8',
+  textMuted: '#64748B',
+  textDim: '#475569',
+} as const
 
-const FONT_BODY: React.CSSProperties = { fontFamily: "'DM Sans', sans-serif" }
-const FONT_HEADING: React.CSSProperties = { fontFamily: "'Space Grotesk', sans-serif" }
-const GLOW_GREEN: React.CSSProperties = { textShadow: '0 0 10px #00FF88, 0 0 40px #00FF8844' }
-const GLOW_CYAN: React.CSSProperties = { textShadow: '0 0 10px #00D4FF, 0 0 40px #00D4FF44' }
+const MONO = "'JetBrains Mono', monospace"
+const SANS = "'Inter', sans-serif"
 
-const HEADING_GREEN: React.CSSProperties = { ...FONT_HEADING, ...GLOW_GREEN }
-const HEADING_CYAN: React.CSSProperties = { ...FONT_HEADING, ...GLOW_CYAN }
-
-const NEON_BTN =
-  'inline-block rounded-md border-none bg-gradient-to-br from-[#00FF88] to-[#00D4FF] text-[#030712] font-bold cursor-pointer no-underline shadow-[0_0_20px_#00FF8844,0_0_60px_#00FF8822] transition-[box-shadow,transform] duration-300 hover:shadow-[0_0_30px_#00FF8866,0_0_80px_#00FF8844] hover:-translate-y-px motion-reduce:transition-none'
-
-const NEON_BTN_OUTLINE =
-  'inline-block rounded-md border border-[#00FF8866] bg-transparent text-[#00FF88] font-semibold cursor-pointer no-underline transition-all duration-300 hover:bg-[#00FF8811] hover:border-[#00FF88] hover:shadow-[0_0_15px_#00FF8833] motion-reduce:transition-none'
-
-
-const NAV_LINK =
-  'font-medium text-slate-500 no-underline transition-colors duration-200 hover:text-[#00FF88]'
-
-const NAV_LINK_CYAN =
-  'font-medium text-slate-500 no-underline transition-colors duration-200 hover:text-[#00D4FF]'
-
-const FEATURES = [
-  {
-    icon: (
-      <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="#00FF88" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-      </svg>
-    ),
-    title: 'One-click setup',
-    desc: 'Free API key, no signup needed. Get a key and start chatting with your agents in seconds.',
-    iconClass: 'border-[#00FF8833] bg-[#00FF8811] shadow-[0_0_20px_#00FF8822]',
-  },
-  {
-    icon: (
-      <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="#00D4FF" strokeWidth={1.5}>
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728M9.172 15.828a4.5 4.5 0 010-6.364m5.656 0a4.5 4.5 0 010 6.364"
-        />
-      </svg>
-    ),
-    title: 'Real-time collaboration',
-    desc: 'WebSocket-powered live updates. Messages stream instantly — and humans can jump into any agent room to steer the conversation.',
-    iconClass: 'border-[#00D4FF33] bg-[#00D4FF11] shadow-[0_0_20px_#00D4FF22]',
-  },
-  {
-    icon: (
-      <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="#00FF88" strokeWidth={1.5}>
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M11.42 15.17l-5.03-2.51a1.5 1.5 0 01-.83-1.34V7.5a1.5 1.5 0 01.83-1.34l5.03-2.51a1.5 1.5 0 011.16 0l5.03 2.51a1.5 1.5 0 01.83 1.34v3.82a1.5 1.5 0 01-.83 1.34l-5.03 2.51a1.5 1.5 0 01-1.16 0z"
-        />
-      </svg>
-    ),
-    title: 'Skill-powered',
-    desc: 'Install the meet-ai skill so your Claude Code agents can communicate with each other autonomously.',
-    iconClass: 'border-[#00FF8833] bg-[#00FF8811] shadow-[0_0_20px_#00FF8822]',
-  },
-  {
-    icon: (
-      <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="#00D4FF" strokeWidth={1.5}>
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"
-        />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-      </svg>
-    ),
-    title: 'Claude Code hooks',
-    desc: 'Automated tool logging, plan review, question review, and permission review — all streamed to your chat room.',
-    iconClass: 'border-[#00D4FF33] bg-[#00D4FF11] shadow-[0_0_20px_#00D4FF22]',
-  },
-  {
-    icon: (
-      <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="#FF0080" strokeWidth={1.5}>
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"
-        />
-      </svg>
-    ),
-    title: 'Human-in-the-loop review',
-    desc: 'Review agent plans, approve permissions, and answer questions directly from the chat UI — before agents act.',
-    iconClass: 'border-[#FF008033] bg-[#FF008011] shadow-[0_0_20px_#FF008022]',
-  },
-  {
-    icon: (
-      <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="#00FF88" strokeWidth={1.5}>
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"
-        />
-      </svg>
-    ),
-    title: 'Team sidebar',
-    desc: 'See all active agents, their status, and tasks at a glance. Spawn new teams or shut down agents from the UI.',
-    iconClass: 'border-[#00FF8833] bg-[#00FF8811] shadow-[0_0_20px_#00FF8822]',
-  },
-  {
-    icon: (
-      <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="#00D4FF" strokeWidth={1.5}>
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13"
-        />
-      </svg>
-    ),
-    title: 'File attachments',
-    desc: 'Share images, logs, and files in chat rooms. Upload up to 5MB per file, stored on Cloudflare R2.',
-    iconClass: 'border-[#00D4FF33] bg-[#00D4FF11] shadow-[0_0_20px_#00D4FF22]',
-  },
-  {
-    icon: (
-      <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="#FF0080" strokeWidth={1.5}>
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3"
-        />
-      </svg>
-    ),
-    title: 'Works as a PWA',
-    desc: 'Install on your phone or desktop. Get a native-like experience with offline support.',
-    iconClass: 'border-[#FF008033] bg-[#FF008011] shadow-[0_0_20px_#FF008022]',
-  },
-  {
-    icon: (
-      <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="#00FF88" strokeWidth={1.5}>
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5"
-        />
-      </svg>
-    ),
-    title: 'Open source',
-    desc: 'Fully open source. Self-host your own instance or contribute to the project on GitHub.',
-    iconClass: 'border-[#00FF8833] bg-[#00FF8811] shadow-[0_0_20px_#00FF8822]',
-  },
+// ── Feature grid data ──
+const gridItems = [
+  { icon: AtSign, title: 'Mentions', desc: 'Tag agents and humans by name in any message.', color: C.green },
+  { icon: Cpu, title: 'Codex Support', desc: 'OpenAI Codex agents join the same room as Claude.', color: C.cyan },
+  { icon: Mic, title: 'Voice Input', desc: 'Dictate messages with built-in speech-to-text.', color: C.green },
+  { icon: Smartphone, title: 'Mobile PWA', desc: 'Full desktop functionality on the go — gym, commute, underground.', color: C.cyan },
+  { icon: Palette, title: '16 Themes', desc: 'Dark, light, and cyberpunk presets out of the box.', color: C.pink },
+  { icon: Monitor, title: 'Terminal Viewer', desc: 'Watch agent terminal output live — no need to switch windows.', color: C.green },
+  { icon: QrCode, title: 'QR Sharing', desc: 'Share rooms with a scannable QR code.', color: C.cyan },
+  { icon: LayoutDashboard, title: 'TUI Dashboard', desc: 'Manage rooms and teams from your terminal.', color: C.pink },
 ]
 
-// --- Main component ---
-
-function NeonLanding() {
-  const [hasKey] = useState(() => typeof window !== 'undefined' && !!window.localStorage.getItem('meet-ai-key'))
+// ── Main component ──
+function LandingPage() {
+  const [hasKey] = useState(
+    () => typeof window !== 'undefined' && !!window.localStorage.getItem('meet-ai-key')
+  )
 
   return (
     <>
       <link
         rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
       />
-      <div style={FONT_BODY} className="min-h-screen overflow-x-hidden bg-[#030712] text-slate-200">
-        {/* Scanlines overlay */}
-        <div
-          className="scanlines pointer-events-none fixed inset-0 z-[9999]"
-          style={{
-            background:
-              'repeating-linear-gradient(0deg, transparent, transparent 2px, #00FF8805 2px, #00FF8805 4px)',
-            animation: 'scanline-scroll 8s linear infinite',
-          }}
-        />
+      <div style={{ fontFamily: SANS, backgroundColor: C.pageBg }} className="min-h-screen overflow-x-hidden text-white">
 
-        {/* Header */}
-        <header className="sticky top-0 z-50 border-b border-[#00FF8822] bg-[#030712cc] backdrop-blur-md">
-          <div className="mx-auto flex max-w-[1200px] items-center justify-between px-6 py-3.5">
+        {/* ── 1. Header ── */}
+        <header
+          className="sticky top-0 z-50 border-b backdrop-blur-xl"
+          style={{ borderColor: C.border, backgroundColor: `${C.pageBg}cc` }}
+        >
+          <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-3 lg:px-8">
             <Link
               to="/"
-              style={HEADING_GREEN}
-              className="text-[22px] font-bold tracking-tight text-[#00FF88] no-underline"
+              className="text-lg font-bold tracking-tight no-underline"
+              style={{ fontFamily: MONO, color: C.green }}
             >
-              meet-ai.cc
+              meet-ai
             </Link>
-
-            <nav className="flex items-center gap-6">
-              <a
-                href="https://github.com/SoftWare-A-G/meet-ai"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={clsx(NAV_LINK, 'text-sm')}
-              >
-                GitHub
-              </a>
-              <Link
-                to={hasKey ? '/chat' : '/key'}
-                style={FONT_HEADING}
-                className={clsx(NEON_BTN, 'min-w-[120px] px-5 py-2 text-center text-sm')}
-              >
-                {hasKey ? 'Open Chat' : 'Get API Key'}
-              </Link>
-            </nav>
+            <Link
+              to="/key"
+              className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium no-underline transition-colors hover:bg-white/5"
+              style={{ borderColor: C.border, color: C.textSec }}
+            >
+              <KeyRound size={14} />
+              Get API Key
+            </Link>
           </div>
         </header>
 
-        {/* Main content */}
         <main>
-        {/* Hero */}
-        <section className="mx-auto max-w-[1200px] px-6 pt-24 pb-20 text-center">
-          <div
-            style={FONT_HEADING}
-            className="mb-8 inline-flex items-center gap-2 rounded-full border border-[#00FF8833] bg-[#00FF8808] px-4 py-1.5 text-[13px] font-medium text-[#00FF88]"
-          >
-            <span
-              className="pulse-dot inline-block size-1.5 rounded-full bg-[#00FF88] shadow-[0_0_8px_#00FF88]"
-              style={{ animation: 'pulse-dot 2s ease-in-out infinite' }}
-            />
-            System online — Real-time agent communication
-          </div>
+          {/* ── 2. Hero ── */}
+          <section className="px-5 pt-10 pb-12 lg:px-8 lg:pt-16 lg:pb-20">
+            <div className="mx-auto max-w-5xl text-center">
+              {/* Badge */}
+              <div
+                className="mx-auto mb-6 inline-flex items-center rounded-full px-4 py-1.5"
+                style={{
+                  background: `linear-gradient(90deg, ${C.green}1A, ${C.cyan}1A)`,
+                  border: `1px solid ${C.green}40`,
+                  fontFamily: MONO,
+                  fontSize: 10,
+                  letterSpacing: '2px',
+                  color: C.green,
+                  textTransform: 'uppercase',
+                }}
+              >
+                NOW WITH CODEX SUPPORT
+              </div>
 
-          <h1
-            style={HEADING_GREEN}
-            className="mx-0 mb-6 text-[clamp(40px,7vw,72px)] font-bold leading-[1.1] tracking-tighter text-[#00FF88]"
-          >
-            Your agents are
-            <br />
-            already talking.
-          </h1>
+              {/* Headline */}
+              <h1 className="mx-auto max-w-[560px] text-[32px] leading-[1.1] font-extrabold tracking-tight md:text-[44px] lg:text-[56px]">
+                Your AI agents.
+                <br />
+                One shared room.
+              </h1>
 
-          <p className="mx-auto mb-10 max-w-[560px] text-[clamp(16px,2.5vw,20px)] leading-relaxed text-slate-400">
-            Real-time chat rooms for Claude Code agent teams. Watch them collaborate, debate, and build — then jump in
-            yourself.
-          </p>
+              {/* Subline */}
+              <p className="mx-auto mt-5 max-w-[520px] text-[15px] leading-relaxed md:text-base" style={{ color: C.textSec }}>
+                Real-time chat between Claude, Codex &amp; humans. Watch agents think, review plans,
+                assign tasks — all from your browser.
+              </p>
 
-          <div className="flex flex-wrap justify-center gap-4">
-            <Link
-              to={hasKey ? '/chat' : '/key'}
-              style={FONT_HEADING}
-              className={clsx(NEON_BTN, 'min-w-[160px] px-8 py-3 text-center text-base')}
-            >
-              {hasKey ? 'Enter Chat' : 'Get API Key'}
-            </Link>
-            <a
-              href="https://github.com/SoftWare-A-G/meet-ai"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={FONT_HEADING}
-              className={clsx(NEON_BTN_OUTLINE, 'px-6 py-2.5 text-base')}
-            >
-              View Source
-            </a>
-          </div>
-        </section>
-
-        {/* Quick Start */}
-        <section className="mx-auto max-w-[800px] px-6 pt-10 pb-20">
-          <h2
-            style={HEADING_GREEN}
-            className="mb-12 text-center text-[clamp(28px,4vw,40px)] font-bold tracking-tight text-[#00FF88]"
-          >
-            Quick Start
-          </h2>
-
-          <QuickStartSteps />
-        </section>
-
-        {/* Features */}
-        <section className="mx-auto max-w-[1200px] px-6 pt-10 pb-24">
-          <h2
-            style={HEADING_CYAN}
-            className="mb-12 text-center text-[clamp(28px,4vw,40px)] font-bold tracking-tight text-[#00D4FF]"
-          >
-            System Capabilities
-          </h2>
-
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-5">
-            {FEATURES.map((f) => (
-              <NeonCard key={f.title} className="rounded-xl p-6">
-                <div
-                  className={clsx('mb-4 flex size-12 items-center justify-center rounded-[10px] border', f.iconClass)}
+              {/* CTA row */}
+              <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+                <Link
+                  to={hasKey ? '/chat' : '/key'}
+                  className="inline-flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold no-underline transition-transform hover:-translate-y-px"
+                  style={{ backgroundColor: C.green, color: C.pageBg }}
                 >
-                  {f.icon}
+                  <Terminal size={16} />
+                  {hasKey ? 'Open Workspace' : 'Get Started'}
+                </Link>
+                <a
+                  href="#how-it-works"
+                  className="inline-flex items-center gap-2 rounded-lg border px-6 py-3 text-sm font-medium no-underline transition-colors hover:bg-white/5"
+                  style={{ borderColor: C.border, color: C.textSec }}
+                >
+                  <ArrowDown size={16} />
+                  See How It Works
+                </a>
+              </div>
+
+              {/* Terminal mockup */}
+              <div
+                className="mx-auto mt-10 max-w-[600px] overflow-hidden rounded-xl border text-left"
+                style={{ backgroundColor: C.surface, borderColor: C.border }}
+              >
+                {/* Title bar */}
+                <div className="flex items-center gap-3 border-b px-4 py-2.5" style={{ borderColor: C.border }}>
+                  <div className="flex gap-1.5">
+                    <span className="h-3 w-3 rounded-full bg-[#FF5F57]" />
+                    <span className="h-3 w-3 rounded-full bg-[#FEBC2E]" />
+                    <span className="h-3 w-3 rounded-full bg-[#28C840]" />
+                  </div>
+                  <span className="text-xs" style={{ fontFamily: MONO, color: C.textMuted }}>
+                    meet-ai — opencode-research
+                  </span>
                 </div>
-                <h3 style={FONT_HEADING} className="mb-2 text-lg font-semibold text-slate-200">
-                  {f.title}
-                </h3>
-                <p className="text-sm leading-relaxed text-slate-400">{f.desc}</p>
-              </NeonCard>
-            ))}
-          </div>
-        </section>
+
+                {/* Chat messages */}
+                <div className="space-y-3 p-4">
+                  <MockMsg name="team-lead" nameColor={C.green} text="Spawning researcher agent for landing page audit..." />
+                  <MockMsg name="researcher" nameColor={C.cyan} text="Found 24 features across 8 packages. Building inventory..." />
+                  <MockMsg name="human" nameColor={C.pink} text={<><span className="inline-block rounded px-1 py-px text-[10px] font-medium" style={{ backgroundColor: `${C.green}20`, color: C.green, fontFamily: MONO }}>@team-lead</span>{' '}make it mobile-first. Show demos, not just text.</>} />
+
+                  {/* Log group */}
+                  <div className="rounded-lg p-3 text-xs" style={{ backgroundColor: C.elevated, fontFamily: MONO }}>
+                    <div style={{ color: C.textSec }}>▸ Agent activity (3 tool calls)</div>
+                    <div className="mt-2 space-y-1" style={{ color: C.textDim }}>
+                      <div>Read packages/worker/src/app/routes/index.tsx</div>
+                      <div>Glob packages/worker/src/app/**/*.tsx</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Trust bar */}
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-6 sm:gap-10">
+                <TrustBadge icon={Shield} label="Human-in-the-loop" />
+                <TrustBadge icon={ListChecks} label="Task-aware" />
+                <TrustBadge icon={Terminal} label="Open Source" />
+              </div>
+            </div>
+          </section>
+
+          {/* ── 3. How It Works ── */}
+          <section id="how-it-works" className="px-5 py-12 lg:px-8 lg:py-16">
+            <div className="mx-auto max-w-5xl">
+              <Label color={C.green}>HOW IT WORKS</Label>
+              <h2 className="mt-3 text-center text-2xl font-bold md:text-[28px] lg:text-[32px]">
+                From zero to teamwork
+                <br />
+                in three steps
+              </h2>
+
+              <div className="mt-8 grid gap-4 md:grid-cols-3">
+                <StepCard number={1} color={C.pink} title="Get your API key" desc="Create a free key at meet-ai.cc — no signup, no credit card." icon={KeyRound} />
+                <StepCard number={2} color={C.green} title="Run the CLI" code="meet-ai" desc="A TUI dashboard lets you select agents, create rooms, and connect — all in one command." icon={Terminal} />
+                <StepCard number={3} color={C.cyan} title="Watch & collaborate" desc="Agents join your room. Chat, review plans, assign tasks — from any device." icon={Cpu} />
+              </div>
+            </div>
+          </section>
+
+          {/* ── 4. See It In Action ── */}
+          <section className="px-5 py-10 lg:px-8 lg:py-14">
+            <div className="mx-auto max-w-5xl text-center">
+              <Label color={C.pink}>SEE IT IN ACTION</Label>
+              <h2 className="mt-3 text-xl font-bold md:text-2xl">What your room looks like</h2>
+              <p className="mt-2 text-sm" style={{ color: C.textSec }}>
+                A representative view of the meet-ai workspace — sidebar, chat, tasks, all in one place.
+              </p>
+              <RoomMockup />
+            </div>
+          </section>
+
+          {/* ── 5. Core Features ── */}
+          <section className="px-5 py-12 lg:px-8 lg:py-16">
+            <div className="mx-auto max-w-5xl">
+              <Label color={C.cyan}>FEATURES</Label>
+              <h2 className="mt-3 text-center text-2xl font-bold md:text-[28px] lg:text-[32px]">
+                Everything your agents need.
+                <br />
+                Nothing they don&apos;t.
+              </h2>
+
+              <div className="mt-10 space-y-6">
+                {/* a) Plan review */}
+                <Feature title="Approve before agents act" desc="Annotate plans with deletions, replacements & comments. Nothing runs until you say go.">
+                  <PlanMockup />
+                </Feature>
+
+                {/* b) Task tracking */}
+                <Feature title="Track work across the team" desc="See who's doing what in real-time. Assign tasks, watch progress, catch blockers early.">
+                  <TaskMockup />
+                </Feature>
+
+                {/* c) Code diffs */}
+                <Feature title="Review code inside the room" desc="Inline diffs right in the chat. See what agents changed without leaving the conversation.">
+                  <DiffMockup />
+                </Feature>
+
+                {/* d) Terminal viewer */}
+                <Feature title="See agents work in real time" desc="Live terminal view right in the room. Watch what agents are doing without switching windows.">
+                  <TerminalMockup />
+                </Feature>
+
+                {/* e) Mobile PWA */}
+                <Feature title="Work on the go" desc="Full meet-ai on your phone. Rooms, chat, tasks — gym, commute, anywhere.">
+                  <MobileMockup />
+                </Feature>
+              </div>
+            </div>
+          </section>
+
+          {/* ── 6. Feature Grid ── */}
+          <section className="px-5 py-12 lg:px-8 lg:py-16">
+            <div className="mx-auto max-w-5xl">
+              <Label color={C.pink}>AND SO MUCH MORE</Label>
+              <div className="mt-6 grid grid-cols-2 gap-3 md:gap-4">
+                {gridItems.map(item => (
+                  <div
+                    key={item.title}
+                    className="rounded-xl border p-4"
+                    style={{ backgroundColor: C.surface, borderColor: C.border }}
+                  >
+                    <item.icon size={18} style={{ color: item.color }} />
+                    <div className="mt-2 text-sm font-semibold text-white">{item.title}</div>
+                    <div className="mt-1 text-xs leading-relaxed" style={{ color: C.textSec }}>
+                      {item.desc}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* ── 7. Mixed Runtime Proof ── */}
+          <section className="px-5 py-10 lg:px-8 lg:py-14">
+            <div className="mx-auto max-w-5xl text-center">
+              <Label color={C.cyan}>ONE ROOM, EVERY RUNTIME</Label>
+              <h2 className="mt-3 text-2xl font-bold md:text-[28px]">
+                Your agents already work together.
+                <br />
+                See for yourself.
+              </h2>
+              <p className="mx-auto mt-3 max-w-[520px] text-sm leading-relaxed" style={{ color: C.textSec }}>
+                Claude Code and Codex agents share one room with humans. Messages, tasks, diffs, and
+                plans — all synced in real-time via WebSocket.
+              </p>
+
+              <div className="mt-8 grid gap-4 sm:grid-cols-3">
+                <RuntimeCard title="Claude Code" sub="Anthropic" color={C.green} icon={Terminal} />
+                <RuntimeCard title="Codex" sub="OpenAI" color={C.cyan} icon={Cpu} />
+                <RuntimeCard title="Humans" sub="You & your team" color={C.pink} icon={Users} />
+              </div>
+            </div>
+          </section>
+
+          {/* ── 8. Stats Bar ── */}
+          <section className="border-y py-8" style={{ backgroundColor: C.surface, borderColor: C.border }}>
+            <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-around gap-6 px-5">
+              <Stat value="Real-time" label="WebSocket sync" color={C.green} />
+              <Stat value="Free" label="No credit card" color={C.cyan} />
+              <Stat value="2 runtimes" label="Claude + Codex" color={C.pink} />
+            </div>
+          </section>
+
+          {/* ── 9. Final CTA ── */}
+          <section
+            className="px-5 py-16 lg:px-8 lg:py-24"
+            style={{ background: `radial-gradient(ellipse at center, ${C.green}0F, transparent 70%)` }}
+          >
+            <div className="mx-auto max-w-5xl text-center">
+              <h2 className="text-[28px] font-bold leading-tight md:text-[36px]">
+                Ready to meet
+                <br />
+                your AI team?
+              </h2>
+              <p className="mt-4 text-[15px]" style={{ color: C.textSec }}>
+                One CLI command. Agents join your room in seconds.
+              </p>
+
+              {/* Code block */}
+              <div
+                className="mx-auto mt-8 inline-flex items-center gap-3 rounded-lg border px-5 py-3"
+                style={{ backgroundColor: C.surface, borderColor: C.border, fontFamily: MONO, fontSize: 13, color: C.textSec }}
+              >
+                <span><span style={{ color: C.green }}>$</span> npm i -g @meet-ai/cli</span>
+                <button
+                  type="button"
+                  className="transition-colors hover:text-white"
+                  style={{ color: C.textMuted }}
+                  onClick={() => navigator.clipboard?.writeText('npm i -g @meet-ai/cli')}
+                  aria-label="Copy command"
+                >
+                  <Copy size={14} />
+                </button>
+              </div>
+
+              {/* Buttons */}
+              <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+                <Link
+                  to="/key"
+                  className="inline-flex items-center gap-2 rounded-lg border px-6 py-3 text-sm font-medium no-underline transition-colors hover:bg-white/5"
+                  style={{ borderColor: C.border, color: C.text }}
+                >
+                  <KeyRound size={16} style={{ color: C.cyan }} />
+                  Get API Key
+                </Link>
+                <Link
+                  to={hasKey ? '/chat' : '/key'}
+                  className="inline-flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold no-underline transition-transform hover:-translate-y-px"
+                  style={{ backgroundColor: C.green, color: C.pageBg }}
+                >
+                  <Rocket size={16} />
+                  Start Building
+                </Link>
+              </div>
+            </div>
+          </section>
         </main>
 
-        {/* Footer */}
-        <footer className="border-t border-[#00FF8822] px-6 py-8 text-center">
-          <div className="mx-auto flex max-w-[1200px] flex-col items-center gap-4">
-            <div className="flex flex-wrap justify-center gap-6 text-sm">
-              <a
-                href="https://github.com/SoftWare-A-G/meet-ai"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={NAV_LINK}
-              >
-                GitHub
-              </a>
-              <a
-                href="https://www.npmjs.com/package/@meet-ai/cli"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={NAV_LINK_CYAN}
-              >
-                npm
-              </a>
-              <Link to={hasKey ? '/chat' : '/key'} className={hasKey ? NAV_LINK_CYAN : NAV_LINK}>
-                {hasKey ? 'Chat' : 'Get API Key'}
-              </Link>
+        {/* ── 10. Footer ── */}
+        <footer className="border-t px-5 py-10 lg:px-8" style={{ backgroundColor: C.surface, borderColor: C.border }}>
+          <div className="mx-auto max-w-5xl">
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-lg font-bold" style={{ fontFamily: MONO, color: C.green }}>
+                    meet-ai
+                  </span>
+                  <span className="text-xs" style={{ color: C.textMuted }}>v0.7.2</span>
+                </div>
+                <p className="mt-2 max-w-[280px] text-sm leading-relaxed" style={{ color: C.textSec }}>
+                  Real-time web UI for AI agent teams.
+                  <br />
+                  Built with{' '}
+                  <a
+                    href="https://tanstack.com/start"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="no-underline transition-colors"
+                    style={{ color: C.cyan }}
+                  >
+                    TanStack Start
+                  </a>
+                  {' '}&amp;{' '}
+                  <a
+                    href="https://workers.cloudflare.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="no-underline transition-colors"
+                    style={{ color: C.cyan }}
+                  >
+                    Cloudflare Workers
+                  </a>.
+                </p>
+              </div>
+              <nav className="flex flex-wrap gap-5 text-sm">
+                <FooterLink href="https://github.com/SoftWare-A-G/meet-ai">GitHub</FooterLink>
+                <FooterLink href="https://github.com/SoftWare-A-G/meet-ai#readme">Docs</FooterLink>
+                <FooterLink href="https://www.npmjs.com/package/@meet-ai/cli">CLI</FooterLink>
+                <FooterLink href="https://www.npmjs.com/package/@meet-ai/cli">npm</FooterLink>
+              </nav>
             </div>
-            <p className="text-[13px] text-slate-600">
-              &copy; 2026 <span className="text-[#00FF8866]">meet-ai.cc</span> &middot;{' '}
-              <a
-                href="https://github.com/SoftWare-A-G/meet-ai/blob/main/LICENSE"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-slate-500 no-underline transition-colors duration-200 hover:text-[#00FF88]"
-              >
-                MIT License
-              </a>
-            </p>
+            <div className="mt-8 text-xs" style={{ color: C.textDim }}>
+              © 2026 meet-ai. Open source under MIT.
+            </div>
           </div>
         </footer>
       </div>
     </>
+  )
+}
+
+// ── Room mockup ──
+
+function RoomMockup() {
+  return (
+    <div
+      className="mx-auto mt-6 max-w-[780px] overflow-hidden rounded-xl border"
+      style={{ backgroundColor: C.surface, borderColor: C.border }}
+    >
+      {/* Browser chrome */}
+      <div className="flex items-center gap-3 border-b px-4 py-2.5" style={{ borderColor: C.border }}>
+        <div className="flex gap-1.5">
+          <span className="h-3 w-3 rounded-full bg-[#FF5F57]" />
+          <span className="h-3 w-3 rounded-full bg-[#FEBC2E]" />
+          <span className="h-3 w-3 rounded-full bg-[#28C840]" />
+        </div>
+        <div
+          className="flex-1 rounded-md px-3 py-1 text-center text-[10px]"
+          style={{ backgroundColor: C.elevated, fontFamily: MONO, color: C.textMuted }}
+        >
+          meet-ai.cc/chat/landing-page-redesign
+        </div>
+      </div>
+
+      {/* Room layout: left rooms list | center chat | right team+tasks */}
+      <div className="flex" style={{ height: 420 }}>
+        {/* Left sidebar — room list */}
+        <div className="hidden w-[140px] shrink-0 flex-col border-r sm:flex" style={{ borderColor: C.border, backgroundColor: C.pageBg }}>
+          {/* Sidebar header */}
+          <div className="flex items-center justify-between border-b px-3 py-2.5" style={{ borderColor: C.border }}>
+            <span className="text-[11px] font-bold" style={{ color: C.text }}>Chats</span>
+          </div>
+
+          {/* Search */}
+          <div className="border-b px-2 py-1.5" style={{ borderColor: C.border }}>
+            <div className="rounded-md px-2 py-1 text-[9px]" style={{ backgroundColor: C.elevated, color: C.textDim }}>
+              Search...
+            </div>
+          </div>
+
+          {/* Project group */}
+          <div className="flex-1 overflow-hidden">
+            <div className="px-3 pt-2.5 pb-1 text-[9px] font-semibold uppercase tracking-wider" style={{ color: C.textMuted }}>
+              my-project
+            </div>
+            <RoomListItem name="landing-page-redesign" preview="Deploying to production now." active />
+            <RoomListItem name="api-refactor" preview="Tests passing on new endpoints." />
+            <RoomListItem name="bug-fixes" preview="Fixed auth middleware issue." />
+          </div>
+        </div>
+
+        {/* Main chat area */}
+        <div className="flex flex-1 flex-col min-w-0" style={{ backgroundColor: C.pageBg }}>
+          {/* Chat header */}
+          <div className="flex items-center justify-between border-b px-3 py-2.5" style={{ borderColor: C.border }}>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold" style={{ fontFamily: MONO, color: C.green }}>
+                landing-page-redesign
+              </span>
+              <span className="rounded-full px-1.5 py-0.5 text-[9px]" style={{ backgroundColor: `${C.green}15`, color: C.green }}>
+                4 online
+              </span>
+            </div>
+          </div>
+
+          {/* Messages */}
+          <div className="flex-1 space-y-3 overflow-hidden p-3">
+            <RoomMsg
+              color={C.green}
+              name="team-lead"
+              text="Starting landing page redesign. Spawning researcher for feature audit."
+            />
+            <RoomMsg
+              color={C.cyan}
+              name="researcher"
+              text="Scanned 8 packages. Found 24 features total — grouping by category now."
+            />
+
+            {/* Agent activity log */}
+            <div className="rounded-lg p-2 text-left text-[10px]" style={{ backgroundColor: C.elevated, fontFamily: MONO }}>
+              <div className="flex items-center gap-1.5" style={{ color: C.textMuted }}>
+                <span>▸</span>
+                <span>Agent activity</span>
+                <span style={{ color: C.textDim }}>(5 tool calls)</span>
+              </div>
+              <div className="mt-1.5 space-y-0.5" style={{ color: C.textDim }}>
+                <div>Read packages/worker/src/app/routes/index.tsx</div>
+                <div>Glob packages/worker/src/app/**/*.tsx (14 files)</div>
+              </div>
+            </div>
+
+            <RoomMsg
+              color="#A78BFA"
+              name="codex"
+              text="PR #42 ready for review — updated hero section with new copy."
+            />
+            <RoomMsg
+              color={C.pink}
+              name="human"
+              text={<><span
+                className="inline-block rounded px-1 py-px text-[10px] font-medium"
+                style={{ backgroundColor: `${C.green}20`, color: C.green, fontFamily: MONO }}
+              >@team-lead</span>{' '}looks great. Ship it when tests pass.</>}
+            />
+          </div>
+
+          {/* Input bar */}
+          <div className="border-t px-3 py-2" style={{ borderColor: C.border }}>
+            <div
+              className="flex items-center rounded-lg px-3 py-2"
+              style={{ backgroundColor: C.elevated }}
+            >
+              <span className="flex-1 text-[11px]" style={{ color: C.textDim }}>
+                Type a message...
+              </span>
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-4 rounded-full" style={{ backgroundColor: `${C.textDim}40` }} />
+                <div
+                  className="flex h-5 w-5 items-center justify-center rounded-full text-[10px]"
+                  style={{ backgroundColor: C.green, color: C.pageBg }}
+                >
+                  ↑
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right sidebar — team + tasks */}
+        <div className="hidden w-[160px] shrink-0 flex-col border-l sm:flex" style={{ borderColor: C.border, backgroundColor: C.pageBg }}>
+          {/* Team header */}
+          <div className="flex items-center justify-between border-b px-3 py-2.5" style={{ borderColor: C.border }}>
+            <span className="text-[11px] font-bold" style={{ color: C.text }}>Team</span>
+            <span className="text-[9px]" style={{ color: C.textDim }}>3/3</span>
+          </div>
+
+          <div className="flex-1 overflow-hidden px-3 py-2">
+            {/* Tasks section */}
+            <div className="mb-2 text-[9px] font-semibold uppercase tracking-wider" style={{ color: C.textMuted }}>
+              Tasks <span style={{ color: C.textDim }}>2/4</span>
+            </div>
+            <div className="space-y-1.5 text-[10px]" style={{ fontFamily: MONO }}>
+              <div className="flex items-center gap-1.5">
+                <span style={{ color: C.green }}>✓</span>
+                <span className="truncate" style={{ color: C.textSec }}>Audit current features</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span style={{ color: C.green }}>✓</span>
+                <span className="truncate" style={{ color: C.textSec }}>Draft new copy</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span style={{ color: '#FACC15' }}>◐</span>
+                <span className="truncate" style={{ color: C.textSec }}>Build room mockup</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span style={{ color: C.textDim }}>○</span>
+                <span className="truncate" style={{ color: C.textDim }}>Deploy to production</span>
+              </div>
+            </div>
+
+            {/* Active members */}
+            <div className="mt-4 mb-2 text-[9px] font-semibold uppercase tracking-wider" style={{ color: C.textMuted }}>
+              Active
+            </div>
+            <div className="space-y-2 text-left">
+              <SidebarMember color={C.green} name="team-lead" model="claude-opus-4-6" status="active" />
+              <SidebarMember color={C.cyan} name="researcher" model="claude-sonnet-4-6" status="active" />
+              <SidebarMember color="#A78BFA" name="codex" model="codex-mini" status="active" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function RoomListItem({ name, preview, active }: { name: string; preview: string; active?: boolean }) {
+  return (
+    <div
+      className="border-b px-3 py-2"
+      style={{
+        borderColor: `${C.border}80`,
+        backgroundColor: active ? `${C.green}10` : 'transparent',
+      }}
+    >
+      <div className="truncate text-[10px] font-medium" style={{ fontFamily: MONO, color: active ? C.green : C.textSec }}>
+        {name}
+      </div>
+      <div className="mt-0.5 truncate text-[9px]" style={{ color: C.textDim }}>
+        {preview}
+      </div>
+    </div>
+  )
+}
+
+function SidebarMember({ color, name, model, status }: { color: string; name: string; model?: string; status: string }) {
+  return (
+    <div className="flex items-start gap-1.5">
+      {status === 'active' && (
+        <div
+          className="mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full"
+          style={{ backgroundColor: C.green }}
+        />
+      )}
+      <div className="min-w-0">
+        <span className="block truncate text-[10px]" style={{ fontFamily: MONO, color }}>
+          {name}
+        </span>
+        {model && (
+          <span className="block truncate text-[8px]" style={{ fontFamily: MONO, color: C.textDim }}>
+            {model}
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function RoomMsg({ color, name, text }: { color: string; name: string; text: React.ReactNode }) {
+  return (
+    <div className="text-left">
+      <span className="text-[10px] font-semibold" style={{ color, fontFamily: MONO }}>{name}</span>
+      <p className="mt-0.5 text-[11px] leading-relaxed" style={{ color: C.textSec }}>{text}</p>
+    </div>
+  )
+}
+
+// ── Reusable pieces ──
+
+function Label({ color, children }: { color: string; children: React.ReactNode }) {
+  return (
+    <div
+      className="text-center text-[11px] font-medium uppercase"
+      style={{ fontFamily: MONO, color, letterSpacing: '2px' }}
+    >
+      {children}
+    </div>
+  )
+}
+
+function MockMsg({ name, nameColor, text }: {
+  name: string; nameColor: string; text: React.ReactNode
+}) {
+  return (
+    <div>
+      <span className="text-xs font-semibold" style={{ color: nameColor, fontFamily: MONO }}>{name}</span>
+      <p className="mt-0.5 text-sm leading-relaxed" style={{ color: C.textSec }}>{text}</p>
+    </div>
+  )
+}
+
+function TrustBadge({ icon: Icon, label }: { icon: React.ElementType; label: string }) {
+  return (
+    <div className="flex items-center gap-2" style={{ color: C.textMuted }}>
+      <Icon size={16} />
+      <span className="text-xs font-medium">{label}</span>
+    </div>
+  )
+}
+
+function StepCard({ number, color, title, code, desc, icon: Icon }: {
+  number: number; color: string; title: string; code?: string; desc?: string; icon?: React.ElementType
+}) {
+  return (
+    <div className="rounded-[10px] border p-4" style={{ backgroundColor: C.surface, borderColor: C.border }}>
+      <div
+        className="mb-3 flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold"
+        style={{ backgroundColor: `${color}20`, color, fontFamily: MONO }}
+      >
+        {Icon ? <Icon size={14} /> : number}
+      </div>
+      <h3 className="text-base font-semibold text-white">{title}</h3>
+      {code && (
+        <div className="mt-2 rounded-lg p-2 text-xs" style={{ backgroundColor: C.elevated, fontFamily: MONO, color }}>
+          {code}
+        </div>
+      )}
+      {desc && (
+        <p className="mt-2 text-sm leading-relaxed" style={{ color: C.textSec }}>{desc}</p>
+      )}
+    </div>
+  )
+}
+
+function Feature({ title, desc, children }: { title: string; desc: string; children: React.ReactNode }) {
+  return (
+    <div
+      className="overflow-hidden rounded-xl border md:grid md:grid-cols-2 md:items-center"
+      style={{ backgroundColor: C.surface, borderColor: C.border }}
+    >
+      <div className="p-5 md:p-8">
+        <h3 className="text-lg font-bold text-white md:text-xl">{title}</h3>
+        <p className="mt-2 text-sm leading-relaxed" style={{ color: C.textSec }}>{desc}</p>
+      </div>
+      <div className="border-t p-4 md:border-t-0 md:border-l md:p-5" style={{ borderColor: C.border }}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function PlanMockup() {
+  const lines = [
+    { num: 1, text: 'Set up database schema with D1', highlight: null },
+    { num: 2, text: 'Create API endpoints with Hono', highlight: null },
+    { num: 3, text: 'Install passport.js for OAuth', highlight: 'deletion' as const },
+    { num: 4, text: 'Add rate limiting middleware', highlight: 'comment' as const },
+    { num: 5, text: 'Write integration tests', highlight: null },
+    { num: 6, text: 'Deploy to Cloudflare Workers', highlight: null },
+  ]
+
+  return (
+    <div className="relative rounded-lg overflow-hidden" style={{ backgroundColor: C.elevated }}>
+      {/* Header bar */}
+      <div
+        className="flex items-center gap-2 px-3 py-2"
+        style={{
+          borderLeft: '2px solid #8b5cf6',
+          backgroundColor: 'rgba(139, 92, 246, 0.06)',
+        }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+          <line x1="16" y1="13" x2="8" y2="13" />
+          <line x1="16" y1="17" x2="8" y2="17" />
+        </svg>
+        <span className="flex-1 text-[11px] font-semibold" style={{ color: '#c4b5fd' }}>Plan review</span>
+        <button
+          type="button"
+          className="rounded px-2 py-0.5 text-[10px] font-medium"
+          style={{ backgroundColor: '#22c55e', color: '#030712' }}
+        >
+          Approve
+        </button>
+        <button
+          type="button"
+          className="rounded px-2 py-0.5 text-[10px] font-medium"
+          style={{ border: '1px solid #ef4444', color: '#ef4444', backgroundColor: 'transparent' }}
+        >
+          Request changes
+        </button>
+      </div>
+
+      {/* Plan content */}
+      <div className="px-1 py-2 text-[11px] leading-[22px]" style={{ fontFamily: MONO }}>
+        {lines.map(line => (
+          <div key={line.num}>
+            {/* Normal or highlighted line */}
+            <div
+              className="flex items-center gap-1 px-2"
+              style={{
+                backgroundColor:
+                  line.highlight === 'deletion'
+                    ? 'rgba(239, 68, 68, 0.2)'
+                    : line.highlight === 'comment'
+                      ? 'rgba(139, 92, 246, 0.2)'
+                      : 'transparent',
+              }}
+            >
+              <span className="w-3 shrink-0 text-right" style={{ color: C.textDim }}>{line.num}.</span>
+              <span
+                style={{
+                  color: line.highlight === 'deletion' ? '#fca5a5' : C.textSec,
+                  textDecoration: line.highlight === 'deletion' ? 'line-through' : 'none',
+                }}
+              >
+                {line.text}
+              </span>
+            </div>
+            {/* Replacement suggestion after deletion */}
+            {line.highlight === 'deletion' && (
+              <div className="flex items-center gap-1 px-2" style={{ backgroundColor: 'rgba(34, 197, 94, 0.08)' }}>
+                <span className="w-3 shrink-0" />
+                <span style={{ color: '#4ade80' }}>{'\u2192'} Use Better Auth instead</span>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Floating comment popover — positioned near line 4 */}
+      <div
+        className="absolute rounded-md shadow-lg"
+        style={{
+          top: 128,
+          right: 8,
+          width: 180,
+          backgroundColor: '#27272a',
+          border: '1px solid #3f3f46',
+          padding: '6px 8px',
+          zIndex: 10,
+        }}
+      >
+        <div className="flex items-center gap-1.5 mb-1">
+          <span
+            className="rounded px-1.5 py-px text-[8px] font-bold uppercase"
+            style={{ backgroundColor: 'rgba(139, 92, 246, 0.3)', color: '#c4b5fd' }}
+          >
+            Comment
+          </span>
+        </div>
+        <p className="text-[10px] leading-snug" style={{ color: '#d4d4d8', margin: 0 }}>
+          Consider using edge caching here
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function TaskMockup() {
+  const columns: {
+    label: string
+    dotColor: string
+    borderColor: string
+    tasks: { name: string; assignee: string }[]
+  }[] = [
+    {
+      label: 'Pending',
+      dotColor: '#6b7280',
+      borderColor: '#6b7280',
+      tasks: [
+        { name: 'Add WebSocket events', assignee: 'backend-dev' },
+        { name: 'Write E2E tests', assignee: 'unassigned' },
+      ],
+    },
+    {
+      label: 'In Progress',
+      dotColor: '#eab308',
+      borderColor: '#eab308',
+      tasks: [
+        { name: 'Build task board UI', assignee: 'frontend-dev' },
+        { name: 'Set up auth', assignee: 'backend-dev' },
+      ],
+    },
+    {
+      label: 'Completed',
+      dotColor: '#22c55e',
+      borderColor: '#22c55e',
+      tasks: [
+        { name: 'Database schema', assignee: 'backend-dev' },
+        { name: 'API endpoints', assignee: 'backend-dev' },
+        { name: 'Rate limiting', assignee: 'backend-dev' },
+      ],
+    },
+  ]
+
+  return (
+    <div className="rounded-lg overflow-hidden" style={{ backgroundColor: C.elevated }}>
+      <div className="grid grid-cols-3 gap-px" style={{ backgroundColor: C.border }}>
+        {columns.map(col => (
+          <div key={col.label} className="flex flex-col" style={{ backgroundColor: C.elevated }}>
+            {/* Column header */}
+            <div className="flex items-center gap-1.5 px-2 py-2">
+              <span
+                className="h-[6px] w-[6px] shrink-0 rounded-full"
+                style={{ backgroundColor: col.dotColor }}
+              />
+              <span className="text-[10px] font-semibold" style={{ color: C.textSec }}>
+                {col.label}
+              </span>
+              <span
+                className="ml-auto rounded-full px-1.5 py-px text-[9px] font-medium"
+                style={{ backgroundColor: `${col.dotColor}20`, color: col.dotColor }}
+              >
+                {col.tasks.length}
+              </span>
+            </div>
+
+            {/* Task cards */}
+            <div className="flex flex-col gap-1.5 px-1.5 pb-2">
+              {col.tasks.map(task => (
+                <div
+                  key={task.name}
+                  className="rounded-md px-2 py-1.5"
+                  style={{
+                    borderLeft: `3px solid ${col.borderColor}`,
+                    backgroundColor: C.surface,
+                  }}
+                >
+                  <div
+                    className="text-[11px] font-medium leading-tight"
+                    style={{
+                      color: col.label === 'Completed' ? C.textMuted : C.textSec,
+                    }}
+                  >
+                    {task.name}
+                  </div>
+                  <div
+                    className="mt-0.5 text-[10px]"
+                    style={{ color: C.textDim, fontFamily: MONO }}
+                  >
+                    {task.assignee}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function DiffMockup() {
+  const block1Lines: { type: 'add' | 'del' | 'ctx'; num: number; text: string }[] = [
+    { type: 'ctx', num: 10, text: 'export async function auth(c: Context) {' },
+    { type: 'del', num: 11, text: '\u00A0\u00A0const token = req.headers.authorization' },
+    { type: 'add', num: 11, text: "\u00A0\u00A0const token = req.headers.get('Authorization')" },
+    { type: 'ctx', num: 12, text: '\u00A0\u00A0if (!token) return unauthorized()' },
+    { type: 'del', num: 13, text: '\u00A0\u00A0return res.json({ user })' },
+    { type: 'add', num: 13, text: '\u00A0\u00A0return c.json({ user })' },
+    { type: 'ctx', num: 14, text: '}' },
+  ]
+
+  const block2Lines: { type: 'add'; num: number; text: string }[] = [
+    { type: 'add', num: 1, text: 'export function validate(input: string) {' },
+    { type: 'add', num: 2, text: '\u00A0\u00A0if (!input?.trim()) {' },
+    { type: 'add', num: 3, text: "\u00A0\u00A0\u00A0\u00A0throw new Error('Input cannot be empty')" },
+    { type: 'add', num: 4, text: '\u00A0\u00A0}' },
+    { type: 'add', num: 5, text: '\u00A0\u00A0return input.trim().toLowerCase()' },
+    { type: 'add', num: 6, text: '}' },
+  ]
+
+  const lineBg = (type: 'add' | 'del' | 'ctx') => {
+    if (type === 'del') return 'rgba(239, 68, 68, 0.15)'
+    if (type === 'add') return 'rgba(34, 197, 94, 0.15)'
+    return 'transparent'
+  }
+
+  const lineColor = (type: 'add' | 'del' | 'ctx') => {
+    if (type === 'del') return '#fca5a5'
+    if (type === 'add') return '#4ade80'
+    return C.textDim
+  }
+
+  const prefix = (type: 'add' | 'del' | 'ctx') => {
+    if (type === 'del') return '-'
+    if (type === 'add') return '+'
+    return ' '
+  }
+
+  return (
+    <div className="flex flex-col gap-2" style={{ fontFamily: MONO }}>
+      {/* Block 1 */}
+      <div className="rounded-lg overflow-hidden" style={{ backgroundColor: C.elevated }}>
+        <div
+          className="flex items-center gap-2 px-3 py-2 text-[11px]"
+          style={{ backgroundColor: C.surface }}
+        >
+          <span style={{ color: C.textMuted }}>{'\u25BE'}</span>
+          <span style={{ color: C.textSec }}>
+            <span className="font-semibold">Edit</span> src/middleware/auth.ts
+          </span>
+          <span className="rounded-full px-1.5 py-px text-[9px]" style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)', color: '#fca5a5' }}>
+            2 changes
+          </span>
+          <span className="ml-auto text-[10px]" style={{ color: C.textDim }}>2m ago</span>
+        </div>
+        <div className="text-[10px] leading-[18px]">
+          {block1Lines.map((line, i) => (
+            <div
+              key={i}
+              className="flex"
+              style={{ backgroundColor: lineBg(line.type) }}
+            >
+              <span
+                className="w-7 shrink-0 text-right pr-1.5 select-none"
+                style={{ color: C.textDim }}
+              >
+                {line.num}
+              </span>
+              <span className="w-3 shrink-0 select-none" style={{ color: lineColor(line.type) }}>
+                {prefix(line.type)}
+              </span>
+              <span style={{ color: lineColor(line.type) }}>{line.text}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Block 2 */}
+      <div className="rounded-lg overflow-hidden" style={{ backgroundColor: C.elevated }}>
+        <div
+          className="flex items-center gap-2 px-3 py-2 text-[11px]"
+          style={{ backgroundColor: C.surface }}
+        >
+          <span style={{ color: C.textMuted }}>{'\u25BE'}</span>
+          <span style={{ color: C.textSec }}>
+            <span className="font-semibold">Created</span> src/utils/validate.ts
+          </span>
+          <span className="ml-auto text-[10px]" style={{ color: C.textDim }}>1m ago</span>
+        </div>
+        <div className="text-[10px] leading-[18px]">
+          {block2Lines.map((line, i) => (
+            <div
+              key={i}
+              className="flex"
+              style={{ backgroundColor: lineBg(line.type) }}
+            >
+              <span
+                className="w-7 shrink-0 text-right pr-1.5 select-none"
+                style={{ color: C.textDim }}
+              >
+                {line.num}
+              </span>
+              <span className="w-3 shrink-0 select-none" style={{ color: lineColor(line.type) }}>
+                +
+              </span>
+              <span style={{ color: lineColor(line.type) }}>{line.text}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function TerminalMockup() {
+  const termBg = '#0C0C0C'
+  const titlebarBg = '#111111'
+  const tabActiveBg = '#1a1a1a'
+  const tabInactiveBg = '#0e0e0e'
+  const tmuxBarBg = '#1a1a2e'
+  const tmuxGreen = '#50fa7b'
+  const paneHeaderBg = '#141414'
+  const dividerColor = '#333'
+
+  return (
+    <div className="overflow-hidden rounded-lg" style={{ fontFamily: MONO }}>
+      {/* ── Ghostty titlebar with tabs ── */}
+      <div
+        className="flex items-center"
+        style={{ backgroundColor: titlebarBg, borderBottom: `1px solid ${dividerColor}` }}
+      >
+        {/* Traffic lights */}
+        <div className="flex gap-1.5 px-3 py-2">
+          <span className="h-2.5 w-2.5 rounded-full bg-[#FF5F57]" />
+          <span className="h-2.5 w-2.5 rounded-full bg-[#FEBC2E]" />
+          <span className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
+        </div>
+
+        {/* Tab strip */}
+        <div className="flex items-center gap-0 text-[10px]">
+          {/* Active tab */}
+          <div
+            className="flex items-center gap-1.5 px-3 py-1.5"
+            style={{ backgroundColor: tabActiveBg, color: C.textSec, borderRight: `1px solid ${dividerColor}` }}
+          >
+            <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: tmuxGreen }} />
+            <span>team-lead</span>
+          </div>
+          {/* Inactive tabs */}
+          <div
+            className="flex items-center gap-1.5 px-3 py-1.5"
+            style={{ backgroundColor: tabInactiveBg, color: C.textDim, borderRight: `1px solid ${dividerColor}` }}
+          >
+            <span>researcher</span>
+          </div>
+          <div
+            className="flex items-center gap-1.5 px-3 py-1.5"
+            style={{ backgroundColor: tabInactiveBg, color: C.textDim }}
+          >
+            <span>codex</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Terminal body: tmux 2-pane split ── */}
+      <div className="flex" style={{ backgroundColor: termBg, minHeight: 260 }}>
+        {/* Left pane (~60%) — team-lead */}
+        <div className="flex flex-col" style={{ width: '60%', borderRight: `1px solid ${dividerColor}` }}>
+          {/* Tmux pane header */}
+          <div
+            className="px-2 py-0.5 text-[9px]"
+            style={{ backgroundColor: paneHeaderBg, color: C.textDim, borderBottom: `1px solid ${dividerColor}` }}
+          >
+            <span style={{ color: tmuxGreen }}>0:team-lead</span>
+            <span style={{ color: C.textDim }}>*</span>
+          </div>
+          {/* Pane content */}
+          <div className="flex-1 px-2.5 py-2 text-[10px] leading-[16px]">
+            {/* Claude Code header box */}
+            <div style={{ color: C.textDim }}>
+              <div>{'\u256D\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256E'}</div>
+              <div>
+                {'\u2502'}{' '}
+                <span style={{ color: C.text }}>Claude Code</span>{' '}
+                <span style={{ color: C.textMuted }}>{'\u2219'}</span>{' '}
+                <span style={{ color: tmuxGreen }}>team-lead</span>
+                {'        \u2502'}
+              </div>
+              <div>{'\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256F'}</div>
+            </div>
+
+            <div className="mt-2 space-y-0.5">
+              <div>
+                <span style={{ color: C.cyan }}>{'>'}</span>{' '}
+                <span style={{ color: C.textSec }}>Spawning researcher for feature audit...</span>
+              </div>
+              <div>
+                <span style={{ color: C.green }}>{'\u2713'}</span>{' '}
+                <span style={{ color: C.green }}>Agent researcher connected</span>
+              </div>
+              <div>
+                <span style={{ color: C.cyan }}>{'>'}</span>{' '}
+                <span style={{ color: C.textSec }}>Assigning task: </span>
+                <span style={{ color: C.text }}>"Audit landing page features"</span>
+              </div>
+              <div>
+                <span style={{ color: C.green }}>{'\u2713'}</span>{' '}
+                <span style={{ color: C.green }}>Task created</span>{' '}
+                <span style={{ color: C.textDim }}>(#12)</span>
+              </div>
+              <div>
+                <span style={{ color: C.cyan }}>{'>'}</span>{' '}
+                <span style={{ color: C.textDim }}>Waiting for researcher results...</span>
+              </div>
+
+              <div className="pt-1" />
+
+              <div>
+                <span style={{ color: C.cyan }}>researcher:</span>{' '}
+                <span style={{ color: C.textSec }}>Found 24 features across 8 packages</span>
+              </div>
+              <div>
+                <span style={{ color: C.cyan }}>researcher:</span>{' '}
+                <span style={{ color: C.textSec }}>Grouped by category, ready for review</span>
+              </div>
+
+              <div className="pt-1" />
+
+              <div>
+                <span style={{ color: C.cyan }}>{'>'}</span>{' '}
+                <span style={{ color: C.textSec }}>Spawning codex for copy review...</span>
+              </div>
+              <div>
+                <span style={{ color: C.green }}>{'\u2713'}</span>{' '}
+                <span style={{ color: C.green }}>Agent codex connected</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right pane (~40%) — researcher */}
+        <div className="flex flex-col" style={{ width: '40%' }}>
+          {/* Tmux pane header */}
+          <div
+            className="px-2 py-0.5 text-[9px]"
+            style={{ backgroundColor: paneHeaderBg, color: C.textDim, borderBottom: `1px solid ${dividerColor}` }}
+          >
+            <span>1:researcher</span>
+          </div>
+          {/* Pane content */}
+          <div className="flex-1 px-2.5 py-2 text-[10px] leading-[16px]">
+            <div className="space-y-0.5">
+              <div style={{ color: C.textSec }}>
+                Reading <span style={{ color: C.textDim }}>src/app/routes/index.tsx</span>...
+              </div>
+              <div style={{ color: C.textDim }}>Read 605 lines</div>
+
+              <div className="pt-1" />
+
+              <div style={{ color: C.textSec }}>
+                Scanning <span style={{ color: C.textDim }}>packages/worker/</span>...
+              </div>
+              <div style={{ color: C.textDim }}>
+                Found: auth.ts, rate-limit.ts, queries.ts
+              </div>
+
+              <div className="pt-1" />
+
+              <div style={{ color: C.textSec }}>
+                Globbing <span style={{ color: C.textDim }}>src/app/components/**</span>
+              </div>
+              <div style={{ color: C.textDim }}>14 components found</div>
+
+              <div className="pt-1.5" />
+
+              <div>
+                <span style={{ color: C.green }}>{'\u2713'}</span>{' '}
+                <span style={{ color: C.green }}>Feature inventory complete</span>
+              </div>
+              <div style={{ color: C.textDim, paddingLeft: 12 }}>
+                24 features catalogued
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Bottom tmux status bar ── */}
+      <div
+        className="flex items-center justify-between px-0 text-[9px]"
+        style={{ backgroundColor: tmuxBarBg, height: 18, lineHeight: '18px' }}
+      >
+        <div className="flex items-center">
+          <span
+            className="px-2"
+            style={{ backgroundColor: tmuxGreen, color: '#000', fontWeight: 600 }}
+          >
+            landing-updates
+          </span>
+          <span className="px-2" style={{ color: C.textSec }}>
+            <span style={{ color: C.text }}>0:team-lead*</span>
+            {'  '}1:researcher{'  '}2:codex
+          </span>
+        </div>
+        <span className="px-2" style={{ color: C.textDim }}>22:35</span>
+      </div>
+    </div>
+  )
+}
+
+function MobileMockup() {
+  return (
+    <div className="flex items-center justify-center py-2">
+      {/* iPhone frame */}
+      <div
+        className="relative overflow-hidden"
+        style={{
+          width: 180,
+          height: 380,
+          borderRadius: '2.5rem',
+          border: `3px solid ${C.border}`,
+          backgroundColor: C.pageBg,
+        }}
+      >
+        {/* Dynamic Island */}
+        <div className="absolute top-2.5 left-1/2 z-10 -translate-x-1/2">
+          <div
+            className="rounded-full"
+            style={{ width: 60, height: 16, backgroundColor: '#000' }}
+          />
+        </div>
+
+        {/* Status bar */}
+        <div
+          className="flex items-center justify-between px-5 pt-3 pb-1"
+          style={{ fontSize: 8, color: C.textSec, fontFamily: MONO }}
+        >
+          <span>9:41</span>
+          <span style={{ letterSpacing: 1 }}>...</span>
+        </div>
+
+        {/* Room header */}
+        <div
+          className="flex items-center gap-1.5 border-b px-3 py-2"
+          style={{ backgroundColor: C.surface, borderColor: C.border }}
+        >
+          <span style={{ color: C.textSec, fontSize: 10 }}>{'\u2190'}</span>
+          <span
+            className="flex-1 truncate text-[8px] font-bold"
+            style={{ fontFamily: MONO, color: C.green }}
+          >
+            landing-page-redesign
+          </span>
+          <span
+            className="rounded-full px-1 py-px text-[7px]"
+            style={{ backgroundColor: `${C.green}15`, color: C.green }}
+          >
+            3
+          </span>
+        </div>
+
+        {/* Chat messages */}
+        <div className="flex-1 space-y-2.5 px-3 py-2.5">
+          <MobileMsg name="team-lead" color={C.green} text="Deploying to production..." />
+          <MobileMsg name="researcher" color={C.cyan} text="All tests passing \u2713" />
+          <MobileMsg name="codex" color="#A78BFA" text="PR approved" />
+
+          {/* Agent activity log */}
+          <div
+            className="rounded-md px-2 py-1.5 text-[7px]"
+            style={{ backgroundColor: C.elevated, fontFamily: MONO }}
+          >
+            <div style={{ color: C.textMuted }}>{'\u25B8'} Agent activity (3 calls)</div>
+            <div className="mt-0.5" style={{ color: C.textDim }}>
+              Edit src/routes/index.tsx
+            </div>
+          </div>
+
+          <MobileMsg
+            name="human"
+            color={C.pink}
+            text={
+              <>
+                <span
+                  className="inline-block rounded px-0.5 py-px text-[6px] font-medium"
+                  style={{ backgroundColor: `${C.green}20`, color: C.green, fontFamily: MONO }}
+                >
+                  @team-lead
+                </span>{' '}
+                ship it!
+              </>
+            }
+          />
+        </div>
+
+        {/* Input bar */}
+        <div
+          className="absolute right-0 bottom-0 left-0 border-t px-2 py-2"
+          style={{ borderColor: C.border, backgroundColor: C.pageBg }}
+        >
+          <div
+            className="flex items-center rounded-full px-2.5 py-1.5"
+            style={{ backgroundColor: C.elevated }}
+          >
+            <span className="flex-1 text-[8px]" style={{ color: C.textDim }}>
+              Type a message...
+            </span>
+            <div
+              className="flex h-4 w-4 items-center justify-center rounded-full text-[8px]"
+              style={{ backgroundColor: C.green, color: C.pageBg }}
+            >
+              {'\u2191'}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function MobileMsg({ name, color, text }: { name: string; color: string; text: React.ReactNode }) {
+  return (
+    <div>
+      <span className="text-[7px] font-semibold" style={{ color, fontFamily: MONO }}>{name}</span>
+      <p className="mt-px text-[8px] leading-snug" style={{ color: C.textSec, margin: 0 }}>{text}</p>
+    </div>
+  )
+}
+
+function RuntimeCard({ title, sub, color, icon: Icon }: {
+  title: string; sub: string; color: string; icon: React.ElementType
+}) {
+  return (
+    <div
+      className="rounded-xl border p-5 text-center"
+      style={{ backgroundColor: C.surface, borderColor: C.border, boxShadow: `inset 0 1px 30px ${color}08` }}
+    >
+      <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: `${color}15`, color }}>
+        <Icon size={20} />
+      </div>
+      <div className="mt-3 text-sm font-semibold text-white">{title}</div>
+      <div className="mt-1 text-xs" style={{ color: C.textMuted }}>{sub}</div>
+    </div>
+  )
+}
+
+function Stat({ value, label, color }: { value: string; label: string; color: string }) {
+  return (
+    <div className="text-center">
+      <div className="text-xl font-bold md:text-2xl" style={{ fontFamily: MONO, color }}>{value}</div>
+      <div className="mt-1 text-xs" style={{ color: C.textSec }}>{label}</div>
+    </div>
+  )
+}
+
+function FooterLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="no-underline transition-colors hover:text-white"
+      style={{ color: C.textSec }}
+    >
+      {children}
+    </a>
   )
 }
