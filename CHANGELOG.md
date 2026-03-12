@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.0.0](https://github.com/SoftWare-A-G/meet-ai/compare/0.7.2...1.0.0) (2026-03-12)
+
+### Features
+
+* add first-run Meet AI auth onboarding around `~/.meet-ai/config.json`, including direct sign-in, broken-config recovery, and migration of existing Claude/Codex credentials into the canonical home config
+* redesign the key-page Quick Start into a 5-step flow that signs users in through `meet-ai`, restores generated-key display with copy feedback, and keeps setup guidance aligned with the new home-config auth model
+
+### Bug Fixes
+
+* migrate runtime `MEET_AI_URL` and `MEET_AI_KEY` reads for subcommands, hooks, Codex listen, and team-member registration to `~/.meet-ai/config.json`, with clear setup errors for non-interactive command paths and silent skips for hooks when no home config exists
+* enable `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` automatically for Claude panes spawned from the dashboard
+* harden onboarding persistence by validating sign-in URLs before writing config, always writing `$schema` first in `config.json`, and keeping broken `defaultEnv` repair flows visible instead of collapsing into empty-state onboarding
+* align the CLI and worker package manifests at `1.0.0` for the release
+
+### Tests
+
+* add coverage for home-config auth state detection, migration discovery, onboarding helpers, broken-config repair, and command failures when credentials are missing
+* refresh hook, listener, registration, bootstrap, and integration suites to assert the home-config-only credential model, with the full CLI suite passing at release time
+
 ## [0.7.2](https://github.com/SoftWare-A-G/meet-ai/compare/0.7.1...0.7.2) (2026-03-11)
 
 ### Features

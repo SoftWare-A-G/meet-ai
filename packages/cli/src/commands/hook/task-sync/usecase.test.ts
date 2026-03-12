@@ -1,5 +1,9 @@
-import { describe, it, expect, mock, beforeEach } from 'bun:test'
+import { describe, it, expect, mock, beforeEach, afterEach } from 'bun:test'
+import { rmSync } from 'node:fs'
+import { setMeetAiDirOverride, writeHomeConfig } from '@meet-ai/cli/lib/meetai-home'
 import { TaskHookInput, TaskCreateHookInput, TaskUpdateHookInput } from './schema'
+
+const TEMP_MEET_AI_DIR = '/tmp/meet-ai-task-sync-test-home'
 
 // Real captured payloads from Claude Code PostToolUse events
 const TASK_CREATE_PAYLOAD = {
@@ -149,8 +153,17 @@ describe('processTaskSync', () => {
     mockCreateHookClient.mockClear()
     mockFindRoom.mockResolvedValue({ roomId: 'room-123', teamName: 'test-team' })
     mockPost.mockResolvedValue({ ok: true })
-    process.env.MEET_AI_URL = 'https://test.example.com'
-    process.env.MEET_AI_KEY = 'mai_testkey123'
+    rmSync(TEMP_MEET_AI_DIR, { recursive: true, force: true })
+    setMeetAiDirOverride(TEMP_MEET_AI_DIR)
+    writeHomeConfig({
+      defaultEnv: 'default',
+      envs: { default: { url: 'https://test.example.com', key: 'mai_testkey123' } },
+    })
+  })
+
+  afterEach(() => {
+    setMeetAiDirOverride(undefined)
+    rmSync(TEMP_MEET_AI_DIR, { recursive: true, force: true })
   })
 
   it('sends upsert for TaskCreate with correct fields', async () => {
@@ -198,8 +211,8 @@ describe('processTaskSync', () => {
     expect(await processTaskSync(JSON.stringify(TASK_CREATE_PAYLOAD))).toBe('skip')
   })
 
-  it('skips when env vars missing', async () => {
-    delete process.env.MEET_AI_URL
+  it('skips when no home config exists', async () => {
+    setMeetAiDirOverride('/tmp/nonexistent-meet-ai-dir-99')
     expect(await processTaskSync(JSON.stringify(TASK_CREATE_PAYLOAD))).toBe('skip')
   })
 

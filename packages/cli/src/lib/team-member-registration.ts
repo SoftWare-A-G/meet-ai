@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { createHookClient, getTeamInfo, sendTeamMemberUpsert } from './hooks/client'
+import { getHomeCredentials } from './meetai-home'
 
 type TeamConfigMember = {
   agentId?: string
@@ -89,9 +90,9 @@ function defaultColor(agentName: string, role: string): string {
 }
 
 export const registerActiveTeamMember: TeamMemberRegistrar = async input => {
-  const url = process.env.MEET_AI_URL?.trim()
-  const key = process.env.MEET_AI_KEY?.trim()
-  if (!url || !key) return
+  const creds = getHomeCredentials()
+  if (!creds) return
+  const { url, key } = creds
 
   const client = createHookClient(url, key)
   const roomTeamInfo = await getTeamInfo(client, input.roomId)

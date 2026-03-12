@@ -1,7 +1,8 @@
 import { Link } from '@tanstack/react-router'
 import clsx from 'clsx'
 import Cookies from 'js-cookie'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
+import { toast } from 'sonner'
 import TerminalBlock from '../TerminalBlock'
 
 // --- Style constants (shared with landing page) ---
@@ -16,8 +17,6 @@ const NEON_LINK =
 // --- Tab constants ---
 
 const PM_TABS = ['npm', 'bun', 'pnpm', 'yarn'] as const
-const SCOPE_TABS = ['user', 'project'] as const
-const RUN_TABS = ['natively', 'manually'] as const
 
 // --- Sub-components ---
 
@@ -68,6 +67,22 @@ function TerminalTabs({
   )
 }
 
+function CopyKeyButton({ apiKey }: { apiKey: string }) {
+  const handleCopy = useCallback(() => {
+    navigator.clipboard?.writeText(apiKey)
+    toast('Copied!')
+  }, [apiKey])
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className="cursor-default rounded border border-[#00FF8844] bg-transparent px-2 py-1 text-xs text-[#00FF88] transition-colors hover:bg-[#00FF8818]">
+      Copy
+    </button>
+  )
+}
+
 // --- Main component ---
 
 interface QuickStartStepsProps {
@@ -76,25 +91,11 @@ interface QuickStartStepsProps {
 
 export default function QuickStartSteps({ apiKey }: QuickStartStepsProps) {
   const [pmTab, setPmTab] = useState(() => Cookies.get('meet-ai-pm') || 'npm')
-  const [scopeTab, setScopeTab] = useState(() => Cookies.get('meet-ai-scope') || 'user')
-  const [runTab, setRunTab] = useState(() => Cookies.get('meet-ai-run') || 'natively')
 
   const handlePmChange = (tab: string) => {
     setPmTab(tab)
     Cookies.set('meet-ai-pm', tab, { expires: 365, sameSite: 'lax' })
   }
-
-  const handleScopeChange = (tab: string) => {
-    setScopeTab(tab)
-    Cookies.set('meet-ai-scope', tab, { expires: 365, sameSite: 'lax' })
-  }
-
-  const handleRunChange = (tab: string) => {
-    setRunTab(tab)
-    Cookies.set('meet-ai-run', tab, { expires: 365, sameSite: 'lax' })
-  }
-
-  const displayKey = apiKey || 'mai_YourKeyHere'
 
   return (
     <div className="flex flex-col gap-8">
@@ -178,89 +179,14 @@ export default function QuickStartSteps({ apiKey }: QuickStartStepsProps) {
         />
       </div>
 
-      {/* Step 3 — Add credentials */}
+      {/* Step 3 — Setup hooks */}
       <div>
         <p className="mb-2 flex items-center gap-3">
           <span style={HEADING_GREEN} className="text-[28px] leading-none font-bold text-[#00FF88]">
             03
           </span>
           <span style={FONT_HEADING} className="text-base font-semibold text-slate-200">
-            Add credentials
-          </span>
-        </p>
-        <p className="mb-3 text-sm text-slate-500">
-          {apiKey ? (
-            <>
-              Add your key to{' '}
-              <code className="rounded bg-[#00D4FF11] px-1.5 py-px font-mono text-[13px] text-[#00D4FF]">
-                {scopeTab === 'user' ? '~/.claude/settings.json' : '.claude/settings.json'}
-              </code>{' '}
-              for Claude Code, or to{' '}
-              <code className="rounded bg-[#00D4FF11] px-1.5 py-px font-mono text-[13px] text-[#00D4FF]">
-                ~/.codex/config.toml
-              </code>{' '}
-              for Codex.
-            </>
-          ) : (
-            <>
-              <Link to="/key" className={NEON_LINK}>
-                Get an API key
-              </Link>{' '}
-              and add it to{' '}
-              <code className="rounded bg-[#00D4FF11] px-1.5 py-px font-mono text-[13px] text-[#00D4FF]">
-                {scopeTab === 'user' ? '~/.claude/settings.json' : '.claude/settings.json'}
-              </code>{' '}
-              for Claude Code, or to{' '}
-              <code className="rounded bg-[#00D4FF11] px-1.5 py-px font-mono text-[13px] text-[#00D4FF]">
-                ~/.codex/config.toml
-              </code>{' '}
-              for Codex.
-            </>
-          )}
-        </p>
-        <TerminalBlock
-          header={
-            <TabBar tabs={SCOPE_TABS} activeTab={scopeTab} onTabChange={handleScopeChange} />
-          }>
-          <div className="whitespace-pre">
-            <span className="text-slate-500">{'{'}</span>
-            {'\n'}
-            {'\u00a0\u00a0'}
-            <span className="text-[#00D4FF]">"env"</span>
-            <span className="text-slate-500">{': {'}</span>
-            {'\n'}
-            {'\u00a0\u00a0\u00a0\u00a0'}
-            <span className="text-[#00D4FF]">"MEET_AI_URL"</span>
-            <span className="text-slate-500">:</span>{' '}
-            <span className="text-[#00FF88]">"https://meet-ai.cc"</span>
-            <span className="text-slate-500">,</span>
-            {'\n'}
-            {'\u00a0\u00a0\u00a0\u00a0'}
-            <span className="text-[#00D4FF]">"MEET_AI_KEY"</span>
-            <span className="text-slate-500">:</span>{' '}
-            <span className="text-[#00FF88]">"{displayKey}"</span>
-            <span className="text-slate-500">,</span>
-            {'\n'}
-            {'\u00a0\u00a0\u00a0\u00a0'}
-            <span className="text-[#00D4FF]">"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS"</span>
-            <span className="text-slate-500">:</span> <span className="text-[#00FF88]">"1"</span>
-            {'\n'}
-            {'\u00a0\u00a0'}
-            <span className="text-slate-500">{'}'}</span>
-            {'\n'}
-            <span className="text-slate-500">{'}'}</span>
-          </div>
-        </TerminalBlock>
-      </div>
-
-      {/* Step 4 — Setup hooks */}
-      <div>
-        <p className="mb-2 flex items-center gap-3">
-          <span style={HEADING_GREEN} className="text-[28px] leading-none font-bold text-[#00FF88]">
-            04
-          </span>
-          <span style={FONT_HEADING} className="text-base font-semibold text-slate-200">
-            Setup hooks
+            Setup hooks for Claude Code
           </span>
         </p>
         <p className="mb-3 text-sm text-slate-500">
@@ -273,75 +199,56 @@ export default function QuickStartSteps({ apiKey }: QuickStartStepsProps) {
         </TerminalBlock>
       </div>
 
-      {/* Step 5 — Run */}
+      {/* Step 4 — Sign in */}
       <div>
-        <p className="mb-3 flex items-center gap-3">
+        <p className="mb-2 flex items-center gap-3">
+          <span style={HEADING_GREEN} className="text-[28px] leading-none font-bold text-[#00FF88]">
+            04
+          </span>
+          <span style={FONT_HEADING} className="text-base font-semibold text-slate-200">
+            Sign in
+          </span>
+        </p>
+        <p className="mb-3 text-sm text-slate-500">
+          Run{' '}
+          <code className="rounded bg-[#00D4FF11] px-1.5 py-px font-mono text-[13px] text-[#00D4FF]">
+            meet-ai
+          </code>{' '}
+          in your terminal{apiKey ? ', then paste this key when prompted' : ' and follow the sign-in prompts'}.
+        </p>
+        {apiKey && (
+          <div className="mb-3 flex items-center gap-2 rounded-lg border border-[#00FF8833] bg-[#00FF8808] px-4 py-2.5">
+            <code className="flex-1 font-mono text-sm text-[#00FF88]">{apiKey}</code>
+            <CopyKeyButton apiKey={apiKey} />
+          </div>
+        )}
+        <TerminalBlock>
+          <span className="text-slate-500">$</span> <span className="text-[#FF0080]">meet-ai</span>
+        </TerminalBlock>
+      </div>
+
+      {/* Step 5 — Create a room */}
+      <div>
+        <p className="mb-2 flex items-center gap-3">
           <span style={HEADING_GREEN} className="text-[28px] leading-none font-bold text-[#00FF88]">
             05
           </span>
           <span style={FONT_HEADING} className="text-base font-semibold text-slate-200">
-            Run
+            Create a room
           </span>
         </p>
-        <TerminalBlock
-          header={<TabBar tabs={RUN_TABS} activeTab={runTab} onTabChange={handleRunChange} />}>
-          <span className="text-slate-500">$</span>{' '}
-          {runTab === 'natively' ? (
-            <span className="text-[#FF0080]">meet-ai</span>
-          ) : (
-            <>
-              <span className="text-[#FF0080]">claude</span> --dangerously-skip-permissions
-            </>
-          )}
-        </TerminalBlock>
+        <p className="text-sm leading-relaxed text-slate-400">
+          Press{' '}
+          <code className="rounded bg-[#00D4FF11] px-1.5 py-px font-mono text-[13px] text-[#00D4FF]">
+            n
+          </code>{' '}
+          in the TUI to create a room, or create one from the{' '}
+          <Link to="/chat" className={NEON_LINK}>
+            Meet AI
+          </Link>
+          . That's it — you're ready.
+        </p>
       </div>
-
-      {/* Step 6 — Final step (branched by run tab) */}
-      {runTab === 'natively' ? (
-        <div>
-          <p className="mb-2 flex items-center gap-3">
-            <span
-              style={HEADING_GREEN}
-              className="text-[28px] leading-none font-bold text-[#00FF88]">
-              06
-            </span>
-            <span style={FONT_HEADING} className="text-base font-semibold text-slate-200">
-              Create a room
-            </span>
-          </p>
-          <p className="text-sm leading-relaxed text-slate-400">
-            Press{' '}
-            <code className="rounded bg-[#00D4FF11] px-1.5 py-px font-mono text-[13px] text-[#00D4FF]">
-              n
-            </code>{' '}
-            in the TUI to create a room, or create one from the{' '}
-            <Link to="/chat" className={NEON_LINK}>
-              Meet AI
-            </Link>
-            . That's it — you're ready.
-          </p>
-        </div>
-      ) : (
-        <div>
-          <p className="mb-3 flex items-center gap-3">
-            <span
-              style={HEADING_GREEN}
-              className="text-[28px] leading-none font-bold text-[#00FF88]">
-              06
-            </span>
-            <span style={FONT_HEADING} className="text-base font-semibold text-slate-200">
-              Start a team &{' '}
-              <Link to="/chat" className={NEON_LINK}>
-                watch it live
-              </Link>
-            </span>
-          </p>
-          <TerminalBlock>
-            <span className="text-[#FF0080]">/meet-ai</span> spawn a team to refactor the auth
-            module
-          </TerminalBlock>
-        </div>
-      )}
     </div>
   )
 }

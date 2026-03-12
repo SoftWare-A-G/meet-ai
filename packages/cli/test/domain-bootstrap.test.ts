@@ -1,23 +1,26 @@
 import { test, expect, describe, beforeEach, afterEach } from 'bun:test'
+import { rmSync } from 'node:fs'
+import { setMeetAiDirOverride, writeHomeConfig } from '@meet-ai/cli/lib/meetai-home'
 
-// Set env vars before importing bootstrap so getMeetAiConfig() succeeds
-const ORIGINAL_ENV = { ...process.env }
+const TEMP_MEET_AI_DIR = '/tmp/meet-ai-bootstrap-test-home'
 
 beforeEach(() => {
-  process.env.MEET_AI_URL = 'https://test.example.com'
-  process.env.MEET_AI_KEY = 'mai_testkey1234567890abcdef'
+  rmSync(TEMP_MEET_AI_DIR, { recursive: true, force: true })
+  setMeetAiDirOverride(TEMP_MEET_AI_DIR)
+  writeHomeConfig({
+    defaultEnv: 'default',
+    envs: { default: { url: 'https://test.example.com', key: 'mai_testkey1234567890abcdef' } },
+  })
 })
 
 afterEach(() => {
-  process.env = { ...ORIGINAL_ENV }
-  // Reset the singleton between tests by clearing the module cache
-  // Bun re-evaluates modules when we use dynamic import with cache busting,
-  // but for static imports we need to reset the container manually.
+  setMeetAiDirOverride(undefined)
+  rmSync(TEMP_MEET_AI_DIR, { recursive: true, force: true })
 })
 
 describe('getContainer', () => {
   test('returns an object with all expected use case properties', async () => {
-    // Re-import to pick up env vars
+    // Re-import to pick up home config
     const { getContainer } = await import('@meet-ai/cli/domain/bootstrap')
     const container = getContainer()
 

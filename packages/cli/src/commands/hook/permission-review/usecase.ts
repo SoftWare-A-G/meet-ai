@@ -1,5 +1,6 @@
 import { createHookClient, type HookClient } from '@meet-ai/cli/lib/hooks/client'
 import { findRoomId } from '@meet-ai/cli/lib/hooks/find-room'
+import { getHomeCredentials } from '@meet-ai/cli/lib/meetai-home'
 
 type PermissionRequestInput = {
   session_id: string
@@ -194,12 +195,9 @@ export async function processPermissionReview(
     return
   }
 
-  const url = process.env.MEET_AI_URL
-  const key = process.env.MEET_AI_KEY
-  if (!url || !key) {
-    process.stderr.write('[permission-review] MEET_AI_URL or MEET_AI_KEY not set\n')
-    return
-  }
+  const creds = getHomeCredentials()
+  if (!creds) return
+  const { url, key } = creds
 
   const client = createHookClient(url, key)
   const formattedContent = formatPermissionRequest(toolName, toolInput)

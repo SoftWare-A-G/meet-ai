@@ -45,7 +45,7 @@ export default function KeyExistingState({ apiKey, onRegenerate }: KeyExistingSt
                   Your current key will keep working.
                 </AlertDialog.Description>
                 <div className="flex gap-3">
-                  <AlertDialog.Close className="cursor-pointer rounded-full border border-edge-light bg-transparent px-5 py-2 text-[13px] text-text-secondary transition-colors duration-150 hover:bg-edge-dim hover:text-text-primary">
+                  <AlertDialog.Close className="inline-flex cursor-pointer items-center justify-center rounded-full border border-edge-light bg-transparent h-8 px-2.5 text-sm font-medium text-text-secondary transition-colors duration-150 hover:bg-edge-dim hover:text-text-primary">
                     Cancel
                   </AlertDialog.Close>
                   <Button

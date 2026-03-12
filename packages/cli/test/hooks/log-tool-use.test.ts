@@ -1,8 +1,10 @@
 import { describe, expect, it, beforeEach, afterEach, mock } from 'bun:test'
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { processHookInput } from '@meet-ai/cli/commands/hook/log-tool-use/usecase'
+import { setMeetAiDirOverride, writeHomeConfig } from '@meet-ai/cli/lib/meetai-home'
 
 const TEST_DIR = '/tmp/meet-ai-hook-test-teams-cli'
+const TEMP_MEET_AI_DIR = '/tmp/meet-ai-log-tool-use-test-home'
 const MSGID_DIR = '/tmp'
 
 function writeTeamFile(data: { session_id: string; room_id: string }) {
@@ -12,16 +14,19 @@ function writeTeamFile(data: { session_id: string; room_id: string }) {
 }
 
 const originalFetch = globalThis.fetch
-const originalEnv = { ...process.env }
 
 describe('processHookInput', () => {
   beforeEach(() => {
     mkdirSync(TEST_DIR, { recursive: true })
+    rmSync(TEMP_MEET_AI_DIR, { recursive: true, force: true })
     globalThis.fetch = mock(() =>
       Promise.resolve(new Response('{}', { status: 201 }))
     ) as unknown as typeof fetch
-    process.env.MEET_AI_URL = 'http://localhost:9999'
-    process.env.MEET_AI_KEY = 'mai_test123'
+    setMeetAiDirOverride(TEMP_MEET_AI_DIR)
+    writeHomeConfig({
+      defaultEnv: 'default',
+      envs: { default: { url: 'http://localhost:9999', key: 'mai_test123' } },
+    })
     delete process.env.MEET_AI_RUNTIME
     delete process.env.MEET_AI_CODEX_SESSION_ID
     delete process.env.CODEX_HOME
@@ -29,8 +34,9 @@ describe('processHookInput', () => {
 
   afterEach(() => {
     rmSync(TEST_DIR, { recursive: true, force: true })
+    rmSync(TEMP_MEET_AI_DIR, { recursive: true, force: true })
     globalThis.fetch = originalFetch
-    process.env = { ...originalEnv }
+    setMeetAiDirOverride(undefined)
     // Clean up msgid files
     try {
       rmSync(`${MSGID_DIR}/meet-ai-hook-sess-1.msgid`)
@@ -105,20 +111,8 @@ describe('processHookInput', () => {
     expect(result).toBe('skip')
   })
 
-  it('skips when MEET_AI_URL is not set', async () => {
-    process.env.MEET_AI_URL = ''
-    writeTeamFile({ session_id: 'sess-1', room_id: 'room-1' })
-    const input = JSON.stringify({
-      session_id: 'sess-1',
-      tool_name: 'Read',
-      tool_input: { file_path: '/a/b.ts' },
-    })
-    const result = await processHookInput(input, TEST_DIR)
-    expect(result).toBe('skip')
-  })
-
-  it('skips when MEET_AI_KEY is not set', async () => {
-    process.env.MEET_AI_KEY = ''
+  it('silently skips when no home config exists', async () => {
+    setMeetAiDirOverride('/tmp/nonexistent-meet-ai-dir-99')
     writeTeamFile({ session_id: 'sess-1', room_id: 'room-1' })
     const input = JSON.stringify({
       session_id: 'sess-1',

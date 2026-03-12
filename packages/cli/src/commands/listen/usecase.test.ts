@@ -2,6 +2,7 @@ import { describe, it, expect, mock, beforeEach, afterEach, spyOn } from 'bun:te
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { ZodError } from 'zod'
 import { listen } from './usecase'
+import { setMeetAiDirOverride, writeHomeConfig } from '@meet-ai/cli/lib/meetai-home'
 import type IInboxRouter from '@meet-ai/cli/domain/interfaces/IInboxRouter'
 import type { CodexAppServerEvent } from '@meet-ai/cli/lib/codex-app-server'
 import type { HookClient } from '@meet-ai/cli/lib/hooks/client'
@@ -142,6 +143,7 @@ describe('listen', () => {
   const savedAgentName = process.env.MEET_AI_AGENT_NAME
   const savedHome = process.env.HOME
   const codexHome = '/tmp/meet-ai-listen-codex-home'
+  const tempMeetAiDir = '/tmp/meet-ai-listen-test-home'
 
   function writeCodexSessionTranscript(sessionId: string, cwd: string) {
     mkdirSync(`${codexHome}/sessions/2026/03/08`, { recursive: true })
@@ -157,6 +159,7 @@ describe('listen', () => {
     // Prevent process.exit from actually exiting during tests
     process.exit = mock(() => {}) as any
     rmSync(codexHome, { recursive: true, force: true })
+    rmSync(tempMeetAiDir, { recursive: true, force: true })
     mkdirSync(codexHome, { recursive: true })
     delete process.env.MEET_AI_RUNTIME
     delete process.env.CODEX_HOME
@@ -170,6 +173,8 @@ describe('listen', () => {
     process.exit = originalExit
     process.on = originalOn
     rmSync(codexHome, { recursive: true, force: true })
+    rmSync(tempMeetAiDir, { recursive: true, force: true })
+    setMeetAiDirOverride(undefined)
     if (savedRuntime === undefined) delete process.env.MEET_AI_RUNTIME
     else process.env.MEET_AI_RUNTIME = savedRuntime
     if (savedCodexHome === undefined) delete process.env.CODEX_HOME
@@ -279,8 +284,11 @@ describe('listen', () => {
   it('publishes codex activity events through the hook log transport', async () => {
     process.env.MEET_AI_RUNTIME = 'codex'
     process.env.CODEX_HOME = codexHome
-    process.env.MEET_AI_URL = 'http://localhost:8787'
-    process.env.MEET_AI_KEY = 'mai_test123'
+    setMeetAiDirOverride(tempMeetAiDir)
+    writeHomeConfig({
+      defaultEnv: 'default',
+      envs: { default: { url: 'http://localhost:8787', key: 'mai_test123' } },
+    })
 
     const client = mockClient()
     const codexBridge = makeCodexBridgeMock()
@@ -317,8 +325,11 @@ describe('listen', () => {
   it('routes codex plan updates through room plan reviews and injects the approved decision', async () => {
     process.env.MEET_AI_RUNTIME = 'codex'
     process.env.CODEX_HOME = codexHome
-    process.env.MEET_AI_URL = 'http://localhost:8787'
-    process.env.MEET_AI_KEY = 'mai_test123'
+    setMeetAiDirOverride(tempMeetAiDir)
+    writeHomeConfig({
+      defaultEnv: 'default',
+      envs: { default: { url: 'http://localhost:8787', key: 'mai_test123' } },
+    })
 
     const client = mockClient()
     const codexBridge = makeCodexBridgeMock()
@@ -406,8 +417,11 @@ describe('listen', () => {
   it('does not ask codex to propose another plan when the preview is dismissed', async () => {
     process.env.MEET_AI_RUNTIME = 'codex'
     process.env.CODEX_HOME = codexHome
-    process.env.MEET_AI_URL = 'http://localhost:8787'
-    process.env.MEET_AI_KEY = 'mai_test123'
+    setMeetAiDirOverride(tempMeetAiDir)
+    writeHomeConfig({
+      defaultEnv: 'default',
+      envs: { default: { url: 'http://localhost:8787', key: 'mai_test123' } },
+    })
 
     const client = mockClient()
     const codexBridge = makeCodexBridgeMock()

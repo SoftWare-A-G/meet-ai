@@ -1,4 +1,5 @@
 import { getMeetAiConfig } from '@meet-ai/cli/config'
+import type { MeetAiConfig } from '@meet-ai/cli/config'
 import type { MeetAiClient } from '@meet-ai/cli/types'
 import HttpTransport from './adapters/HttpTransport'
 import ConnectionAdapter from './adapters/ConnectionAdapter'
@@ -49,8 +50,8 @@ function cleanupOldAttachments(): void {
   }
 }
 
-function createContainer() {
-  const config = getMeetAiConfig()
+function createContainer(configOverride?: MeetAiConfig) {
+  const config = configOverride ?? getMeetAiConfig()
 
   // Transport layer
   const transport = new HttpTransport(config.url, config.key)
@@ -95,7 +96,10 @@ function createContainer() {
 // Lazy singleton — created on first access
 let container: ReturnType<typeof createContainer> | null = null
 
-export function getContainer() {
+export function getContainer(configOverride?: MeetAiConfig) {
+  if (configOverride) {
+    container = createContainer(configOverride)
+  }
   if (!container) {
     container = createContainer()
   }
@@ -108,8 +112,8 @@ export function getContainer() {
  * (client: MeetAiClient, ...) signatures while the backing implementation
  * moves to the domain layer.
  */
-export function getClient(): MeetAiClient {
-  const c = getContainer()
+export function getClient(configOverride?: MeetAiConfig): MeetAiClient {
+  const c = getContainer(configOverride)
   return {
     listRooms: () => c.listRooms.execute(),
     createRoom: (name, projectId) => c.createRoom.execute(name, projectId),

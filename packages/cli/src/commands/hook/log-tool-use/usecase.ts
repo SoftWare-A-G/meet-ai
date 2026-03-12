@@ -11,6 +11,7 @@ import {
   type HookInput,
   type StructuredPatchHunk,
 } from '@meet-ai/cli/lib/hooks'
+import { getHomeCredentials } from '@meet-ai/cli/lib/meetai-home'
 
 const PARENT_MSG_TTL_SEC = 120
 
@@ -67,10 +68,10 @@ export async function processHookInput(
   if (!room) return 'skip'
   const { roomId, teamName } = room
 
-  // Need env vars
-  const url = process.env.MEET_AI_URL
-  const key = process.env.MEET_AI_KEY
-  if (!url || !key) return 'skip'
+  // Need credentials from home config
+  const creds = getHomeCredentials()
+  if (!creds) return 'skip'
+  const { url, key } = creds
 
   const client = createHookClient(url, key)
 

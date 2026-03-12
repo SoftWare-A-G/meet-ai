@@ -1,10 +1,11 @@
 import { describe, expect, it, mock, beforeEach, afterEach } from 'bun:test'
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs'
+import { setMeetAiDirOverride, writeHomeConfig } from '@meet-ai/cli/lib/meetai-home'
 
 const TEST_DIR = '/tmp/meet-ai-plan-review-test-teams'
+const TEMP_MEET_AI_DIR = '/tmp/meet-ai-plan-review-test-home'
 
 const originalFetch = globalThis.fetch
-const originalEnv = { ...process.env }
 const originalStdout = process.stdout.write
 const originalStderr = process.stderr.write
 
@@ -34,14 +35,18 @@ describe('plan-review usecase', () => {
 
   beforeEach(() => {
     mkdirSync(TEST_DIR, { recursive: true })
+    rmSync(TEMP_MEET_AI_DIR, { recursive: true, force: true })
     mockFetch = mock()
     globalThis.fetch = mockFetch as unknown as typeof fetch
     stdoutCapture = ''
     stderrCapture = ''
     process.stdout.write = ((chunk: string) => { stdoutCapture += chunk; return true }) as typeof process.stdout.write
     process.stderr.write = ((chunk: string) => { stderrCapture += chunk; return true }) as typeof process.stderr.write
-    process.env.MEET_AI_URL = 'http://localhost:9999'
-    process.env.MEET_AI_KEY = 'mai_test123'
+    setMeetAiDirOverride(TEMP_MEET_AI_DIR)
+    writeHomeConfig({
+      defaultEnv: 'default',
+      envs: { default: { url: 'http://localhost:9999', key: 'mai_test123' } },
+    })
     writeTeamFile('my-team', { session_id: 'sess-1', room_id: 'room-abc' })
   })
 
@@ -49,9 +54,9 @@ describe('plan-review usecase', () => {
     globalThis.fetch = originalFetch
     process.stdout.write = originalStdout
     process.stderr.write = originalStderr
-    process.env.MEET_AI_URL = originalEnv.MEET_AI_URL
-    process.env.MEET_AI_KEY = originalEnv.MEET_AI_KEY
+    setMeetAiDirOverride(undefined)
     rmSync(TEST_DIR, { recursive: true, force: true })
+    rmSync(TEMP_MEET_AI_DIR, { recursive: true, force: true })
   })
 
   it('skips when stdin is invalid JSON', async () => {
@@ -104,19 +109,10 @@ describe('plan-review usecase', () => {
     expect(stdoutCapture).toBe('')
   })
 
-  it('skips when MEET_AI_URL not set', async () => {
-    delete process.env.MEET_AI_URL
+  it('silently skips when no home config exists', async () => {
+    setMeetAiDirOverride('/tmp/nonexistent-meet-ai-dir-99')
     const { processPlanReview } = await loadUsecase()
     await processPlanReview(makeInput(), TEST_DIR)
-    expect(stderrCapture).toContain('MEET_AI_URL or MEET_AI_KEY not set')
-    expect(stdoutCapture).toBe('')
-  })
-
-  it('skips when MEET_AI_KEY not set', async () => {
-    delete process.env.MEET_AI_KEY
-    const { processPlanReview } = await loadUsecase()
-    await processPlanReview(makeInput(), TEST_DIR)
-    expect(stderrCapture).toContain('MEET_AI_URL or MEET_AI_KEY not set')
     expect(stdoutCapture).toBe('')
   })
 

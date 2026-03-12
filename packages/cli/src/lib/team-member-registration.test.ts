@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test'
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { setMeetAiDirOverride, writeHomeConfig } from '@meet-ai/cli/lib/meetai-home'
+
+const TEMP_MEET_AI_DIR = '/tmp/meet-ai-team-member-registration-home'
 
 const mockCreateHookClient = mock(() => ({ api: {} }))
 const mockGetTeamInfo = mock(() => Promise.resolve(null as any))
@@ -16,8 +19,6 @@ const { registerActiveTeamMember } = await import('./team-member-registration')
 describe('registerActiveTeamMember', () => {
   const tempHome = '/tmp/meet-ai-team-member-registration'
   const savedHome = process.env.HOME
-  const savedUrl = process.env.MEET_AI_URL
-  const savedKey = process.env.MEET_AI_KEY
   const savedAgentName = process.env.MEET_AI_AGENT_NAME
   const savedColor = process.env.MEET_AI_COLOR
 
@@ -25,10 +26,14 @@ describe('registerActiveTeamMember', () => {
     rmSync(tempHome, { recursive: true, force: true })
     mkdirSync(`${tempHome}/.claude/teams/demo-team`, { recursive: true })
     process.env.HOME = tempHome
-    process.env.MEET_AI_URL = 'https://meet-ai.test'
-    process.env.MEET_AI_KEY = 'test-key'
     delete process.env.MEET_AI_AGENT_NAME
     delete process.env.MEET_AI_COLOR
+    rmSync(TEMP_MEET_AI_DIR, { recursive: true, force: true })
+    setMeetAiDirOverride(TEMP_MEET_AI_DIR)
+    writeHomeConfig({
+      defaultEnv: 'default',
+      envs: { default: { url: 'https://meet-ai.test', key: 'mai_test_key123' } },
+    })
     mockCreateHookClient.mockClear()
     mockGetTeamInfo.mockClear()
     mockGetTeamInfo.mockResolvedValue(null as any)
@@ -37,12 +42,10 @@ describe('registerActiveTeamMember', () => {
 
   afterEach(() => {
     rmSync(tempHome, { recursive: true, force: true })
+    rmSync(TEMP_MEET_AI_DIR, { recursive: true, force: true })
+    setMeetAiDirOverride(undefined)
     if (savedHome === undefined) delete process.env.HOME
     else process.env.HOME = savedHome
-    if (savedUrl === undefined) delete process.env.MEET_AI_URL
-    else process.env.MEET_AI_URL = savedUrl
-    if (savedKey === undefined) delete process.env.MEET_AI_KEY
-    else process.env.MEET_AI_KEY = savedKey
     if (savedAgentName === undefined) delete process.env.MEET_AI_AGENT_NAME
     else process.env.MEET_AI_AGENT_NAME = savedAgentName
     if (savedColor === undefined) delete process.env.MEET_AI_COLOR
@@ -71,7 +74,7 @@ describe('registerActiveTeamMember', () => {
       teamName: 'demo-team',
     })
 
-    expect(mockCreateHookClient).toHaveBeenCalledWith('https://meet-ai.test', 'test-key')
+    expect(mockCreateHookClient).toHaveBeenCalledWith('https://meet-ai.test', 'mai_test_key123')
     expect(mockSendTeamMemberUpsert).toHaveBeenCalledWith(
       { api: {} },
       '30c9e52e-5f4d-4298-a995-efb5c27623d6',

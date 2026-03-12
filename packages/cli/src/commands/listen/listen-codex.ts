@@ -1,4 +1,5 @@
 import { downloadMessageAttachments } from '@meet-ai/cli/lib/attachments'
+import { getHomeCredentials } from '@meet-ai/cli/lib/meetai-home'
 import { appendCodexInboxEntry, readCurrentCodexSessionId } from '@meet-ai/cli/lib/codex'
 import {
   type CodexAppServerEvent,
@@ -321,9 +322,10 @@ export function listenCodex(
 
   const terminal = createTerminalControlHandler({ client, roomId })
 
-  const meetAiUrl = process.env.MEET_AI_URL ?? ''
-  const meetAiKey = process.env.MEET_AI_KEY ?? ''
-  const hookClient = meetAiUrl && meetAiKey ? deps.createHookClient(meetAiUrl, meetAiKey) : null
+  const homeCreds = getHomeCredentials()
+  if (!homeCreds) throw new Error("No meet-ai credentials found. Run 'meet-ai' to set up.")
+  const { url: meetAiUrl, key: meetAiKey } = homeCreds
+  const hookClient = deps.createHookClient(meetAiUrl, meetAiKey)
   let activityParentId: string | null = null
   let activityLogQueue: Promise<void> = Promise.resolve()
   const taskToolCallHandler =

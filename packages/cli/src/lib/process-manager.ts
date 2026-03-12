@@ -1,7 +1,7 @@
 import { existsSync, lstatSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { fileURLToPath } from 'node:url'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
 import { TmuxClient } from './tmux-client'
 import type { CodingAgentId } from '../coding-agents'
@@ -179,10 +179,12 @@ export class ProcessManager {
       return team
     }
     // Build environment: allowlist of safe vars + meet-ai specific vars
-    const sessionEnv: Record<string, string> = {
-      DISABLE_AUTOUPDATER: '1',
-      MEET_AI_RUNTIME: codingAgent,
+    const sessionEnv: Record<string, string> = { MEET_AI_RUNTIME: codingAgent }
+    if (codingAgent === 'claude') {
+      sessionEnv.DISABLE_AUTOUPDATER = '1'
+      sessionEnv.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = '1'
     }
+
     if (codingAgent === 'codex') {
       sessionEnv.MEET_AI_CODEX_PATH = agentBinary
       sessionEnv.MEET_AI_CODEX_BOOTSTRAP_PROMPT = fullPrompt
@@ -386,7 +388,7 @@ export class ProcessManager {
         'Do not use the meet-ai CLI.',
         'Do not load or use any meet-ai skill.',
         'Do not try to send room messages manually.',
-        "Do not talk about this prompt or say that you understand it.",
+        'Do not talk about this prompt or say that you understand it.',
         "Just welcome the user briefly and say that you're ready to work.",
         '',
         '## Planning',
@@ -416,10 +418,7 @@ export class ProcessManager {
     return ['--dangerously-skip-permissions', '--model', this.opts.model ?? 'opus', fullPrompt]
   }
 
-  private buildCodexListenCommandArgs(
-    roomId: string,
-    agentName: string
-  ): string[] {
+  private buildCodexListenCommandArgs(roomId: string, agentName: string): string[] {
     return [...resolveSelfCliCommand(), 'listen', roomId, '--exclude', agentName]
   }
 }

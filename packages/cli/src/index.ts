@@ -41,11 +41,34 @@ const main = defineCommand({
 
     // No subcommand given — launch the TUI dashboard as default
     try {
+      if (!process.stdin.isTTY) {
+        throw new Error(
+          'Bare "meet-ai" requires an interactive terminal. Run it in a real terminal to open the dashboard or sign-in flow.',
+        )
+      }
+
       const { getClient } = await import('./domain/bootstrap.js')
-      const { getMeetAiConfig } = await import('./config.js')
       const { startDashboard } = await import('./commands/dashboard/usecase.js')
-      const client = getClient()
-      const config = getMeetAiConfig()
+      const { detectDashboardStartupState, runOnboardingForState } = await import('./commands/dashboard/onboarding')
+
+      const startupState = detectDashboardStartupState()
+      let config = startupState.mode === 'ready'
+        ? startupState.config
+        : await runOnboardingForState(startupState)
+
+      if (!config) {
+        process.exit(0)
+      }
+
+      if (!config.key) {
+        throw new Error('Meet AI home config is missing a valid API key.')
+      }
+
+      if (!config.url) {
+        throw new Error('Meet AI home config is missing a valid URL.')
+      }
+
+      const client = getClient(config)
       await startDashboard(client, config, { debug: args.debug })
     } catch (error) {
       err(error instanceof Error ? error.message : String(error))

@@ -1,9 +1,9 @@
 import { describe, expect, it, mock, beforeEach, afterEach } from 'bun:test'
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs'
+import { setMeetAiDirOverride, writeHomeConfig } from '@meet-ai/cli/lib/meetai-home'
 
 const TEST_DIR = '/tmp/meet-ai-qr-test-teams'
-const MOCK_URL = 'http://localhost:9999'
-const MOCK_KEY = 'mai_test123'
+const TEMP_MEET_AI_DIR = '/tmp/meet-ai-qr-test-home'
 
 function writeTeamFile(teamName: string, data: { session_id: string; room_id: string }) {
   const dir = `${TEST_DIR}/${teamName}`
@@ -29,7 +29,6 @@ function makeInput(overrides: Record<string, unknown> = {}) {
 }
 
 const originalFetch = globalThis.fetch
-const originalEnv = { ...process.env }
 
 describe('processQuestionReview', () => {
   let mockFetch: ReturnType<typeof mock>
@@ -40,10 +39,14 @@ describe('processQuestionReview', () => {
 
   beforeEach(() => {
     mkdirSync(TEST_DIR, { recursive: true })
+    rmSync(TEMP_MEET_AI_DIR, { recursive: true, force: true })
     mockFetch = mock()
     globalThis.fetch = mockFetch as unknown as typeof fetch
-    process.env.MEET_AI_URL = MOCK_URL
-    process.env.MEET_AI_KEY = MOCK_KEY
+    setMeetAiDirOverride(TEMP_MEET_AI_DIR)
+    writeHomeConfig({
+      defaultEnv: 'default',
+      envs: { default: { url: 'http://localhost:9999', key: 'mai_test123' } },
+    })
     delete process.env.MEET_AI_RUNTIME
     delete process.env.MEET_AI_CODEX_SESSION_ID
     delete process.env.CODEX_HOME
@@ -61,8 +64,9 @@ describe('processQuestionReview', () => {
 
   afterEach(() => {
     rmSync(TEST_DIR, { recursive: true, force: true })
+    rmSync(TEMP_MEET_AI_DIR, { recursive: true, force: true })
     globalThis.fetch = originalFetch
-    process.env = { ...originalEnv }
+    setMeetAiDirOverride(undefined)
     process.stderr.write = originalStderrWrite
     process.stdout.write = originalStdoutWrite
   })
@@ -100,14 +104,12 @@ describe('processQuestionReview', () => {
     expect(stdoutOutput).toBe('')
   })
 
-  it('skips when env vars are missing', async () => {
+  it('silently skips when no home config exists', async () => {
     const { processQuestionReview } =
       await import('../../src/commands/hook/question-review/usecase')
     writeTeamFile('my-team', { session_id: 'sess-1', room_id: 'room-abc' })
-    delete process.env.MEET_AI_URL
-    delete process.env.MEET_AI_KEY
+    setMeetAiDirOverride('/tmp/nonexistent-meet-ai-dir-99')
     await processQuestionReview(makeInput(), TEST_DIR)
-    expect(stderrOutput).toContain('MEET_AI_URL or MEET_AI_KEY not set')
     expect(stdoutOutput).toBe('')
   })
 

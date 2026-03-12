@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'bun:test'
-import { unlinkSync } from 'node:fs'
+import { mkdirSync, unlinkSync, rmSync, writeFileSync } from 'node:fs'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { runCli } from '../helpers/run-cli'
 
@@ -8,6 +8,23 @@ import { runCli } from '../helpers/run-cli'
 let server: ReturnType<typeof createServer> | undefined
 let baseUrl: string
 let serverStartError: Error | null = null
+
+// Temp home dirs for writing ~/.meet-ai/config.json
+let tempHome: string
+let unreachableHome: string
+
+function writeHomeConfig(homeDir: string, url: string, key: string) {
+  const meetaiDir = `${homeDir}/.meet-ai`
+  mkdirSync(meetaiDir, { recursive: true })
+  writeFileSync(
+    `${meetaiDir}/config.json`,
+    JSON.stringify({
+      $schema: 'https://meet-ai.cc/schemas/config.json',
+      defaultEnv: 'default',
+      envs: { default: { url, key } },
+    }),
+  )
+}
 
 function readJsonBody(req: IncomingMessage): Promise<any> {
   return new Promise((resolve, reject) => {
@@ -120,14 +137,24 @@ beforeAll(async () => {
     return
   }
   baseUrl = `http://127.0.0.1:${address.port}`
+
+  // Create temp home dirs with config files
+  tempHome = '/tmp/meet-ai-cli-integ-home'
+  unreachableHome = '/tmp/meet-ai-cli-integ-unreachable'
+  rmSync(tempHome, { recursive: true, force: true })
+  rmSync(unreachableHome, { recursive: true, force: true })
+  writeHomeConfig(tempHome, baseUrl, 'mai_testkey123')
+  writeHomeConfig(unreachableHome, 'http://127.0.0.1:1', 'mai_testkey123')
 })
 
 afterAll(() => {
   server?.close()
+  rmSync(tempHome, { recursive: true, force: true })
+  rmSync(unreachableHome, { recursive: true, force: true })
 })
 
 function env(extra?: Record<string, string>) {
-  return { MEET_AI_URL: baseUrl, MEET_AI_KEY: 'mai_testkey123', ...extra }
+  return { HOME: tempHome, ...extra }
 }
 
 function skipIfServerUnavailable() {
@@ -264,12 +291,24 @@ describe('validation failure paths', () => {
 // ---------- API failure paths ----------
 
 describe('API failure paths', () => {
+  it('bare meet-ai without a TTY exits 1 before launching the TUI', async () => {
+    const result = await runCli([], {
+      MEET_AI_RUNTIME: '',
+      CODEX_HOME: '/nonexistent',
+      HOME: '/nonexistent',
+    })
+
+    expect(result.exitCode).toBe(1)
+    expect(result.stderr).toContain('requires an interactive terminal')
+    expect(result.stderr).not.toContain('tmux is required')
+    expect(result.stderr).not.toContain('Raw mode is not supported')
+  })
+
   it('create-room with unreachable server exits 1 with error', async () => {
-    // GIVEN a server URL that nothing is listening on
+    // GIVEN a home config pointing to an unreachable server
     // WHEN we try to create a room
     const result = await runCli(['create-room', 'test-room'], {
-      MEET_AI_URL: 'http://127.0.0.1:1',
-      MEET_AI_KEY: 'mai_testkey123',
+      HOME: unreachableHome,
     })
 
     // THEN it exits 1 and stderr has an error (no raw stack traces)
@@ -279,11 +318,10 @@ describe('API failure paths', () => {
   })
 
   it('send-message with unreachable server exits 1 with error', async () => {
-    // GIVEN a server URL that nothing is listening on
+    // GIVEN a home config pointing to an unreachable server
     // WHEN we try to send a message
     const result = await runCli(['send-message', 'room-123', 'bot', 'hello'], {
-      MEET_AI_URL: 'http://127.0.0.1:1',
-      MEET_AI_KEY: 'mai_testkey123',
+      HOME: unreachableHome,
     })
 
     // THEN it exits 1 and stderr has an error (no raw stack traces)
@@ -293,17 +331,38 @@ describe('API failure paths', () => {
   })
 
   it('generate-key with unreachable server exits 1 with error', async () => {
-    // GIVEN a server URL that nothing is listening on
+    // GIVEN a home config pointing to an unreachable server
     // WHEN we try to generate a key
     const result = await runCli(['generate-key'], {
-      MEET_AI_URL: 'http://127.0.0.1:1',
-      MEET_AI_KEY: 'mai_testkey123',
+      HOME: unreachableHome,
     })
 
     // THEN it exits 1 and stderr has an error (no raw stack traces)
     expect(result.exitCode).toBe(1)
     expect(result.stderr.length).toBeGreaterThan(0)
     expect(result.stderr).not.toContain('    at ')
+  })
+})
+
+// ---------- Missing credentials ----------
+
+describe('missing credentials', () => {
+  it('create-room with no home config exits 1 with setup error', async () => {
+    // GIVEN: HOME points to a dir without .meet-ai/config.json
+    const noConfigHome = '/tmp/meet-ai-cli-integ-no-config'
+    rmSync(noConfigHome, { recursive: true, force: true })
+    mkdirSync(noConfigHome, { recursive: true })
+
+    // WHEN: we try to create a room
+    const result = await runCli(['create-room', 'test-room'], {
+      HOME: noConfigHome,
+    })
+
+    // THEN: it exits 1 and stderr contains the setup error
+    expect(result.exitCode).toBe(1)
+    expect(result.stderr).toContain("No meet-ai credentials found. Run 'meet-ai' to set up.")
+
+    rmSync(noConfigHome, { recursive: true, force: true })
   })
 })
 

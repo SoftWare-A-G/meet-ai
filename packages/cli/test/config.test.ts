@@ -1,142 +1,122 @@
-import { test, expect, beforeEach, afterEach, spyOn } from "bun:test";
+import { test, expect, beforeEach, afterEach } from "bun:test";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { z } from "zod";
 import {
+  findMigratableConfigSources,
   getMeetAiConfig,
   resolveRawConfig,
   configSchema,
 } from "@meet-ai/cli/config";
+import { setMeetAiDirOverride, writeHomeConfig } from "@meet-ai/cli/lib/meetai-home";
 
-// Save original env vars so we can restore them
-let savedEnv: Record<string, string | undefined>;
+const TEMP_MEET_AI_DIR = '/tmp/meet-ai-config-test-home';
 
 beforeEach(() => {
-  savedEnv = {
-    MEET_AI_URL: process.env.MEET_AI_URL,
-    MEET_AI_KEY: process.env.MEET_AI_KEY,
-    MEET_AI_RUNTIME: process.env.MEET_AI_RUNTIME,
-    CODEX_HOME: process.env.CODEX_HOME,
-  };
+  rmSync(TEMP_MEET_AI_DIR, { recursive: true, force: true });
 });
 
 afterEach(() => {
-  // Restore original env
-  for (const [key, value] of Object.entries(savedEnv)) {
-    if (value === undefined) {
-      Reflect.deleteProperty(process.env, key);
-    } else {
-      process.env[key] = value;
-    }
-  }
+  setMeetAiDirOverride(undefined);
+  rmSync(TEMP_MEET_AI_DIR, { recursive: true, force: true });
 });
 
-// --- Config priority chain ---
+// Helper: write a home config with test credentials
+function writeTestHomeConfig(url: string, key: string) {
+  setMeetAiDirOverride(TEMP_MEET_AI_DIR);
+  writeHomeConfig({
+    defaultEnv: 'default',
+    envs: { default: { url, key } },
+  });
+}
 
-test("env vars override file settings", () => {
-  // GIVEN: MEET_AI_URL and MEET_AI_KEY are set in process.env
-  process.env.MEET_AI_URL = "https://env-override.example.com";
-  process.env.MEET_AI_KEY = "mai_env_key_123";
+// --- Home config resolution ---
 
-  // WHEN: config is resolved
-  const config = getMeetAiConfig();
-
-  // THEN: env var values take priority
-  expect(config.url).toBe("https://env-override.example.com");
-  expect(config.key).toBe("mai_env_key_123");
-});
-
-test("resolveRawConfig returns env vars when set", () => {
-  // GIVEN: env vars are set
-  process.env.MEET_AI_URL = "https://raw-env.example.com";
-  process.env.MEET_AI_KEY = "mai_raw_123";
+test("resolveRawConfig returns credentials from home config", () => {
+  // GIVEN: a home config with url and key
+  writeTestHomeConfig('https://home-config.example.com', 'mai_home_123');
 
   // WHEN: raw config is resolved
   const raw = resolveRawConfig();
 
-  // THEN: env var values are returned
-  expect(raw.url).toBe("https://raw-env.example.com");
-  expect(raw.key).toBe("mai_raw_123");
+  // THEN: home config values are returned
+  expect(raw.url).toBe('https://home-config.example.com');
+  expect(raw.key).toBe('mai_home_123');
+});
+
+test("resolveRawConfig accepts meetaiHome option", () => {
+  // GIVEN: a home config at a custom path
+  mkdirSync(TEMP_MEET_AI_DIR, { recursive: true });
+  writeFileSync(
+    `${TEMP_MEET_AI_DIR}/config.json`,
+    JSON.stringify({
+      $schema: 'https://meet-ai.cc/schemas/config.json',
+      defaultEnv: 'default',
+      envs: { default: { url: 'https://custom-path.example.com', key: 'mai_custom_123' } },
+    }),
+  );
+
+  // WHEN: resolveRawConfig is called with meetaiHome
+  const raw = resolveRawConfig({ meetaiHome: TEMP_MEET_AI_DIR });
+
+  // THEN: values from the custom path are returned
+  expect(raw.url).toBe('https://custom-path.example.com');
+  expect(raw.key).toBe('mai_custom_123');
 });
 
 // --- Default values ---
 
-test("defaults to https://meet-ai.cc when no config sources exist", () => {
-  // GIVEN: no env vars are set and settings file paths point to non-existent locations
-  delete process.env.MEET_AI_URL;
-  delete process.env.MEET_AI_KEY;
-  delete process.env.MEET_AI_RUNTIME;
-  delete process.env.CODEX_HOME;
-  const noFiles = { projectSettingsPath: "/nonexistent", homeDir: "/nonexistent" };
+test("defaults to https://meet-ai.cc when no home config exists", () => {
+  // GIVEN: no home config file
+  setMeetAiDirOverride('/tmp/nonexistent-meet-ai-dir');
 
   // WHEN: raw config is resolved
-  const raw = resolveRawConfig(noFiles);
+  const raw = resolveRawConfig();
 
   // THEN: defaults are returned
   expect(raw.url).toBe("https://meet-ai.cc");
   expect(raw.key).toBeUndefined();
 });
 
-test("default config passes validation", () => {
-  // GIVEN: no env vars are set and settings file paths point to non-existent locations
-  delete process.env.MEET_AI_URL;
-  delete process.env.MEET_AI_KEY;
-  delete process.env.MEET_AI_RUNTIME;
-  delete process.env.CODEX_HOME;
-  const noFiles = { projectSettingsPath: "/nonexistent", homeDir: "/nonexistent" };
+test("getMeetAiConfig throws when no home config exists", () => {
+  // GIVEN: no home config file (key will be undefined)
+  setMeetAiDirOverride('/tmp/nonexistent-meet-ai-dir');
 
-  // WHEN: getMeetAiConfig is called
-  const config = getMeetAiConfig(noFiles);
-
-  // THEN: the default URL passes schema validation
-  expect(config.url).toBe("https://meet-ai.cc");
-  expect(config.key).toBeUndefined();
-});
-
-test("loads MEET_AI_* from Codex config.toml env section when runtime is codex", async () => {
-  process.env.MEET_AI_RUNTIME = "codex";
-  delete process.env.MEET_AI_URL;
-  delete process.env.MEET_AI_KEY;
-
-  const codexHome = "/tmp/meet-ai-codex-config";
-  rmSync(codexHome, { recursive: true, force: true });
-  mkdirSync(codexHome, { recursive: true });
-  writeFileSync(
-    `${codexHome}/config.toml`,
-    [
-      'model = "gpt-5.4"',
-      "",
-      "[env]",
-      'MEET_AI_URL = "https://codex-config.example.com"',
-      'MEET_AI_KEY = "mai_codex_123"',
-      "",
-    ].join("\n"),
+  // WHEN/THEN: getMeetAiConfig throws with the setup error
+  expect(() => getMeetAiConfig()).toThrow(
+    "No meet-ai credentials found. Run 'meet-ai' to set up."
   );
-
-  const raw = resolveRawConfig({ codexHome });
-
-  expect(raw.url).toBe("https://codex-config.example.com");
-  expect(raw.key).toBe("mai_codex_123");
 });
 
-test("project settings override Codex config when runtime is codex", async () => {
-  process.env.MEET_AI_RUNTIME = "codex";
-  delete process.env.MEET_AI_URL;
-  delete process.env.MEET_AI_KEY;
-  delete process.env.CODEX_HOME;
+test("localhost URL passes validation via home config", () => {
+  // GIVEN: a home config with localhost URL
+  writeTestHomeConfig('http://localhost:8787', 'mai_local_key');
 
-  const codexHome = "/tmp/meet-ai-codex-config-priority";
-  const projectRoot = "/tmp/meet-ai-project-priority";
+  // WHEN: config is loaded
+  const config = getMeetAiConfig();
+
+  // THEN: localhost URL is accepted
+  expect(config.url).toBe("http://localhost:8787");
+});
+
+// --- findMigratableConfigSources ---
+
+test("findMigratableConfigSources discovers project, user, and codex sources", () => {
+  process.env.MEET_AI_RUNTIME = "codex";
+
+  const codexHome = "/tmp/meet-ai-migrate-codex";
+  const projectRoot = "/tmp/meet-ai-migrate-project";
+  const userHome = "/tmp/meet-ai-migrate-user";
   rmSync(codexHome, { recursive: true, force: true });
   rmSync(projectRoot, { recursive: true, force: true });
+  rmSync(userHome, { recursive: true, force: true });
   mkdirSync(codexHome, { recursive: true });
-  mkdirSync(projectRoot, { recursive: true });
+  mkdirSync(`${projectRoot}/.claude`, { recursive: true });
+  mkdirSync(`${userHome}/.claude`, { recursive: true });
 
   writeFileSync(
     `${codexHome}/config.toml`,
     ['[env]', 'MEET_AI_URL = "https://codex-config.example.com"', 'MEET_AI_KEY = "mai_codex_123"', ""].join("\n"),
   );
-
-  const projectSettingsPath = `${projectRoot}/settings.json`;
+  const projectSettingsPath = `${projectRoot}/.claude/settings.json`;
   writeFileSync(
     projectSettingsPath,
     JSON.stringify({
@@ -146,11 +126,33 @@ test("project settings override Codex config when runtime is codex", async () =>
       },
     }),
   );
+  writeFileSync(
+    `${userHome}/.claude/settings.json`,
+    JSON.stringify({
+      env: {
+        MEET_AI_URL: "https://user-settings.example.com",
+        MEET_AI_KEY: "mai_user_123",
+      },
+    }),
+  );
 
-  const raw = resolveRawConfig({ codexHome, projectSettingsPath, homeDir: "/nonexistent" });
+  const sources = findMigratableConfigSources({
+    codexHome,
+    homeDir: userHome,
+    projectSettingsPath,
+  });
 
-  expect(raw.url).toBe("https://project-settings.example.com");
-  expect(raw.key).toBe("mai_project_123");
+  expect(sources).toHaveLength(3);
+  expect(sources.map(source => source.kind)).toEqual([
+    "project-claude",
+    "user-claude",
+    "codex",
+  ]);
+  expect(sources.map(source => source.envName)).toEqual([
+    "project-settings-example-com",
+    "user-settings-example-com",
+    "codex-config-example-com",
+  ]);
 });
 
 // --- URL validation ---
@@ -180,74 +182,6 @@ test("invalid URL fails schema validation", () => {
       "MEET_AI_URL must be a valid URL",
     );
   }
-});
-
-test("getMeetAiConfig throws on invalid URL from env", () => {
-  // GIVEN: an invalid URL in env vars
-  process.env.MEET_AI_URL = "not-a-url";
-
-  // WHEN/THEN: getMeetAiConfig throws a ZodError
-  expect(() => getMeetAiConfig()).toThrow(z.ZodError);
-});
-
-test("localhost URL passes validation", () => {
-  // GIVEN: a localhost URL
-  process.env.MEET_AI_URL = "http://localhost:8787";
-  process.env.MEET_AI_KEY = "mai_local";
-
-  // WHEN: config is loaded
-  const config = getMeetAiConfig();
-
-  // THEN: localhost URL is accepted
-  expect(config.url).toBe("http://localhost:8787");
-});
-
-// --- Key prefix warning ---
-
-test("warns when key does not start with mai_ prefix", () => {
-  // GIVEN: a key without the mai_ prefix
-  process.env.MEET_AI_URL = "https://meet-ai.cc";
-  process.env.MEET_AI_KEY = "bad_prefix_key";
-  const warnSpy = spyOn(console, "warn").mockImplementation(() => {});
-
-  // WHEN: config is loaded
-  getMeetAiConfig();
-
-  // THEN: a warning is logged
-  expect(warnSpy).toHaveBeenCalledTimes(1);
-  expect(warnSpy.mock.calls[0][0]).toContain("does not start with 'mai_'");
-
-  warnSpy.mockRestore();
-});
-
-test("does not warn when key starts with mai_ prefix", () => {
-  // GIVEN: a properly prefixed key
-  process.env.MEET_AI_URL = "https://meet-ai.cc";
-  process.env.MEET_AI_KEY = "mai_valid_key_123";
-  const warnSpy = spyOn(console, "warn").mockImplementation(() => {});
-
-  // WHEN: config is loaded
-  getMeetAiConfig();
-
-  // THEN: no warning is logged
-  expect(warnSpy).not.toHaveBeenCalled();
-
-  warnSpy.mockRestore();
-});
-
-test("does not warn when key is undefined", () => {
-  // GIVEN: no key is set
-  process.env.MEET_AI_URL = "https://meet-ai.cc";
-  delete process.env.MEET_AI_KEY;
-  const warnSpy = spyOn(console, "warn").mockImplementation(() => {});
-
-  // WHEN: config is loaded
-  getMeetAiConfig();
-
-  // THEN: no warning is logged
-  expect(warnSpy).not.toHaveBeenCalled();
-
-  warnSpy.mockRestore();
 });
 
 // --- Schema shape ---

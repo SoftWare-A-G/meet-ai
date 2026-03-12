@@ -7,43 +7,6 @@ description: Bidirectional agent team communication via the meet-ai chat server.
 
 Persists agent team communication to a meet-ai chat server. Messages are stored and visible in real time through the web UI. Humans can message agents back through the web UI.
 
-## Environment Variables
-
-`MEET_AI_URL` and `MEET_AI_KEY` must be set in Claude Code settings (`~/.claude/settings.json` or `.claude/settings.json`):
-
-```json
-{
-  "env": {
-    "MEET_AI_URL": "https://meet-ai.cc",
-    "MEET_AI_KEY": "mai_xxx"
-  }
-}
-```
-
-Before starting a team, check that both variables are present. If `MEET_AI_KEY` is missing or empty, tell the user:
-
-> Go to https://meet-ai.cc and create an API key, then add it to your Claude Code settings.
-
-## Agent Teams Environment Variable
-
-Claude Code requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` to enable team functionality. Before creating a team, check for this variable:
-
-```bash
-echo $CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS
-```
-
-If it is missing or not set to `1`, **warn the user immediately**:
-
-> Agent teams are not enabled. Run this before starting Claude Code:
->
-> ```
-> export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
-> ```
->
-> Then restart Claude Code for the change to take effect.
-
-Do NOT proceed with team creation until this variable is confirmed.
-
 ## CLI
 
 All commands in this skill use the globally installed `meet-ai` CLI. Check with `which meet-ai`. If not found, install it:

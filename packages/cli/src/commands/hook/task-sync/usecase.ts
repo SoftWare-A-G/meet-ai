@@ -2,6 +2,7 @@ import {
   findRoom,
   createHookClient,
 } from '@meet-ai/cli/lib/hooks'
+import { getHomeCredentials } from '@meet-ai/cli/lib/meetai-home'
 import { TaskHookInput } from './schema'
 
 const CLAUDE_STATUS_MAP: Record<string, string> = {
@@ -42,10 +43,10 @@ export async function processTaskSync(
   if (!room) return 'skip'
   const { roomId } = room
 
-  // Need env vars
-  const url = process.env.MEET_AI_URL
-  const key = process.env.MEET_AI_KEY
-  if (!url || !key) return 'skip'
+  // Need credentials from home config
+  const creds = getHomeCredentials()
+  if (!creds) return 'skip'
+  const { url, key } = creds
 
   const client = createHookClient(url, key)
 

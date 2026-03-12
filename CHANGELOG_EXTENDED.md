@@ -1,5 +1,54 @@
 # Changelog
 
+## [1.0.0](https://github.com/SoftWare-A-G/meet-ai/compare/0.7.2...1.0.0) (2026-03-12)
+
+### Features
+
+* add a first-run Meet AI auth system centered on `~/.meet-ai/config.json`, including:
+  * an Ink sign-in modal that accepts direct `mai_*` keys or `/auth/<token>` links
+  * a broken-config recovery modal for repairing invalid `defaultEnv` pointers
+  * a migration modal that detects existing Claude/Codex credentials and imports them into the canonical home config only when no Meet AI home config exists
+  * a multi-environment config schema with `defaultEnv`, `envs`, restrictive file permissions, and a persisted `$schema` entry
+* redesign the key-page Quick Start to a 5-step flow:
+  * install the CLI
+  * install the Claude Code skill
+  * run `meet-ai setup-hooks`
+  * sign in with `meet-ai`, optionally copying the generated key from the page and pasting it into the CLI prompt
+  * create a room
+* restore generated-key visibility on the key page while aligning it to the new sign-in flow, including copy-to-clipboard feedback and consistent modal action sizing
+
+### Bug Fixes
+
+* migrate runtime `MEET_AI_URL` and `MEET_AI_KEY` reads off env/Claude/Codex settings and onto `~/.meet-ai/config.json` for:
+  * shared CLI config resolution
+  * subcommand/bootstrap command paths
+  * Claude hook integrations (`log-tool-use`, `task-sync`, `plan-review`, `question-review`, `permission-review`)
+  * Codex listener transport initialization
+  * active team-member registration
+* make non-interactive behavior consistent with the home-config model:
+  * bare `meet-ai` now requires an interactive terminal instead of falling through to Ink raw-mode crashes
+  * subcommands fail with a clear setup error when no home config exists
+  * hooks silently skip when credentials are unavailable so parent tool processes are not disturbed
+  * Codex listener startup fails early with the same setup guidance instead of degrading into partial transport setup
+* harden onboarding and config persistence:
+  * validate sign-in URLs before writing them to disk
+  * keep environment-name collision checks active during sign-in and migration
+  * repair broken `defaultEnv` configs without hiding existing environments
+  * serialize `$schema` as the first field in `~/.meet-ai/config.json`
+* automatically enable `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in the dashboard process manager for spawned Claude sessions
+* remove stale Claude-settings credential guidance from docs and Quick Start surfaces so setup instructions match the new internal auth contract
+* align the CLI and worker package manifests at `1.0.0` for the release
+
+### Tests
+
+* add new unit coverage for:
+  * auth-link parsing and claim resolution
+  * multi-env home-config helpers and schema validation
+  * dashboard startup state detection across valid, broken, migration, and fresh-install cases
+  * migration-source discovery from Claude and Codex config files
+* update hook, listener, registration, bootstrap, and integration tests to assert the home-config-only credential model, including silent hook skips and clear command/listener setup failures
+* keep the final release green with the full CLI suite passing at release time after the auth migration and Quick Start redesign
+
 ## [0.7.2](https://github.com/SoftWare-A-G/meet-ai/compare/0.7.1...0.7.2) (2026-03-11)
 
 ### Features

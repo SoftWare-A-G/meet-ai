@@ -1,5 +1,5 @@
-import { setTimeout as delay } from 'node:timers/promises'
 import { createHookClient } from '@meet-ai/cli/lib/hooks/client'
+import { getHomeCredentials } from '@meet-ai/cli/lib/meetai-home'
 import { findRoomId } from '@meet-ai/cli/lib/hooks/find-room'
 import {
   createPlanReview,
@@ -96,12 +96,9 @@ export async function processPlanReview(rawInput: string, teamsDir?: string): Pr
     return
   }
 
-  const url = process.env.MEET_AI_URL
-  const key = process.env.MEET_AI_KEY
-  if (!url || !key) {
-    process.stderr.write('[plan-review] MEET_AI_URL or MEET_AI_KEY not set\n')
-    return
-  }
+  const creds = getHomeCredentials()
+  if (!creds) return
+  const { url, key } = creds
 
   const client = createHookClient(url, key)
 
