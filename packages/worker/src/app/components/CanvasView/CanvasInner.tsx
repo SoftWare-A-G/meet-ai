@@ -1,6 +1,6 @@
-import { Tldraw, iconTypes, type TLUiAssetUrlOverrides } from 'tldraw'
-import { useSync } from '@tldraw/sync'
 import 'tldraw/tldraw.css'
+import { useSync } from '@tldraw/sync'
+import { Tldraw, iconTypes, type TLUiAssetUrlOverrides, type TLUiOverrides } from 'tldraw'
 
 interface CanvasInnerProps {
   wsUrl: string
@@ -16,9 +16,28 @@ const NO_OP_ASSETS = {
 
 // Self-host the SVG sprite sheet to avoid cross-origin <use href> restrictions
 const SELF_HOSTED_ASSET_URLS: TLUiAssetUrlOverrides = {
-  icons: Object.fromEntries(
-    iconTypes.map((name) => [name, `/tldraw/icons/0_merged.svg#${name}`])
-  ),
+  icons: Object.fromEntries(iconTypes.map(name => [name, `/tldraw/icons/0_merged.svg#${name}`])),
+}
+
+const MEDIA_DISABLED_OVERRIDES: TLUiOverrides = {
+  tools(_editor, tools) {
+    const nextTools = { ...tools }
+    delete nextTools.asset
+    return nextTools
+  },
+  actions(_editor, actions) {
+    return {
+      ...actions,
+      'insert-media': {
+        ...actions['insert-media'],
+        onSelect: () => {},
+      },
+      'replace-media': {
+        ...actions['replace-media'],
+        onSelect: () => {},
+      },
+    }
+  },
 }
 
 export default function CanvasInner({ wsUrl, userName, userColor }: CanvasInnerProps) {
@@ -48,6 +67,9 @@ export default function CanvasInner({ wsUrl, userName, userColor }: CanvasInnerP
     <Tldraw
       store={store.store}
       assetUrls={SELF_HOSTED_ASSET_URLS}
+      acceptedImageMimeTypes={[]}
+      acceptedVideoMimeTypes={[]}
+      overrides={MEDIA_DISABLED_OVERRIDES}
       autoFocus
     />
   )

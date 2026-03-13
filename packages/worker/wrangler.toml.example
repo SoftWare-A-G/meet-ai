@@ -16,10 +16,6 @@ not_found_handling = "none"
 binding = "UPLOADS"
 id = "YOUR_KV_NAMESPACE_ID"
 
-[[r2_buckets]]
-binding = "CANVAS_BUCKET"
-bucket_name = "meet-ai-canvas-assets"
-
 [[d1_databases]]
 binding = "DB"
 database_name = "meet-ai-db"

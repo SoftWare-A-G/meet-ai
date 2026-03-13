@@ -679,14 +679,6 @@ export const roomsRoute = new Hono<AppEnv>()
         headers: { 'X-Room-Id': roomId },
       }))
 
-      // Clean up R2 assets for this canvas
-      if (c.env.CANVAS_BUCKET) {
-        const prefix = `canvas/${canvas.id}/`
-        const listed = await c.env.CANVAS_BUCKET.list({ prefix })
-        if (listed.objects.length > 0) {
-          await Promise.all(listed.objects.map(obj => c.env.CANVAS_BUCKET.delete(obj.key)))
-        }
-      }
     }
 
     await db.deleteRoom(keyId, roomId)

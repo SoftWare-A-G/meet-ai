@@ -5,7 +5,6 @@ export type Bindings = {
   CANVAS_ROOM: DurableObjectNamespace
   ASSETS: Fetcher
   UPLOADS: KVNamespace
-  CANVAS_BUCKET: R2Bucket
   ELEVENLABS_API_KEY: string
   VOICE_API_AVAILABLE_FOR: string
 }
