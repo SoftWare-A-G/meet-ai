@@ -267,13 +267,171 @@ function getNextIndex(existingIndexes: string[]): string {
   return `${highest}V`
 }
 
+type CanvasRecord = Record<string, unknown> & { id: string }
+type CanvasMutationPut = Record<string, unknown> & { id: string; typeName: string }
+
+function isRecordObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function isCanvasRecord(value: unknown): value is CanvasRecord {
+  return isRecordObject(value) && typeof value.id === 'string'
+}
+
+function listSnapshotRecords(snapshot: unknown): CanvasRecord[] {
+  if (!isRecordObject(snapshot) || !Array.isArray(snapshot.records)) return []
+  return snapshot.records.filter(isCanvasRecord)
+}
+
+function getSnapshotContext(snapshot: unknown): {
+  pageIds: string[]
+  recordById: Map<string, CanvasRecord>
+  shapeRecords: CanvasRecord[]
+} {
+  const records = listSnapshotRecords(snapshot)
+  const pageIds = records.filter(record => record.typeName === 'page').map(record => record.id)
+  const shapeRecords = records.filter(record => record.typeName === 'shape')
+  return {
+    pageIds,
+    shapeRecords,
+    recordById: new Map(records.map(record => [record.id, record])),
+  }
+}
+
+function getDefaultShapeProps(type: string, props: Record<string, unknown>): Record<string, unknown> {
+  switch (type) {
+    case 'geo':
+      return {
+        geo: 'rectangle',
+        w: 200,
+        h: 100,
+        color: 'black',
+        labelColor: 'black',
+        fill: 'none',
+        dash: 'solid',
+        size: 'm',
+        font: 'draw',
+        text: '',
+        align: 'middle',
+        verticalAlign: 'middle',
+        growY: 0,
+        url: '',
+        ...props,
+      }
+    case 'note':
+      return {
+        color: 'yellow',
+        size: 'm',
+        text: '',
+        font: 'draw',
+        align: 'middle',
+        verticalAlign: 'middle',
+        growY: 0,
+        fontSizeAdjustment: 0,
+        url: '',
+        ...props,
+      }
+    case 'text':
+      return {
+        color: 'black',
+        size: 'm',
+        text: '',
+        font: 'draw',
+        textAlign: 'start',
+        autoSize: true,
+        scale: 1,
+        w: 200,
+        ...props,
+      }
+    case 'arrow':
+      return {
+        color: 'black',
+        fill: 'none',
+        dash: 'draw',
+        size: 'm',
+        arrowheadStart: 'none',
+        arrowheadEnd: 'arrow',
+        font: 'draw',
+        start: { x: 0, y: 0 },
+        end: { x: 100, y: 0 },
+        bend: 0,
+        text: '',
+        labelPosition: 0.5,
+        scale: 1,
+        ...props,
+      }
+    case 'frame':
+      return {
+        w: 800,
+        h: 600,
+        name: 'Frame',
+        ...props,
+      }
+    default:
+      return props
+  }
+}
+
+function normalizeCreatedShapeRecords(shapes: CanvasRecord[], snapshot: unknown): CanvasMutationPut[] {
+  const context = getSnapshotContext(snapshot)
+  const defaultPageId = context.pageIds[0] ?? 'page:page'
+  const reservedIndexes = new Map<string, string[]>()
+
+  return shapes.map(shape => {
+    if (shape.typeName === 'shape') return shape as CanvasMutationPut
+
+    const parentId = typeof shape.parentId === 'string' ? shape.parentId : defaultPageId
+    const existingSiblingIndexes = context.shapeRecords
+      .filter(record => record.parentId === parentId && typeof record.index === 'string')
+      .map(record => record.index as string)
+    const pendingSiblingIndexes = reservedIndexes.get(parentId) ?? []
+    const index =
+      typeof shape.index === 'string' ? shape.index : getNextIndex([...existingSiblingIndexes, ...pendingSiblingIndexes])
+
+    reservedIndexes.set(parentId, [...pendingSiblingIndexes, index])
+
+    const type = typeof shape.type === 'string' ? shape.type : 'geo'
+    const props = isRecordObject(shape.props) ? shape.props : {}
+
+    return {
+      ...shape,
+      typeName: 'shape',
+      type,
+      x: typeof shape.x === 'number' ? shape.x : 0,
+      y: typeof shape.y === 'number' ? shape.y : 0,
+      rotation: typeof shape.rotation === 'number' ? shape.rotation : 0,
+      parentId,
+      index,
+      isLocked: typeof shape.isLocked === 'boolean' ? shape.isLocked : false,
+      opacity: typeof shape.opacity === 'number' ? shape.opacity : 1,
+      meta: isRecordObject(shape.meta) ? shape.meta : {},
+      props: getDefaultShapeProps(type, props),
+    }
+  })
+}
+
+function mergeCanvasRecord(existing: CanvasRecord, update: CanvasRecord): CanvasMutationPut {
+  const existingProps = isRecordObject(existing.props) ? existing.props : {}
+  const updateProps = isRecordObject(update.props) ? update.props : {}
+  const existingMeta = isRecordObject(existing.meta) ? existing.meta : {}
+  const updateMeta = isRecordObject(update.meta) ? update.meta : {}
+
+  return {
+    ...existing,
+    ...update,
+    typeName: typeof update.typeName === 'string' ? update.typeName : typeof existing.typeName === 'string' ? existing.typeName : 'shape',
+    props: { ...existingProps, ...updateProps },
+    meta: { ...existingMeta, ...updateMeta },
+  }
+}
+
 // --- Canvas tool call handler ---
 
 export type CanvasOperations = {
   ensureCanvas(): Promise<Canvas | null>
   getSnapshot(): Promise<CanvasSnapshot | null>
   applyMutations(mutations: {
-    puts?: Array<Record<string, unknown> & { id: string }>
+    puts?: Array<Record<string, unknown> & { id: string; typeName: string }>
     deletes?: string[]
   }): Promise<CanvasMutationResult | null>
   requestPermission?: PermissionReviewer
@@ -417,7 +575,9 @@ export function createCanvasToolCallHandler(ops: CanvasOperations): DynamicToolC
         if (!parsed.success) return makeToolError(parsed.error.message)
 
         await ops.ensureCanvas()
-        const result = await ops.applyMutations({ puts: parsed.data.shapes })
+        const snapshot = await ops.getSnapshot()
+        const normalizedShapes = normalizeCreatedShapeRecords(parsed.data.shapes, snapshot?.snapshot)
+        const result = await ops.applyMutations({ puts: normalizedShapes })
         if (!result) return makeToolError('Failed to create shapes')
 
         return makeToolResponse({
@@ -430,7 +590,21 @@ export function createCanvasToolCallHandler(ops: CanvasOperations): DynamicToolC
         const parsed = UpdateCanvasShapesInput.safeParse(args)
         if (!parsed.success) return makeToolError(parsed.error.message)
 
-        const result = await ops.applyMutations({ puts: parsed.data.updates })
+        const snapshot = await ops.getSnapshot()
+        if (!snapshot) return makeToolError('Failed to read canvas snapshot')
+
+        const context = getSnapshotContext(snapshot.snapshot)
+        const hydratedUpdates: CanvasMutationPut[] = []
+
+        for (const update of parsed.data.updates) {
+          const existing = context.recordById.get(update.id)
+          if (!existing || existing.typeName !== 'shape') {
+            return makeToolError(`Shape not found on canvas: ${update.id}`)
+          }
+          hydratedUpdates.push(mergeCanvasRecord(existing, update))
+        }
+
+        const result = await ops.applyMutations({ puts: hydratedUpdates })
         if (!result) return makeToolError('Failed to update shapes')
 
         return makeToolResponse({

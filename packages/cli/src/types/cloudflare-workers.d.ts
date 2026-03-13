@@ -50,8 +50,19 @@ interface DurableObjectStorage {
   get<T = unknown>(key: string): Promise<T | undefined>
   put(key: string, value: unknown): Promise<void>
   delete(key: string): Promise<boolean>
+  deleteAll(): Promise<void>
   getAlarm(): Promise<number | null>
   setAlarm(scheduledTime: number | Date): Promise<void>
+  transactionSync<T>(closure: () => T): T
+  sql: DurableObjectSqlStorage
+}
+
+interface DurableObjectSqlStorageCursor<T = unknown> extends Iterable<T> {
+  toArray(): T[]
+}
+
+interface DurableObjectSqlStorage {
+  exec<T = unknown>(query: string, ...bindings: unknown[]): DurableObjectSqlStorageCursor<T>
 }
 
 interface DurableObjectNamespace {

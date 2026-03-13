@@ -195,17 +195,50 @@ describe('createCanvasToolCallHandler', () => {
   })
 
   describe('create_canvas_shapes', () => {
-    it('creates shapes via mutations', async () => {
+    it('normalizes simplified shapes into full tldraw records before mutations', async () => {
       const ops = makeOps()
       const handler = createCanvasToolCallHandler(ops)
-      const shapes = [{ id: 'shape:new1', type: 'geo' }]
+      const shapes = [{ id: 'shape:new1', type: 'geo', x: 120, y: 140, props: { w: 240, h: 140, fill: 'semi' } }]
       const result = await handler('create_canvas_shapes', { shapes })
 
       expect(result.success).toBe(true)
       const data = getData(result)
       expect(data.created_shape_ids).toEqual(['shape:new1'])
       expect(data.ok).toBe(true)
-      expect(ops.applyMutations).toHaveBeenCalledWith({ puts: shapes })
+      const callArgs = (ops.applyMutations as ReturnType<typeof mock>).mock.calls[0]
+      const puts = callArgs[0].puts
+      expect(puts).toHaveLength(1)
+      expect(puts[0].id).toBe('shape:new1')
+      expect(puts[0].typeName).toBe('shape')
+      expect(puts[0].type).toBe('geo')
+      expect(puts[0].parentId).toBe('page:page')
+      expect(puts[0].index).toBe('a2V')
+      expect(puts[0].x).toBe(120)
+      expect(puts[0].y).toBe(140)
+      expect(puts[0].rotation).toBe(0)
+      expect(puts[0].isLocked).toBe(false)
+      expect(puts[0].opacity).toBe(1)
+      expect(puts[0].meta).toEqual({})
+      expect(puts[0].props.geo).toBe('rectangle')
+      expect(puts[0].props.w).toBe(240)
+      expect(puts[0].props.h).toBe(140)
+      expect(puts[0].props.fill).toBe('semi')
+    })
+
+    it('assigns sequential indexes when creating multiple shapes together', async () => {
+      const ops = makeOps()
+      const handler = createCanvasToolCallHandler(ops)
+      const shapes = [
+        { id: 'shape:new1', type: 'geo' },
+        { id: 'shape:new2', type: 'geo' },
+      ]
+      const result = await handler('create_canvas_shapes', { shapes })
+
+      expect(result.success).toBe(true)
+      const callArgs = (ops.applyMutations as ReturnType<typeof mock>).mock.calls[0]
+      const puts = callArgs[0].puts
+      expect(puts[0].index).toBe('a2V')
+      expect(puts[1].index).toBe('a2VV')
     })
 
     it('rejects empty shapes array', async () => {
@@ -223,7 +256,7 @@ describe('createCanvasToolCallHandler', () => {
   })
 
   describe('update_canvas_shapes', () => {
-    it('updates shapes via mutations', async () => {
+    it('hydrates partial updates from the existing canvas record before mutations', async () => {
       const ops = makeOps()
       const handler = createCanvasToolCallHandler(ops)
       const updates = [{ id: 'shape:1', props: { color: 'red' } }]
@@ -232,7 +265,26 @@ describe('createCanvasToolCallHandler', () => {
       expect(result.success).toBe(true)
       const data = getData(result)
       expect(data.updated_shape_ids).toEqual(['shape:1'])
-      expect(ops.applyMutations).toHaveBeenCalledWith({ puts: updates })
+      const callArgs = (ops.applyMutations as ReturnType<typeof mock>).mock.calls[0]
+      const puts = callArgs[0].puts
+      expect(puts).toHaveLength(1)
+      expect(puts[0].id).toBe('shape:1')
+      expect(puts[0].typeName).toBe('shape')
+      expect(puts[0].type).toBe('geo')
+      expect(puts[0].x).toBe(10)
+      expect(puts[0].y).toBe(20)
+      expect(puts[0].parentId).toBe('page:page')
+      expect(puts[0].index).toBe('a1')
+      expect(puts[0].props.color).toBe('red')
+    })
+
+    it('returns an error when the target shape does not exist', async () => {
+      const ops = makeOps()
+      const handler = createCanvasToolCallHandler(ops)
+      const result = await handler('update_canvas_shapes', { updates: [{ id: 'shape:missing', props: { color: 'red' } }] })
+
+      expect(result.success).toBe(false)
+      expect(ops.applyMutations).not.toHaveBeenCalled()
     })
   })
 

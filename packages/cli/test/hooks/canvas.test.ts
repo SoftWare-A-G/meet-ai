@@ -106,7 +106,7 @@ describe('canvas hook wrappers', () => {
     )
 
     const result = await applyCanvasMutations(client, 'r-1', {
-      puts: [{ id: 'shape:1', type: 'geo' }],
+      puts: [{ id: 'shape:1', typeName: 'shape', type: 'geo' }],
     })
     expect(result).toEqual(mutationResult)
   })

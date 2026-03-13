@@ -53,14 +53,14 @@ export function MigrationModal({
         Meet AI - Import Existing Credentials
       </Text>
       <Text dimColor>
-        No Meet AI home config was found. Import credentials from an existing tool config:
+        No Meet AI home config was found. Import credentials from an existing tool config.
       </Text>
 
       <Box marginTop={1} flexDirection="column">
         {sources.map((source, index) => (
           <Text key={`${source.kind}:${source.path}`} color={index === selectedIndex ? 'green' : undefined}>
             {index === selectedIndex ? '> ' : '  '}
-            {source.label}: {source.url} -> {source.envName}
+            {source.label}: {source.url} {'->'} {source.envName}
           </Text>
         ))}
         <Text color={selectedIndex === sources.length ? 'green' : undefined}>

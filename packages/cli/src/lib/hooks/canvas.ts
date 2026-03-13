@@ -77,7 +77,7 @@ export async function applyCanvasMutations(
   client: HookClient,
   roomId: string,
   mutations: {
-    puts?: Array<Record<string, unknown> & { id: string }>
+    puts?: Array<Record<string, unknown> & { id: string; typeName: string }>
     deletes?: string[]
   },
 ): Promise<CanvasMutationResult | null> {
