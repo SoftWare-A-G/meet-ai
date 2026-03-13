@@ -1,4 +1,4 @@
-import type { ApiKey, Room, Message, Log, Attachment, PlanDecision, QuestionReview, PermissionReview, Project } from '../lib/types'
+import type { ApiKey, Room, Message, Log, Attachment, PlanDecision, QuestionReview, PermissionReview, Project, Canvas } from '../lib/types'
 
 export function queries(db: D1Database) {
   return {
@@ -292,7 +292,8 @@ export function queries(db: D1Database) {
     },
 
     async deleteRoom(keyId: string, roomId: string) {
-      // Delete in order: permission_reviews, question_reviews, plan_decisions, attachments, logs, messages, then room
+      // Delete in order: canvases, permission_reviews, question_reviews, plan_decisions, attachments, logs, messages, then room
+      await db.prepare('DELETE FROM canvases WHERE room_id = ?').bind(roomId).run()
       await db.prepare('DELETE FROM permission_reviews WHERE room_id = ?').bind(roomId).run()
       await db.prepare('DELETE FROM question_reviews WHERE room_id = ?').bind(roomId).run()
       await db.prepare('DELETE FROM plan_decisions WHERE room_id = ?').bind(roomId).run()
@@ -300,6 +301,34 @@ export function queries(db: D1Database) {
       await db.prepare('DELETE FROM logs WHERE room_id = ?').bind(roomId).run()
       await db.prepare('DELETE FROM messages WHERE room_id = ?').bind(roomId).run()
       await db.prepare('DELETE FROM rooms WHERE id = ? AND key_id = ?').bind(roomId, keyId).run()
+    },
+
+    async findCanvasByRoom(roomId: string, keyId: string) {
+      return db.prepare(
+        'SELECT id, key_id, room_id, title, created_at, updated_at, last_opened_at, created_by, updated_by FROM canvases WHERE room_id = ? AND key_id = ?'
+      ).bind(roomId, keyId).first<Canvas>()
+    },
+
+    async createCanvas(id: string, roomId: string, keyId: string, title?: string, createdBy?: string) {
+      return db.prepare(
+        `INSERT INTO canvases (id, key_id, room_id, title, created_by)
+         VALUES (?, ?, ?, ?, ?)
+         RETURNING id, key_id, room_id, title, created_at, updated_at, last_opened_at, created_by, updated_by`
+      ).bind(id, keyId, roomId, title ?? null, createdBy ?? null).first<Canvas>() as Promise<Canvas>
+    },
+
+    async touchCanvas(id: string, keyId: string, updatedBy?: string) {
+      await db.prepare(
+        `UPDATE canvases SET updated_at = datetime('now'), last_opened_at = datetime('now'), updated_by = ?
+         WHERE id = ? AND key_id = ?`
+      ).bind(updatedBy ?? null, id, keyId).run()
+    },
+
+    async deleteCanvas(id: string, keyId: string) {
+      const result = await db.prepare(
+        'DELETE FROM canvases WHERE id = ? AND key_id = ?'
+      ).bind(id, keyId).run()
+      return result.meta.changes > 0
     },
   }
 }

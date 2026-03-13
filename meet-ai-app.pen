@@ -1,0 +1,1847 @@
+{
+  "version": "2.8",
+  "children": [
+    {
+      "type": "frame",
+      "id": "OA3Fl",
+      "x": 0,
+      "y": 0,
+      "name": "Variant A — Cozy Warm",
+      "clip": true,
+      "width": 402,
+      "height": 874,
+      "fill": "#F5F4F1",
+      "cornerRadius": 40,
+      "layout": "vertical",
+      "justifyContent": "center",
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "frame",
+          "id": "8KYum",
+          "name": "Status Bar",
+          "width": "fill_container",
+          "height": 62,
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "NqeH4",
+              "name": "timeA",
+              "fill": "#1A1918",
+              "content": "9:41",
+              "fontFamily": "Inter",
+              "fontSize": 16,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "WoHmZ",
+          "name": "Content",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 32,
+          "padding": [
+            0,
+            40,
+            80,
+            40
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "YI3Ys",
+              "name": "Icon Container",
+              "width": 160,
+              "height": 160,
+              "fill": "#FFFFFF",
+              "cornerRadius": 40,
+              "effect": {
+                "type": "shadow",
+                "shadowType": "outer",
+                "color": "#1A191810",
+                "offset": {
+                  "x": 0,
+                  "y": 4
+                },
+                "blur": 24
+              },
+              "layout": "vertical",
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "InHSa",
+                  "name": "qrIconA",
+                  "width": 72,
+                  "height": 72,
+                  "iconFontName": "scan",
+                  "iconFontFamily": "lucide",
+                  "fill": "#3D8A5A"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "vjzm3",
+              "name": "Text Group",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "p1IiQ",
+                  "name": "titleA",
+                  "fill": "#1A1918",
+                  "content": "Welcome to Meet AI",
+                  "textAlign": "center",
+                  "fontFamily": "Outfit",
+                  "fontSize": 28,
+                  "fontWeight": "600",
+                  "letterSpacing": -0.5
+                },
+                {
+                  "type": "text",
+                  "id": "XyD5y",
+                  "name": "subtitleA",
+                  "fill": "#6D6C6A",
+                  "textGrowth": "fixed-width",
+                  "width": 280,
+                  "content": "Scan a QR code to connect\nwith your team instantly",
+                  "lineHeight": 1.5,
+                  "textAlign": "center",
+                  "fontFamily": "Outfit",
+                  "fontSize": 16
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "sSbD8",
+              "name": "Scan Button",
+              "width": 280,
+              "height": 56,
+              "fill": "#3D8A5A",
+              "cornerRadius": 100,
+              "gap": 12,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "dd1bU",
+                  "name": "btnIconA",
+                  "width": 22,
+                  "height": 22,
+                  "iconFontName": "qr-code",
+                  "iconFontFamily": "lucide",
+                  "fill": "#FFFFFF"
+                },
+                {
+                  "type": "text",
+                  "id": "anO6G",
+                  "name": "btnTextA",
+                  "fill": "#FFFFFF",
+                  "content": "Scan QR Code",
+                  "fontFamily": "Outfit",
+                  "fontSize": 17,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "NsPXB",
+      "x": 502,
+      "y": 0,
+      "name": "Variant B — Elegant Dark",
+      "clip": true,
+      "width": 402,
+      "height": 874,
+      "fill": "#1A1A1C",
+      "cornerRadius": 40,
+      "layout": "vertical",
+      "justifyContent": "center",
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "frame",
+          "id": "fr4I2",
+          "name": "Status Bar",
+          "width": "fill_container",
+          "height": 62,
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "duy4T",
+              "name": "timeB",
+              "fill": "#F5F5F0",
+              "content": "9:41",
+              "fontFamily": "Inter",
+              "fontSize": 16,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "jL0NU",
+          "name": "Content",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 48,
+          "padding": [
+            0,
+            40,
+            80,
+            40
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "K4VIE",
+              "name": "Icon Container",
+              "width": 140,
+              "height": 140,
+              "fill": "#242426",
+              "cornerRadius": 36,
+              "stroke": {
+                "align": "inside",
+                "thickness": 1,
+                "fill": "#3A3A3C"
+              },
+              "layout": "vertical",
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "ryYjX",
+                  "name": "qrIconB",
+                  "width": 64,
+                  "height": 64,
+                  "iconFontName": "scan",
+                  "iconFontFamily": "lucide",
+                  "fill": "#C9A962"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "5y4aY",
+              "name": "Text Group",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 16,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "95GZ2",
+                  "name": "titleB",
+                  "fill": "#F5F5F0",
+                  "content": "Meet AI",
+                  "lineHeight": 1,
+                  "textAlign": "center",
+                  "fontFamily": "Cormorant Garamond",
+                  "fontSize": 42
+                },
+                {
+                  "type": "text",
+                  "id": "CV9op",
+                  "name": "subtitleB",
+                  "fill": "#6E6E70",
+                  "textGrowth": "fixed-width",
+                  "width": 260,
+                  "content": "Scan to connect with\nyour team",
+                  "lineHeight": 1.5,
+                  "textAlign": "center",
+                  "fontFamily": "Inter",
+                  "fontSize": 14
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "kQOzu",
+              "name": "Scan Button",
+              "width": 260,
+              "height": 56,
+              "fill": "#C9A962",
+              "cornerRadius": 20,
+              "gap": 12,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "t7HFx",
+                  "name": "btnIconB",
+                  "width": 20,
+                  "height": 20,
+                  "iconFontName": "qr-code",
+                  "iconFontFamily": "lucide",
+                  "fill": "#1A1A1C"
+                },
+                {
+                  "type": "text",
+                  "id": "AjNIR",
+                  "name": "btnTextB",
+                  "fill": "#1A1A1C",
+                  "content": "Scan QR Code",
+                  "fontFamily": "Inter",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "QToGS",
+      "x": 1004,
+      "y": 0,
+      "name": "Variant C — Playful Vibrant",
+      "clip": true,
+      "width": 402,
+      "height": 874,
+      "fill": "#FFFFFF",
+      "cornerRadius": 40,
+      "layout": "vertical",
+      "justifyContent": "center",
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "frame",
+          "id": "h5fj8",
+          "name": "Status Bar",
+          "width": "fill_container",
+          "height": 62,
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "2CZGQ",
+              "name": "timeC",
+              "fill": "#18181B",
+              "content": "9:41",
+              "fontFamily": "Inter",
+              "fontSize": 16,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "F9XOk",
+          "name": "Content",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 40,
+          "padding": [
+            0,
+            40,
+            80,
+            40
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "HSXb6",
+              "name": "Icon Background",
+              "width": 160,
+              "height": 160,
+              "fill": {
+                "type": "gradient",
+                "gradientType": "linear",
+                "enabled": true,
+                "rotation": 135,
+                "size": {
+                  "height": 1
+                },
+                "colors": [
+                  {
+                    "color": "#8B5CF6",
+                    "position": 0
+                  },
+                  {
+                    "color": "#A78BFA",
+                    "position": 1
+                  }
+                ]
+              },
+              "cornerRadius": 48,
+              "layout": "vertical",
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "VU72c",
+                  "name": "qrIconC",
+                  "width": 72,
+                  "height": 72,
+                  "iconFontName": "scan",
+                  "iconFontFamily": "lucide",
+                  "fill": "#FFFFFF"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "9nXXL",
+              "name": "Text Group",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "DM3Mi",
+                  "name": "titleC",
+                  "fill": "#18181B",
+                  "content": "Meet AI",
+                  "textAlign": "center",
+                  "fontFamily": "Plus Jakarta Sans",
+                  "fontSize": 34,
+                  "fontWeight": "800"
+                },
+                {
+                  "type": "text",
+                  "id": "SFD7H",
+                  "name": "subtitleC",
+                  "fill": "#71717A",
+                  "textGrowth": "fixed-width",
+                  "width": 280,
+                  "content": "Scan a QR code to join\nyour team in seconds",
+                  "lineHeight": 1.5,
+                  "textAlign": "center",
+                  "fontFamily": "Inter",
+                  "fontSize": 16
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "g5FZU",
+              "name": "Scan Button",
+              "width": 280,
+              "height": 58,
+              "fill": "#8B5CF6",
+              "cornerRadius": 24,
+              "gap": 12,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "XRmsA",
+                  "name": "btnIconC",
+                  "width": 22,
+                  "height": 22,
+                  "iconFontName": "qr-code",
+                  "iconFontFamily": "lucide",
+                  "fill": "#FFFFFF"
+                },
+                {
+                  "type": "text",
+                  "id": "Q2bR0",
+                  "name": "btnTextC",
+                  "fill": "#FFFFFF",
+                  "content": "Scan QR Code",
+                  "fontFamily": "Inter",
+                  "fontSize": 17,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "RrF1u",
+      "x": 0,
+      "y": 974,
+      "name": "Variant D — Glow",
+      "clip": true,
+      "width": 402,
+      "height": 874,
+      "fill": "#111113",
+      "cornerRadius": 40,
+      "layout": "vertical",
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "frame",
+          "id": "1fcRo",
+          "name": "Status Bar",
+          "width": "fill_container",
+          "height": 62,
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "U4X2b",
+              "name": "timeD",
+              "fill": "#F5F5F0",
+              "content": "9:41",
+              "fontFamily": "Inter",
+              "fontSize": 16,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Suide",
+          "name": "Content",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 48,
+          "padding": [
+            0,
+            40,
+            80,
+            40
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "45ica",
+              "name": "Icon Area",
+              "width": 200,
+              "height": 200,
+              "layout": "none",
+              "children": [
+                {
+                  "type": "ellipse",
+                  "id": "3waKU",
+                  "x": 0,
+                  "y": 0,
+                  "name": "Glow",
+                  "fill": {
+                    "type": "gradient",
+                    "gradientType": "radial",
+                    "enabled": true,
+                    "rotation": 0,
+                    "size": {
+                      "width": 1,
+                      "height": 1
+                    },
+                    "colors": [
+                      {
+                        "color": "#C9A96230",
+                        "position": 0
+                      },
+                      {
+                        "color": "#C9A96200",
+                        "position": 1
+                      }
+                    ]
+                  },
+                  "width": 200,
+                  "height": 200
+                },
+                {
+                  "type": "ellipse",
+                  "id": "KCnCH",
+                  "x": 40,
+                  "y": 40,
+                  "name": "Circle",
+                  "fill": "#1A1A1C",
+                  "width": 120,
+                  "height": 120,
+                  "stroke": {
+                    "align": "inside",
+                    "thickness": 1.5,
+                    "fill": {
+                      "type": "gradient",
+                      "gradientType": "linear",
+                      "enabled": true,
+                      "rotation": 180,
+                      "size": {
+                        "height": 1
+                      },
+                      "colors": [
+                        {
+                          "color": "#C9A962",
+                          "position": 0
+                        },
+                        {
+                          "color": "#8B7845",
+                          "position": 1
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "icon_font",
+                  "id": "1ZbdT",
+                  "x": 76,
+                  "y": 76,
+                  "name": "iconD",
+                  "width": 48,
+                  "height": 48,
+                  "iconFontName": "scan",
+                  "iconFontFamily": "lucide",
+                  "fill": "#C9A962"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "WI2ak",
+              "name": "Text Group",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 14,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "9A9oj",
+                  "name": "titleD",
+                  "fill": "#F5F5F0",
+                  "content": "Meet AI",
+                  "textAlign": "center",
+                  "fontFamily": "Plus Jakarta Sans",
+                  "fontSize": 36,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "MCZK8",
+                  "name": "subD",
+                  "fill": "#6E6E70",
+                  "content": "Scan to connect with your team",
+                  "textAlign": "center",
+                  "fontFamily": "Plus Jakarta Sans",
+                  "fontSize": 15
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "msmcL",
+              "name": "Scan Button",
+              "width": "fill_container",
+              "height": 58,
+              "fill": {
+                "type": "gradient",
+                "gradientType": "linear",
+                "enabled": true,
+                "rotation": 90,
+                "size": {
+                  "height": 1
+                },
+                "colors": [
+                  {
+                    "color": "#C9A962",
+                    "position": 0
+                  },
+                  {
+                    "color": "#A8893E",
+                    "position": 1
+                  }
+                ]
+              },
+              "cornerRadius": 100,
+              "gap": 12,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "zRB0X",
+                  "name": "btnIconD",
+                  "width": 20,
+                  "height": 20,
+                  "iconFontName": "qr-code",
+                  "iconFontFamily": "lucide",
+                  "fill": "#111113"
+                },
+                {
+                  "type": "text",
+                  "id": "pyXxQ",
+                  "name": "btnTextD",
+                  "fill": "#111113",
+                  "content": "Scan QR Code",
+                  "fontFamily": "Plus Jakarta Sans",
+                  "fontSize": 16,
+                  "fontWeight": "700"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "3s7Jh",
+      "x": 502,
+      "y": 974,
+      "name": "Variant E — Glass",
+      "clip": true,
+      "width": 402,
+      "height": 874,
+      "fill": {
+        "type": "gradient",
+        "gradientType": "linear",
+        "enabled": true,
+        "rotation": 180,
+        "size": {
+          "height": 1
+        },
+        "colors": [
+          {
+            "color": "#0F0F1A",
+            "position": 0
+          },
+          {
+            "color": "#1A1A2E",
+            "position": 0.5
+          },
+          {
+            "color": "#16162A",
+            "position": 1
+          }
+        ]
+      },
+      "cornerRadius": 40,
+      "layout": "vertical",
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "frame",
+          "id": "3VygW",
+          "name": "Status Bar",
+          "width": "fill_container",
+          "height": 62,
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "WSYvd",
+              "name": "timeE",
+              "fill": "#E0E0F0",
+              "content": "9:41",
+              "fontFamily": "Inter",
+              "fontSize": 16,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Hzk17",
+          "name": "Content",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "padding": [
+            0,
+            28,
+            60,
+            28
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "GAZ4l",
+              "name": "Glass Card",
+              "width": "fill_container",
+              "fill": "#FFFFFF0D",
+              "cornerRadius": 28,
+              "stroke": {
+                "align": "inside",
+                "thickness": 1,
+                "fill": "#FFFFFF15"
+              },
+              "layout": "vertical",
+              "gap": 36,
+              "padding": [
+                48,
+                32,
+                40,
+                32
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "cVGHC",
+                  "name": "Icon Ring",
+                  "width": 100,
+                  "height": 100,
+                  "cornerRadius": 50,
+                  "stroke": {
+                    "align": "inside",
+                    "thickness": 1.5,
+                    "fill": "#C9A96260"
+                  },
+                  "layout": "vertical",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon_font",
+                      "id": "jK9rS",
+                      "name": "scanE",
+                      "width": 40,
+                      "height": 40,
+                      "iconFontName": "scan",
+                      "iconFontFamily": "lucide",
+                      "fill": "#C9A962"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "pmv21",
+                  "name": "Text Group",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 10,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "f1ivz",
+                      "name": "titleE",
+                      "fill": "#F0F0FF",
+                      "content": "Meet AI",
+                      "textAlign": "center",
+                      "fontFamily": "Outfit",
+                      "fontSize": 32,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "2DcQg",
+                      "name": "subE",
+                      "fill": "#8888AA",
+                      "textGrowth": "fixed-width",
+                      "width": 240,
+                      "content": "Scan a QR code to connect\nwith your team",
+                      "lineHeight": 1.6,
+                      "textAlign": "center",
+                      "fontFamily": "Outfit",
+                      "fontSize": 14
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "IObwX",
+                  "name": "Scan Button",
+                  "width": "fill_container",
+                  "height": 52,
+                  "fill": "#C9A962",
+                  "cornerRadius": 16,
+                  "stroke": {
+                    "align": "inside",
+                    "thickness": 0
+                  },
+                  "gap": 10,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon_font",
+                      "id": "PrgW3",
+                      "name": "btnIE",
+                      "width": 18,
+                      "height": 18,
+                      "iconFontName": "qr-code",
+                      "iconFontFamily": "lucide",
+                      "fill": "#0F0F1A"
+                    },
+                    {
+                      "type": "text",
+                      "id": "quycF",
+                      "name": "btnTE",
+                      "fill": "#0F0F1A",
+                      "content": "Scan QR Code",
+                      "fontFamily": "Outfit",
+                      "fontSize": 15,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "IisTa",
+      "x": 1004,
+      "y": 974,
+      "name": "Variant F — Minimal Line",
+      "clip": true,
+      "width": 402,
+      "height": 874,
+      "fill": "#131315",
+      "cornerRadius": 40,
+      "layout": "vertical",
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "frame",
+          "id": "iLXmG",
+          "name": "Status Bar",
+          "width": "fill_container",
+          "height": 62,
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "Qhwdn",
+              "name": "timeF",
+              "fill": "#AAAAB0",
+              "content": "9:41",
+              "fontFamily": "Space Grotesk",
+              "fontSize": 16,
+              "fontWeight": "500"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Eqqlf",
+          "name": "Content",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 40,
+          "padding": [
+            0,
+            48,
+            80,
+            48
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon_font",
+              "id": "yA1Hh",
+              "name": "iconF",
+              "width": 56,
+              "height": 56,
+              "iconFontName": "scan",
+              "iconFontFamily": "lucide",
+              "fill": "#C9A962"
+            },
+            {
+              "type": "rectangle",
+              "cornerRadius": 1,
+              "id": "Lz0Mf",
+              "name": "Accent Line",
+              "fill": "#C9A96250",
+              "width": 40,
+              "height": 1.5
+            },
+            {
+              "type": "frame",
+              "id": "aCgAm",
+              "name": "Text Group",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 14,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "W7wT2",
+                  "name": "titleF",
+                  "fill": "#E8E8ED",
+                  "content": "Meet AI",
+                  "textAlign": "center",
+                  "fontFamily": "Space Grotesk",
+                  "fontSize": 34,
+                  "fontWeight": "700",
+                  "letterSpacing": 1
+                },
+                {
+                  "type": "text",
+                  "id": "B1al5",
+                  "name": "subF",
+                  "fill": "#5A5A62",
+                  "textGrowth": "fixed-width",
+                  "width": 240,
+                  "content": "scan a qr code to connect\nwith your team",
+                  "lineHeight": 1.7,
+                  "textAlign": "center",
+                  "fontFamily": "Space Grotesk",
+                  "fontSize": 13,
+                  "letterSpacing": 0.5
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "j8rfO",
+              "name": "Scan Button",
+              "width": "fill_container",
+              "height": 54,
+              "cornerRadius": 14,
+              "stroke": {
+                "align": "inside",
+                "thickness": 1,
+                "fill": "#C9A96240"
+              },
+              "gap": 10,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "PCqVP",
+                  "name": "btnIF",
+                  "width": 18,
+                  "height": 18,
+                  "iconFontName": "qr-code",
+                  "iconFontFamily": "lucide",
+                  "fill": "#C9A962"
+                },
+                {
+                  "type": "text",
+                  "id": "p2Q9K",
+                  "name": "btnTF",
+                  "fill": "#C9A962",
+                  "content": "Scan QR Code",
+                  "fontFamily": "Space Grotesk",
+                  "fontSize": 14,
+                  "fontWeight": "500",
+                  "letterSpacing": 0.5
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "3cl3T",
+      "x": 1506,
+      "y": 974,
+      "name": "Variant G — Bold Gradient",
+      "clip": true,
+      "width": 402,
+      "height": 874,
+      "fill": "#0C0C0E",
+      "cornerRadius": 40,
+      "layout": "vertical",
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "frame",
+          "id": "EXP0L",
+          "name": "Status Bar",
+          "width": "fill_container",
+          "height": 62,
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "F5aWQ",
+              "name": "timeG",
+              "fill": "#FFFFFF90",
+              "content": "9:41",
+              "fontFamily": "Sora",
+              "fontSize": 16,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "x5pLc",
+          "name": "Content",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 44,
+          "padding": [
+            0,
+            36,
+            80,
+            36
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "RYOhZ",
+              "name": "Icon Box",
+              "width": 140,
+              "height": 140,
+              "fill": {
+                "type": "gradient",
+                "gradientType": "linear",
+                "enabled": true,
+                "rotation": 135,
+                "size": {
+                  "height": 1
+                },
+                "colors": [
+                  {
+                    "color": "#C9A962",
+                    "position": 0
+                  },
+                  {
+                    "color": "#8B6914",
+                    "position": 1
+                  }
+                ]
+              },
+              "cornerRadius": 36,
+              "layout": "vertical",
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "1pfZR",
+                  "name": "iconG",
+                  "width": 56,
+                  "height": 56,
+                  "iconFontName": "scan",
+                  "iconFontFamily": "lucide",
+                  "fill": "#0C0C0E"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "xDY7S",
+              "name": "Text Group",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Kci6r",
+                  "name": "titleG",
+                  "fill": "#FFFFFF",
+                  "content": "Meet AI",
+                  "textAlign": "center",
+                  "fontFamily": "Sora",
+                  "fontSize": 40,
+                  "fontWeight": "800"
+                },
+                {
+                  "type": "text",
+                  "id": "0xT7a",
+                  "name": "subG",
+                  "fill": "#FFFFFF50",
+                  "content": "Your team is one scan away",
+                  "textAlign": "center",
+                  "fontFamily": "Sora",
+                  "fontSize": 15
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "PIdIe",
+              "name": "Scan Button",
+              "width": "fill_container",
+              "height": 60,
+              "fill": {
+                "type": "gradient",
+                "gradientType": "linear",
+                "enabled": true,
+                "rotation": 90,
+                "size": {
+                  "height": 1
+                },
+                "colors": [
+                  {
+                    "color": "#C9A962",
+                    "position": 0
+                  },
+                  {
+                    "color": "#8B6914",
+                    "position": 1
+                  }
+                ]
+              },
+              "cornerRadius": 20,
+              "gap": 12,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "4JF9r",
+                  "name": "btnIG",
+                  "width": 22,
+                  "height": 22,
+                  "iconFontName": "qr-code",
+                  "iconFontFamily": "lucide",
+                  "fill": "#0C0C0E"
+                },
+                {
+                  "type": "text",
+                  "id": "dF9e0",
+                  "name": "btnTG",
+                  "fill": "#0C0C0E",
+                  "content": "Scan QR Code",
+                  "fontFamily": "Sora",
+                  "fontSize": 16,
+                  "fontWeight": "700"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "egepF",
+      "x": 0,
+      "y": 1948,
+      "name": "H — Dot",
+      "clip": true,
+      "width": 402,
+      "height": 874,
+      "fill": "#101012",
+      "cornerRadius": 40,
+      "layout": "vertical",
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "frame",
+          "id": "lnnNk",
+          "name": "Status Bar",
+          "width": "fill_container",
+          "height": 62,
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "5W24Y",
+              "name": "tH",
+              "fill": "#AAAAB0",
+              "content": "9:41",
+              "fontFamily": "Space Grotesk",
+              "fontSize": 16,
+              "fontWeight": "500"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "FygUt",
+          "name": "Content",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 44,
+          "padding": [
+            0,
+            48,
+            80,
+            48
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon_font",
+              "id": "aCnzR",
+              "name": "iH",
+              "width": 48,
+              "height": 48,
+              "iconFontName": "scan",
+              "iconFontFamily": "lucide",
+              "fill": "#C9A962"
+            },
+            {
+              "type": "ellipse",
+              "id": "EkwYc",
+              "name": "Dot",
+              "fill": "#C9A96260",
+              "width": 6,
+              "height": 6
+            },
+            {
+              "type": "frame",
+              "id": "u5q8m",
+              "name": "Text Group",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 16,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Swboj",
+                  "name": "tiH",
+                  "fill": "#E8E8ED",
+                  "content": "Meet AI",
+                  "textAlign": "center",
+                  "fontFamily": "Space Grotesk",
+                  "fontSize": 30,
+                  "fontWeight": "600",
+                  "letterSpacing": 4
+                },
+                {
+                  "type": "text",
+                  "id": "w7Y9a",
+                  "name": "suH",
+                  "fill": "#4A4A52",
+                  "textGrowth": "fixed-width",
+                  "width": 240,
+                  "content": "scan a qr code to connect\nwith your team",
+                  "lineHeight": 1.8,
+                  "textAlign": "center",
+                  "fontFamily": "Space Grotesk",
+                  "fontSize": 13,
+                  "letterSpacing": 0.8
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "rMBeA",
+              "name": "Scan Button",
+              "width": 240,
+              "height": 50,
+              "cornerRadius": 100,
+              "stroke": {
+                "align": "inside",
+                "thickness": 1,
+                "fill": "#C9A96235"
+              },
+              "gap": 10,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "G1H98",
+                  "name": "biH",
+                  "width": 16,
+                  "height": 16,
+                  "iconFontName": "qr-code",
+                  "iconFontFamily": "lucide",
+                  "fill": "#C9A96290"
+                },
+                {
+                  "type": "text",
+                  "id": "BIRdB",
+                  "name": "btH",
+                  "fill": "#C9A96290",
+                  "content": "Scan QR Code",
+                  "fontFamily": "Space Grotesk",
+                  "fontSize": 13,
+                  "fontWeight": "500",
+                  "letterSpacing": 1
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "pJtk7",
+      "x": 502,
+      "y": 1948,
+      "name": "I — Underline",
+      "clip": true,
+      "width": 402,
+      "height": 874,
+      "fill": "#131315",
+      "cornerRadius": 40,
+      "layout": "vertical",
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "frame",
+          "id": "Ik1i5",
+          "name": "Status Bar",
+          "width": "fill_container",
+          "height": 62,
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "86hRc",
+              "name": "tI",
+              "fill": "#AAAAB0",
+              "content": "9:41",
+              "fontFamily": "Space Grotesk",
+              "fontSize": 16,
+              "fontWeight": "500"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "GYD3I",
+          "name": "Content",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 48,
+          "padding": [
+            0,
+            48,
+            80,
+            48
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon_font",
+              "id": "tu3Mk",
+              "name": "iI",
+              "width": 52,
+              "height": 52,
+              "iconFontName": "scan",
+              "iconFontFamily": "lucide",
+              "fill": "#C9A962"
+            },
+            {
+              "type": "frame",
+              "id": "EQtpt",
+              "name": "Title Block",
+              "layout": "vertical",
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "K8u15",
+                  "name": "tiI",
+                  "fill": "#E8E8ED",
+                  "content": "Meet AI",
+                  "textAlign": "center",
+                  "fontFamily": "Space Grotesk",
+                  "fontSize": 36,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 1,
+                  "id": "c0KAN",
+                  "name": "Underline",
+                  "fill": "#C9A962",
+                  "width": 48,
+                  "height": 2
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "MgPiL",
+              "name": "suI",
+              "fill": "#5A5A62",
+              "textGrowth": "fixed-width",
+              "width": 230,
+              "content": "scan a qr code to connect\nwith your team",
+              "lineHeight": 1.7,
+              "textAlign": "center",
+              "fontFamily": "Space Grotesk",
+              "fontSize": 13,
+              "letterSpacing": 0.3
+            },
+            {
+              "type": "frame",
+              "id": "keHn6",
+              "name": "Scan Button",
+              "width": "fill_container",
+              "height": 52,
+              "cornerRadius": 4,
+              "stroke": {
+                "align": "inside",
+                "thickness": 1,
+                "fill": "#C9A96240"
+              },
+              "gap": 10,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "HmKfx",
+                  "name": "biI",
+                  "width": 17,
+                  "height": 17,
+                  "iconFontName": "qr-code",
+                  "iconFontFamily": "lucide",
+                  "fill": "#C9A962"
+                },
+                {
+                  "type": "text",
+                  "id": "vZhre",
+                  "name": "btI",
+                  "fill": "#C9A962",
+                  "content": "Scan QR Code",
+                  "fontFamily": "Space Grotesk",
+                  "fontSize": 14,
+                  "fontWeight": "500",
+                  "letterSpacing": 0.5
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "26Atz",
+      "x": 1004,
+      "y": 1948,
+      "name": "J — Pinned",
+      "clip": true,
+      "width": 402,
+      "height": 874,
+      "fill": "#0E0E10",
+      "cornerRadius": 40,
+      "layout": "vertical",
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "frame",
+          "id": "q8lN0",
+          "name": "Status Bar",
+          "width": "fill_container",
+          "height": 62,
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "XC9JE",
+              "name": "tJ",
+              "fill": "#AAAAB0",
+              "content": "9:41",
+              "fontFamily": "Space Grotesk",
+              "fontSize": 16,
+              "fontWeight": "500"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "SLsR2",
+          "name": "Content",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "padding": [
+            80,
+            48,
+            60,
+            48
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "iTIKl",
+              "name": "Top Group",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 36,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "xYRy1",
+                  "name": "iJ",
+                  "width": 44,
+                  "height": 44,
+                  "iconFontName": "scan",
+                  "iconFontFamily": "lucide",
+                  "fill": "#C9A962"
+                },
+                {
+                  "type": "text",
+                  "id": "3QHnx",
+                  "name": "tiJ",
+                  "fill": "#E8E8ED",
+                  "content": "Meet AI",
+                  "textAlign": "center",
+                  "fontFamily": "Space Grotesk",
+                  "fontSize": 32,
+                  "fontWeight": "700",
+                  "letterSpacing": 0.5
+                },
+                {
+                  "type": "rectangle",
+                  "id": "mdSSL",
+                  "name": "Full Rule",
+                  "fill": "#C9A96218",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "text",
+                  "id": "HUlof",
+                  "name": "suJ",
+                  "fill": "#4A4A52",
+                  "content": "scan a qr code to connect with your team",
+                  "textAlign": "center",
+                  "fontFamily": "Space Grotesk",
+                  "fontSize": 13,
+                  "letterSpacing": 0.5
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "571lH",
+              "name": "Spacer",
+              "width": 1,
+              "height": "fill_container"
+            },
+            {
+              "type": "frame",
+              "id": "CPte4",
+              "name": "Scan Button",
+              "width": "fill_container",
+              "height": 52,
+              "cornerRadius": 12,
+              "stroke": {
+                "align": "inside",
+                "thickness": 1,
+                "fill": "#C9A96230"
+              },
+              "gap": 10,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "3CDxM",
+                  "name": "biJ",
+                  "width": 17,
+                  "height": 17,
+                  "iconFontName": "qr-code",
+                  "iconFontFamily": "lucide",
+                  "fill": "#C9A96280"
+                },
+                {
+                  "type": "text",
+                  "id": "nntCe",
+                  "name": "btJ",
+                  "fill": "#C9A96280",
+                  "content": "Scan QR Code",
+                  "fontFamily": "Space Grotesk",
+                  "fontSize": 14,
+                  "fontWeight": "500",
+                  "letterSpacing": 0.5
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "ILKIl",
+      "x": 1506,
+      "y": 1948,
+      "name": "K — Vertical",
+      "clip": true,
+      "width": 402,
+      "height": 874,
+      "fill": "#131315",
+      "cornerRadius": 40,
+      "layout": "vertical",
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "frame",
+          "id": "Pr25v",
+          "name": "Status Bar",
+          "width": "fill_container",
+          "height": 62,
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "NXJDS",
+              "name": "tK",
+              "fill": "#AAAAB0",
+              "content": "9:41",
+              "fontFamily": "Space Grotesk",
+              "fontSize": 16,
+              "fontWeight": "500"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "EWdmf",
+          "name": "Content",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 44,
+          "padding": [
+            0,
+            48,
+            80,
+            48
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon_font",
+              "id": "ZZheH",
+              "name": "iK",
+              "width": 52,
+              "height": 52,
+              "iconFontName": "scan",
+              "iconFontFamily": "lucide",
+              "fill": "#C9A962"
+            },
+            {
+              "type": "rectangle",
+              "id": "V1GJG",
+              "name": "Vertical Line",
+              "fill": "#C9A96240",
+              "width": 1.5,
+              "height": 48
+            },
+            {
+              "type": "frame",
+              "id": "PCrXM",
+              "name": "Title Group",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 16,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "mrtYQ",
+                  "name": "tiK",
+                  "fill": "#E8E8ED",
+                  "content": "MEET AI",
+                  "textAlign": "center",
+                  "fontFamily": "Space Grotesk",
+                  "fontSize": 28,
+                  "fontWeight": "700",
+                  "letterSpacing": 8
+                },
+                {
+                  "type": "text",
+                  "id": "4HpDR",
+                  "name": "suK",
+                  "fill": "#4A4A52",
+                  "content": "scan to connect",
+                  "textAlign": "center",
+                  "fontFamily": "Space Grotesk",
+                  "fontSize": 12,
+                  "letterSpacing": 2
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "fWyxI",
+              "name": "Button Wrap",
+              "width": 180,
+              "height": 180,
+              "cornerRadius": 90,
+              "stroke": {
+                "align": "inside",
+                "thickness": 1,
+                "fill": "#C9A96225"
+              },
+              "layout": "vertical",
+              "gap": 12,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "PK6aW",
+                  "name": "biK",
+                  "width": 28,
+                  "height": 28,
+                  "iconFontName": "qr-code",
+                  "iconFontFamily": "lucide",
+                  "fill": "#C9A96270"
+                },
+                {
+                  "type": "text",
+                  "id": "6qSeK",
+                  "name": "btK",
+                  "fill": "#C9A96270",
+                  "content": "SCAN",
+                  "fontFamily": "Space Grotesk",
+                  "fontSize": 11,
+                  "fontWeight": "600",
+                  "letterSpacing": 3
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

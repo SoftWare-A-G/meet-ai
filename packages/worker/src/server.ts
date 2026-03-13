@@ -20,6 +20,7 @@ async function getHonoApp() {
 // Re-export Durable Objects so wrangler can discover them
 export { ChatRoom } from './durable-objects/chat-room'
 export { Lobby } from './durable-objects/lobby'
+export { CanvasRoom } from './durable-objects/canvas-room'
 
 // Lazily import the TanStack Start server entry (resolved by vite virtual module)
 async function getStartHandler() {

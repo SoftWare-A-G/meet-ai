@@ -5,6 +5,7 @@ import { useChatContext } from '../../lib/chat-context'
 import { deleteRoom, renameRoom, updateRoomProject } from '../../lib/api'
 import MainHeader from '../../components/MainHeader'
 import ChatView from '../../components/ChatView'
+import CanvasView from '../../components/CanvasView'
 
 export const Route = createFileRoute('/chat/$id')({
   component: ChatRoom,
@@ -15,6 +16,7 @@ function ChatRoom() {
   const navigate = useNavigate()
   const { rooms, projects, removeRoom, updateRoom, apiKey, userName, isStandalone, teamInfo, setTeamSidebarOpen, setTeamInfo, setTasksInfo, setCommandsInfo, showQR } = useChatContext()
   const [terminalOpen, setTerminalOpen] = useState(false)
+  const [canvasOpen, setCanvasOpen] = useState(false)
 
   const room = rooms.find(r => r.id === id)
   const roomName = room?.name ?? 'Loading...'
@@ -72,19 +74,28 @@ function ChatRoom() {
         onAttachProject={handleAttachProject}
         onDelete={handleDeleteConfirm}
         onTerminalClick={() => setTerminalOpen(true)}
+        onCanvasClick={() => setCanvasOpen(true)}
       />
       {room && (
-        <ChatView
-          key={room.id}
-          room={room}
-          apiKey={apiKey}
-          userName={userName}
-          onTeamInfo={setTeamInfo}
-          onTasksInfo={setTasksInfo}
-          onCommandsInfo={setCommandsInfo}
-          terminalOpen={terminalOpen}
-          onTerminalClose={() => setTerminalOpen(false)}
-        />
+        <>
+          <ChatView
+            key={room.id}
+            room={room}
+            apiKey={apiKey}
+            userName={userName}
+            onTeamInfo={setTeamInfo}
+            onTasksInfo={setTasksInfo}
+            onCommandsInfo={setCommandsInfo}
+            terminalOpen={terminalOpen}
+            onTerminalClose={() => setTerminalOpen(false)}
+          />
+          <CanvasView
+            roomId={room.id}
+            open={canvasOpen}
+            onClose={() => setCanvasOpen(false)}
+            userName={userName}
+          />
+        </>
       )}
     </div>
   )

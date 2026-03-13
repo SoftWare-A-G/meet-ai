@@ -9,10 +9,12 @@ import {
   describeCodexAppServerError,
 } from '@meet-ai/cli/lib/codex-app-server'
 import { emitCodexAppServerLog } from '@meet-ai/cli/lib/codex-app-server-evlog'
-import { TASK_TOOL_SPECS, createTaskToolCallHandler } from '@meet-ai/cli/lib/codex-task-tools'
+import { TASK_TOOL_SPECS, TASK_TOOL_NAMES, createTaskToolCallHandler } from '@meet-ai/cli/lib/codex-task-tools'
+import { CANVAS_TOOL_SPECS, CANVAS_TOOL_NAMES, createCanvasToolCallHandler } from '@meet-ai/cli/lib/codex-canvas-tools'
 import { createHookClient, sendLogEntry, sendParentMessage } from '@meet-ai/cli/lib/hooks/client'
 import { findRoom } from '@meet-ai/cli/lib/hooks/find-room'
 import { createTask, updateTask, listTasks, getTask } from '@meet-ai/cli/lib/hooks/tasks'
+import { ensureCanvas, getCanvasSnapshot, applyCanvasMutations } from '@meet-ai/cli/lib/hooks/canvas'
 import {
   createPlanReview,
   expirePlanReview,
@@ -339,6 +341,57 @@ export function listenCodex(
         })
       : undefined
 
+  const canvasToolCallHandler =
+    hookClient && roomId
+      ? createCanvasToolCallHandler({
+          ensureCanvas: () => ensureCanvas(hookClient, roomId),
+          getSnapshot: () => getCanvasSnapshot(hookClient, roomId),
+          applyMutations: mutations => applyCanvasMutations(hookClient, roomId, mutations),
+          requestPermission: async (toolName, formattedContent, toolInputJson) => {
+            try {
+              const createRes = await hookClient.api.rooms[':id']['permission-reviews'].$post({
+                param: { id: roomId },
+                json: {
+                  tool_name: toolName,
+                  tool_input_json: toolInputJson,
+                  formatted_content: formattedContent,
+                },
+              })
+              if (!createRes.ok) return null
+              const { id: reviewId } = (await createRes.json()) as { id: string }
+
+              // Poll for decision (2s interval, 30min timeout)
+              const deadline = Date.now() + 1_800_000
+              while (Date.now() < deadline) {
+                await new Promise(resolve => setTimeout(resolve, 2000))
+                try {
+                  const pollRes = await hookClient.api.rooms[':id']['permission-reviews'][':reviewId'].$get({
+                    param: { id: roomId, reviewId },
+                  })
+                  if (pollRes.ok) {
+                    const data = (await pollRes.json()) as { status: string; feedback?: string }
+                    if (data.status === 'approved') return { status: 'approved' }
+                    if (data.status === 'denied') return { status: 'denied', feedback: data.feedback }
+                    if (data.status === 'expired') return { status: 'expired' }
+                  }
+                } catch {
+                  // continue polling
+                }
+              }
+              // Expire the review on timeout
+              try {
+                await hookClient.api.rooms[':id']['permission-reviews'][':reviewId'].expire.$post({
+                  param: { id: roomId, reviewId },
+                })
+              } catch { /* best effort */ }
+              return { status: 'expired' }
+            } catch {
+              return null
+            }
+          },
+        })
+      : undefined
+
   const bootstrapPrompt = process.env.MEET_AI_CODEX_BOOTSTRAP_PROMPT?.trim()
   const codexSender = process.env.MEET_AI_AGENT_NAME?.trim() || 'codex'
   const messageState = new Map<string, TurnMessageState>()
@@ -374,14 +427,23 @@ export function listenCodex(
       ? (params: ToolRequestUserInputParams) =>
           requestCodexUserInputViaRoom(hookClient, roomId, params)
       : undefined
+  const combinedToolCallHandler =
+    taskToolCallHandler || canvasToolCallHandler
+      ? async (tool: string, args: unknown) => {
+          if (taskToolCallHandler && TASK_TOOL_NAMES.has(tool)) return taskToolCallHandler(tool, args)
+          if (canvasToolCallHandler && CANVAS_TOOL_NAMES.has(tool)) return canvasToolCallHandler(tool, args)
+          return { contentItems: [{ type: 'inputText' as const, text: JSON.stringify({ error: `Unknown tool: ${tool}` }) }], success: false }
+        }
+      : undefined
+
   const codexBridge: CodexBridge =
     codexBridgeOverride ??
     createCodexAppServerBridge({
       threadId: null,
       cwd: process.cwd(),
       experimentalApi: true,
-      dynamicTools: TASK_TOOL_SPECS,
-      ...(taskToolCallHandler ? { toolCallHandler: taskToolCallHandler } : {}),
+      dynamicTools: [...TASK_TOOL_SPECS, ...CANVAS_TOOL_SPECS],
+      ...(combinedToolCallHandler ? { toolCallHandler: combinedToolCallHandler } : {}),
       ...(requestUserInputHandler ? { requestUserInputHandler } : {}),
     })
 

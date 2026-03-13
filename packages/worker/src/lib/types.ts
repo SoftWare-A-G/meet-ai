@@ -2,8 +2,10 @@ export type Bindings = {
   DB: D1Database
   CHAT_ROOM: DurableObjectNamespace
   LOBBY: DurableObjectNamespace
+  CANVAS_ROOM: DurableObjectNamespace
   ASSETS: Fetcher
   UPLOADS: KVNamespace
+  CANVAS_BUCKET: R2Bucket
   ELEVENLABS_API_KEY: string
   VOICE_API_AVAILABLE_FOR: string
 }
@@ -115,6 +117,18 @@ export type PermissionReview = {
   decided_by: string | null
   decided_at: string | null
   created_at: string
+}
+
+export type Canvas = {
+  id: string
+  key_id: string
+  room_id: string
+  title: string | null
+  created_at: string
+  updated_at: string
+  last_opened_at: string | null
+  created_by: string | null
+  updated_by: string | null
 }
 
 export type TeamMember = {

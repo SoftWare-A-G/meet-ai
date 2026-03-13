@@ -1,5 +1,5 @@
 import { Tooltip } from '@base-ui/react/tooltip'
-import { IconQrcode, IconTerminal, IconUsers } from '../../icons'
+import { IconCanvas, IconQrcode, IconTerminal, IconUsers } from '../../icons'
 import RoomSettings from '../RoomSettings'
 import { useHaptics } from '../../hooks/useHaptics'
 import { SidebarTrigger } from '../ui/sidebar'
@@ -17,6 +17,7 @@ type MainHeaderProps = {
   onAttachProject: (projectId: string | null) => void
   onDelete: () => void
   onTerminalClick?: () => void
+  onCanvasClick?: () => void
 }
 
 const tooltipPopupClass = "rounded bg-gray-900 px-2 py-1 text-xs text-white shadow-lg"
@@ -33,6 +34,7 @@ export default function MainHeader({
   onAttachProject,
   onDelete,
   onTerminalClick,
+  onCanvasClick,
 }: MainHeaderProps) {
   const { trigger } = useHaptics()
   return (
@@ -52,6 +54,22 @@ export default function MainHeader({
           <span className="text-base font-bold">{roomName}</span>
         </div>
         <div className="flex items-center gap-3">
+          {onCanvasClick && (
+            <Tooltip.Root>
+              <Tooltip.Trigger
+                aria-label="Canvas"
+                className="text-header-text flex h-8 w-8 cursor-pointer items-center justify-center border-none bg-transparent text-lg hover:bg-white/10 rounded-md"
+                onClick={() => { trigger('light'); onCanvasClick?.() }}
+              >
+                <IconCanvas size={18} />
+              </Tooltip.Trigger>
+              <Tooltip.Portal>
+                <Tooltip.Positioner sideOffset={8}>
+                  <Tooltip.Popup className={tooltipPopupClass}>Canvas</Tooltip.Popup>
+                </Tooltip.Positioner>
+              </Tooltip.Portal>
+            </Tooltip.Root>
+          )}
           {onTerminalClick && (
             <Tooltip.Root>
               <Tooltip.Trigger

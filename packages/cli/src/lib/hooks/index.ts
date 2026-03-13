@@ -6,4 +6,6 @@ export { createHookClient, sendParentMessage, sendLogEntry, sendTeamMemberUpsert
 export type { HookClient } from './client'
 export { createTask, updateTask, listTasks, getTask } from './tasks'
 export type { Task } from './tasks'
+export { ensureCanvas, getCanvas, getCanvasSnapshot, applyCanvasMutations } from './canvas'
+export type { Canvas, CanvasWithUrls, CanvasSnapshot, CanvasMutationResult } from './canvas'
 export type { HookInput, TeamSessionFile, StructuredPatchHunk } from './types'

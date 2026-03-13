@@ -16,6 +16,10 @@ not_found_handling = "none"
 binding = "UPLOADS"
 id = "YOUR_KV_NAMESPACE_ID"
 
+[[r2_buckets]]
+binding = "CANVAS_BUCKET"
+bucket_name = "meet-ai-canvas-assets"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "meet-ai-db"
@@ -29,6 +33,7 @@ crons = ["0 3 * * *"]
 bindings = [
   { name = "CHAT_ROOM", class_name = "ChatRoom" },
   { name = "LOBBY", class_name = "Lobby" },
+  { name = "CANVAS_ROOM", class_name = "CanvasRoom" },
 ]
 
 [[migrations]]
@@ -38,3 +43,7 @@ new_sqlite_classes = ["ChatRoom"]
 [[migrations]]
 tag = "v2"
 new_sqlite_classes = ["Lobby"]
+
+[[migrations]]
+tag = "v3"
+new_sqlite_classes = ["CanvasRoom"]

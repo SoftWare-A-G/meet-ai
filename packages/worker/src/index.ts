@@ -12,11 +12,13 @@ import { questionReviewsRoute } from './routes/question-reviews'
 import { permissionReviewsRoute } from './routes/permission-reviews'
 import { ttsRoute } from './routes/tts'
 import { uploadsRoute } from './routes/uploads'
+import { canvasRoute } from './routes/canvas'
 import { wsRoute } from './routes/ws'
 import type { AppEnv } from './lib/types'
 
 export { ChatRoom } from './durable-objects/chat-room'
 export { Lobby } from './durable-objects/lobby'
+export { CanvasRoom } from './durable-objects/canvas-room'
 
 export const app = new Hono<AppEnv>()
   .onError((err, c) => {
@@ -45,6 +47,7 @@ export const app = new Hono<AppEnv>()
   .route('/api/rooms', wsRoute)
   .route('/api/lobby', lobbyRoute)
   .route('/api/rooms', uploadsRoute)
+  .route('/api/rooms', canvasRoute)
   .route('/api', uploadsRoute)
   .route('/api/tts', ttsRoute)
 

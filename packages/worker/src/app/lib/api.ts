@@ -297,3 +297,50 @@ export async function expirePlanReview(
   if (!res.ok) throw new Error(`Plan review expire failed: HTTP ${res.status}`)
   return res.json()
 }
+
+// Canvas API helpers
+
+export type CanvasMetadata = {
+  id: string
+  room_id: string
+  title: string | null
+  created_at: string
+  updated_at: string
+  ws_url?: string
+  snapshot_url?: string
+}
+
+export async function ensureCanvas(roomId: string): Promise<CanvasMetadata> {
+  const res = await fetch(`/api/rooms/${roomId}/canvas`, {
+    method: 'POST',
+    headers: authHeaders(),
+  })
+  if (!res.ok) throw new Error(`Ensure canvas failed: HTTP ${res.status}`)
+  return res.json()
+}
+
+export async function loadCanvas(roomId: string): Promise<CanvasMetadata | null> {
+  const res = await fetch(`/api/rooms/${roomId}/canvas`, { headers: authHeaders() })
+  if (res.status === 404) return null
+  if (!res.ok) throw new Error(`Load canvas failed: HTTP ${res.status}`)
+  return res.json()
+}
+
+export async function loadCanvasSnapshot(roomId: string): Promise<{ canvas_id: string; room_id: string; snapshot: unknown }> {
+  const res = await fetch(`/api/rooms/${roomId}/canvas/snapshot`, { headers: authHeaders() })
+  if (!res.ok) throw new Error(`Load canvas snapshot failed: HTTP ${res.status}`)
+  return res.json()
+}
+
+export async function applyCanvasMutations(
+  roomId: string,
+  mutations: { puts?: Array<{ id: string; [key: string]: unknown }>; deletes?: string[] },
+): Promise<{ canvas_id: string; room_id: string; ok: boolean }> {
+  const res = await fetch(`/api/rooms/${roomId}/canvas/mutations`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(mutations),
+  })
+  if (!res.ok) throw new Error(`Apply canvas mutations failed: HTTP ${res.status}`)
+  return res.json()
+}
