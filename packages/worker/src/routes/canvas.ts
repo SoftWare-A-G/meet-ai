@@ -1,6 +1,7 @@
 import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 import { queries } from '../db/queries'
+import { validateCanvasMutationPuts } from '../lib/canvas-records'
 import { requireAuth } from '../middleware/auth'
 import { canvasMutationsSchema } from '../schemas/canvas'
 import type { AppEnv } from '../lib/types'
@@ -136,6 +137,14 @@ export const canvasRoute = new Hono<AppEnv>()
     }
 
     const body = c.req.valid('json')
+    let validatedPuts
+    try {
+      validatedPuts = validateCanvasMutationPuts(body.puts)
+    } catch (error) {
+      return c.json({
+        error: error instanceof Error ? `invalid canvas record: ${error.message}` : 'invalid canvas record',
+      }, 400)
+    }
 
     // Forward to CanvasRoom DO
     const doId = c.env.CANVAS_ROOM.idFromName(`${keyId}:${canvas.id}`)
@@ -143,7 +152,7 @@ export const canvasRoute = new Hono<AppEnv>()
     const res = await stub.fetch(
       new Request('http://internal/mutations', {
         method: 'POST',
-        body: JSON.stringify(body),
+        body: JSON.stringify({ ...body, puts: validatedPuts }),
         headers: { 'Content-Type': 'application/json', 'X-Room-Id': roomId },
       })
     )

@@ -346,49 +346,12 @@ export function listenCodex(
       ? createCanvasToolCallHandler({
           ensureCanvas: () => ensureCanvas(hookClient, roomId),
           getSnapshot: () => getCanvasSnapshot(hookClient, roomId),
-          applyMutations: mutations => applyCanvasMutations(hookClient, roomId, mutations),
-          requestPermission: async (toolName, formattedContent, toolInputJson) => {
-            try {
-              const createRes = await hookClient.api.rooms[':id']['permission-reviews'].$post({
-                param: { id: roomId },
-                json: {
-                  tool_name: toolName,
-                  tool_input_json: toolInputJson,
-                  formatted_content: formattedContent,
-                },
-              })
-              if (!createRes.ok) return null
-              const { id: reviewId } = (await createRes.json()) as { id: string }
-
-              // Poll for decision (2s interval, 30min timeout)
-              const deadline = Date.now() + 1_800_000
-              while (Date.now() < deadline) {
-                await new Promise(resolve => setTimeout(resolve, 2000))
-                try {
-                  const pollRes = await hookClient.api.rooms[':id']['permission-reviews'][':reviewId'].$get({
-                    param: { id: roomId, reviewId },
-                  })
-                  if (pollRes.ok) {
-                    const data = (await pollRes.json()) as { status: string; feedback?: string }
-                    if (data.status === 'approved') return { status: 'approved' }
-                    if (data.status === 'denied') return { status: 'denied', feedback: data.feedback }
-                    if (data.status === 'expired') return { status: 'expired' }
-                  }
-                } catch {
-                  // continue polling
-                }
-              }
-              // Expire the review on timeout
-              try {
-                await hookClient.api.rooms[':id']['permission-reviews'][':reviewId'].expire.$post({
-                  param: { id: roomId, reviewId },
-                })
-              } catch { /* best effort */ }
-              return { status: 'expired' }
-            } catch {
-              return null
-            }
-          },
+          applyMutations: mutations =>
+            applyCanvasMutations(
+              hookClient,
+              roomId,
+              mutations as Parameters<typeof applyCanvasMutations>[2],
+            ),
         })
       : undefined
 

@@ -4,10 +4,14 @@ import {
   DurableObjectSqliteSyncWrapper,
   SQLiteSyncStorage,
 } from '@tldraw/sync-core'
+import type { TLRecord } from '@tldraw/tlschema'
+import { repairLegacyCanvasShapeRecords } from '../lib/canvas-records'
 
 export class CanvasRoom extends DurableObject {
-  private socketRoom: TLSocketRoom | null = null
+  private socketRoom: TLSocketRoom<TLRecord> | null = null
+  private storage: SQLiteSyncStorage<TLRecord> | null = null
   private roomId: string | null = null
+  private didRepairLegacyShapes = false
 
   /** Store the parent chat room_id so the DO knows which room it belongs to. */
   private async ensureRoomId(request: Request): Promise<void> {
@@ -24,10 +28,27 @@ export class CanvasRoom extends DurableObject {
     return this.roomId
   }
 
-  private getSocketRoom(): TLSocketRoom {
-    if (!this.socketRoom || this.socketRoom.isClosed()) {
+  private getStorage(): SQLiteSyncStorage<TLRecord> {
+    if (!this.storage) {
       const sql = new DurableObjectSqliteSyncWrapper(this.ctx.storage)
-      const storage = new SQLiteSyncStorage({ sql })
+      this.storage = new SQLiteSyncStorage({ sql })
+    }
+    return this.storage
+  }
+
+  private repairLegacyShapes(): void {
+    if (this.didRepairLegacyShapes) return
+
+    const storage = this.getStorage()
+    storage.transaction(txn => {
+      repairLegacyCanvasShapeRecords(txn)
+    })
+    this.didRepairLegacyShapes = true
+  }
+
+  private getSocketRoom(): TLSocketRoom<TLRecord> {
+    if (!this.socketRoom || this.socketRoom.isClosed()) {
+      const storage = this.getStorage()
       this.socketRoom = new TLSocketRoom({
         storage,
         log: { warn: console.warn, error: console.error },
@@ -51,6 +72,7 @@ export class CanvasRoom extends DurableObject {
     // We do NOT use ctx.acceptWebSocket (hibernation API) because
     // TLSocketRoom needs to attach its own event listeners to the socket.
     if (url.pathname === '/ws') {
+      this.repairLegacyShapes()
       const sessionId = url.searchParams.get('sessionId') ?? crypto.randomUUID()
       const pair = new WebSocketPair()
       const [client, server] = Object.values(pair)
@@ -66,6 +88,7 @@ export class CanvasRoom extends DurableObject {
 
     // GET /snapshot — readonly canvas snapshot for REST consumers
     if (url.pathname === '/snapshot' && request.method === 'GET') {
+      this.repairLegacyShapes()
       const room = this.getSocketRoom()
       try {
         const snapshot = room.getCurrentSnapshot()
@@ -83,6 +106,7 @@ export class CanvasRoom extends DurableObject {
     // storage.transaction() triggers TLSyncRoom's onChange → broadcastExternalStorageChanges(),
     // so changes are automatically broadcast to all connected WebSocket clients.
     if (url.pathname === '/mutations' && request.method === 'POST') {
+      this.repairLegacyShapes()
       const body = await request.json() as {
         puts?: Array<{ id: string; [key: string]: unknown }>
         deletes?: string[]
@@ -113,6 +137,8 @@ export class CanvasRoom extends DurableObject {
         this.socketRoom.close()
         this.socketRoom = null
       }
+      this.storage = null
+      this.didRepairLegacyShapes = false
       await this.ctx.storage.deleteAll()
       return new Response(JSON.stringify({ ok: true }), {
         headers: { 'Content-Type': 'application/json' },

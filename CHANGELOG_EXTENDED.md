@@ -1,5 +1,70 @@
 # Changelog
 
+## [1.1.2](https://github.com/SoftWare-A-G/meet-ai/compare/1.1.1...1.1.2) (2026-03-14)
+
+### Features
+
+- publish the shared canvas CLI entrypoint for client repos:
+  - add `meet-ai canvas tools` to list the shared canvas action surface exposed to agents
+  - add `meet-ai canvas shape-types` to report the supported storage-free shape subset
+  - add `meet-ai canvas call <roomId> <tool> --input-json ...` so Claude Code and operators can invoke the same room-backed canvas logic the Codex dynamic tools use
+- extend agent guidance across the two durable distribution surfaces used outside this repo:
+  - add a dedicated Canvas section to the installed Meet AI skill with discovery commands, inspection flow, mutation examples, and storage-free rules
+  - append compact Meet AI canvas guidance to the Claude launch system prompt so the essential command surface survives conversation compaction
+  - keep the Codex bootstrap prompt aligned with the same discovery-first canvas workflow
+
+### Bug Fixes
+
+- tighten the public canvas contract around the current no-storage deployment model:
+  - remove `--input-file` support from the CLI canvas command and accept only inline `--input-json` payloads
+  - remove lingering skill guidance that implied file, image, or asset-backed canvas flows
+  - stop advertising `bookmark`, `embed`, `image`, and `video` in the public shape-type list while storage stays disabled
+- make canvas discovery output more actionable for agents:
+  - add concrete JSON examples directly to the `create_canvas_shapes`, `update_canvas_shapes`, and `add_canvas_note` tool descriptions
+  - update snapshot/tool wording so the exposed surface no longer implies asset/media support that clients cannot use
+- align the CLI and worker package manifests at `1.1.2` for the release
+
+### Tests
+
+- add and refresh CLI coverage for the shipped canvas workflow:
+  - verify the published canvas command metadata helpers and inline payload path in `packages/cli/src/commands/canvas/usecase.test.ts`
+  - verify Claude launches with an appended Meet AI system prompt that includes durable canvas guidance in `packages/cli/test/process-manager.test.ts`
+  - verify the shared canvas tool layer advertises only the storage-free shape subset in `packages/cli/test/codex-canvas-tools.test.ts`
+- keep the patch validation green with:
+  - `bun test packages/cli/src/commands/canvas/usecase.test.ts`
+  - `bun test packages/cli/test/codex-canvas-tools.test.ts`
+  - `bun test packages/cli/test/process-manager.test.ts`
+
+## [1.1.1](https://github.com/SoftWare-A-G/meet-ai/compare/1.1.0...1.1.1) (2026-03-13)
+
+### Bug Fixes
+
+- harden agent-driven canvas mutations across the CLI and worker:
+  - normalize `create_canvas_shapes` payloads into full `tldraw` shape records with `typeName`, page parenting, indexes, and shape-specific default props before they are written
+  - hydrate `update_canvas_shapes` partial payloads from the current snapshot so update writes preserve the existing record shape instead of pushing malformed partial objects into storage
+  - require `typeName` on worker-side canvas mutation `puts`, preventing invalid records from reaching the canvas room even if a caller bypasses the CLI normalizer
+  - eliminate the browser-side `Missing definition for record type undefined` crash caused by partial rectangle writes
+- fix the dashboard migration modal parser issue:
+  - escape the literal `->` text rendered in the Ink migration source list
+  - keep the migration intro copy valid JSX while preserving the existing onboarding and credential-import flow
+- align the CLI Cloudflare worker shim with the Durable Object SQLite API already used by the canvas room:
+  - add `storage.sql`, `transactionSync`, and `deleteAll` to the local `cloudflare:workers` type shim
+  - clear the false worker-surface type errors that blocked `@meet-ai/cli` typecheck even though `canvas-room.ts` itself was already using the correct runtime API
+- align the CLI and worker package manifests at `1.1.1` for the release
+
+### Tests
+
+- expand CLI canvas regression coverage to assert:
+  - simplified `geo` inputs are normalized into full `tldraw` records before mutation writes
+  - sequential shape creation gets stable synthesized indexes
+  - partial shape updates are hydrated from the existing snapshot and missing target shapes are rejected
+- add worker schema unit coverage proving canvas mutation `puts` are rejected when `typeName` is missing
+- keep the release validation green with:
+  - `bun test packages/cli/test/codex-canvas-tools.test.ts`
+  - `bun test packages/worker/test/canvas-schema.unit.test.ts`
+  - `bun --filter @meet-ai/cli typecheck`
+  - `bun --filter @meet-ai/worker typecheck`
+
 ## [1.1.0](https://github.com/SoftWare-A-G/meet-ai/compare/1.0.0...1.1.0) (2026-03-13)
 
 ### Features

@@ -1,5 +1,7 @@
 import type { HookClient } from './client'
 
+export type CanvasMutationPut = Record<string, unknown> & { id: string; typeName: string }
+
 export type Canvas = {
   id: string
   key_id: string
@@ -77,7 +79,7 @@ export async function applyCanvasMutations(
   client: HookClient,
   roomId: string,
   mutations: {
-    puts?: Array<Record<string, unknown> & { id: string; typeName: string }>
+    puts?: CanvasMutationPut[]
     deletes?: string[]
   },
 ): Promise<CanvasMutationResult | null> {

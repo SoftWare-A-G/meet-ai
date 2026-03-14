@@ -200,7 +200,7 @@ export class ProcessManager {
     const commandArgs =
       codingAgent === 'codex'
         ? this.buildCodexListenCommandArgs(roomId, sessionEnv.MEET_AI_AGENT_NAME ?? 'codex')
-        : [agentBinary, ...this.buildClaudeCommandArgs(fullPrompt)]
+        : [agentBinary, ...this.buildClaudeCommandArgs(roomId, fullPrompt)]
 
     if (this.opts.debug) {
       team.lines.push(`[debug] AGENT: ${codingAgent}`)
@@ -403,19 +403,42 @@ export class ProcessManager {
         '- When you finish a task, call update_task to set status to "completed".',
         '- Use the assignee field to claim tasks for yourself.',
         '- Prefer get_task to fetch a single task by ID when you already know the ID.',
+        '',
+        '## Canvas',
+        'If the user asks for canvas work, use the built-in canvas tools instead of describing edits without acting.',
+        'Inspect first with get_canvas_state, list_canvas_shapes, or get_canvas_snapshot before mutating an existing canvas.',
+        'Use list_canvas_shape_types before creating raw tldraw shapes, and prefer add_canvas_note for short welcome notes or labels.',
+        'Use create_canvas_shapes, update_canvas_shapes, and delete_canvas_shapes for structured edits, and use set_canvas_view only when you need to focus the viewport.',
       ]
     }
 
     return [
       'You are a team lead. IMMEDIATELY:',
       '1. Start agent-team to start accepting commands from Meet AI.',
-      '2. Connect to the meet-ai room using the /meet-ai skill.',
-      '3. Send a brief welcome message to the room and wait for instructions.',
+      '2. Connect to the meet-ai room using the /meet-ai skill, send a brief welcome message, and wait for instructions.',
     ]
   }
 
-  private buildClaudeCommandArgs(fullPrompt: string): string[] {
-    return ['--dangerously-skip-permissions', '--model', this.opts.model ?? 'opus', fullPrompt]
+  private buildClaudeSystemPrompt(roomId: string): string {
+    return [
+      "You're running inside Meet AI.",
+      `ROOM_ID: ${roomId}`,
+      'Use Meet AI commands through the local CLI available in this environment. Do not rely on a repo-local skill workflow.',
+      'When canvas work is requested, prefer the shared canvas helper surface over handwritten tldraw payloads.',
+      'Start with `canvas tools`, `canvas shape-types`, and `canvas call <roomId> get_canvas_state` before mutating an existing canvas.',
+      'Prefer `add_canvas_note` for short notes and labels. Use `create_canvas_shapes`, `update_canvas_shapes`, and `delete_canvas_shapes` for structured edits.',
+    ].join('\n')
+  }
+
+  private buildClaudeCommandArgs(roomId: string, fullPrompt: string): string[] {
+    return [
+      '--dangerously-skip-permissions',
+      '--model',
+      this.opts.model ?? 'opus',
+      '--append-system-prompt',
+      this.buildClaudeSystemPrompt(roomId),
+      fullPrompt,
+    ]
   }
 
   private buildCodexListenCommandArgs(roomId: string, agentName: string): string[] {

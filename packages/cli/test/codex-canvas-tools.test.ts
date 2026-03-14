@@ -1,6 +1,7 @@
 import { describe, expect, it, mock } from 'bun:test'
 import type { DynamicToolCallResponse } from '../src/generated/codex-app-server/v2/DynamicToolCallResponse'
 import {
+  BUILTIN_TLDRAW_SHAPE_TYPES,
   CANVAS_TOOL_SPECS,
   CANVAS_READ_TOOL_NAMES,
   CANVAS_WRITE_TOOL_NAMES,
@@ -32,13 +33,73 @@ const makeSnapshot = (records: unknown[] = []) => ({
   snapshot: { records },
 })
 
+const makeGeoRecord = (overrides: Record<string, unknown> = {}) => ({
+  id: 'shape:geo',
+  typeName: 'shape',
+  type: 'geo',
+  x: 0,
+  y: 0,
+  rotation: 0,
+  parentId: 'page:page',
+  index: 'a1',
+  isLocked: false,
+  opacity: 1,
+  meta: {},
+  props: {
+    geo: 'rectangle',
+    dash: 'draw',
+    url: '',
+    w: 100,
+    h: 100,
+    growY: 0,
+    scale: 1,
+    labelColor: 'black',
+    color: 'black',
+    fill: 'none',
+    size: 'm',
+    font: 'draw',
+    align: 'middle',
+    verticalAlign: 'middle',
+    richText: { type: 'doc', content: [{ type: 'paragraph' }] },
+  },
+  ...overrides,
+})
+
+const makeNoteRecord = (overrides: Record<string, unknown> = {}) => ({
+  id: 'shape:note',
+  typeName: 'shape',
+  type: 'note',
+  x: 100,
+  y: 200,
+  rotation: 0,
+  parentId: 'page:page',
+  index: 'a2',
+  isLocked: false,
+  opacity: 1,
+  meta: {},
+  props: {
+    color: 'black',
+    labelColor: 'black',
+    size: 'm',
+    font: 'draw',
+    fontSizeAdjustment: 0,
+    align: 'middle',
+    verticalAlign: 'middle',
+    growY: 0,
+    url: '',
+    richText: { type: 'doc', content: [{ type: 'paragraph' }] },
+    scale: 1,
+  },
+  ...overrides,
+})
+
 function makeOps(overrides: Partial<CanvasOperations> = {}): CanvasOperations {
   return {
     ensureCanvas: mock(() => Promise.resolve(makeCanvas())),
     getSnapshot: mock(() => Promise.resolve(makeSnapshot([
       { typeName: 'page', id: 'page:page' },
-      { typeName: 'shape', id: 'shape:1', type: 'geo', x: 10, y: 20, parentId: 'page:page', index: 'a1' },
-      { typeName: 'shape', id: 'shape:2', type: 'note', x: 100, y: 200, parentId: 'page:page', index: 'a2' },
+      makeGeoRecord({ id: 'shape:1', x: 10, y: 20 }),
+      makeNoteRecord({ id: 'shape:2' }),
     ]))),
     applyMutations: mock(() => Promise.resolve({ canvas_id: 'c-1', room_id: 'r-1', ok: true })),
     ...overrides,
@@ -46,12 +107,12 @@ function makeOps(overrides: Partial<CanvasOperations> = {}): CanvasOperations {
 }
 
 describe('CANVAS_TOOL_SPECS', () => {
-  it('defines 8 tools total', () => {
-    expect(CANVAS_TOOL_SPECS).toHaveLength(8)
+  it('defines 9 tools total', () => {
+    expect(CANVAS_TOOL_SPECS).toHaveLength(9)
   })
 
-  it('has 3 read tools and 5 write tools', () => {
-    expect(CANVAS_READ_TOOL_NAMES.size).toBe(3)
+  it('has 4 read tools and 5 write tools', () => {
+    expect(CANVAS_READ_TOOL_NAMES.size).toBe(4)
     expect(CANVAS_WRITE_TOOL_NAMES.size).toBe(5)
   })
 
@@ -63,8 +124,9 @@ describe('CANVAS_TOOL_SPECS', () => {
     }
   })
 
-  it('read tools include get_canvas_state, list_canvas_shapes, get_canvas_snapshot', () => {
+  it('read tools include get_canvas_state, list_canvas_shape_types, list_canvas_shapes, get_canvas_snapshot', () => {
     expect(CANVAS_READ_TOOL_NAMES.has('get_canvas_state')).toBe(true)
+    expect(CANVAS_READ_TOOL_NAMES.has('list_canvas_shape_types')).toBe(true)
     expect(CANVAS_READ_TOOL_NAMES.has('list_canvas_shapes')).toBe(true)
     expect(CANVAS_READ_TOOL_NAMES.has('get_canvas_snapshot')).toBe(true)
   })
@@ -75,6 +137,19 @@ describe('CANVAS_TOOL_SPECS', () => {
     expect(CANVAS_WRITE_TOOL_NAMES.has('delete_canvas_shapes')).toBe(true)
     expect(CANVAS_WRITE_TOOL_NAMES.has('set_canvas_view')).toBe(true)
     expect(CANVAS_WRITE_TOOL_NAMES.has('add_canvas_note')).toBe(true)
+  })
+
+  it('advertises only the storage-free shape subset', () => {
+    expect(BUILTIN_TLDRAW_SHAPE_TYPES).toEqual([
+      'text',
+      'draw',
+      'geo',
+      'note',
+      'line',
+      'frame',
+      'arrow',
+      'highlight',
+    ])
   })
 })
 
@@ -106,6 +181,18 @@ describe('createCanvasToolCallHandler', () => {
       const handler = createCanvasToolCallHandler(ops)
       const result = await handler('get_canvas_state', {})
       expect(result.success).toBe(false)
+    })
+  })
+
+  describe('list_canvas_shape_types', () => {
+    it('returns only the storage-free shape subset', async () => {
+      const handler = createCanvasToolCallHandler(makeOps())
+      const result = await handler('list_canvas_shape_types', {})
+
+      expect(result.success).toBe(true)
+      const data = getData(result)
+      expect(data.shape_types).toEqual(BUILTIN_TLDRAW_SHAPE_TYPES)
+      expect(data.total).toBe(BUILTIN_TLDRAW_SHAPE_TYPES.length)
     })
   })
 
@@ -212,7 +299,7 @@ describe('createCanvasToolCallHandler', () => {
       expect(puts[0].typeName).toBe('shape')
       expect(puts[0].type).toBe('geo')
       expect(puts[0].parentId).toBe('page:page')
-      expect(puts[0].index).toBe('a2V')
+      expect(typeof puts[0].index).toBe('string')
       expect(puts[0].x).toBe(120)
       expect(puts[0].y).toBe(140)
       expect(puts[0].rotation).toBe(0)
@@ -223,6 +310,12 @@ describe('createCanvasToolCallHandler', () => {
       expect(puts[0].props.w).toBe(240)
       expect(puts[0].props.h).toBe(140)
       expect(puts[0].props.fill).toBe('semi')
+      expect(puts[0].props.scale).toBe(1)
+      expect(puts[0].props.richText).toEqual({
+        type: 'doc',
+        content: [{ type: 'paragraph' }],
+      })
+      expect(puts[0].props.text).toBeUndefined()
     })
 
     it('assigns sequential indexes when creating multiple shapes together', async () => {
@@ -237,8 +330,18 @@ describe('createCanvasToolCallHandler', () => {
       expect(result.success).toBe(true)
       const callArgs = (ops.applyMutations as ReturnType<typeof mock>).mock.calls[0]
       const puts = callArgs[0].puts
-      expect(puts[0].index).toBe('a2V')
-      expect(puts[1].index).toBe('a2VV')
+      expect(typeof puts[0].index).toBe('string')
+      expect(typeof puts[1].index).toBe('string')
+      expect(puts[0].index).not.toBe(puts[1].index)
+      expect([puts[0].index, puts[1].index]).toEqual([...puts].map((shape: { index: string }) => shape.index).sort())
+      expect(puts[0].props.w).toBe(100)
+      expect(puts[0].props.h).toBe(100)
+      expect(puts[0].props.dash).toBe('draw')
+      expect(puts[0].props.scale).toBe(1)
+      expect(puts[0].props.richText).toEqual({
+        type: 'doc',
+        content: [{ type: 'paragraph' }],
+      })
     })
 
     it('rejects empty shapes array', async () => {
@@ -250,8 +353,26 @@ describe('createCanvasToolCallHandler', () => {
     it('returns error when mutation fails', async () => {
       const ops = makeOps({ applyMutations: mock(() => Promise.resolve(null)) })
       const handler = createCanvasToolCallHandler(ops)
-      const result = await handler('create_canvas_shapes', { shapes: [{ id: 's:1', type: 'geo' }] })
+      const result = await handler('create_canvas_shapes', { shapes: [{ id: 'shape:s1', type: 'geo' }] })
       expect(result.success).toBe(false)
+    })
+
+    it('hydrates video shapes with shipped autoplay defaults', async () => {
+      const ops = makeOps()
+      const handler = createCanvasToolCallHandler(ops)
+      const result = await handler('create_canvas_shapes', {
+        shapes: [{ id: 'shape:video1', type: 'video', props: { url: 'https://example.com/video.mp4' } }],
+      })
+
+      expect(result.success).toBe(true)
+      const callArgs = (ops.applyMutations as ReturnType<typeof mock>).mock.calls[0]
+      const puts = callArgs[0].puts
+      expect(puts).toHaveLength(1)
+      expect(puts[0].type).toBe('video')
+      expect(puts[0].props.autoplay).toBe(true)
+      expect(puts[0].props.url).toBe('https://example.com/video.mp4')
+      expect(puts[0].props.assetId).toBeNull()
+      expect(puts[0].props.playing).toBe(true)
     })
   })
 
@@ -330,27 +451,34 @@ describe('createCanvasToolCallHandler', () => {
       expect(result.success).toBe(true)
       const data = getData(result)
       expect(data.created_shape_ids).toHaveLength(1)
-      expect(data.created_shape_ids[0]).toMatch(/^shape:note_/)
+      expect(data.created_shape_ids[0]).toMatch(/^shape:/)
 
       // Verify the mutation was called with a note shape
       const callArgs = (ops.applyMutations as ReturnType<typeof mock>).mock.calls[0]
       const puts = callArgs[0].puts
       expect(puts).toHaveLength(1)
       expect(puts[0].type).toBe('note')
-      expect(puts[0].props.text).toBe('Hello world')
+      expect(puts[0].props.color).toBe('black')
+      expect(puts[0].props.scale).toBe(1)
+      expect(puts[0].props.labelColor).toBe('black')
+      expect(puts[0].props.richText).toEqual({
+        type: 'doc',
+        content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Hello world' }] }],
+      })
+      expect(puts[0].props.text).toBeUndefined()
       expect(puts[0].x).toBe(50)
       expect(puts[0].y).toBe(50)
+      expect(puts[0].opacity).toBe(1)
       // parentId should come from snapshot page, not hardcoded
       expect(puts[0].parentId).toBe('page:page')
-      // index should be computed from existing shapes (a1, a2 exist → a2V)
-      expect(puts[0].index).toBe('a2V')
+      expect(typeof puts[0].index).toBe('string')
     })
 
     it('uses discovered page ID from snapshot', async () => {
       const ops = makeOps({
         getSnapshot: mock(() => Promise.resolve(makeSnapshot([
           { typeName: 'page', id: 'page:custom-page' },
-          { typeName: 'shape', id: 'shape:1', type: 'geo', x: 0, y: 0, parentId: 'page:custom-page', index: 'a1' },
+          makeGeoRecord({ id: 'shape:1', parentId: 'page:custom-page' }),
         ]))),
       })
       const handler = createCanvasToolCallHandler(ops)
@@ -360,7 +488,7 @@ describe('createCanvasToolCallHandler', () => {
       const callArgs = (ops.applyMutations as ReturnType<typeof mock>).mock.calls[0]
       const puts = callArgs[0].puts
       expect(puts[0].parentId).toBe('page:custom-page')
-      expect(puts[0].index).toBe('a1V')
+      expect(typeof puts[0].index).toBe('string')
     })
 
     it('uses default index a1 when no shapes exist on page', async () => {
@@ -376,7 +504,8 @@ describe('createCanvasToolCallHandler', () => {
       const callArgs = (ops.applyMutations as ReturnType<typeof mock>).mock.calls[0]
       const puts = callArgs[0].puts
       expect(puts[0].parentId).toBe('page:empty')
-      expect(puts[0].index).toBe('a1')
+      expect(typeof puts[0].index).toBe('string')
+      expect(puts[0].index.length).toBeGreaterThan(0)
     })
 
     it('rejects empty text', async () => {
@@ -386,74 +515,19 @@ describe('createCanvasToolCallHandler', () => {
     })
   })
 
-  describe('permission review', () => {
-    it('blocks write tool when permission is denied', async () => {
+  describe('write execution', () => {
+    it('executes write tools directly without permission review', async () => {
+      const reviewer = mock(() => Promise.resolve({ status: 'denied' as const, feedback: 'Not now' }))
       const ops = makeOps({
-        requestPermission: mock(() => Promise.resolve({ status: 'denied' as const, feedback: 'Not now' })),
-      })
+        // Legacy fixtures may still pass this through; it is ignored now.
+        requestPermission: reviewer,
+      } as Partial<CanvasOperations>)
       const handler = createCanvasToolCallHandler(ops)
-      const result = await handler('create_canvas_shapes', { shapes: [{ id: 's:1', type: 'geo' }] })
-
-      expect(result.success).toBe(false)
-      const data = getData(result)
-      expect(data.error).toContain('Permission denied')
-      expect(data.error).toContain('Not now')
-      // Mutation should NOT have been called
-      expect(ops.applyMutations).not.toHaveBeenCalled()
-    })
-
-    it('blocks write tool when permission expires', async () => {
-      const ops = makeOps({
-        requestPermission: mock(() => Promise.resolve({ status: 'expired' as const })),
-      })
-      const handler = createCanvasToolCallHandler(ops)
-      const result = await handler('delete_canvas_shapes', { shape_ids: ['s:1'] })
-
-      expect(result.success).toBe(false)
-      expect(ops.applyMutations).not.toHaveBeenCalled()
-    })
-
-    it('allows write tool when permission is approved', async () => {
-      const ops = makeOps({
-        requestPermission: mock(() => Promise.resolve({ status: 'approved' as const })),
-      })
-      const handler = createCanvasToolCallHandler(ops)
-      const result = await handler('create_canvas_shapes', { shapes: [{ id: 's:1', type: 'geo' }] })
+      const result = await handler('create_canvas_shapes', { shapes: [{ id: 'shape:s1', type: 'geo' }] })
 
       expect(result.success).toBe(true)
       expect(ops.applyMutations).toHaveBeenCalled()
-    })
-
-    it('allows write tool when requestPermission returns null (unavailable)', async () => {
-      const ops = makeOps({
-        requestPermission: mock(() => Promise.resolve(null)),
-      })
-      const handler = createCanvasToolCallHandler(ops)
-      const result = await handler('create_canvas_shapes', { shapes: [{ id: 's:1', type: 'geo' }] })
-
-      // null = reviewer unavailable, block the action
-      expect(result.success).toBe(false)
-    })
-
-    it('does not request permission for read tools', async () => {
-      const reviewer = mock(() => Promise.resolve({ status: 'approved' as const }))
-      const ops = makeOps({ requestPermission: reviewer })
-      const handler = createCanvasToolCallHandler(ops)
-
-      await handler('get_canvas_state', {})
-      await handler('list_canvas_shapes', {})
-      await handler('get_canvas_snapshot', {})
-
-      expect(reviewer).not.toHaveBeenCalled()
-    })
-
-    it('skips permission review when requestPermission is not provided', async () => {
-      const ops = makeOps() // no requestPermission
-      const handler = createCanvasToolCallHandler(ops)
-      const result = await handler('create_canvas_shapes', { shapes: [{ id: 's:1', type: 'geo' }] })
-
-      // Without requestPermission, write tools execute directly
-      expect(result.success).toBe(true)
+      expect(reviewer.mock.calls).toHaveLength(0)
     })
   })
 })

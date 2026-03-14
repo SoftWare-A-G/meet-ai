@@ -1,5 +1,33 @@
 # Changelog
 
+## [1.1.2](https://github.com/SoftWare-A-G/meet-ai/compare/1.1.1...1.1.2) (2026-03-14)
+
+### Features
+
+- publish the `meet-ai canvas` CLI surface with shared `tools`, `shape-types`, and `call` subcommands, and teach both the installed Meet AI skill and Claude/Codex runtime prompts how to discover and use canvas actions in client repos
+
+### Bug Fixes
+
+- tighten the public canvas contract to the storage-free, inline-JSON-only surface by removing `--input-file`, adding concrete JSON examples to the canvas tool descriptions, and advertising only the supported shape types: `text`, `draw`, `geo`, `note`, `line`, `frame`, `arrow`, and `highlight`
+- align the CLI and worker package manifests at `1.1.2` for the release
+
+### Tests
+
+- add CLI regression coverage for the published canvas command helpers, Claude canvas system-prompt injection, and the reduced storage-free shape list, with the targeted canvas and process-manager suites passing for the patch release
+
+## [1.1.1](https://github.com/SoftWare-A-G/meet-ai/compare/1.1.0...1.1.1) (2026-03-13)
+
+### Bug Fixes
+
+- normalize CLI canvas shape mutations into full `tldraw` records, hydrate partial shape updates from the current snapshot, and reject malformed canvas mutation writes without `typeName` so invalid agent-created shapes no longer crash browser clients
+- fix the dashboard `MigrationModal` JSX parse error by escaping the literal `->` text rendered in the Ink migration source list
+- align the CLI Cloudflare worker type shim with the Durable Object SQLite APIs used by `CanvasRoom`, clearing false `storage.sql`, `transactionSync`, and `deleteAll` type errors during CLI typecheck
+- align the CLI and worker package manifests at `1.1.1` for the release
+
+### Tests
+
+- add canvas regression coverage for normalized shape creation and update flows plus server-side malformed-mutation rejection, and keep `@meet-ai/cli` and `@meet-ai/worker` typechecks green for the patch release
+
 ## [1.1.0](https://github.com/SoftWare-A-G/meet-ai/compare/1.0.0...1.1.0) (2026-03-13)
 
 ### Features

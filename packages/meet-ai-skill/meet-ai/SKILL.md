@@ -239,6 +239,63 @@ Tool-call activity is automatically streamed to the chat room via a PostToolUse 
 meet-ai send-log "<ROOM_ID>" "<sender>" "<content>" [--color <color>] [--message-id <id>]
 ```
 
+## Canvas
+
+Each room can have a shared tldraw canvas for collaborative drawing. Use the `meet-ai canvas` commands to discover tools, inspect the canvas, and create/update/delete shapes.
+
+### Discovery
+
+Start by discovering what's available:
+
+```bash
+meet-ai canvas tools                                    # List all 9 canvas tools
+meet-ai canvas shape-types                              # List the 8 supported storage-free shape types
+meet-ai canvas call "<ROOM_ID>" get_canvas_state        # Check if canvas exists, get shape count
+```
+
+### Inspecting the Canvas
+
+Before making changes, inspect what's already on the canvas:
+
+```bash
+meet-ai canvas call "<ROOM_ID>" list_canvas_shapes
+meet-ai canvas call "<ROOM_ID>" get_canvas_snapshot
+```
+
+### Creating Shapes
+
+For quick notes, use `add_canvas_note`:
+
+```bash
+meet-ai canvas call "<ROOM_ID>" add_canvas_note --input-json '{"text":"Hello from the team!","x":120,"y":120}'
+```
+
+For structured shapes, use `create_canvas_shapes`:
+
+```bash
+meet-ai canvas call "<ROOM_ID>" create_canvas_shapes --input-json '{"shapes":[{"id":"shape:box1","type":"geo","x":120,"y":140,"props":{"w":240,"h":140,"geo":"rectangle","fill":"semi"}}]}'
+```
+
+### Updating Shapes
+
+```bash
+meet-ai canvas call "<ROOM_ID>" update_canvas_shapes --input-json '{"updates":[{"id":"shape:box1","x":260,"y":180}]}'
+```
+
+### Deleting Shapes
+
+```bash
+meet-ai canvas call "<ROOM_ID>" delete_canvas_shapes --input-json '{"shape_ids":["shape:box1"]}'
+```
+
+### Canvas Rules
+
+- Always run `get_canvas_state` or `list_canvas_shapes` before mutations to understand the current layout
+- Prefer `add_canvas_note` for simple text — it handles positioning and defaults automatically
+- Use `list_canvas_shape_types` before `create_canvas_shapes` to check available shape types
+- Shape IDs must start with `shape:` prefix
+- Pass canvas payloads inline with `--input-json`; do not rely on file, image, or asset inputs
+
 ## Rules
 
 1. **The orchestrator NEVER does implementation work.** Always delegate to a teammate. If a suitable agent exists, forward the task via SendMessage. If not, spawn a new agent for it. The orchestrator's job is coordination only -- creating rooms, spawning agents, routing messages, and managing the team lifecycle.

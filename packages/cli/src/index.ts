@@ -24,6 +24,7 @@ const main = defineCommand({
     'send-log': () => import('./commands/send-log/command').then(m => m.default),
     poll: () => import('./commands/poll/command').then(m => m.default),
     listen: () => import('./commands/listen/command').then(m => m.default),
+    canvas: () => import('./commands/canvas/command').then(m => m.default),
     'send-team-info': () => import('./commands/send-team-info/command').then(m => m.default),
     'send-tasks': () => import('./commands/send-tasks/command').then(m => m.default),
     'download-attachment': () =>

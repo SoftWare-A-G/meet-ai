@@ -161,6 +161,33 @@ describe('ProcessManager', () => {
     expect(team.lines[0]).toContain('No CLI binary configured for coding agent: codex')
   })
 
+  test('claude spawn appends Meet AI command guidance as a durable system prompt', () => {
+    const tmux = {
+      newSession: (_name: string, commandArgs: string[]) => {
+        const systemPromptIndex = commandArgs.indexOf('--append-system-prompt')
+        expect(systemPromptIndex).toBeGreaterThan(-1)
+        const systemPrompt = commandArgs[systemPromptIndex + 1]
+        const prompt = commandArgs.at(-1)
+        expect(systemPrompt).toContain("You're running inside Meet AI.")
+        expect(systemPrompt).toContain('ROOM_ID: room-1')
+        expect(systemPrompt).toContain('Use Meet AI commands through the local CLI available in this environment.')
+        expect(systemPrompt).toContain('canvas tools')
+        expect(systemPrompt).toContain('add_canvas_note')
+        expect(systemPrompt).not.toContain('/meet-ai skill')
+        expect(prompt).toContain('ROOM_ID: room-1')
+        expect(prompt).toContain('You are a team lead. IMMEDIATELY:')
+        return { ok: true, output: '' }
+      },
+      killSession: () => ({ ok: true, output: '' }),
+      listSessions: () => [],
+    } as any
+
+    pm = new ProcessManager({ agentBinaries, tmux })
+    const team = pm.spawn('room-1', 'test-room', 'claude')
+
+    expect(team.status).toBe('running')
+  })
+
   test('codex bootstrap prompt does not instruct skill loading', () => {
     const tmux = {
       newSession: (_name: string, _commandArgs: string[], env?: Record<string, string>) => {
@@ -174,6 +201,9 @@ describe('ProcessManager', () => {
         expect(env?.MEET_AI_CODEX_BOOTSTRAP_PROMPT).toContain('If the user asks for a plan, or asks you to show/present/preview the plan before implementation, create or update the turn plan with the plan tool instead of replying with a plain-text plan.')
         expect(env?.MEET_AI_CODEX_BOOTSTRAP_PROMPT).toContain('Use update_plan for plan previews and revisions.')
         expect(env?.MEET_AI_CODEX_BOOTSTRAP_PROMPT).toContain('If you need clarifying input before making a plan, ask it through request_user_input instead of a plain-text message.')
+        expect(env?.MEET_AI_CODEX_BOOTSTRAP_PROMPT).toContain('## Canvas')
+        expect(env?.MEET_AI_CODEX_BOOTSTRAP_PROMPT).toContain('If the user asks for canvas work, use the built-in canvas tools instead of describing edits without acting.')
+        expect(env?.MEET_AI_CODEX_BOOTSTRAP_PROMPT).toContain('Use list_canvas_shape_types before creating raw tldraw shapes, and prefer add_canvas_note for short welcome notes or labels.')
         expect(env?.MEET_AI_CODEX_BOOTSTRAP_PROMPT).not.toContain('/meet-ai skill')
         expect(env?.MEET_AI_CODEX_BOOTSTRAP_PROMPT).not.toContain('Start agent-team mode')
         expect(env?.MEET_AI_CODEX_BOOTSTRAP_PROMPT).not.toContain('Send a brief welcome message to the room.')
