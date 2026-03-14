@@ -1,5 +1,30 @@
 # Changelog
 
+## [1.2.0](https://github.com/SoftWare-A-G/meet-ai/compare/1.1.2...1.2.0) (2026-03-14)
+
+### Features
+
+- add an in-dashboard environment manager for the Meet AI CLI:
+  - register a new `EnvManagerModal` in the Ink app shell and open it with the `e` shortcut from the status bar
+  - let operators switch between existing home-config environments by updating `defaultEnv` and reloading the resolved `url` and `key`
+  - let operators add a new environment in-place by entering a URL plus either a direct key or auth link, auto-deriving the environment name until the field is manually edited
+  - reuse the existing auth helpers and `meetai-home` config utilities so the dashboard respects the same `~/.meet-ai/config.json` contract as `meet-ai` sign-in flows
+
+### Bug Fixes
+
+- make environment switching deterministic in the live dashboard:
+  - restart and exit the current dashboard process immediately after a successful switch so the next launch reconnects against the newly selected environment
+  - block the environment manager while sessions are active, avoiding a partial client/process state split where attached teams still target the old backend
+- keep the add-environment flow consistent with the existing home-config rules:
+  - validate URLs before submission
+  - reject duplicate environment names already present in the loose config reader
+  - resolve auth-link input through the shared key-claim helper before writing the new environment
+- align the CLI and worker package manifests at `1.2.0` for the release
+
+### Tests
+
+- no automated test files were updated in the staged `1.2.0` release scope
+
 ## [1.1.2](https://github.com/SoftWare-A-G/meet-ai/compare/1.1.1...1.1.2) (2026-03-14)
 
 ### Features

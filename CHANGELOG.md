@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.2.0](https://github.com/SoftWare-A-G/meet-ai/compare/1.1.2...1.2.0) (2026-03-14)
+
+### Features
+
+- add a dashboard environment manager modal so operators can switch the active `~/.meet-ai/config.json` environment or add a new one directly from the CLI TUI with the `e` shortcut
+
+### Bug Fixes
+
+- restart the dashboard immediately after an environment switch so the client reconnects with the new default environment instead of keeping stale session state
+- gate the environment-manager shortcut while teams are attached, preventing mid-session environment changes from conflicting with active room state
+- align the CLI and worker package manifests at `1.2.0` for the release
+
+### Tests
+
+- no automated test changes are included in the staged `1.2.0` release scope
+
 ## [1.1.2](https://github.com/SoftWare-A-G/meet-ai/compare/1.1.1...1.1.2) (2026-03-14)
 
 ### Features

@@ -75,6 +75,11 @@ export function StatusBar({ teamCount, roomCount, focusedRoom, version, updateSt
           <Text bold>a</Text>
           <Text dimColor>]ttach</Text>
         </Text>
+        <Text dimColor={teamCount > 0}>
+          <Text dimColor={teamCount > 0}>[</Text>
+          <Text bold>e</Text>
+          <Text dimColor={teamCount > 0}>]nv</Text>
+        </Text>
         <Text>
           <Text dimColor>[</Text>
           <Text bold>j/k</Text>

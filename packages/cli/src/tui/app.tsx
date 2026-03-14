@@ -4,6 +4,7 @@ import { ProcessManager } from '@meet-ai/cli/lib/process-manager'
 import type { CodingAgentDefinition } from '@meet-ai/cli/coding-agents'
 import { Dashboard } from './dashboard'
 import { SpawnDialog } from './spawn-dialog'
+import EnvManagerModal from './EnvManagerModal'
 import { StatusBar } from './status-bar'
 import { groupTeamsByRoom } from './room-groups'
 import { useAutoUpdate } from './use-auto-update'
@@ -51,6 +52,7 @@ function AppInner({ processManager, client, codingAgents, onAttach, onDetach, on
   const [focusedRoomIndex, setFocusedRoomIndex] = useState(0)
   const [focusedTeamIndex, setFocusedTeamIndex] = useState(0)
   const [showSpawn, setShowSpawn] = useState(false)
+  const [showEnvManager, setShowEnvManager] = useState(false)
   const [availableRooms, setAvailableRooms] = useState<Room[]>([])
   const [roomsLoading, setRoomsLoading] = useState(false)
   const [roomsError, setRoomsError] = useState<string | null>(null)
@@ -62,7 +64,8 @@ function AppInner({ processManager, client, codingAgents, onAttach, onDetach, on
 
   const terminalHeight = stdout?.rows ?? 24
   const spawnDialogHeight = Math.max(10, Math.min(16, terminalHeight - 4))
-  const bottomHeight = showSpawn ? spawnDialogHeight : killTargetId ? 1 : 1
+  const envManagerHeight = Math.max(10, Math.min(14, terminalHeight - 4))
+  const bottomHeight = showSpawn ? spawnDialogHeight : showEnvManager ? envManagerHeight : killTargetId ? 1 : 1
   const dashboardHeight = terminalHeight - bottomHeight
 
   // Group teams by room (synchronous — always up-to-date)
@@ -181,7 +184,7 @@ function AppInner({ processManager, client, codingAgents, onAttach, onDetach, on
   }, [focusedRoomIndex, focusedTeamIndex, processManager, dashboardHeight])
 
   useInput((input, key) => {
-    if (showSpawn || busyRef.current) return
+    if (showSpawn || showEnvManager || busyRef.current) return
 
     // Restart confirmation mode
     if (restartConfirm) {
@@ -225,6 +228,13 @@ function AppInner({ processManager, client, codingAgents, onAttach, onDetach, on
     if (input === 'Q') {
       processManager.killAll()
       exit()
+      return
+    }
+
+    // Environment manager
+    if (input === 'e') {
+      if (teams.length > 0) return
+      setShowEnvManager(true)
       return
     }
 
@@ -308,6 +318,15 @@ function AppInner({ processManager, client, codingAgents, onAttach, onDetach, on
           <Text color="red">? </Text>
           <Text dimColor>[y/n]</Text>
         </Box>
+      ) : showEnvManager ? (
+        <EnvManagerModal
+          onSwitch={() => {
+            setShowEnvManager(false)
+            onRequestRestart?.()
+            exit()
+          }}
+          onCancel={() => setShowEnvManager(false)}
+        />
       ) : showSpawn ? (
         <SpawnDialog
           codingAgents={[...codingAgents]}
