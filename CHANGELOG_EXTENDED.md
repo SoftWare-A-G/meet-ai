@@ -1,5 +1,51 @@
 # Changelog
 
+## [2.0.0](https://github.com/SoftWare-A-G/meet-ai/compare/1.2.0...2.0.0) (2026-03-14)
+
+### Breaking Changes
+
+- remove the old skill-distribution path for Meet AI:
+  - delete `packages/meet-ai-skill/meet-ai/SKILL.md`
+  - delete the repo-local `.claude/skills/meet-ai/SKILL.md` link
+  - stop documenting the skill as the primary Claude workflow in `CLAUDE.md`
+- replace the old skill-centric coordination model with prompt-owned runtime contracts:
+  - Claude team-lead behavior now lives in injected prompt builders instead of the removed skill file
+  - Codex bootstrap behavior now lives in a dedicated prompt module instead of a small inline bootstrap block
+  - downstream users who relied on the shipped skill file must migrate to the new prompt-driven behavior
+
+### Features
+
+- extract prompt definitions into dedicated CLI modules:
+  - add `packages/cli/src/lib/prompts/claude-system-prompt.ts`
+  - add `packages/cli/src/lib/prompts/claude-starting-prompt.ts`
+  - add `packages/cli/src/lib/prompts/codex-bootstrap-prompt.ts`
+  - simplify `packages/cli/src/lib/process-manager.ts` so it wires prompt builders instead of embedding large prompt bodies inline
+- strengthen the Claude orchestration contract in the system prompt:
+  - document agent colors, CLI message mirroring, polling/listening, progress updates, and shared canvas usage
+  - add a Planning section that makes the orchestrator own plan mode and forbids delegating plan mode to teammate agents
+  - add a Task Management section with explicit delegation and post-plan task rules
+  - add an Asking the User section that makes `AskUserQuestion` a first-class Meet AI web-UI flow
+  - add a Message Routing section that suppresses filler acknowledgments when no response is needed
+- strengthen the Codex bootstrap contract:
+  - require execution-grade plans through `update_plan`
+  - require task-tool usage and canvas-tool usage through the built-in Codex tool surface
+  - add mention-routing guidance so Codex ignores messages addressed to other agents instead of replying with unnecessary acknowledgments
+
+### Bug Fixes
+
+- remove stale Claude documentation that still referenced the deleted skill workflow in `CLAUDE.md`
+- refresh `process-manager` prompt assertions so Claude and Codex launches are validated against the current extracted prompt text instead of older inline wording
+- align the CLI and worker package manifests at `2.0.0` for the release
+
+### Tests
+
+- add dedicated unit coverage for:
+  - `packages/cli/test/prompts/claude-system-prompt.test.ts`
+  - `packages/cli/test/prompts/claude-starting-prompt.test.ts`
+  - `packages/cli/test/prompts/codex-bootstrap-prompt.test.ts`
+- extend `packages/cli/test/process-manager.test.ts` to assert the new injected Claude and Codex prompt contracts end-to-end
+- add `packages/cli/test/prompts/behavioral-prompt-test.ts` to exercise the Claude prompt behavior with question-and-answer style checks against the composed prompt surface
+
 ## [1.2.0](https://github.com/SoftWare-A-G/meet-ai/compare/1.1.2...1.2.0) (2026-03-14)
 
 ### Features

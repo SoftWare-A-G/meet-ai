@@ -1,5 +1,28 @@
 # Changelog
 
+## [2.0.0](https://github.com/SoftWare-A-G/meet-ai/compare/1.2.0...2.0.0) (2026-03-14)
+
+### Breaking Changes
+
+- remove the distributed `meet-ai` skill and the repo-local `.claude/skills/meet-ai` link, replacing the old skill-based workflow with first-class Claude and Codex system-prompt injection
+- external agent setups that previously depended on `packages/meet-ai-skill/meet-ai/SKILL.md` must migrate to the new prompt-driven runtime contracts for Meet AI orchestration, planning, task tracking, canvas usage, and user-question flows
+
+### Features
+
+- extract the Claude and Codex runtime instructions into dedicated prompt builders, including a full Claude system prompt, Claude startup prompt, and Codex bootstrap prompt
+- expand the Claude orchestration prompt with explicit planning ownership, task-management, AskUserQuestion, and message-routing guidance for Meet AI web-UI flows
+- expand the Codex bootstrap prompt with execution-grade planning rules, task-tool usage, canvas guidance, and mention-routing behavior for multi-agent rooms
+
+### Bug Fixes
+
+- remove stale documentation in `CLAUDE.md` that still pointed operators at the deleted `meet-ai` skill workflow
+- align the CLI and worker package manifests at `2.0.0` for the major release
+
+### Tests
+
+- add prompt regression coverage for the extracted Claude and Codex prompt builders, plus updated process-manager assertions for the injected prompt contracts
+- add behavioral prompt coverage for the Claude prompt surface so core orchestration instructions can be checked independently of the inline process-manager wiring
+
 ## [1.2.0](https://github.com/SoftWare-A-G/meet-ai/compare/1.1.2...1.2.0) (2026-03-14)
 
 ### Features

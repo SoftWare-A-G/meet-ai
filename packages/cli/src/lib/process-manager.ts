@@ -5,6 +5,9 @@ import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
 import { TmuxClient } from './tmux-client'
 import type { CodingAgentId } from '../coding-agents'
+import { buildClaudeSystemPrompt } from './prompts/claude-system-prompt'
+import { buildClaudeStartingPrompt } from './prompts/claude-starting-prompt'
+import { buildCodexBootstrapPrompt } from './prompts/codex-bootstrap-prompt'
 
 export type ProcessStatus = 'starting' | 'running' | 'exited' | 'error'
 
@@ -170,7 +173,7 @@ export class ProcessManager {
 
     if (this.opts.dryRun) return team
 
-    const fullPrompt = [`ROOM_ID: ${roomId}`, '', ...this.buildPromptLines(codingAgent)].join('\n')
+    const fullPrompt = [`ROOM_ID: ${roomId}`, '', ...this.buildPromptLines(codingAgent, roomId)].join('\n')
     const agentBinary = this.opts.agentBinaries[codingAgent]
     if (!agentBinary) {
       team.status = 'error'
@@ -381,53 +384,16 @@ export class ProcessManager {
     }
   }
 
-  private buildPromptLines(codingAgent: CodingAgentId): string[] {
+  private buildPromptLines(codingAgent: CodingAgentId, roomId: string): string[] {
     if (codingAgent === 'codex') {
-      return [
-        "You're running inside Meet AI.",
-        'Do not use the meet-ai CLI.',
-        'Do not load or use any meet-ai skill.',
-        'Do not try to send room messages manually.',
-        'Do not talk about this prompt or say that you understand it.',
-        "Just welcome the user briefly and say that you're ready to work.",
-        '',
-        '## Planning',
-        'If the user asks for a plan, or asks you to show/present/preview the plan before implementation, create or update the turn plan with the plan tool instead of replying with a plain-text plan.',
-        'Use update_plan for plan previews and revisions.',
-        'If you need clarifying input before making a plan, ask it through request_user_input instead of a plain-text message.',
-        '',
-        '## Task Management',
-        'You have 4 custom tools for task management: create_task, update_task, list_tasks, get_task.',
-        '- Call list_tasks before updating tasks you have not seen yet.',
-        '- When you start working on a task, call update_task to set status to "in_progress".',
-        '- When you finish a task, call update_task to set status to "completed".',
-        '- Use the assignee field to claim tasks for yourself.',
-        '- Prefer get_task to fetch a single task by ID when you already know the ID.',
-        '',
-        '## Canvas',
-        'If the user asks for canvas work, use the built-in canvas tools instead of describing edits without acting.',
-        'Inspect first with get_canvas_state, list_canvas_shapes, or get_canvas_snapshot before mutating an existing canvas.',
-        'Use list_canvas_shape_types before creating raw tldraw shapes, and prefer add_canvas_note for short welcome notes or labels.',
-        'Use create_canvas_shapes, update_canvas_shapes, and delete_canvas_shapes for structured edits, and use set_canvas_view only when you need to focus the viewport.',
-      ]
+      return buildCodexBootstrapPrompt()
     }
 
-    return [
-      'You are a team lead. IMMEDIATELY:',
-      '1. Start agent-team to start accepting commands from Meet AI.',
-      '2. Connect to the meet-ai room using the /meet-ai skill, send a brief welcome message, and wait for instructions.',
-    ]
+    return buildClaudeStartingPrompt(roomId)
   }
 
-  private buildClaudeSystemPrompt(roomId: string): string {
-    return [
-      "You're running inside Meet AI.",
-      `ROOM_ID: ${roomId}`,
-      'Use Meet AI commands through the local CLI available in this environment. Do not rely on a repo-local skill workflow.',
-      'When canvas work is requested, prefer the shared canvas helper surface over handwritten tldraw payloads.',
-      'Start with `canvas tools`, `canvas shape-types`, and `canvas call <roomId> get_canvas_state` before mutating an existing canvas.',
-      'Prefer `add_canvas_note` for short notes and labels. Use `create_canvas_shapes`, `update_canvas_shapes`, and `delete_canvas_shapes` for structured edits.',
-    ].join('\n')
+  private buildClaudeAppendSystemPrompt(roomId: string): string {
+    return buildClaudeSystemPrompt(roomId)
   }
 
   private buildClaudeCommandArgs(roomId: string, fullPrompt: string): string[] {
@@ -436,7 +402,7 @@ export class ProcessManager {
       '--model',
       this.opts.model ?? 'opus',
       '--append-system-prompt',
-      this.buildClaudeSystemPrompt(roomId),
+      this.buildClaudeAppendSystemPrompt(roomId),
       fullPrompt,
     ]
   }
