@@ -93,11 +93,12 @@ export async function processHookInput(
 
   // Detect agent shutdown
   if (toolName === 'SendMessage') {
-    const inputType = toolInput.type as string | undefined
-    const approve = toolInput.approve as boolean | undefined
+    const message = toolInput.message as Record<string, unknown> | undefined
+    const inputType = message?.type || ''
+    const approve = message?.approve || false
 
     if (inputType === 'shutdown_response' && approve === true) {
-      const requestId = toolInput.request_id as string | undefined
+      const requestId = message?.request_id as string | undefined
       const agentName = requestId?.split('@')[1]
 
       if (agentName) {

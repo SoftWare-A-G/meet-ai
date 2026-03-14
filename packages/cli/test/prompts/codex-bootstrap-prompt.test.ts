@@ -26,6 +26,8 @@ describe('buildCodexBootstrapPrompt', () => {
       expect(prompt).toContain('## Planning')
       expect(prompt).toContain('update_plan')
       expect(prompt).toContain('request_user_input')
+      expect(prompt).toContain('Do not create a plan for small, clear work')
+      expect(prompt).toContain('If the work is small and clear, implement it directly.')
     })
 
     test('Plan Structure section', () => {
@@ -68,6 +70,11 @@ describe('buildCodexBootstrapPrompt', () => {
       expect(prompt).not.toContain('Start agent-team mode')
       expect(prompt).not.toContain('Send a brief welcome message to the room.')
       expect(prompt).not.toContain('set_interaction_mode')
+    })
+
+    test('no unconditional plan requirement', () => {
+      expect(prompt).not.toContain('Before implementing, produce an execution-grade plan using update_plan.')
+      expect(prompt).not.toContain('Do not start implementation until the plan is approved, unless the user explicitly says to proceed.')
     })
   })
 })

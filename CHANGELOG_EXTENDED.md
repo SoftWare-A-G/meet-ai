@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.1.1](https://github.com/SoftWare-A-G/meet-ai/compare/2.1.0...2.1.1) (2026-03-15)
+
+### Bug Fixes
+
+- fix Claude teammate shutdown state handling in the CLI hook pipeline:
+  - update `packages/cli/src/commands/hook/log-tool-use/usecase.ts` so `SendMessage` shutdown responses are read from the nested `tool_input.message` object instead of the old top-level `tool_input` fields
+  - restore detection of approved `shutdown_response` payloads by reading `message.type`, `message.approve`, and `message.request_id`
+  - mark the matching room teammate as `inactive` again when a Claude agent shutdown is approved, preventing stale active Claude presence in Meet AI room rosters
+
 ## [2.1.0](https://github.com/SoftWare-A-G/meet-ai/compare/2.0.0...2.1.0) (2026-03-14)
 
 ### Features

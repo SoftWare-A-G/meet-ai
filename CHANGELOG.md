@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.1.1](https://github.com/SoftWare-A-G/meet-ai/compare/2.1.0...2.1.1) (2026-03-15)
+
+### Bug Fixes
+
+- fix Claude teammate shutdown tracking so approved `shutdown_response` control messages read the nested `SendMessage.message` payload correctly and mark the corresponding Claude room member as `inactive` instead of leaving stale active presence in the room
+
 ## [2.1.0](https://github.com/SoftWare-A-G/meet-ai/compare/2.0.0...2.1.0) (2026-03-14)
 
 ### Features
