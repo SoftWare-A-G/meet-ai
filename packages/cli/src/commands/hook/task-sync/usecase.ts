@@ -74,7 +74,7 @@ export async function processTaskSync(
   const res = await client.api.rooms[':id'].tasks.upsert.$post({
     param: { id: roomId },
     json: body as {
-      source: 'claude' | 'codex' | 'meet_ai'
+      source: 'claude' | 'codex' | 'pi' | 'meet_ai'
       source_id: string
       subject?: string
       description?: string

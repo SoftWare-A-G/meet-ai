@@ -1,7 +1,7 @@
 import { Box, Text, useInput, useApp, useStdout, useStdin } from 'ink'
 import { useState, useCallback, useEffect, useRef, useMemo, Component, type ReactNode } from 'react'
 import { ProcessManager } from '@meet-ai/cli/lib/process-manager'
-import type { CodingAgentDefinition } from '@meet-ai/cli/coding-agents'
+import { getCodingAgentDefinition, type CodingAgentDefinition } from '@meet-ai/cli/coding-agents'
 import { Dashboard } from './dashboard'
 import { SpawnDialog } from './spawn-dialog'
 import EnvManagerModal from './EnvManagerModal'
@@ -295,7 +295,7 @@ function AppInner({ processManager, client, codingAgents, onAttach, onDetach, on
 
   const killTarget = killTargetId ? teams.find(t => t.teamId === killTargetId) : null
   const killLabel = killTarget
-    ? `${killTarget.codingAgent === 'codex' ? 'Codex' : 'Claude'} in ${killTarget.roomName}`
+    ? `${getCodingAgentDefinition(killTarget.codingAgent).label} in ${killTarget.roomName}`
     : killTargetId
 
   return (

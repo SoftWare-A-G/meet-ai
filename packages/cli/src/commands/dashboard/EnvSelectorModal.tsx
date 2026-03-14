@@ -42,8 +42,8 @@ export function EnvSelectorModal({ onSuccess, onCancel }: EnvSelectorModalProps)
         }
         const env = getDefaultEnv(config)
         onSuccess({ url: env.url, key: env.key })
-      } catch (err) {
-        setError(err instanceof Error ? err.message : String(err))
+      } catch (error) {
+        setError(error instanceof Error ? error.message : String(error))
       }
     }
   })

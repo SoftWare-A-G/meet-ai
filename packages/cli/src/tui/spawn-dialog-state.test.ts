@@ -75,4 +75,36 @@ describe('spawn-dialog-state', () => {
       codingAgent: 'claude',
     })
   })
+
+  it('passes pi as the coding agent when selected', () => {
+    const selection = resolveSpawnSelection({
+      focus: 'input',
+      roomName: 'Pi Room',
+      selectedRoomIndex: 0,
+      rooms: [],
+      codingAgent: 'pi',
+    })
+
+    expect(selection).toEqual({
+      type: 'new',
+      roomName: 'Pi Room',
+      codingAgent: 'pi',
+    })
+  })
+
+  it('selects existing room with pi agent', () => {
+    const selection = resolveSpawnSelection({
+      focus: 'list',
+      roomName: '',
+      selectedRoomIndex: 0,
+      rooms: [{ id: '1', name: 'Alpha', created_at: '2026-01-01 00:00:00', connected: false }],
+      codingAgent: 'pi',
+    })
+
+    expect(selection).toEqual({
+      type: 'existing',
+      room: { id: '1', name: 'Alpha', created_at: '2026-01-01 00:00:00' },
+      codingAgent: 'pi',
+    })
+  })
 })

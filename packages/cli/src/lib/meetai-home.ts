@@ -68,7 +68,7 @@ export function writeHomeConfig(config: HomeConfig): void {
   ensureHome()
   writeFileSync(
     getConfigPath(),
-    JSON.stringify({ $schema: CONFIG_SCHEMA_URL, ...config }, null, 2) + '\n',
+    `${JSON.stringify({ $schema: CONFIG_SCHEMA_URL, ...config }, null, 2)}\n`,
     { mode: 0o600 },
   )
 }
@@ -117,7 +117,7 @@ export function getHomeCredentials(): { url: string; key: string } | null {
 }
 
 /** Lists all environments with a flag indicating the default. */
-export function listEnvs(): Array<{ name: string; isDefault: boolean }> {
+export function listEnvs(): { name: string; isDefault: boolean }[] {
   const config = readHomeConfigLoose()
   if (!config) return []
 

@@ -1,4 +1,4 @@
-export type CodingAgentId = 'claude' | 'codex'
+export type CodingAgentId = 'claude' | 'codex' | 'pi'
 
 export interface CodingAgentDefinition {
   id: CodingAgentId
@@ -8,6 +8,7 @@ export interface CodingAgentDefinition {
 export const CODING_AGENT_DEFINITIONS: readonly CodingAgentDefinition[] = [
   { id: 'claude', label: 'Claude Code' },
   { id: 'codex', label: 'Codex' },
+  { id: 'pi', label: 'Pi' },
 ] as const
 
 export function isCodingAgentId(value: string): value is CodingAgentId {

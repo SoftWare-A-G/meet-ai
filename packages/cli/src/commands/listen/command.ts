@@ -4,6 +4,7 @@ import { getMeetAiRuntime } from '@meet-ai/cli/runtime'
 import { defineCommand } from 'citty'
 import { listenClaude } from './listen-claude'
 import { listenCodex } from './listen-codex'
+import { listenPi } from './listen-pi'
 
 export default defineCommand({
   meta: {
@@ -52,6 +53,11 @@ export default defineCommand({
       // This is long-running — the WebSocket keeps the process alive until killed
       if (getMeetAiRuntime() === 'codex') {
         listenCodex(client, input)
+        return
+      }
+
+      if (getMeetAiRuntime() === 'pi') {
+        listenPi(client, input)
         return
       }
 

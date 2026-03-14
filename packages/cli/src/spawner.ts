@@ -81,7 +81,28 @@ Or set MEET_AI_CODEX_PATH to the Codex CLI path.
   }
 }
 
+export function findPiCli(): string {
+  const home = homedir()
+  try {
+    return findBinary('pi', 'MEET_AI_PI_PATH', [
+      join(home, '.bun', 'bin', 'pi'),
+      '/opt/homebrew/bin/pi',
+      '/usr/local/bin/pi',
+      join(home, '.local', 'bin', 'pi'),
+    ])
+  } catch {
+    throw new Error(
+      `
+Pi CLI is not installed
+
+Please install Pi or set MEET_AI_PI_PATH to the Pi CLI path.
+      `.trim()
+    )
+  }
+}
+
 export function findCodingAgentCli(agentId: CodingAgentId): string {
   if (agentId === 'codex') return findCodexCli()
+  if (agentId === 'pi') return findPiCli()
   return findClaudeCli()
 }

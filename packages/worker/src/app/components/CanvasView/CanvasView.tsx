@@ -31,8 +31,8 @@ export default function CanvasView({ roomId, open, onClose, userName }: CanvasVi
       if (!key) throw new Error('No API key')
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
       setWsUrl(`${protocol}//${location.host}/api/rooms/${roomId}/canvas/ws?token=${encodeURIComponent(key)}`)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to initialize canvas')
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to initialize canvas')
     } finally {
       setLoading(false)
     }

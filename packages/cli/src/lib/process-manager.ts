@@ -8,6 +8,7 @@ import type { CodingAgentId } from '../coding-agents'
 import { buildClaudeSystemPrompt } from './prompts/claude-system-prompt'
 import { buildClaudeStartingPrompt } from './prompts/claude-starting-prompt'
 import { buildCodexBootstrapPrompt } from './prompts/codex-bootstrap-prompt'
+import { buildPiStartingPrompt } from './prompts/pi-starting-prompt'
 
 export type ProcessStatus = 'starting' | 'running' | 'exited' | 'error'
 
@@ -46,7 +47,7 @@ const SessionEntrySchema = z.object({
   sessionName: z.string(),
   roomId: z.string(),
   roomName: z.string(),
-  codingAgent: z.enum(['claude', 'codex']).default('claude'),
+  codingAgent: z.enum(['claude', 'codex', 'pi']).default('claude'),
   createdAt: z.string(),
 })
 
@@ -193,6 +194,14 @@ export class ProcessManager {
       sessionEnv.MEET_AI_CODEX_BOOTSTRAP_PROMPT = fullPrompt
       sessionEnv.MEET_AI_AGENT_NAME = 'codex'
     }
+
+    if (codingAgent === 'pi') {
+      sessionEnv.MEET_AI_RUNTIME = 'pi'
+      sessionEnv.MEET_AI_PI_PATH = agentBinary
+      sessionEnv.MEET_AI_PI_BOOTSTRAP_PROMPT = fullPrompt
+      sessionEnv.MEET_AI_AGENT_NAME = 'pi'
+      sessionEnv.MEET_AI_ROOM_ID = roomId
+    }
     for (const key of ENV_ALLOWLIST) {
       const value = process.env[key]
       if (value) sessionEnv[key] = value
@@ -203,7 +212,9 @@ export class ProcessManager {
     const commandArgs =
       codingAgent === 'codex'
         ? this.buildCodexListenCommandArgs(roomId, sessionEnv.MEET_AI_AGENT_NAME ?? 'codex')
-        : [agentBinary, ...this.buildClaudeCommandArgs(roomId, fullPrompt)]
+        : codingAgent === 'pi'
+          ? this.buildPiListenCommandArgs(roomId, sessionEnv.MEET_AI_AGENT_NAME ?? 'pi')
+          : [agentBinary, ...this.buildClaudeCommandArgs(roomId, fullPrompt)]
 
     if (this.opts.debug) {
       team.lines.push(`[debug] AGENT: ${codingAgent}`)
@@ -389,6 +400,10 @@ export class ProcessManager {
       return buildCodexBootstrapPrompt()
     }
 
+    if (codingAgent === 'pi') {
+      return buildPiStartingPrompt(roomId)
+    }
+
     return buildClaudeStartingPrompt(roomId)
   }
 
@@ -408,6 +423,10 @@ export class ProcessManager {
   }
 
   private buildCodexListenCommandArgs(roomId: string, agentName: string): string[] {
+    return [...resolveSelfCliCommand(), 'listen', roomId, '--exclude', agentName]
+  }
+
+  private buildPiListenCommandArgs(roomId: string, agentName: string): string[] {
     return [...resolveSelfCliCommand(), 'listen', roomId, '--exclude', agentName]
   }
 }

@@ -3,6 +3,7 @@ import Sidebar from './Sidebar'
 import MainPane from './MainPane'
 import type { ProcessStatus } from '@meet-ai/cli/lib/process-manager'
 import type { RoomGroup } from './room-groups'
+import { getCodingAgentDefinition } from '@meet-ai/cli/coding-agents'
 
 interface DashboardProps {
   roomGroups: RoomGroup[]
@@ -54,7 +55,7 @@ export function Dashboard({ roomGroups, focusedRoomIndex, focusedTeamIndex, heig
           <Box paddingX={1} gap={1}>
             {focusedGroup.teams.map((team, i) => {
               const isFocused = i === focusedTeamIndex
-              const label = team.codingAgent === 'codex' ? 'Codex' : 'Claude'
+              const label = getCodingAgentDefinition(team.codingAgent).label
               const { icon, color } = STATUS_ICONS[team.status]
               return (
                 <Text key={team.teamId}>

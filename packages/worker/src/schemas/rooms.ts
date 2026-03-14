@@ -64,7 +64,7 @@ export const createTaskSchema = z.object({
   subject: z.string().min(1).max(500),
   description: z.string().max(2000).optional(),
   assignee: z.string().max(100).nullable().optional(),
-  source: z.enum(['claude', 'codex', 'meet_ai']).optional(),
+  source: z.enum(['claude', 'codex', 'pi', 'meet_ai']).optional(),
   source_id: z.string().max(100).nullable().optional(),
   updated_by: z.string().max(100).nullable().optional(),
 })
@@ -74,7 +74,7 @@ export const updateTaskSchema = z.object({
   description: z.string().max(2000).optional(),
   status: z.enum(['pending', 'in_progress', 'completed']).optional(),
   assignee: z.string().max(100).nullable().optional(),
-  source: z.enum(['claude', 'codex', 'meet_ai']).optional(),
+  source: z.enum(['claude', 'codex', 'pi', 'meet_ai']).optional(),
   source_id: z.string().max(100).nullable().optional(),
   updated_by: z.string().max(100).nullable().optional(),
 })
@@ -84,7 +84,7 @@ export const upsertTaskSchema = z.object({
   description: z.string().max(2000).optional(),
   status: z.enum(['pending', 'in_progress', 'completed']).optional(),
   assignee: z.string().max(100).nullable().optional(),
-  source: z.enum(['claude', 'codex', 'meet_ai']),
+  source: z.enum(['claude', 'codex', 'pi', 'meet_ai']),
   source_id: z.string().max(100),
   updated_by: z.string().max(100).nullable().optional(),
 })

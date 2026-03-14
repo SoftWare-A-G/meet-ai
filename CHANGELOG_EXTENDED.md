@@ -1,5 +1,31 @@
 # Changelog
 
+## [2.1.0](https://github.com/SoftWare-A-G/meet-ai/compare/2.0.0...2.1.0) (2026-03-14)
+
+### Features
+
+- add initial Pi agent support across the Meet AI CLI:
+  - extend `CodingAgentId`, `MeetAiRuntime`, dashboard discovery, and process-manager session wiring so Pi can be selected alongside Claude and Codex
+  - add `findPiCli()` plus `MEET_AI_PI_PATH` support so the Pi binary can be discovered from the same spawn flow as the other coding agents
+  - add `packages/cli/src/lib/pi-rpc.ts` and `packages/cli/src/commands/listen/listen-pi.ts` so Meet AI can spawn `pi --mode rpc --no-session`, relay room messages and attachments into Pi, stream Pi responses back to the room, and surface Pi activity through structured logs
+  - add `packages/cli/src/lib/prompts/pi-starting-prompt.ts` so Pi starts with explicit Meet AI rules for room messaging, task-board usage, and canvas tooling
+  - add bundled Pi task and canvas extensions so Pi can use the existing Meet AI task-board and room-scoped canvas APIs without separate glue code
+
+### Bug Fixes
+
+- thread Pi through the existing room and task contracts:
+  - allow `pi` in worker task schemas for create, update, and upsert operations
+  - allow `pi` in shared CLI task helpers and `spawn_request` control messages so task sync and room-spawn flows stop rejecting the new runtime
+- fix Pi presentation in the TUI:
+  - replace hardcoded `codex ? Codex : Claude` label fallbacks in the dashboard and kill confirmation views with the shared coding-agent definition lookup
+  - keep dashboard startup messaging accurate by listing Pi in the “supported coding agent CLI” discovery errors
+- keep the touched support files aligned with the Pi rollout:
+  - align the CLI and worker package manifests at `2.1.0` for the release
+
+### Tests
+
+- add `packages/cli/src/tui/spawn-dialog-state.test.ts` coverage proving Pi can be selected for both new-room and existing-room spawn flows
+
 ## [2.0.0](https://github.com/SoftWare-A-G/meet-ai/compare/1.2.0...2.0.0) (2026-03-14)
 
 ### Breaking Changes

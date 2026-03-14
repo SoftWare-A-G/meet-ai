@@ -334,7 +334,7 @@ export async function loadCanvasSnapshot(roomId: string): Promise<{ canvas_id: s
 
 export async function applyCanvasMutations(
   roomId: string,
-  mutations: { puts?: Array<{ id: string; [key: string]: unknown }>; deletes?: string[] },
+  mutations: { puts?: { id: string; [key: string]: unknown }[]; deletes?: string[] },
 ): Promise<{ canvas_id: string; room_id: string; ok: boolean }> {
   const res = await fetch(`/api/rooms/${roomId}/canvas/mutations`, {
     method: 'POST',

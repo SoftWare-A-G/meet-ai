@@ -108,7 +108,7 @@ export class CanvasRoom extends DurableObject {
     if (url.pathname === '/mutations' && request.method === 'POST') {
       this.repairLegacyShapes()
       const body = await request.json() as {
-        puts?: Array<{ id: string; [key: string]: unknown }>
+        puts?: { id: string; [key: string]: unknown }[]
         deletes?: string[]
       }
       const room = this.getSocketRoom()

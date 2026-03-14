@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.1.0](https://github.com/SoftWare-A-G/meet-ai/compare/2.0.0...2.1.0) (2026-03-14)
+
+### Features
+
+- add initial Pi agent support, including runtime selection, Pi CLI discovery, RPC-backed room listening, Pi-specific bootstrap guidance, structured Pi logging, and bundled Meet AI task/canvas extensions
+
+### Bug Fixes
+
+- allow `pi` as a valid task source across worker task schemas, shared CLI task helpers, and room control-message parsing so Pi-created tasks can sync with the existing task board APIs
+- fix TUI agent labels so Pi sessions render as `Pi` in dashboard tabs and kill confirmations instead of falling back to the default Claude label
+- align the CLI and worker package manifests at `2.1.0` for the release
+
+### Tests
+
+- add spawn-dialog-state coverage for creating new Pi sessions and attaching Pi to existing rooms
+
 ## [2.0.0](https://github.com/SoftWare-A-G/meet-ai/compare/1.2.0...2.0.0) (2026-03-14)
 
 ### Breaking Changes

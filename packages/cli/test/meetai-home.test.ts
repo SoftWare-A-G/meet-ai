@@ -121,7 +121,9 @@ describe('readHomeConfig / writeHomeConfig', () => {
     writeHomeConfig(config)
     const stat = statSync(join(tempDir, 'config.json'))
     // 0o600 = owner read+write only (decimal 384)
-    expect(stat.mode & 0o777).toBe(0o600)
+    // oxlint: bitwise is intentional – extracting POSIX permission bits
+// eslint-disable-next-line no-bitwise
+expect(stat.mode & 0o777).toBe(0o600)
   })
 })
 

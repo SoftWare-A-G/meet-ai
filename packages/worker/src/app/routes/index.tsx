@@ -1183,6 +1183,18 @@ function TaskMockup() {
   )
 }
 
+const lineBg = (type: 'add' | 'del' | 'ctx') => {
+  if (type === 'del') return 'rgba(239, 68, 68, 0.15)'
+  if (type === 'add') return 'rgba(34, 197, 94, 0.15)'
+  return 'transparent'
+}
+
+const prefix = (type: 'add' | 'del' | 'ctx') => {
+  if (type === 'del') return '-'
+  if (type === 'add') return '+'
+  return ' '
+}
+
 function DiffMockup() {
   const block1Lines: { type: 'add' | 'del' | 'ctx'; num: number; text: string }[] = [
     { type: 'ctx', num: 10, text: 'export async function auth(c: Context) {' },
@@ -1207,22 +1219,10 @@ function DiffMockup() {
     { type: 'add', num: 6, text: '}' },
   ]
 
-  const lineBg = (type: 'add' | 'del' | 'ctx') => {
-    if (type === 'del') return 'rgba(239, 68, 68, 0.15)'
-    if (type === 'add') return 'rgba(34, 197, 94, 0.15)'
-    return 'transparent'
-  }
-
   const lineColor = (type: 'add' | 'del' | 'ctx') => {
     if (type === 'del') return '#fca5a5'
     if (type === 'add') return '#4ade80'
     return C.textDim
-  }
-
-  const prefix = (type: 'add' | 'del' | 'ctx') => {
-    if (type === 'del') return '-'
-    if (type === 'add') return '+'
-    return ' '
   }
 
   return (

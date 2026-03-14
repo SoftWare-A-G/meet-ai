@@ -20,7 +20,7 @@ export async function createTask(
     subject: string
     description?: string
     assignee?: string | null
-    source?: 'claude' | 'codex' | 'meet_ai'
+    source?: 'claude' | 'codex' | 'pi' | 'meet_ai'
     source_id?: string | null
     updated_by?: string | null
   },
@@ -47,7 +47,7 @@ export async function updateTask(
     description?: string
     status?: 'pending' | 'in_progress' | 'completed'
     assignee?: string | null
-    source?: 'claude' | 'codex' | 'meet_ai'
+    source?: 'claude' | 'codex' | 'pi' | 'meet_ai'
     source_id?: string | null
     updated_by?: string | null
   },
