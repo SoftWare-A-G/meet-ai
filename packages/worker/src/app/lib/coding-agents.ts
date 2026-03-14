@@ -1,6 +1,7 @@
-export type CodingAgentId = 'claude' | 'codex'
+export type CodingAgentId = 'claude' | 'codex' | 'pi'
 
 export const CODING_AGENT_OPTIONS = [
   { id: 'claude', label: 'Claude Code' },
   { id: 'codex', label: 'Codex' },
+  { id: 'pi', label: 'Pi' },
 ] as const

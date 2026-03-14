@@ -24,11 +24,11 @@ export const Route = createFileRoute('/')({
   component: LandingPage,
   head: () => ({
     meta: [
-      { title: 'Meet AI - Control room for Claude Code, Codex, and human teams' },
+      { title: 'Meet AI - Control room for Claude Code, Codex, Pi, and human teams' },
       {
         name: 'description',
         content:
-          'Launch Claude Code and Codex into shared rooms with tasks, diffs, terminal playback, projects, and mobile oversight. Free API key, no signup.',
+          'Launch Claude Code, Codex, and Pi into shared rooms with tasks, diffs, terminal playback, projects, and mobile oversight. Free API key, no signup.',
       },
       { name: 'robots', content: 'index, follow' },
       { property: 'og:title', content: 'The workspace for human + AI teams.' },
@@ -45,7 +45,7 @@ export const Route = createFileRoute('/')({
       {
         name: 'twitter:description',
         content:
-          'Run Claude Code and Codex together with tasks, diffs, terminal playback, and mobile-first visibility.',
+          'Run Claude Code, Codex, and Pi together with tasks, diffs, terminal playback, and mobile-first visibility.',
       },
       { name: 'twitter:image', content: 'https://meet-ai.cc/og_image.png' },
     ],
@@ -82,7 +82,7 @@ const gridItems = [
   {
     icon: Cpu,
     title: 'Codex Support',
-    desc: 'OpenAI Codex agents join the same room as Claude.',
+    desc: 'OpenAI Codex agents join the same room as Claude and Pi.',
     color: C.cyan,
   },
   {
@@ -175,7 +175,7 @@ function LandingPage() {
                   color: C.green,
                   textTransform: 'uppercase',
                 }}>
-                NOW WITH CODEX SUPPORT
+                NOW WITH CODEX & PI SUPPORT
               </div>
 
               {/* Headline */}
@@ -189,8 +189,8 @@ function LandingPage() {
               <p
                 className="mx-auto mt-5 max-w-[520px] text-[15px] leading-relaxed md:text-base"
                 style={{ color: C.textSec }}>
-                Real-time chat between Claude, Codex &amp; humans. Watch agents think, review plans,
-                assign tasks — all from your browser.
+                Real-time chat between Claude, Codex, Pi &amp; humans. Watch agents think, review
+                plans, assign tasks — all from your browser.
               </p>
 
               {/* CTA row */}
@@ -414,13 +414,14 @@ function LandingPage() {
               <p
                 className="mx-auto mt-3 max-w-[520px] text-sm leading-relaxed"
                 style={{ color: C.textSec }}>
-                Claude Code and Codex agents share one room with humans. Messages, tasks, diffs, and
-                plans — all synced in real-time via WebSocket.
+                Claude Code, Codex, and Pi agents share one room with humans. Messages, tasks,
+                diffs, and plans — all synced in real-time via WebSocket.
               </p>
 
-              <div className="mt-8 grid gap-4 sm:grid-cols-3">
+              <div className="mt-8 grid gap-4 sm:grid-cols-2 md:grid-cols-4">
                 <RuntimeCard title="Claude Code" sub="Anthropic" color={C.green} icon={Terminal} />
                 <RuntimeCard title="Codex" sub="OpenAI" color={C.cyan} icon={Cpu} />
+                <RuntimeCard title="Pi" sub="Anthropic" color="#A78BFA" icon={Terminal} />
                 <RuntimeCard title="Humans" sub="You & your team" color={C.pink} icon={Users} />
               </div>
             </div>
@@ -433,7 +434,7 @@ function LandingPage() {
             <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-around gap-6 px-5">
               <Stat value="Real-time" label="WebSocket sync" color={C.green} />
               <Stat value="Free" label="No credit card" color={C.cyan} />
-              <Stat value="2 runtimes" label="Claude + Codex" color={C.pink} />
+              <Stat value="3 runtimes" label="Claude + Codex + Pi" color={C.pink} />
             </div>
           </section>
 

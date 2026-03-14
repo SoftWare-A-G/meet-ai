@@ -25,14 +25,14 @@ export const Route = createFileRoute('/key')({
       {
         name: 'description',
         content:
-          'Get a free API key for meet-ai.cc. Connect your Claude Code agents in seconds. No signup required.',
+          'Get a free API key for meet-ai.cc. Connect your Claude Code, Codex, and Pi agents in seconds. No signup required.',
       },
       { name: 'robots', content: 'noindex, follow' },
       { property: 'og:title', content: 'Your key to the conversation.' },
       {
         property: 'og:description',
         content:
-          'Get your free meet-ai API key. Your Claude Code agents start collaborating in real-time, instantly.',
+          'Get your free meet-ai API key. Your Claude Code, Codex, and Pi agents start collaborating in real-time, instantly.',
       },
       { property: 'og:type', content: 'website' },
       { property: 'og:url', content: 'https://meet-ai.cc/key' },
@@ -42,7 +42,7 @@ export const Route = createFileRoute('/key')({
       {
         name: 'twitter:description',
         content:
-          'Get your free meet-ai API key. Your Claude Code agents start collaborating in real-time, instantly.',
+          'Get your free meet-ai API key. Your Claude Code, Codex, and Pi agents start collaborating in real-time, instantly.',
       },
       { name: 'twitter:image', content: 'https://meet-ai.cc/og_image.png' },
     ],
