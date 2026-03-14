@@ -1,35 +1,132 @@
-import { BrowserWindow, Updater } from 'electrobun/bun'
+import { BrowserWindow, defineElectrobunRPC } from 'electrobun/bun'
+import { loadCredentials } from './auth'
+import { MeetAiClient } from './meetai-client'
+import { selectRoom } from './room-selector'
+import { showErrorScreen } from './error-screen'
+import type { MeetAiEvent } from './meetai-client'
 
-const DEV_SERVER_PORT = 5173
-const DEV_SERVER_URL = `http://localhost:${DEV_SERVER_PORT}`
+// ─── RPC Schema ───
+// bun.messages = messages the bun process sends TO the webview
 
-// Check if Vite dev server is running for HMR
-async function getMainViewUrl(): Promise<string> {
-  const channel = await Updater.localInfo.channel()
-  if (channel === 'dev') {
-    try {
-      await fetch(DEV_SERVER_URL, { method: 'HEAD' })
-      console.log(`HMR enabled: Using Vite dev server at ${DEV_SERVER_URL}`)
-      return DEV_SERVER_URL
-    } catch {
-      console.log("Vite dev server not running. Run 'bun run dev:hmr' for HMR support.")
-    }
-  }
-  return 'views://mainview/index.html'
+export type MeetAiRPCSchema = {
+	bun: {
+		requests: {}
+		messages: {
+			'meetai:team_info': Extract<MeetAiEvent, { type: 'team_info' }>
+			'meetai:message': Extract<MeetAiEvent, { type: 'message' }>
+			'meetai:tasks_info': Extract<MeetAiEvent, { type: 'tasks_info' }>
+			'meetai:log': Extract<MeetAiEvent, { type: 'log' }>
+			'meetai:commands_info': Extract<MeetAiEvent, { type: 'commands_info' }>
+		}
+	}
+	webview: {
+		requests: {}
+		messages: {}
+	}
 }
 
-// Create the main application window
-const url = await getMainViewUrl()
+// ─── Auth ───
 
-const _mainWindow = new BrowserWindow({
-  title: 'Meet AI',
-  url,
-  frame: {
-    width: 900,
-    height: 700,
-    x: 200,
-    y: 200,
-  },
+const credentials = loadCredentials()
+if (!credentials) {
+	showErrorScreen(
+		'No credentials found. Please configure meet-ai first.',
+	)
+	setInterval(() => {}, 60000)
+	throw new Error('No credentials')
+}
+
+// ─── Room Selection ───
+
+const client = new MeetAiClient(credentials)
+
+let selectedRoom: Awaited<ReturnType<typeof selectRoom>> = null
+try {
+	selectedRoom = await selectRoom(client)
+} catch (err) {
+	showErrorScreen(
+		`Failed to connect: ${err instanceof Error ? err.message : String(err)}`,
+	)
+	setInterval(() => {}, 60000)
+	throw err
+}
+
+if (!selectedRoom) {
+	showErrorScreen('No rooms found. Create a room with meet-ai first.')
+	setInterval(() => {}, 60000)
+	throw new Error('No rooms')
+}
+
+// ─── RPC Bridge ───
+
+const rpc = defineElectrobunRPC<MeetAiRPCSchema, 'bun'>('bun', {
+	handlers: {
+		requests: {},
+		messages: {},
+	},
 })
 
-console.log('React Tailwind Vite app started!')
+// Electrobun's RPC Proxy accepts any message name at runtime but the
+// generic type plumbing in defineElectrobunRPC doesn't resolve the
+// message keys properly. Cast to a typed send function.
+type BunMessages = MeetAiRPCSchema['bun']['messages']
+const send = rpc.send as unknown as <K extends keyof BunMessages>(
+	name: K,
+	payload: BunMessages[K],
+) => void
+
+// ─── Browser Window ───
+
+const win = new BrowserWindow({
+	title: `Meet AI — ${selectedRoom.name}`,
+	url: 'views://mainview/index.html',
+	frame: { width: 1280, height: 800, x: 100, y: 100 },
+	rpc,
+})
+
+// Belt-and-suspenders: also call loadURL explicitly in case the constructor
+// doesn't reliably pass the URL to the native webview init.
+win.webview.loadURL('views://mainview/index.html')
+
+// ─── Forward WebSocket Events to Webview ───
+
+client.on('team_info', (data) => {
+	console.log(`[game] team_info: ${data.members.length} members in "${data.team_name}"`)
+	send('meetai:team_info', data)
+})
+
+client.on('message', (data) => {
+	console.log(`[game] message: ${data.sender}: ${data.content.slice(0, 60)}`)
+	send('meetai:message', data)
+})
+
+client.on('tasks_info', (data) => {
+	console.log(`[game] tasks_info: ${data.tasks.length} tasks`)
+	send('meetai:tasks_info', data)
+})
+
+client.on('log', (data) => {
+	console.log(`[game] log: ${data.sender}: ${data.content.slice(0, 60)}`)
+	send('meetai:log', data)
+})
+
+client.on('commands_info', (data) => {
+	console.log(`[game] commands_info: ${data.commands.length} commands`)
+	send('meetai:commands_info', data)
+})
+
+// Wait for the webview to finish loading before connecting to meet-ai.
+// Without this, the first team_info can arrive before the webview's user code
+// executes — the preload's default receiveMessageFromBun handler just logs and
+// discards the message, so the webview never receives the initial state.
+win.webview.on('dom-ready', () => {
+	console.log('[rpc] Webview dom-ready, connecting to meet-ai…')
+	client.connect(selectedRoom.id)
+	console.log(`[meet-ai] Connected to room: ${selectedRoom.name}`)
+})
+
+// ─── Cleanup ───
+
+win.on('close', () => {
+	client.disconnect()
+})

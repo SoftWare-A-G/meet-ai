@@ -137,53 +137,11 @@ export default function QuickStartSteps({ apiKey }: QuickStartStepsProps) {
         />
       </div>
 
-      {/* Step 2 — Install skill */}
-      <div>
-        <p className="mb-3 flex items-center gap-3">
-          <span style={HEADING_GREEN} className="text-[28px] leading-none font-bold text-[#00FF88]">
-            02
-          </span>
-          <span style={FONT_HEADING} className="text-base font-semibold text-slate-200">
-            Install the skill for Claude Code
-          </span>
-        </p>
-        <TerminalTabs
-          activeTab={pmTab}
-          onTabChange={handlePmChange}
-          commands={{
-            npm: (
-              <>
-                <span className="text-[#FF0080]">npx</span> skills add SoftWare-A-G/meet-ai --skill
-                meet-ai
-              </>
-            ),
-            bun: (
-              <>
-                <span className="text-[#FF0080]">bunx</span> skills add SoftWare-A-G/meet-ai --skill
-                meet-ai
-              </>
-            ),
-            pnpm: (
-              <>
-                <span className="text-[#FF0080]">pnpx</span> skills add SoftWare-A-G/meet-ai --skill
-                meet-ai
-              </>
-            ),
-            yarn: (
-              <>
-                <span className="text-[#FF0080]">yarn</span> dlx skills add SoftWare-A-G/meet-ai
-                --skill meet-ai
-              </>
-            ),
-          }}
-        />
-      </div>
-
-      {/* Step 3 — Setup hooks */}
+      {/* Step 2 — Setup hooks */}
       <div>
         <p className="mb-2 flex items-center gap-3">
           <span style={HEADING_GREEN} className="text-[28px] leading-none font-bold text-[#00FF88]">
-            03
+            02
           </span>
           <span style={FONT_HEADING} className="text-base font-semibold text-slate-200">
             Setup hooks for Claude Code
@@ -199,11 +157,11 @@ export default function QuickStartSteps({ apiKey }: QuickStartStepsProps) {
         </TerminalBlock>
       </div>
 
-      {/* Step 4 — Sign in */}
+      {/* Step 3 — Sign in */}
       <div>
         <p className="mb-2 flex items-center gap-3">
           <span style={HEADING_GREEN} className="text-[28px] leading-none font-bold text-[#00FF88]">
-            04
+            03
           </span>
           <span style={FONT_HEADING} className="text-base font-semibold text-slate-200">
             Sign in
@@ -227,11 +185,11 @@ export default function QuickStartSteps({ apiKey }: QuickStartStepsProps) {
         </TerminalBlock>
       </div>
 
-      {/* Step 5 — Create a room */}
+      {/* Step 4 — Create a room */}
       <div>
         <p className="mb-2 flex items-center gap-3">
           <span style={HEADING_GREEN} className="text-[28px] leading-none font-bold text-[#00FF88]">
-            05
+            04
           </span>
           <span style={FONT_HEADING} className="text-base font-semibold text-slate-200">
             Create a room

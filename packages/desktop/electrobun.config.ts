@@ -1,27 +1,37 @@
-import type { ElectrobunConfig } from 'electrobun'
+import type { ElectrobunConfig } from "electrobun";
 
 export default {
-  app: {
-    name: 'Meet-AI',
-    identifier: 'com.isnifer.meet-ai',
-    version: '0.0.1',
-  },
-  build: {
-    // Vite builds to dist/, we copy from there
-    copy: {
-      'dist/index.html': 'views/mainview/index.html',
-      'dist/assets': 'views/mainview/assets',
-    },
-    // Ignore Vite output in watch mode — HMR handles view rebuilds separately
-    watchIgnore: ['dist/**'],
-    mac: {
-      bundleCEF: false,
-    },
-    linux: {
-      bundleCEF: false,
-    },
-    win: {
-      bundleCEF: false,
-    },
-  },
-} satisfies ElectrobunConfig
+	app: {
+		name: "meet-ai",
+		identifier: "meet-ai.electrobun.dev",
+		version: "0.0.1",
+	},
+	build: {
+		useAsar: false,
+		bun: {
+			entrypoint: "src/bun/index.ts",
+		},
+		views: {
+			mainview: {
+				entrypoint: "src/mainview/index.ts",
+			},
+		},
+		copy: {
+			"src/mainview/index.html": "views/mainview/index.html",
+			"src/mainview/index.css": "views/mainview/index.css",
+			"src/assets": "assets",
+		},
+		mac: {
+			bundleCEF: true,
+			bundleWGPU: true,
+		},
+		linux: {
+			bundleCEF: true,
+			bundleWGPU: true,
+		},
+		win: {
+			bundleCEF: true,
+			bundleWGPU: true,
+		},
+	},
+} satisfies ElectrobunConfig;

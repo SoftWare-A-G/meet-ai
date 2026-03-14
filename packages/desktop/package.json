@@ -1,28 +1,22 @@
 {
-  "name": "@meet-ai/desktop",
-  "version": "1.0.0",
-  "description": "Electrobun app with React, Tailwind CSS, and Vite HMR",
-  "scripts": {
-    "hmr": "vite --port 5173",
-    "watch": "vite build && electrobun dev --watch",
-    "dev": "bun run --parallel hmr watch",
-    "build:stable": "vite build && electrobun build --env=stable"
-  },
-  "dependencies": {
-    "@base-ui/react": "catalog:",
-    "@elevenlabs/elevenlabs-js": "catalog:",
-    "electrobun": "1.14.4",
-    "react": "catalog:",
-    "react-dom": "catalog:"
-  },
-  "devDependencies": {
-    "@tailwindcss/vite": "catalog:",
-    "@types/bun": "catalog:",
-    "@types/react": "catalog:",
-    "@types/react-dom": "catalog:",
-    "@vitejs/plugin-react": "catalog:",
-    "tailwindcss": "catalog:",
-    "typescript": "catalog:",
-    "vite": "catalog:"
-  }
+	"name": "meet-ai-desktop",
+	"version": "2.1.0",
+	"type": "module",
+	"description": "Meet AI desktop game client",
+	"scripts": {
+		"start": "electrobun dev",
+		"dev": "electrobun dev --watch",
+		"build:canary": "electrobun build --env=canary",
+		"build:stable": "electrobun build --env=stable"
+	},
+	"dependencies": {
+		"electrobun": "1.15.1",
+		"hono": "catalog:",
+		"three": "0.183.2"
+	},
+	"devDependencies": {
+		"@types/bun": "catalog:",
+		"@types/three": "0.183.1",
+		"typescript": "catalog:"
+	}
 }

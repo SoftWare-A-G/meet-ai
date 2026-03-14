@@ -1,12 +1,42 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Meet AI</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/main.tsx"></script>
-  </body>
+	<head>
+		<meta charset="UTF-8" />
+		<title>Meet AI</title>
+		<link rel="stylesheet" href="views://mainview/index.css" />
+	</head>
+	<body>
+		<canvas id="game-canvas"></canvas>
+		<div id="ui-overlay"></div>
+		<div id="boot-error" style="display:none;padding:24px;color:#f87171;font-family:monospace;white-space:pre-wrap;background:#0e1015;position:fixed;inset:0;z-index:9999"></div>
+		<script>
+		// Catch module load failures + runtime errors before the game module executes
+		window.__bootError = function(msg, stack) {
+			var el = document.getElementById('boot-error');
+			if (!el) return;
+			var h = document.createElement('h2');
+			h.style.color = '#fbbf24';
+			h.style.marginBottom = '12px';
+			h.textContent = 'Game Boot Error';
+			var p = document.createElement('p');
+			p.textContent = String(msg);
+			var pre = document.createElement('pre');
+			pre.style.color = '#888';
+			pre.style.marginTop = '12px';
+			pre.style.fontSize = '12px';
+			pre.textContent = stack || '';
+			el.appendChild(h);
+			el.appendChild(p);
+			el.appendChild(pre);
+			el.style.display = 'block';
+		};
+		window.onerror = function(msg, src, line, col, err) {
+			window.__bootError(msg, err && err.stack ? err.stack : src + ':' + line + ':' + col);
+		};
+		window.addEventListener('unhandledrejection', function(e) {
+			window.__bootError('Unhandled rejection', e.reason && e.reason.stack ? e.reason.stack : String(e.reason));
+		});
+		</script>
+		<script type="module" src="views://mainview/index.js"></script>
+	</body>
 </html>

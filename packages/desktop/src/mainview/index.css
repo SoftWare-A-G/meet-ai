@@ -1,1 +1,444 @@
-@import 'tailwindcss';
+:root {
+	color-scheme: dark;
+	font-family: "Space Grotesk", "SF Pro Text", system-ui, sans-serif;
+}
+
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+body {
+	overflow: hidden;
+	background: #0e1015;
+	color: #e0e0e0;
+}
+
+/* ── Canvas ── */
+
+#game-canvas {
+	position: fixed;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	display: block;
+}
+
+/* ── UI Overlay (CSS2DRenderer output) ── */
+
+#ui-overlay {
+	position: fixed;
+	inset: 0;
+	pointer-events: none;
+	z-index: 10;
+}
+
+/* ── Zone Labels ── */
+
+.zone-label {
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	padding: 3px 10px;
+	border-radius: 4px;
+	background: rgba(0, 0, 0, 0.55);
+	color: var(--zone-color, #aaa);
+	border: 1px solid var(--zone-color, #555);
+	white-space: nowrap;
+	user-select: none;
+}
+
+/* ── Agent Name Labels ── */
+
+.agent-label {
+	font-size: 11px;
+	font-weight: 600;
+	padding: 2px 8px;
+	border-radius: 3px;
+	background: rgba(0, 0, 0, 0.6);
+	color: var(--agent-color, #fff);
+	white-space: nowrap;
+	user-select: none;
+	text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+/* ── Dialogue Bubbles ── */
+
+.dialogue-bubble {
+	max-width: 220px;
+	padding: 8px 12px;
+	border-radius: 10px;
+	background: rgba(30, 32, 40, 0.92);
+	color: #e8e8ec;
+	font-size: 12px;
+	line-height: 1.4;
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+	white-space: pre-wrap;
+	word-break: break-word;
+	user-select: none;
+	pointer-events: auto;
+	transition: opacity 0.6s ease-out;
+}
+
+.dialogue-bubble::after {
+	content: "";
+	position: absolute;
+	bottom: -6px;
+	left: 50%;
+	transform: translateX(-50%);
+	width: 0;
+	height: 0;
+	border-left: 6px solid transparent;
+	border-right: 6px solid transparent;
+	border-top: 6px solid rgba(30, 32, 40, 0.92);
+}
+
+.dialogue-bubble.fading {
+	opacity: 0;
+}
+
+/* ── Room Title ── */
+
+.room-title {
+	position: fixed;
+	top: 12px;
+	left: 50%;
+	transform: translateX(-50%);
+	font-size: 14px;
+	font-weight: 600;
+	padding: 6px 16px;
+	border-radius: 8px;
+	background: rgba(0, 0, 0, 0.5);
+	color: #ccc;
+	border: 1px solid rgba(255, 255, 255, 0.06);
+	z-index: 20;
+	user-select: none;
+}
+
+/* ── Agent Count Badge ── */
+
+.agent-count {
+	position: fixed;
+	bottom: 12px;
+	left: 12px;
+	font-size: 12px;
+	padding: 4px 10px;
+	border-radius: 6px;
+	background: rgba(0, 0, 0, 0.5);
+	color: #888;
+	border: 1px solid rgba(255, 255, 255, 0.06);
+	z-index: 20;
+	user-select: none;
+}
+
+/* ── Agent Stat Panel (click on agent) ── */
+
+.agent-panel {
+	position: fixed;
+	bottom: 12px;
+	right: 12px;
+	width: 220px;
+	padding: 12px 16px;
+	border-radius: 10px;
+	background: rgba(10, 12, 18, 0.92);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+	z-index: 30;
+	user-select: none;
+	font-size: 12px;
+}
+
+.agent-panel-name {
+	font-size: 14px;
+	font-weight: 700;
+	margin-bottom: 8px;
+	padding-bottom: 6px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.agent-panel-class {
+	font-size: 10px;
+	color: #888;
+	text-transform: uppercase;
+	letter-spacing: 0.1em;
+	margin-bottom: 8px;
+}
+
+.stat-bar-container {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 5px;
+}
+
+.stat-bar-label {
+	width: 50px;
+	font-size: 10px;
+	color: #777;
+	text-transform: uppercase;
+}
+
+.stat-bar-track {
+	flex: 1;
+	height: 6px;
+	background: rgba(255, 255, 255, 0.06);
+	border-radius: 3px;
+	overflow: hidden;
+}
+
+.stat-bar-fill {
+	height: 100%;
+	border-radius: 3px;
+	transition: width 0.3s ease;
+}
+
+.stat-bar-value {
+	width: 28px;
+	font-size: 10px;
+	color: #999;
+	text-align: right;
+}
+
+.agent-panel-stats {
+	display: flex;
+	gap: 12px;
+	margin: 8px 0;
+	padding: 6px 0;
+	border-top: 1px solid rgba(255, 255, 255, 0.06);
+	border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.agent-panel-stat {
+	text-align: center;
+}
+
+.agent-panel-stat-value {
+	font-size: 16px;
+	font-weight: 700;
+	color: #ccc;
+}
+
+.agent-panel-stat-label {
+	font-size: 9px;
+	color: #666;
+	text-transform: uppercase;
+}
+
+.agent-panel-actions {
+	display: flex;
+	gap: 6px;
+	margin-top: 8px;
+}
+
+.agent-panel-btn {
+	flex: 1;
+	padding: 6px 4px;
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	border-radius: 6px;
+	background: rgba(255, 255, 255, 0.04);
+	color: #aaa;
+	font-size: 10px;
+	font-weight: 600;
+	cursor: pointer;
+	text-align: center;
+	transition: background 0.15s, color 0.15s;
+}
+
+.agent-panel-btn:hover {
+	background: rgba(255, 255, 255, 0.1);
+	color: #fff;
+}
+
+.agent-panel-btn.boost { border-color: rgba(255, 200, 0, 0.3); color: #ffd700; }
+.agent-panel-btn.boost:hover { background: rgba(255, 200, 0, 0.15); }
+.agent-panel-btn.recover { border-color: rgba(34, 197, 94, 0.3); color: #22c55e; }
+.agent-panel-btn.recover:hover { background: rgba(34, 197, 94, 0.15); }
+.agent-panel-btn.reroute { border-color: rgba(59, 130, 246, 0.3); color: #3b82f6; }
+.agent-panel-btn.reroute:hover { background: rgba(59, 130, 246, 0.15); }
+
+/* ── XP Popup ── */
+
+.xp-popup {
+	font-size: 14px;
+	font-weight: 700;
+	color: #ffd700;
+	text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8), 0 0 8px rgba(255, 215, 0, 0.4);
+	white-space: nowrap;
+	user-select: none;
+	pointer-events: none;
+	transition: opacity 0.3s ease-out;
+}
+
+/* ── HUD Panel ── */
+
+.hud-panel {
+	position: fixed;
+	top: 12px;
+	right: 12px;
+	min-width: 150px;
+	padding: 10px 14px;
+	border-radius: 8px;
+	background: rgba(0, 0, 0, 0.6);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	z-index: 20;
+	user-select: none;
+}
+
+.hud-title {
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: #888;
+	margin-bottom: 8px;
+	padding-bottom: 4px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.hud-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 12px;
+	padding: 2px 0;
+}
+
+.hud-label {
+	font-size: 11px;
+	color: #777;
+}
+
+.hud-value {
+	font-size: 12px;
+	font-weight: 600;
+	color: #ccc;
+}
+
+/* ── Agent Panel Specialty ── */
+
+.agent-panel-specialty {
+	font-size: 11px;
+	color: #aaa;
+	margin-bottom: 8px;
+	text-transform: capitalize;
+}
+
+/* ── Contract Scrolls ── */
+
+.contract-scroll {
+	font-size: 24px;
+	filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5));
+	animation: scroll-bob 2s ease-in-out infinite;
+	user-select: none;
+	pointer-events: none;
+}
+
+.contract-scroll.difficulty-hard {
+	filter: drop-shadow(0 2px 12px rgba(255, 170, 0, 0.5));
+}
+
+.contract-scroll.difficulty-easy {
+	opacity: 0.7;
+}
+
+@keyframes scroll-bob {
+	0%, 100% { transform: translateY(0); }
+	50% { transform: translateY(-4px); }
+}
+
+/* ── Event Log ── */
+
+.event-log {
+	position: fixed;
+	bottom: 40px;
+	left: 12px;
+	width: 320px;
+	max-height: 260px;
+	padding: 8px 10px;
+	border-radius: 8px;
+	background: rgba(0, 0, 0, 0.7);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	z-index: 20;
+	user-select: none;
+	transition: opacity 0.3s, transform 0.3s;
+}
+
+.event-log.collapsed {
+	opacity: 0;
+	transform: translateY(10px);
+	pointer-events: none;
+}
+
+.event-log-title {
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: #888;
+	margin-bottom: 6px;
+	padding-bottom: 4px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.event-log-entries {
+	max-height: 210px;
+	overflow-y: auto;
+	scrollbar-width: thin;
+	scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+.event-entry {
+	font-size: 11px;
+	line-height: 1.5;
+	font-family: "SF Mono", "Fira Code", monospace;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* ── Error Overlay ── */
+
+.error-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 9999;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 32px;
+	background: rgba(14, 16, 21, 0.97);
+	color: #e0e0e0;
+}
+
+.error-overlay-title {
+	font-size: 20px;
+	font-weight: 700;
+	color: #ef4444;
+	margin-bottom: 16px;
+}
+
+.error-overlay-stack {
+	max-width: 720px;
+	max-height: 50vh;
+	overflow: auto;
+	padding: 16px 20px;
+	border-radius: 8px;
+	background: rgba(255, 255, 255, 0.04);
+	border: 1px solid rgba(239, 68, 68, 0.2);
+	font-family: "SF Mono", "Fira Code", monospace;
+	font-size: 12px;
+	line-height: 1.6;
+	color: #ccc;
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.error-overlay-hint {
+	margin-top: 16px;
+	font-size: 12px;
+	color: #666;
+}
