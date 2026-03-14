@@ -1,39 +1,17 @@
 import { BrowserWindow, defineElectrobunRPC } from 'electrobun/bun'
 import { loadCredentials } from './auth'
+import { showErrorScreen } from './error-screen'
 import { MeetAiClient } from './meetai-client'
 import { selectRoom } from './room-selector'
-import { showErrorScreen } from './error-screen'
-import type { MeetAiEvent } from './meetai-client'
-
-// ─── RPC Schema ───
-// bun.messages = messages the bun process sends TO the webview
-
-export type MeetAiRPCSchema = {
-	bun: {
-		requests: {}
-		messages: {
-			'meetai:team_info': Extract<MeetAiEvent, { type: 'team_info' }>
-			'meetai:message': Extract<MeetAiEvent, { type: 'message' }>
-			'meetai:tasks_info': Extract<MeetAiEvent, { type: 'tasks_info' }>
-			'meetai:log': Extract<MeetAiEvent, { type: 'log' }>
-			'meetai:commands_info': Extract<MeetAiEvent, { type: 'commands_info' }>
-		}
-	}
-	webview: {
-		requests: {}
-		messages: {}
-	}
-}
+import type { MeetAiRPCSchema } from '../shared/rpc-schema'
 
 // ─── Auth ───
 
 const credentials = loadCredentials()
 if (!credentials) {
-	showErrorScreen(
-		'No credentials found. Please configure meet-ai first.',
-	)
-	setInterval(() => {}, 60000)
-	throw new Error('No credentials')
+  showErrorScreen('No credentials found. Please configure meet-ai first.')
+  setInterval(() => {}, 60000)
+  throw new Error('No credentials')
 }
 
 // ─── Room Selection ───
@@ -42,28 +20,26 @@ const client = new MeetAiClient(credentials)
 
 let selectedRoom: Awaited<ReturnType<typeof selectRoom>> = null
 try {
-	selectedRoom = await selectRoom(client)
+  selectedRoom = await selectRoom(client)
 } catch (err) {
-	showErrorScreen(
-		`Failed to connect: ${err instanceof Error ? err.message : String(err)}`,
-	)
-	setInterval(() => {}, 60000)
-	throw err
+  showErrorScreen(`Failed to connect: ${err instanceof Error ? err.message : String(err)}`)
+  setInterval(() => {}, 60000)
+  throw err
 }
 
 if (!selectedRoom) {
-	showErrorScreen('No rooms found. Create a room with meet-ai first.')
-	setInterval(() => {}, 60000)
-	throw new Error('No rooms')
+  showErrorScreen('No rooms found. Create a room with meet-ai first.')
+  setInterval(() => {}, 60000)
+  throw new Error('No rooms')
 }
 
 // ─── RPC Bridge ───
 
 const rpc = defineElectrobunRPC<MeetAiRPCSchema, 'bun'>('bun', {
-	handlers: {
-		requests: {},
-		messages: {},
-	},
+  handlers: {
+    requests: {},
+    messages: {},
+  },
 })
 
 // Electrobun's RPC Proxy accepts any message name at runtime but the
@@ -71,17 +47,17 @@ const rpc = defineElectrobunRPC<MeetAiRPCSchema, 'bun'>('bun', {
 // message keys properly. Cast to a typed send function.
 type BunMessages = MeetAiRPCSchema['bun']['messages']
 const send = rpc.send as unknown as <K extends keyof BunMessages>(
-	name: K,
-	payload: BunMessages[K],
+  name: K,
+  payload: BunMessages[K]
 ) => void
 
 // ─── Browser Window ───
 
 const win = new BrowserWindow({
-	title: `Meet AI — ${selectedRoom.name}`,
-	url: 'views://mainview/index.html',
-	frame: { width: 1280, height: 800, x: 100, y: 100 },
-	rpc,
+  title: `Meet AI — ${selectedRoom.name}`,
+  url: 'views://mainview/index.html',
+  frame: { width: 1280, height: 800, x: 100, y: 100 },
+  rpc,
 })
 
 // Belt-and-suspenders: also call loadURL explicitly in case the constructor
@@ -90,29 +66,29 @@ win.webview.loadURL('views://mainview/index.html')
 
 // ─── Forward WebSocket Events to Webview ───
 
-client.on('team_info', (data) => {
-	console.log(`[game] team_info: ${data.members.length} members in "${data.team_name}"`)
-	send('meetai:team_info', data)
+client.on('team_info', data => {
+  console.log(`[game] team_info: ${data.members.length} members in "${data.team_name}"`)
+  send('meetai:team_info', data)
 })
 
-client.on('message', (data) => {
-	console.log(`[game] message: ${data.sender}: ${data.content.slice(0, 60)}`)
-	send('meetai:message', data)
+client.on('message', data => {
+  console.log(`[game] message: ${data.sender}: ${data.content.slice(0, 60)}`)
+  send('meetai:message', data)
 })
 
-client.on('tasks_info', (data) => {
-	console.log(`[game] tasks_info: ${data.tasks.length} tasks`)
-	send('meetai:tasks_info', data)
+client.on('tasks_info', data => {
+  console.log(`[game] tasks_info: ${data.tasks.length} tasks`)
+  send('meetai:tasks_info', data)
 })
 
-client.on('log', (data) => {
-	console.log(`[game] log: ${data.sender}: ${data.content.slice(0, 60)}`)
-	send('meetai:log', data)
+client.on('log', data => {
+  console.log(`[game] log: ${data.sender}: ${data.content.slice(0, 60)}`)
+  send('meetai:log', data)
 })
 
-client.on('commands_info', (data) => {
-	console.log(`[game] commands_info: ${data.commands.length} commands`)
-	send('meetai:commands_info', data)
+client.on('commands_info', data => {
+  console.log(`[game] commands_info: ${data.commands.length} commands`)
+  send('meetai:commands_info', data)
 })
 
 // Wait for the webview to finish loading before connecting to meet-ai.
@@ -120,13 +96,13 @@ client.on('commands_info', (data) => {
 // executes — the preload's default receiveMessageFromBun handler just logs and
 // discards the message, so the webview never receives the initial state.
 win.webview.on('dom-ready', () => {
-	console.log('[rpc] Webview dom-ready, connecting to meet-ai…')
-	client.connect(selectedRoom.id)
-	console.log(`[meet-ai] Connected to room: ${selectedRoom.name}`)
+  console.log('[rpc] Webview dom-ready, connecting to meet-ai…')
+  client.connect(selectedRoom.id)
+  console.log(`[meet-ai] Connected to room: ${selectedRoom.name}`)
 })
 
 // ─── Cleanup ───
 
 win.on('close', () => {
-	client.disconnect()
+  client.disconnect()
 })

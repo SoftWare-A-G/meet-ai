@@ -7,7 +7,8 @@
 		"start": "electrobun dev",
 		"dev": "electrobun dev --watch",
 		"build:canary": "electrobun build --env=canary",
-		"build:stable": "electrobun build --env=stable"
+		"build:stable": "electrobun build --env=stable",
+		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"electrobun": "1.15.1",
