@@ -286,26 +286,22 @@ export default function MessageList({ messages, attachmentCounts, planDecisions,
             )
           }
           if (item.kind === 'diff-log') {
-            const hunks: string[] = []
-            let filename = ''
+            const blocks: { filename: string; hunk: string; timestamp: string }[] = []
             for (const log of item.logs) {
               const match = log.content.match(/^\[diff:(.+?)\]\n([\s\S]*)$/)
               if (match) {
-                filename = match[1]
-                hunks.push(match[2])
+                blocks.push({ filename: match[1], hunk: match[2], timestamp: log.created_at })
               }
             }
-            if (hunks.length > 0) {
-              const lastLog = item.logs[item.logs.length - 1]
-              return (
+            if (blocks.length > 0) {
+              return blocks.map((block, j) => (
                 <DiffBlock
-                  key={`diff-${item.logs[0].created_at}-${i}`}
-                  filename={filename}
-                  hunks={hunks}
-                  timestamp={lastLog.created_at}
-                  changeCount={hunks.length > 1 ? hunks.length : undefined}
+                  key={`diff-${block.timestamp}-${i}-${j}`}
+                  filename={block.filename}
+                  hunks={[block.hunk]}
+                  timestamp={block.timestamp}
                 />
-              )
+              ))
             }
             return null
           }

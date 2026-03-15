@@ -47,35 +47,35 @@ function truncate(value: string, max: number): string {
 
 function formatToolSummary(toolName: string, args: unknown): string {
   const a = args as Record<string, unknown> | null
-  if (!a || typeof a !== 'object') return `Pi: ${toolName}`
+  if (!a || typeof a !== 'object') return toolName
 
   switch (toolName) {
     case 'read': {
-      return `Pi: read ${a.path ?? ''}`
+      return `Read ${a.path ?? ''}`
     }
     case 'bash': {
       const cmd = typeof a.command === 'string' ? truncate(a.command, 120) : ''
-      return `Pi: bash ${cmd}`
+      return `Bash ${cmd}`
     }
     case 'edit': {
-      return `Pi: edit ${a.path ?? ''}`
+      return `Edit ${a.path ?? ''}`
     }
     case 'write': {
-      return `Pi: write ${a.path ?? ''}`
+      return `Write ${a.path ?? ''}`
     }
     case 'find': {
-      return `Pi: find ${a.path ?? '.'} ${a.pattern ?? ''}`
+      return `Find ${a.path ?? '.'} ${a.pattern ?? ''}`
     }
     case 'grep': {
-      return `Pi: grep ${a.pattern ?? ''} ${a.path ?? ''}`
+      return `Grep ${a.pattern ?? ''} ${a.path ?? ''}`
     }
     case 'ls': {
-      return `Pi: ls ${a.path ?? '.'}`
+      return `Ls ${a.path ?? '.'}`
     }
     default: {
       // For task/canvas tools, show the tool name + first string arg
       const firstArg = Object.values(a).find(v => typeof v === 'string')
-      return firstArg ? `Pi: ${toolName} ${truncate(String(firstArg), 80)}` : `Pi: ${toolName}`
+      return firstArg ? `${toolName} ${truncate(String(firstArg), 80)}` : toolName
     }
   }
 }

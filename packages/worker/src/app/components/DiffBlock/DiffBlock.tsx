@@ -57,12 +57,16 @@ export default function DiffBlock({ filename, hunks, timestamp, changeCount }: D
       newFile: { fileName: filename, fileLang: lang },
       hunks,
     })
+
     file.initTheme('dark')
     file.init()
     file.initSyntax()
     file.buildUnifiedDiffLines()
+
     return file
-  }, [filename, hunks])
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <Collapsible.Root
