@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { uploadFile } from '../lib/api'
+import { uploadFile } from '../lib/fetchers'
 import { queryKeys } from '../lib/query-keys'
 
 export function useUploadFile() {

@@ -1,5 +1,6 @@
 import { getApiClient } from './api-client'
 import type { ApiClient } from './api-client'
+import { getApiKey } from './api'
 import type { InferRequestType, InferResponseType } from 'hono/client'
 
 export class ApiError extends Error {
@@ -84,6 +85,34 @@ export async function deleteTask(input: DeleteTaskInput) {
 
 export type AttachmentCountsResponse = InferResponseType<ApiClient['api']['rooms'][':id']['attachment-counts']['$get'], 200>
 export type TeamInfoResponse = InferResponseType<ApiClient['api']['rooms'][':id']['team-info']['$get'], 200>
+
+// Upload — hc() can't handle FormData (route uses raw formData(), no zValidator),
+// so we use a thin fetch wrapper with the response type inferred from the route.
+export type UploadFileResponse = InferResponseType<ApiClient['api']['rooms'][':id']['upload']['$post'], 201>
+
+export async function uploadFile(roomId: string, file: File): Promise<UploadFileResponse> {
+  const key = getApiKey()
+  const headers: Record<string, string> = {}
+  if (key) headers['Authorization'] = `Bearer ${key}`
+  const formData = new FormData()
+  formData.append('file', file)
+  const res = await fetch(`/api/rooms/${roomId}/upload`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  })
+  if (!res.ok) throw new ApiError(res.status, await res.text())
+  return res.json()
+}
+
+// Link attachment to message
+export type LinkAttachmentInput = InferRequestType<ApiClient['api']['attachments'][':id']['$patch']>
+
+export async function linkAttachment(input: LinkAttachmentInput) {
+  const res = await getApiClient().api.attachments[':id'].$patch(input)
+  if (!res.ok) throw new ApiError(res.status, await res.text())
+  return res.json()
+}
 
 // Command types inferred from POST /api/rooms/:id/commands
 type CommandsPostInput = InferRequestType<ApiClient['api']['rooms'][':id']['commands']['$post']>
