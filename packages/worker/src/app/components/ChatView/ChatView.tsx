@@ -6,8 +6,8 @@ import { useOfflineQueue } from '../../hooks/useOfflineQueue'
 import { useRoomTimeline, useTimelineUpdater } from '../../hooks/useRoomTimeline'
 import { useRoomWebSocket } from '../../hooks/useRoomWebSocket'
 import { useSendMessage } from '../../hooks/useSendMessage'
+import { useTtsStatus } from '../../hooks/useTtsQuery'
 import { useUploadFile } from '../../hooks/useUploadFile'
-import * as api from '../../lib/api'
 import { requestPermission, notifyIfHidden } from '../../lib/notifications'
 import ActivityBar from '../ActivityBar'
 import ActivityLogDrawer from '../ActivityLogDrawer'
@@ -45,15 +45,10 @@ export default function ChatView({
   const [activityDrawerOpen, setActivityDrawerOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
   const [forceScrollCounter, setForceScrollCounter] = useState(0)
-  const [voiceAvailable, setVoiceAvailable] = useState(false)
+  const { data: ttsStatus } = useTtsStatus()
   const [terminalData, setTerminalData] = useState<string | null>(null)
   const { getForRoom } = useOfflineQueue()
   const { triggerForMessage } = useHaptics()
-
-  // Check TTS availability once on mount
-  useEffect(() => {
-    api.checkTtsAvailable().then(setVoiceAvailable)
-  }, [])
 
   // Request notification permission once on mount
   useEffect(() => {
@@ -186,7 +181,7 @@ export default function ChatView({
         onRetry={handleRetry}
         onSend={handleSendWithScroll}
         connected={connected}
-        voiceAvailable={voiceAvailable}
+        voiceAvailable={ttsStatus?.available}
       />
       <ActivityBar onClick={() => setActivityDrawerOpen(true)} />
       <ActivityLogDrawer

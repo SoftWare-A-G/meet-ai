@@ -164,26 +164,6 @@ export async function loadTeamInfo(roomId: string): Promise<TeamInfo | null> {
   return await res.json()
 }
 
-export async function checkTtsAvailable(): Promise<boolean> {
-  try {
-    const res = await fetch('/api/tts/status', { headers: authHeaders() })
-    if (!res.ok) return false
-    const data: { available: boolean } = await res.json()
-    return data.available
-  } catch {
-    return false
-  }
-}
-
-export async function textToSpeech(text: string): Promise<ArrayBuffer> {
-  const res = await fetch('/api/tts', {
-    method: 'POST',
-    headers: authHeaders(),
-    body: JSON.stringify({ text }),
-  })
-  if (!res.ok) throw new Error(`TTS failed: HTTP ${res.status}`)
-  return res.arrayBuffer()
-}
 
 export async function answerQuestionReview(
   roomId: string,

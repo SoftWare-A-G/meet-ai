@@ -1,6 +1,7 @@
-import { getApiClient } from './api-client'
+import { getApiClient, resetApiClient } from './api-client'
 import type { ApiClient } from './api-client'
-import { getApiKey } from './api'
+import { getApiKey, clearApiKey } from './api'
+import { getQueryClient } from './query-client'
 import type { InferRequestType, InferResponseType } from 'hono/client'
 
 export class ApiError extends Error {
@@ -208,6 +209,37 @@ export async function expirePermission(input: ExpirePermissionInput) {
   const res = await getApiClient().api.rooms[':id']['permission-reviews'][':reviewId'].expire.$post(input)
   if (!res.ok) throw new ApiError(res.status, await res.text())
   return res.json()
+}
+
+// TTS status — uses hc client (returns JSON)
+export type TtsStatusResponse = InferResponseType<ApiClient['api']['tts']['status']['$get'], 200>
+
+export async function fetchTtsStatus() {
+  const res = await getApiClient().api.tts.status.$get()
+  if (!res.ok) throw new ApiError(res.status, await res.text())
+  return res.json()
+}
+
+// TTS generation — raw fetch (returns ArrayBuffer, not JSON).
+// hc() can't handle non-JSON responses, so we use a thin fetch wrapper.
+export async function textToSpeech(text: string) {
+  const key = getApiKey()
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (key) headers['Authorization'] = `Bearer ${key}`
+  const res = await fetch('/api/tts', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ text }),
+  })
+  if (res.status === 401) {
+    clearApiKey()
+    resetApiClient()
+    getQueryClient().clear()
+    window.location.href = '/key'
+    throw new ApiError(401, 'Unauthorized')
+  }
+  if (!res.ok) throw new ApiError(res.status, await res.text())
+  return res.arrayBuffer()
 }
 
 // Auth fetchers

@@ -3,7 +3,7 @@ import clsx from 'clsx'
 import { getRouteApi } from '@tanstack/react-router'
 import { hashColor, ensureSenderContrast } from '../../lib/colors'
 import { formatTime } from '../../lib/dates'
-import { textToSpeech } from '../../lib/api'
+import { useTextToSpeech } from '../../hooks/useTtsQuery'
 import { IconCopy, IconCheck, IconShare, IconVolume, IconPlayerStop, IconLoader } from '../../icons'
 import MarkdownContent from '../MarkdownContent'
 import SlashCommandBadge from '../SlashCommandBadge'
@@ -57,6 +57,7 @@ export default function Message({ sender, content, color, timestamp, tempId, sta
       ? ensureSenderContrast(color)
       : hashColor(sender)
   const slashMatch = useMemo(() => parseSlashCommand(content, commandsInfo), [content, commandsInfo])
+  const ttsMutation = useTextToSpeech()
   const [copied, setCopied] = useState(false)
   const [ttsState, setTtsState] = useState<TtsState>('idle')
 
@@ -88,7 +89,7 @@ export default function Message({ sender, content, color, timestamp, tempId, sta
 
     setTtsState('loading')
     try {
-      const audioData = await textToSpeech(content)
+      const audioData = await ttsMutation.mutateAsync(content)
       const blob = new Blob([audioData], { type: 'audio/mpeg' })
       const url = URL.createObjectURL(blob)
       const audio = new Audio(url)
@@ -108,7 +109,7 @@ export default function Message({ sender, content, color, timestamp, tempId, sta
     } catch {
       setTtsState('idle')
     }
-  }, [content, ttsState, trigger])
+  }, [content, ttsState, trigger, ttsMutation])
 
   // Cleanup audio on unmount
   useEffect(() => () => {
