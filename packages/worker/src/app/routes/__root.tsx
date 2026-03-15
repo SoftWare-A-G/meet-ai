@@ -1,10 +1,12 @@
 import { Toast } from '@base-ui/react/toast'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { createRootRoute, HeadContent, Outlet, Scripts } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { Toaster } from 'sonner'
 import { ThemeProvider } from '../components/ThemeProvider'
 import { ToastList } from '../components/Toast'
 import { TooltipProvider } from '../components/ui/tooltip'
+import { getQueryClient } from '../lib/query-client'
 import appCss from '../main.css?url'
 
 export const Route = createRootRoute({
@@ -42,27 +44,29 @@ function RootLayout() {
         <HeadContent />
       </head>
       <body>
-        <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-          <TooltipProvider>
-            <Toast.Provider timeout={2100}>
-              <div className="root">
-                <Outlet />
-              </div>
-              <ToastList />
-            </Toast.Provider>
-          </TooltipProvider>
-          <Toaster
-            theme="dark"
-            position="top-center"
-            toastOptions={{
-              style: {
-                background: '#1a1a2e',
-                border: '1px solid #3b3768',
-                color: '#e5e5e5',
-              },
-            }}
-          />
-        </ThemeProvider>
+        <QueryClientProvider client={getQueryClient()}>
+          <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+            <TooltipProvider>
+              <Toast.Provider timeout={2100}>
+                <div className="root">
+                  <Outlet />
+                </div>
+                <ToastList />
+              </Toast.Provider>
+            </TooltipProvider>
+            <Toaster
+              theme="dark"
+              position="top-center"
+              toastOptions={{
+                style: {
+                  background: '#1a1a2e',
+                  border: '1px solid #3b3768',
+                  color: '#e5e5e5',
+                },
+              }}
+            />
+          </ThemeProvider>
+        </QueryClientProvider>
         <Scripts />
       </body>
     </html>
