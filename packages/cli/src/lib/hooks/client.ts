@@ -76,12 +76,13 @@ export async function sendLogEntry(
   roomId: string,
   summary: string,
   messageId?: string,
+  sender?: string,
 ): Promise<void> {
   try {
     await client.api.rooms[':id'].logs.$post({
       param: { id: roomId },
       json: {
-        sender: HOOK_SENDER,
+        sender: sender ?? HOOK_SENDER,
         content: summary,
         color: HOOK_COLOR,
         ...(messageId ? { message_id: messageId } : {}),

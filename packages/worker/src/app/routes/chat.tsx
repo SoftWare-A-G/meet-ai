@@ -19,6 +19,7 @@ import { ChatContext } from '../lib/chat-context'
 import { STORAGE_KEYS, DEFAULT_SCHEMA } from '../lib/constants'
 import { getOrCreateHandle } from '../lib/handle'
 import { applySchema } from '../lib/theme'
+import type { AgentActivity } from '../lib/activity'
 import type { Project, Room, TeamInfo, TasksInfo, CommandInfo } from '../lib/types'
 
 export const Route = createFileRoute('/chat')({
@@ -114,6 +115,7 @@ function ChatLayout({
   const [commandsInfo, setCommandsInfo] = useState<CommandInfo[] | null>(null)
   const [teamSidebarOpen, setTeamSidebarOpen] = useState(false)
   const [showTaskBoard, setShowTaskBoard] = useState(false)
+  const [agentActivity, setAgentActivity] = useState<Map<string, AgentActivity>>(() => new Map())
 
   const isStandalone =
     (window.navigator as any).standalone === true ||
@@ -205,6 +207,8 @@ function ChatLayout({
       setTasksInfo,
       commandsInfo,
       setCommandsInfo,
+      agentActivity,
+      setAgentActivity,
       teamSidebarOpen,
       setTeamSidebarOpen,
       insertMention: (name: string) => {
@@ -228,6 +232,7 @@ function ChatLayout({
       teamInfo,
       tasksInfo,
       commandsInfo,
+      agentActivity,
       teamSidebarOpen,
       onNameChange,
       onSchemaChange,

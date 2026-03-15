@@ -14,7 +14,7 @@ export const Route = createFileRoute('/chat/$id')({
 function ChatRoom() {
   const { id } = Route.useParams()
   const navigate = useNavigate()
-  const { rooms, projects, removeRoom, updateRoom, apiKey, userName, isStandalone, teamInfo, setTeamSidebarOpen, setTeamInfo, setTasksInfo, setCommandsInfo, showQR } = useChatContext()
+  const { rooms, projects, removeRoom, updateRoom, apiKey, userName, isStandalone, teamInfo, setTeamSidebarOpen, setTeamInfo, setTasksInfo, setCommandsInfo, setAgentActivity, showQR } = useChatContext()
   const [terminalOpen, setTerminalOpen] = useState(false)
   const [canvasOpen, setCanvasOpen] = useState(false)
 
@@ -86,6 +86,7 @@ function ChatRoom() {
             onTeamInfo={setTeamInfo}
             onTasksInfo={setTasksInfo}
             onCommandsInfo={setCommandsInfo}
+            onAgentActivity={setAgentActivity}
             terminalOpen={terminalOpen}
             onTerminalClose={() => setTerminalOpen(false)}
           />

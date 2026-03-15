@@ -1,15 +1,19 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
+import ActivityBar from '../ActivityBar'
 import MessageList from '../MessageList'
 import ChatInput from '../ChatInput'
 import TerminalViewerModal from '../TerminalViewerModal'
 import { useRoomWebSocket } from '../../hooks/useRoomWebSocket'
+import { useChatContext } from '../../lib/chat-context'
 import { useOfflineQueue } from '../../hooks/useOfflineQueue'
 import * as api from '../../lib/api'
 import { requestPermission, notifyIfHidden } from '../../lib/notifications'
 import { useHaptics } from '../../hooks/useHaptics'
 import { parseUtcDate } from '../../lib/dates'
+import type { AgentActivity } from '../../lib/activity'
 import type { Message as MessageType, Room, TeamInfo, TeamMember, TasksInfo, CommandInfo } from '../../lib/types'
+import { useAgentActivity } from '../../hooks/useAgentActivity'
 
 type DisplayMessage = MessageType & {
   tempId?: string
@@ -23,11 +27,12 @@ type ChatViewProps = {
   onTeamInfo?: (info: TeamInfo | null) => void
   onTasksInfo?: (info: TasksInfo | null) => void
   onCommandsInfo?: (commands: CommandInfo[] | null) => void
+  onAgentActivity?: (activity: Map<string, AgentActivity>) => void
   terminalOpen?: boolean
   onTerminalClose?: () => void
 }
 
-export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksInfo, onCommandsInfo, terminalOpen = false, onTerminalClose }: ChatViewProps) {
+export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksInfo, onCommandsInfo, onAgentActivity, terminalOpen = false, onTerminalClose }: ChatViewProps) {
   const [messages, setMessages] = useState<DisplayMessage[]>([])
   const [attachmentCounts, setAttachmentCounts] = useState<Record<string, number>>({})
   const [unreadCount, setUnreadCount] = useState(0)
@@ -272,6 +277,14 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
   // eslint-disable-next-line react-hooks/exhaustive-deps -- sendTerminal* are stable functions
   }, [terminalOpen, connected])
 
+  // Derive per-agent activity from log messages
+  const { teamInfo: ctxTeamInfo } = useChatContext()
+  const agentActivity = useAgentActivity(messages, ctxTeamInfo)
+
+  useEffect(() => {
+    onAgentActivity?.(agentActivity)
+  }, [agentActivity, onAgentActivity])
+
   // Flush queue on coming online
   useEffect(() => {
     const handler = async () => {
@@ -444,6 +457,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
         connected={connected}
         voiceAvailable={voiceAvailable}
       />
+      <ActivityBar />
       <ChatInput
         roomName={room.name}
         onSend={handleSend}

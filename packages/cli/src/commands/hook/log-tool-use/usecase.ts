@@ -66,7 +66,7 @@ export async function processHookInput(
   // Find room
   const room = await findRoom(sessionId, teamsDir, transcriptPath)
   if (!room) return 'skip'
-  const { roomId, teamName } = room
+  const { roomId, teamName, agentName } = room
 
   // Need credentials from home config
   const creds = getHomeCredentials()
@@ -130,7 +130,7 @@ export async function processHookInput(
       if (parentId) saveParentId(sessionId, parentId)
     }
 
-    await sendLogEntry(client, roomId, diffContent, parentId ?? undefined)
+    await sendLogEntry(client, roomId, diffContent, parentId ?? undefined, agentName)
     return 'sent'
   }
 
@@ -145,7 +145,7 @@ export async function processHookInput(
       if (parentId) saveParentId(sessionId, parentId)
     }
 
-    await sendLogEntry(client, roomId, diffContent, parentId ?? undefined)
+    await sendLogEntry(client, roomId, diffContent, parentId ?? undefined, agentName)
     return 'sent'
   }
 
@@ -159,7 +159,7 @@ export async function processHookInput(
   }
 
   // Send log entry
-  await sendLogEntry(client, roomId, summary, parentId ?? undefined)
+  await sendLogEntry(client, roomId, summary, parentId ?? undefined, agentName)
 
   return 'sent'
 }

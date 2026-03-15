@@ -62,5 +62,28 @@ describe('client', () => {
       const client = createHookClient(MOCK_URL, MOCK_KEY)
       await expect(sendLogEntry(client, 'room-1', 'test', 'msg-1')).resolves.toBeUndefined()
     })
+
+    it('uses provided sender instead of default "hook"', async () => {
+      mockFetch.mockResolvedValueOnce(new Response('{}', { status: 201, headers: { 'Content-Type': 'application/json' } }))
+
+      const client = createHookClient(MOCK_URL, MOCK_KEY)
+      await sendLogEntry(client, 'room-1', 'Edit: foo.ts', 'msg-1', 'my-agent')
+
+      expect(mockFetch).toHaveBeenCalledTimes(1)
+      const [, init] = mockFetch.mock.calls[0]
+      const body = JSON.parse(init?.body as string)
+      expect(body.sender).toBe('my-agent')
+    })
+
+    it('defaults sender to "hook" when no sender provided', async () => {
+      mockFetch.mockResolvedValueOnce(new Response('{}', { status: 201, headers: { 'Content-Type': 'application/json' } }))
+
+      const client = createHookClient(MOCK_URL, MOCK_KEY)
+      await sendLogEntry(client, 'room-1', 'Read: bar.ts', 'msg-1')
+
+      const [, init] = mockFetch.mock.calls[0]
+      const body = JSON.parse(init?.body as string)
+      expect(body.sender).toBe('hook')
+    })
   })
 })

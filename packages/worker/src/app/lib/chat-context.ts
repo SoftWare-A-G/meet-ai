@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react'
 import type { Project, Room, TeamInfo, TasksInfo, CommandInfo } from './types'
+import type { AgentActivity } from './activity'
 
 export type ChatContextValue = {
   rooms: Room[]
@@ -15,6 +16,8 @@ export type ChatContextValue = {
   setTasksInfo: (info: TasksInfo | null) => void
   commandsInfo: CommandInfo[] | null
   setCommandsInfo: (commands: CommandInfo[] | null) => void
+  agentActivity: Map<string, AgentActivity>
+  setAgentActivity: (activity: Map<string, AgentActivity>) => void
   teamSidebarOpen: boolean
   setTeamSidebarOpen: (open: boolean | ((prev: boolean) => boolean)) => void
   insertMention: (name: string) => void

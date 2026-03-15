@@ -1,7 +1,12 @@
+import { useState, useEffect } from 'react'
 import clsx from 'clsx'
 import type { TeamInfo, TeamMember, TasksInfo, TaskItem } from '../../lib/types'
 import { ensureSenderContrast } from '../../lib/colors'
+import { formatRelativeTime } from '../../lib/dates'
+import { useChatContext } from '../../lib/chat-context'
 import { useHaptics } from '../../hooks/useHaptics'
+
+const TIMESTAMP_INTERVAL = 15_000
 
 type TeamSidebarProps = {
   teamInfo: TeamInfo | null
@@ -12,14 +17,34 @@ type TeamSidebarProps = {
 }
 
 function MemberRow({ member, inactive }: { member: TeamMember; inactive?: boolean }) {
+  const { agentActivity } = useChatContext()
+  const activity = !inactive ? agentActivity.get(member.name) : undefined
+  const hasActivity = activity && activity.latestAction
+
+  const dotColor = inactive
+    ? '#555'
+    : activity?.state === 'working'
+      ? '#22c55e'
+      : ensureSenderContrast(member.color)
+
   return (
-    <div className={clsx('flex items-center gap-2 px-4 py-[5px] text-[13px]', inactive && 'opacity-40')}>
-      <span
-        className="w-2 h-2 rounded-full shrink-0"
-        style={{ background: inactive ? '#555' : ensureSenderContrast(member.color) }}
-      />
-      <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{member.name}</span>
-      <span className="text-[11px] opacity-40 whitespace-nowrap">{member.model}</span>
+    <div className={clsx('px-4 py-[5px] text-[13px]', inactive && 'opacity-40')}>
+      <div className="flex items-center gap-2">
+        <span
+          className="w-2 h-2 rounded-full shrink-0"
+          style={{ background: dotColor }}
+        />
+        <span className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{member.name}</span>
+        <span className="text-[11px] opacity-40 whitespace-nowrap">{member.model}</span>
+      </div>
+      {hasActivity && (
+        <div className="pl-4 text-[11px] opacity-60 truncate">
+          {activity.latestAction}
+          {activity.lastActivityAt && (
+            <span className="ml-1 opacity-70">&middot; {formatRelativeTime(activity.lastActivityAt)}</span>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -43,6 +68,19 @@ function TaskRow({ task }: { task: TaskItem }) {
 
 function TeamSidebarContent({ teamInfo, tasksInfo, onOpenTaskBoard }: { teamInfo: TeamInfo; tasksInfo?: TasksInfo | null; onOpenTaskBoard?: () => void }) {
   const { trigger } = useHaptics()
+  // Tick counter forces re-render every 15s so relative timestamps stay fresh
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    const interval = setInterval(() => setTick(t => t + 1), TIMESTAMP_INTERVAL)
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') setTick(t => t + 1)
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [])
   const active = teamInfo.members.filter(m => m.status === 'active')
   const inactive = teamInfo.members.filter(m => m.status === 'inactive')
   const tasks = tasksInfo?.tasks ?? []

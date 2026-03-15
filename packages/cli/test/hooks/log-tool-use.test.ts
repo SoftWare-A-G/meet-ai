@@ -179,4 +179,65 @@ describe('processHookInput', () => {
     expect(result).toBe('sent')
     expect(mockFetch).toHaveBeenCalledTimes(2)
   })
+
+  it('passes agent name as sender when transcript has agentName', async () => {
+    writeTeamFile({ session_id: 'sess-1', room_id: 'room-1' })
+
+    const transcriptPath = '/tmp/meet-ai-log-tool-use-agent-test.jsonl'
+    writeFileSync(transcriptPath, JSON.stringify({ teamName: 'test-team', agentName: 'my-agent' }))
+
+    const parentResponse = { id: 'msg-parent' }
+    const logCalls: string[] = []
+
+    const mockFetch = mock((url: string | URL | Request, init?: RequestInit) => {
+      const urlStr = typeof url === 'string' ? url : url.toString()
+      if (urlStr.includes('/logs')) {
+        const body = JSON.parse(init?.body as string)
+        logCalls.push(body.sender)
+        return Promise.resolve(new Response('{}', { status: 201, headers: { 'Content-Type': 'application/json' } }))
+      }
+      return Promise.resolve(new Response(JSON.stringify(parentResponse), { status: 201, headers: { 'Content-Type': 'application/json' } }))
+    }) as unknown as typeof fetch
+    globalThis.fetch = mockFetch
+
+    const input = JSON.stringify({
+      session_id: 'sess-1',
+      transcript_path: transcriptPath,
+      tool_name: 'Grep',
+      tool_input: { pattern: 'foo' },
+    })
+    const result = await processHookInput(input, TEST_DIR)
+
+    expect(result).toBe('sent')
+    expect(logCalls[0]).toBe('my-agent')
+    rmSync(transcriptPath, { force: true })
+  })
+
+  it('defaults sender to "hook" when agent name cannot be resolved', async () => {
+    writeTeamFile({ session_id: 'sess-1', room_id: 'room-1' })
+
+    const parentResponse = { id: 'msg-parent' }
+    const logCalls: string[] = []
+
+    const mockFetch = mock((url: string | URL | Request, init?: RequestInit) => {
+      const urlStr = typeof url === 'string' ? url : url.toString()
+      if (urlStr.includes('/logs')) {
+        const body = JSON.parse(init?.body as string)
+        logCalls.push(body.sender)
+        return Promise.resolve(new Response('{}', { status: 201, headers: { 'Content-Type': 'application/json' } }))
+      }
+      return Promise.resolve(new Response(JSON.stringify(parentResponse), { status: 201, headers: { 'Content-Type': 'application/json' } }))
+    }) as unknown as typeof fetch
+    globalThis.fetch = mockFetch
+
+    const input = JSON.stringify({
+      session_id: 'sess-1',
+      tool_name: 'Read',
+      tool_input: { file_path: '/a/b.ts' },
+    })
+    const result = await processHookInput(input, TEST_DIR)
+
+    expect(result).toBe('sent')
+    expect(logCalls[0]).toBe('hook')
+  })
 })

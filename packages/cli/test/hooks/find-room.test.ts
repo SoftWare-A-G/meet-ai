@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach, afterEach } from 'bun:test'
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs'
-import { findRoomId } from '@meet-ai/cli/lib/hooks/find-room'
+import { findRoomId, findRoom } from '@meet-ai/cli/lib/hooks/find-room'
 
 const TEST_DIR = '/tmp/meet-ai-hook-test-teams'
 
@@ -8,6 +8,12 @@ function writeTeamFile(teamName: string, data: { session_id: string; room_id: st
   const dir = `${TEST_DIR}/${teamName}`
   mkdirSync(dir, { recursive: true })
   writeFileSync(`${dir}/meet-ai.json`, JSON.stringify(data))
+}
+
+function writeTeamConfig(teamName: string, config: Record<string, unknown>) {
+  const dir = `${TEST_DIR}/${teamName}`
+  mkdirSync(dir, { recursive: true })
+  writeFileSync(`${dir}/config.json`, JSON.stringify(config))
 }
 
 function writeTranscript(path: string, lines: string[]) {
@@ -76,5 +82,73 @@ describe('findRoomId', () => {
     expect(raw.session_ids).toContain('lead-sess')
 
     rmSync(transcriptPath, { force: true })
+  })
+})
+
+describe('findRoom — agent name resolution', () => {
+  const transcriptPath = '/tmp/meet-ai-find-room-agent-test.jsonl'
+
+  beforeEach(() => {
+    mkdirSync(TEST_DIR, { recursive: true })
+  })
+
+  afterEach(() => {
+    rmSync(TEST_DIR, { recursive: true, force: true })
+    rmSync(transcriptPath, { force: true })
+  })
+
+  it('extracts agentName from transcript JSONL', async () => {
+    writeTeamFile('my-team', { session_id: 'lead-sess', room_id: 'room-abc' })
+    writeTranscript(transcriptPath, [
+      JSON.stringify({ teamName: 'my-team', agentName: 'fixup-agent' }),
+    ])
+
+    const result = await findRoom('teammate-sess', TEST_DIR, transcriptPath)
+    expect(result).not.toBeNull()
+    expect(result!.agentName).toBe('fixup-agent')
+    expect(result!.roomId).toBe('room-abc')
+  })
+
+  it('resolves lead agent name from config.json when transcript has no agentName', async () => {
+    writeTeamFile('my-team', { session_id: 'lead-sess', room_id: 'room-abc' })
+    writeTeamConfig('my-team', {
+      leadSessionId: 'lead-sess',
+      leadAgentId: 'team-lead@my-team',
+      members: [
+        { agentId: 'team-lead@my-team', name: 'team-lead' },
+        { agentId: 'worker@my-team', name: 'worker' },
+      ],
+    })
+    writeTranscript(transcriptPath, [
+      JSON.stringify({ teamName: 'my-team' }),
+    ])
+
+    const result = await findRoom('lead-sess', TEST_DIR, transcriptPath)
+    expect(result).not.toBeNull()
+    expect(result!.agentName).toBe('team-lead')
+  })
+
+  it('defaults agentName to undefined when neither transcript nor config resolve it', async () => {
+    writeTeamFile('my-team', { session_id: 'lead-sess', room_id: 'room-abc' })
+    writeTranscript(transcriptPath, [
+      JSON.stringify({ teamName: 'my-team' }),
+    ])
+
+    const result = await findRoom('lead-sess', TEST_DIR, transcriptPath)
+    expect(result).not.toBeNull()
+    expect(result!.agentName).toBeUndefined()
+  })
+
+  it('resolves lead name via fallback scan when no transcript provided', async () => {
+    writeTeamFile('my-team', { session_id: 'lead-sess', room_id: 'room-abc' })
+    writeTeamConfig('my-team', {
+      leadSessionId: 'lead-sess',
+      leadAgentId: 'boss@my-team',
+      members: [{ agentId: 'boss@my-team', name: 'boss' }],
+    })
+
+    const result = await findRoom('lead-sess', TEST_DIR)
+    expect(result).not.toBeNull()
+    expect(result!.agentName).toBe('boss')
   })
 })

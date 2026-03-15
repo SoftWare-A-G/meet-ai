@@ -3,10 +3,17 @@ import { join } from 'node:path'
 import { createInterface } from 'node:readline'
 import type { TeamSessionFile } from './types'
 
+type TranscriptInfo = {
+  teamName: string | null
+  agentName: string | null
+}
+
 /**
- * Extract teamName from a JSONL transcript file by reading lines until found.
+ * Extract teamName and agentName from a JSONL transcript file.
+ * Both fields appear on the first entry for teammates; the lead has neither.
  */
-async function extractTeamName(transcriptPath: string): Promise<string | null> {
+async function extractTranscriptInfo(transcriptPath: string): Promise<TranscriptInfo> {
+  const result: TranscriptInfo = { teamName: null, agentName: null }
   try {
     const rl = createInterface({
       input: createReadStream(transcriptPath, 'utf-8'),
@@ -16,9 +23,11 @@ async function extractTeamName(transcriptPath: string): Promise<string | null> {
     for await (const line of rl) {
       try {
         const obj = JSON.parse(line)
-        if (obj.teamName) {
+        if (obj.teamName && !result.teamName) result.teamName = obj.teamName
+        if (obj.agentName && !result.agentName) result.agentName = obj.agentName
+        if (result.teamName) {
           rl.close()
-          return obj.teamName
+          return result
         }
       } catch {
         continue
@@ -27,7 +36,31 @@ async function extractTeamName(transcriptPath: string): Promise<string | null> {
   } catch {
     // File doesn't exist or isn't readable
   }
-  return null
+  return result
+}
+
+/**
+ * Resolve agent name from team config.json when transcript doesn't have it (e.g. team lead).
+ */
+function resolveAgentNameFromConfig(
+  teamsDir: string,
+  teamDirName: string,
+  sessionId: string,
+): string | undefined {
+  try {
+    const configPath = join(teamsDir, teamDirName, 'config.json')
+    const raw = readFileSync(configPath, 'utf-8')
+    const config = JSON.parse(raw)
+    if (config.leadSessionId === sessionId) {
+      const leadMember = config.members?.find(
+        (m: { agentId: string }) => m.agentId === config.leadAgentId,
+      )
+      return leadMember?.name ?? 'team-lead'
+    }
+  } catch {
+    // Config doesn't exist or can't be read
+  }
+  return undefined
 }
 
 /**
@@ -52,6 +85,7 @@ function registerSession(filePath: string, data: TeamSessionFile, sessionId: str
 export type RoomLookupResult = {
   roomId: string
   teamName: string
+  agentName?: string
 }
 
 export async function findRoom(
@@ -61,17 +95,21 @@ export async function findRoom(
 ): Promise<RoomLookupResult | null> {
   const dir = teamsDir ?? `${process.env.HOME}/.claude/teams`
 
-  // Fast path: if we have a transcript, extract teamName and look up directly
+  // Fast path: if we have a transcript, extract teamName and agentName
   if (transcriptPath) {
-    const teamName = await extractTeamName(transcriptPath)
-    if (teamName) {
-      const filePath = join(dir, teamName, 'meet-ai.json')
+    const info = await extractTranscriptInfo(transcriptPath)
+    if (info.teamName) {
+      const filePath = join(dir, info.teamName, 'meet-ai.json')
       try {
         const raw = readFileSync(filePath, 'utf-8')
         const data: TeamSessionFile = JSON.parse(raw)
         // Auto-register this session if not already known
         registerSession(filePath, data, sessionId)
-        if (data.room_id) return { roomId: data.room_id, teamName: data.team_name || teamName }
+        if (data.room_id) {
+          const teamName = data.team_name || info.teamName
+          const agentName = info.agentName ?? resolveAgentNameFromConfig(dir, info.teamName, sessionId)
+          return { roomId: data.room_id, teamName, agentName }
+        }
       } catch {
         // meet-ai.json doesn't exist for this team
       }
@@ -93,7 +131,11 @@ export async function findRoom(
       const data: TeamSessionFile = JSON.parse(raw)
       const knownIds = data.session_ids ?? [data.session_id]
       if (knownIds.includes(sessionId) || data.session_id === sessionId) {
-        if (data.room_id) return { roomId: data.room_id, teamName: data.team_name || entry }
+        if (data.room_id) {
+          const teamName = data.team_name || entry
+          const agentName = resolveAgentNameFromConfig(dir, entry, sessionId)
+          return { roomId: data.room_id, teamName, agentName }
+        }
         return null
       }
     } catch {
