@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
 import ActivityBar from '../ActivityBar'
+import ActivityLogDrawer from '../ActivityLogDrawer'
 import MessageList from '../MessageList'
 import ChatInput from '../ChatInput'
 import TerminalViewerModal from '../TerminalViewerModal'
@@ -34,6 +35,7 @@ type ChatViewProps = {
 
 export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksInfo, onCommandsInfo, onAgentActivity, terminalOpen = false, onTerminalClose }: ChatViewProps) {
   const [messages, setMessages] = useState<DisplayMessage[]>([])
+  const [activityDrawerOpen, setActivityDrawerOpen] = useState(false)
   const [attachmentCounts, setAttachmentCounts] = useState<Record<string, number>>({})
   const [unreadCount, setUnreadCount] = useState(0)
   const [forceScrollCounter, setForceScrollCounter] = useState(0)
@@ -457,7 +459,15 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
         connected={connected}
         voiceAvailable={voiceAvailable}
       />
-      <ActivityBar />
+      {!activityDrawerOpen && (
+        <ActivityBar onClick={() => setActivityDrawerOpen(true)} />
+      )}
+      <ActivityLogDrawer
+        open={activityDrawerOpen}
+        onOpenChange={setActivityDrawerOpen}
+        messages={messages}
+        teamInfo={ctxTeamInfo}
+      />
       <ChatInput
         roomName={room.name}
         onSend={handleSend}
