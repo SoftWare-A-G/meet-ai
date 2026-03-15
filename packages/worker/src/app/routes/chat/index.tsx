@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useCallback } from 'react'
 import LobbyView from '../../components/LobbyView'
 import MainHeader from '../../components/MainHeader'
@@ -11,7 +11,7 @@ export const Route = createFileRoute('/chat/')({
 
 function ChatLobby() {
   const { rooms } = useChatContext()
-  const navigate = useNavigate()
+  const navigate = Route.useNavigate()
 
   const handleSelectRoom = useCallback(
     (room: Room) => {

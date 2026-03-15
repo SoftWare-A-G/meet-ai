@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
 import clsx from 'clsx'
-import type { TeamInfo, TeamMember, TasksInfo, TaskItem } from '../../lib/types'
+import { useTasksQuery } from '../../hooks/useTasksQuery'
+import { useTeamInfoQuery } from '../../hooks/useTeamInfoQuery'
+import type { TaskItem } from '../../lib/fetchers'
+import type { TeamMember } from '../../lib/types'
 import { ensureSenderContrast } from '../../lib/colors'
 import { formatRelativeTime } from '../../lib/dates'
 import { useChatContext } from '../../lib/chat-context'
@@ -9,8 +12,7 @@ import { useHaptics } from '../../hooks/useHaptics'
 const TIMESTAMP_INTERVAL = 15_000
 
 type TeamSidebarProps = {
-  teamInfo: TeamInfo | null
-  tasksInfo?: TasksInfo | null
+  roomId: string | null
   isOpen: boolean
   onClose: () => void
   onOpenTaskBoard?: () => void
@@ -66,8 +68,9 @@ function TaskRow({ task }: { task: TaskItem }) {
   )
 }
 
-function TeamSidebarContent({ teamInfo, tasksInfo, onOpenTaskBoard }: { teamInfo: TeamInfo; tasksInfo?: TasksInfo | null; onOpenTaskBoard?: () => void }) {
+function TeamSidebarContent({ teamInfo, roomId, onOpenTaskBoard }: { teamInfo: NonNullable<ReturnType<typeof useTeamInfoQuery>['data']>; roomId: string | null; onOpenTaskBoard?: () => void }) {
   const { trigger } = useHaptics()
+  const { data: tasksData } = useTasksQuery(roomId)
   // Tick counter forces re-render every 15s so relative timestamps stay fresh
   const [, setTick] = useState(0)
   useEffect(() => {
@@ -83,7 +86,7 @@ function TeamSidebarContent({ teamInfo, tasksInfo, onOpenTaskBoard }: { teamInfo
   }, [])
   const active = teamInfo.members.filter(m => m.status === 'active')
   const inactive = teamInfo.members.filter(m => m.status === 'inactive')
-  const tasks = tasksInfo?.tasks ?? []
+  const tasks = tasksData?.tasks ?? []
   const inProgress = tasks.filter(t => t.status === 'in_progress')
   const pending = tasks.filter(t => t.status === 'pending')
   const completed = tasks.filter(t => t.status === 'completed')
@@ -127,7 +130,8 @@ function TeamSidebarContent({ teamInfo, tasksInfo, onOpenTaskBoard }: { teamInfo
   )
 }
 
-export default function TeamSidebar({ teamInfo, tasksInfo, isOpen, onClose, onOpenTaskBoard }: TeamSidebarProps) {
+export default function TeamSidebar({ roomId, isOpen, onClose, onOpenTaskBoard }: TeamSidebarProps) {
+  const { data: teamInfo } = useTeamInfoQuery(roomId)
   const activeCount = teamInfo?.members.filter(m => m.status === 'active').length ?? 0
   const totalCount = teamInfo?.members.length ?? 0
 
@@ -160,7 +164,7 @@ export default function TeamSidebar({ teamInfo, tasksInfo, isOpen, onClose, onOp
             &times;
           </button>
         </div>
-        {teamInfo && <TeamSidebarContent teamInfo={teamInfo} tasksInfo={tasksInfo} onOpenTaskBoard={onOpenTaskBoard} />}
+        {teamInfo && <TeamSidebarContent teamInfo={teamInfo} roomId={roomId} onOpenTaskBoard={onOpenTaskBoard} />}
       </div>
     </>
   )

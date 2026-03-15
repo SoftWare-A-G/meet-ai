@@ -1,12 +1,16 @@
 import { useState, useEffect, useMemo } from 'react'
 import clsx from 'clsx'
+import { getRouteApi } from '@tanstack/react-router'
 import { DrawerRoot, DrawerPopup, DrawerContent, DrawerHandle, DrawerTitle } from '../ui/drawer'
 import DiffBlock from '../DiffBlock'
+import { useTeamInfoQuery } from '../../hooks/useTeamInfoQuery'
 import { parseAgentActivity } from '../../lib/activity'
 import { formatRelativeTime } from '../../lib/dates'
 import { ensureSenderContrast, hashColor, resolveColor } from '../../lib/colors'
 import { contrastRatio } from '../../lib/theme'
-import type { Message, TeamInfo } from '../../lib/types'
+import type { Message } from '../../lib/types'
+
+const chatRoute = getRouteApi('/chat/$id')
 
 /** Ensure a color works as a pill background on the dark drawer surface (#171717). */
 function pillBgColor(rawColor: string): string {
@@ -32,7 +36,6 @@ type ActivityLogDrawerProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   messages: DisplayMessage[]
-  teamInfo: TeamInfo | null
 }
 
 
@@ -43,7 +46,9 @@ type FilterState = {
 const TIMESTAMP_INTERVAL = 15_000
 const PAGE_SIZE = 100
 
-export default function ActivityLogDrawer({ open, onOpenChange, messages, teamInfo }: ActivityLogDrawerProps) {
+export default function ActivityLogDrawer({ open, onOpenChange, messages }: ActivityLogDrawerProps) {
+  const { id: roomId } = chatRoute.useParams()
+  const { data: teamInfo } = useTeamInfoQuery(roomId)
   const [filter, setFilter] = useState<FilterState>({ agent: null })
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const [, setTick] = useState(0)
@@ -218,7 +223,7 @@ export default function ActivityLogDrawer({ open, onOpenChange, messages, teamIn
   )
 }
 
-function LogEntry({ msg, teamInfo }: { msg: DisplayMessage; teamInfo: TeamInfo | null }) {
+function LogEntry({ msg, teamInfo }: { msg: DisplayMessage; teamInfo: ReturnType<typeof useTeamInfoQuery>['data'] }) {
   const member = teamInfo?.members.find(m => m.name === msg.sender)
   const color = member?.color || msg.color || ''
   const nameColor = color ? ensureSenderContrast(color) : hashColor(msg.sender)

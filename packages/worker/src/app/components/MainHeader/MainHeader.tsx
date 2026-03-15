@@ -3,11 +3,11 @@ import { IconCanvas, IconQrcode, IconTerminal, IconUsers } from '../../icons'
 import RoomSettings from '../RoomSettings'
 import { useHaptics } from '../../hooks/useHaptics'
 import { SidebarTrigger } from '../ui/sidebar'
-import type { Project, Room } from '../../lib/types'
+import type { RoomsResponse, ProjectsResponse } from '../../lib/fetchers'
 
 type MainHeaderProps = {
-  room: Room | undefined
-  projects: Project[]
+  room: RoomsResponse[number] | undefined
+  projects: ProjectsResponse
   roomName: string
   showInvite: boolean
   showTeamToggle: boolean

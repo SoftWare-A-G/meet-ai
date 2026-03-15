@@ -34,7 +34,10 @@ import {
 } from '../ui/combobox'
 import { Input } from '../ui/input'
 import { Button } from '../ui/button'
-import type { Project, Room } from '../../lib/types'
+import type { RoomsResponse, ProjectsResponse } from '../../lib/fetchers'
+
+type Room = RoomsResponse[number]
+type Project = ProjectsResponse[number]
 
 type ProjectOption = {
   label: string

@@ -1,7 +1,6 @@
 import { Toast } from '@base-ui/react/toast'
-import { ClientOnly, createFileRoute, Outlet, useNavigate, useParams } from '@tanstack/react-router'
+import { ClientOnly, createFileRoute, Outlet, useParams } from '@tanstack/react-router'
 import { useState, useCallback, useEffect, useMemo } from 'react'
-import { toast } from 'sonner'
 import IOSInstallModal from '../components/IOSInstallModal'
 import LoginPrompt from '../components/LoginPrompt'
 import QRShareModal from '../components/QRShareModal'
@@ -14,20 +13,19 @@ import TokenScreen from '../components/TokenScreen'
 import { SidebarProvider, SidebarInset } from '../components/ui/sidebar'
 import { useLobbyWebSocket } from '../hooks/useLobbyWebSocket'
 import { useLocalStorage } from '../hooks/useLocalStorage'
+import { useProjectsQuery } from '../hooks/useProjectsQuery'
+import { useRoomsQuery } from '../hooks/useRoomsQuery'
 import * as api from '../lib/api'
 import { ChatContext } from '../lib/chat-context'
 import { STORAGE_KEYS, DEFAULT_SCHEMA } from '../lib/constants'
 import { getOrCreateHandle } from '../lib/handle'
 import { applySchema } from '../lib/theme'
 import type { AgentActivity } from '../lib/activity'
-import type { Project, Room, TeamInfo, TasksInfo, CommandInfo } from '../lib/types'
 
 export const Route = createFileRoute('/chat')({
   component: ChatPage,
   head: () => ({
-    meta: [
-      { name: 'robots', content: 'noindex, follow' },
-    ],
+    meta: [{ name: 'robots', content: 'noindex, follow' }],
   }),
 })
 
@@ -103,82 +101,23 @@ function ChatLayout({
   onNameChange,
   onSchemaChange,
 }: ChatLayoutProps) {
-  const [rooms, setRooms] = useState<Room[]>([])
-  const [projects, setProjects] = useState<Project[]>([])
+  const { data: rooms = [] } = useRoomsQuery()
+  const { data: projects = [] } = useProjectsQuery()
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [showSpawnModal, setShowSpawnModal] = useState(false)
   const [showQRModal, setShowQRModal] = useState(false)
   const [showIOSInstallModal, setShowIOSInstallModal] = useState(false)
   const toastManager = Toast.useToastManager()
-  const [teamInfo, setTeamInfo] = useState<TeamInfo | null>(null)
-  const [tasksInfo, setTasksInfo] = useState<TasksInfo | null>(null)
-  const [commandsInfo, setCommandsInfo] = useState<CommandInfo[] | null>(null)
   const [teamSidebarOpen, setTeamSidebarOpen] = useState(false)
   const [showTaskBoard, setShowTaskBoard] = useState(false)
   const [agentActivity, setAgentActivity] = useState<Map<string, AgentActivity>>(() => new Map())
+  const roomId = useParams({ from: '/chat/$id', shouldThrow: false })?.id
 
   const isStandalone =
     (window.navigator as any).standalone === true ||
     window.matchMedia('(display-mode: standalone)').matches
 
-  // Load rooms and projects on mount
-  useEffect(() => {
-    let cancelled = false
-    async function load() {
-      const [loadedRooms, loadedProjects] = await Promise.all([api.loadRooms(), api.loadProjects()])
-      if (!cancelled) {
-        setRooms(loadedRooms)
-        setProjects(loadedProjects)
-      }
-    }
-    load()
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  const removeRoom = useCallback((id: string) => {
-    setRooms(prev => prev.filter(r => r.id !== id))
-  }, [])
-
-  const updateRoom = useCallback((id: string, updates: Partial<Room>) => {
-    setRooms(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r))
-  }, [])
-
-  const navigate = useNavigate()
-  const params = useParams({ strict: false }) as { id?: string }
-
-  const handleDeleteRoom = useCallback(async (id: string) => {
-    const room = rooms.find(r => r.id === id)
-    try {
-      await api.deleteRoom(id)
-      removeRoom(id)
-      toast.success(`"${room?.name}" deleted`)
-      if (params.id === id) {
-        navigate({ to: '/chat' })
-      }
-    } catch {
-      toast.error('Failed to delete room. Please try again.')
-    }
-  }, [rooms, removeRoom, navigate, params.id])
-
-  // Lobby WebSocket for new room events
-  const onRoomCreated = useCallback((id: string, name: string, projectId?: string | null, projectName?: string | null) => {
-    setRooms(prev => (prev.some(r => r.id === id) ? prev : [{ id, name, project_id: projectId ?? null }, ...prev]))
-    if (projectId && projectName) {
-      setProjects(prev => prev.some(p => p.id === projectId) ? prev : [...prev, { id: projectId, name: projectName, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }])
-    }
-  }, [])
-  const { send: lobbySend } = useLobbyWebSocket(apiKey, onRoomCreated)
-
-  const handleRenameProject = useCallback(async (id: string, name: string) => {
-    try {
-      const updated = await api.renameProject(id, name)
-      setProjects(prev => prev.map(p => p.id === id ? updated : p))
-    } catch {
-      toast.error('Failed to rename project.')
-    }
-  }, [])
+  const { send: lobbySend } = useLobbyWebSocket(apiKey)
 
   const handleInstallClick = useCallback(() => {
     setShowIOSInstallModal(true)
@@ -196,17 +135,9 @@ function ChatLayout({
     () => ({
       rooms,
       projects,
-      removeRoom,
-      updateRoom,
       apiKey,
       userName,
       colorSchema,
-      teamInfo,
-      setTeamInfo,
-      tasksInfo,
-      setTasksInfo,
-      commandsInfo,
-      setCommandsInfo,
       agentActivity,
       setAgentActivity,
       teamSidebarOpen,
@@ -224,14 +155,9 @@ function ChatLayout({
     [
       rooms,
       projects,
-      removeRoom,
-      updateRoom,
       apiKey,
       userName,
       colorSchema,
-      teamInfo,
-      tasksInfo,
-      commandsInfo,
       agentActivity,
       teamSidebarOpen,
       onNameChange,
@@ -251,19 +177,18 @@ function ChatLayout({
           onSettingsClick={() => setShowSettingsModal(true)}
           onSpawnClick={() => setShowSpawnModal(true)}
           onInstallClick={handleInstallClick}
-          onDeleteRoom={handleDeleteRoom}
-          onRenameProject={handleRenameProject}
         />
         <SidebarInset className="bg-transparent">
           <Outlet />
         </SidebarInset>
-        <TeamSidebar
-          teamInfo={teamInfo}
-          tasksInfo={tasksInfo}
-          isOpen={teamSidebarOpen}
-          onClose={() => setTeamSidebarOpen(false)}
-          onOpenTaskBoard={() => setShowTaskBoard(true)}
-        />
+        {roomId && (
+          <TeamSidebar
+            roomId={roomId}
+            isOpen={teamSidebarOpen}
+            onClose={() => setTeamSidebarOpen(false)}
+            onOpenTaskBoard={() => setShowTaskBoard(true)}
+          />
+        )}
       </SidebarProvider>
       {showSettingsModal && (
         <SettingsModal
@@ -285,11 +210,9 @@ function ChatLayout({
         <SpawnTeamModal onClose={() => setShowSpawnModal(false)} onSend={lobbySend} />
       )}
       {showIOSInstallModal && <IOSInstallModal onClose={() => setShowIOSInstallModal(false)} />}
-      {showTaskBoard && params.id && (
+      {showTaskBoard && roomId && (
         <TaskBoardModal
-          roomId={params.id}
-          tasksInfo={tasksInfo}
-          teamInfo={teamInfo}
+          roomId={roomId}
           onClose={() => setShowTaskBoard(false)}
         />
       )}

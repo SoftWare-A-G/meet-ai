@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { toast } from 'sonner'
+import { useState, useEffect, useCallback } from 'react'
 import { useAgentActivity } from '../../hooks/useAgentActivity'
+import { useAttachmentCountsQuery } from '../../hooks/useAttachmentCountsQuery'
 import { useHaptics } from '../../hooks/useHaptics'
 import { useOfflineQueue } from '../../hooks/useOfflineQueue'
 import { useRoomWebSocket } from '../../hooks/useRoomWebSocket'
+import { useUploadFile } from '../../hooks/useUploadFile'
 import * as api from '../../lib/api'
-import { useChatContext } from '../../lib/chat-context'
 import { parseUtcDate } from '../../lib/dates'
 import { requestPermission, notifyIfHidden } from '../../lib/notifications'
 import ActivityBar from '../ActivityBar'
@@ -17,10 +17,6 @@ import type { AgentActivity } from '../../lib/activity'
 import type {
   Message as MessageType,
   Room,
-  TeamInfo,
-  TeamMember,
-  TasksInfo,
-  CommandInfo,
 } from '../../lib/types'
 
 type DisplayMessage = MessageType & {
@@ -32,9 +28,6 @@ type ChatViewProps = {
   room: Room
   apiKey: string
   userName: string
-  onTeamInfo?: (info: TeamInfo | null) => void
-  onTasksInfo?: (info: TasksInfo | null) => void
-  onCommandsInfo?: (commands: CommandInfo[] | null) => void
   onAgentActivity?: (activity: Map<string, AgentActivity>) => void
   terminalOpen?: boolean
   onTerminalClose?: () => void
@@ -44,16 +37,14 @@ export default function ChatView({
   room,
   apiKey,
   userName,
-  onTeamInfo,
-  onTasksInfo,
-  onCommandsInfo,
   onAgentActivity,
   terminalOpen = false,
   onTerminalClose,
 }: ChatViewProps) {
+  const { data: attachmentCounts } = useAttachmentCountsQuery(room.id)
+  const uploadFileMutation = useUploadFile()
   const [messages, setMessages] = useState<DisplayMessage[]>([])
   const [activityDrawerOpen, setActivityDrawerOpen] = useState(false)
-  const [attachmentCounts, setAttachmentCounts] = useState<Record<string, number>>({})
   const [unreadCount, setUnreadCount] = useState(0)
   const [forceScrollCounter, setForceScrollCounter] = useState(0)
   const [voiceAvailable, setVoiceAvailable] = useState(false)
@@ -76,43 +67,24 @@ export default function ChatView({
   const [terminalData, setTerminalData] = useState<string | null>(null)
   const { queue, remove, getForRoom } = useOfflineQueue()
   const { triggerForMessage } = useHaptics()
-  const prevMembersRef = useRef<TeamMember[] | null>(null)
-  const wsTasksDeliveredRef = useRef(false)
-  const wsTeamDeliveredRef = useRef(false)
-
   // Check TTS availability once on mount
   useEffect(() => {
     api.checkTtsAvailable().then(setVoiceAvailable)
   }, [])
 
-  // Clear room-scoped sidebar state immediately on navigation so old room data
-  // does not persist while the new room hydrates over WebSocket.
-  useEffect(() => {
-    prevMembersRef.current = null
-    wsTasksDeliveredRef.current = false
-    wsTeamDeliveredRef.current = false
-    onTeamInfo?.(null)
-    onTasksInfo?.(null)
-    onCommandsInfo?.(null)
-  }, [room.id, onTeamInfo, onTasksInfo, onCommandsInfo])
-
-  // Load message history + logs + attachment counts
+  // Load message history + logs
   useEffect(() => {
     let cancelled = false
     async function load() {
-      const [history, logs, counts, tasks, team] = await Promise.all([
+      const [history, logs] = await Promise.all([
         api.loadMessages(room.id),
         api.loadLogs(room.id),
-        api.loadAttachmentCounts(room.id),
-        api.loadTasks(room.id),
-        api.loadTeamInfo(room.id),
       ])
       if (cancelled) return
       const all = [...history, ...logs].sort(
         (a, b) => parseUtcDate(a.created_at).valueOf() - parseUtcDate(b.created_at).valueOf()
       )
       setMessages(all.map(m => ({ ...m, status: 'sent' as const })))
-      setAttachmentCounts(counts)
 
       // Populate plan decisions from loaded messages
       const decisions: Record<
@@ -166,10 +138,6 @@ export default function ChatView({
       if (Object.keys(pDecisions).length > 0) {
         setPermissionDecisions(prev => ({ ...prev, ...pDecisions }))
       }
-
-      // Hydrate sidebar from REST only if WS hasn't delivered fresher data yet
-      if (tasks && !wsTasksDeliveredRef.current) onTasksInfo?.(tasks)
-      if (team && !wsTeamDeliveredRef.current) onTeamInfo?.(team)
 
       // Restore queued offline messages
       try {
@@ -248,37 +216,6 @@ export default function ChatView({
     [userName, triggerForMessage]
   )
 
-  const onTeamInfoWs = useCallback(
-    (info: TeamInfo) => {
-      const prev = prevMembersRef.current
-      if (prev) {
-        const prevNames = new Set(prev.map(m => m.name))
-        for (const m of info.members) {
-          if (!prevNames.has(m.name) && m.status === 'active') {
-            toast.success(m.name, { description: 'Ready to work', duration: 5000 })
-          }
-        }
-        for (const m of info.members) {
-          const old = prev.find(p => p.name === m.name)
-          if (old && old.status === 'active' && m.status === 'inactive') {
-            toast(m.name, { description: 'Signed off', icon: '👋', duration: 5000 })
-          }
-        }
-      }
-      prevMembersRef.current = info.members
-      wsTeamDeliveredRef.current = true
-      onTeamInfo?.(info)
-    },
-    [onTeamInfo]
-  )
-
-  const onCommandsInfoWs = useCallback(
-    (commands: CommandInfo[]) => {
-      onCommandsInfo?.(commands)
-    },
-    [onCommandsInfo]
-  )
-
   const onPlanDecisionWs = useCallback(
     (event: {
       plan_review_id: string
@@ -338,24 +275,15 @@ export default function ChatView({
 
   const {
     connected,
-    tasksInfo,
     sendTerminalSubscribe,
     sendTerminalUnsubscribe,
     sendTerminalResize,
   } = useRoomWebSocket(room.id, apiKey, onWsMessage, {
-    onTeamInfo: onTeamInfoWs,
-    onCommandsInfo: onCommandsInfoWs,
     onPlanDecision: onPlanDecisionWs,
     onQuestionAnswer: onQuestionAnswerWs,
     onPermissionDecision: onPermissionDecisionWs,
     onTerminalData: onTerminalDataWs,
   })
-
-  useEffect(() => {
-    if (tasksInfo) wsTasksDeliveredRef.current = true
-    onTasksInfo?.(tasksInfo)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- onTasksInfo is stable
-  }, [tasksInfo])
 
   useEffect(() => {
     if (terminalOpen && connected) {
@@ -368,8 +296,7 @@ export default function ChatView({
   }, [terminalOpen, connected])
 
   // Derive per-agent activity from log messages
-  const { teamInfo: ctxTeamInfo } = useChatContext()
-  const agentActivity = useAgentActivity(messages, ctxTeamInfo)
+  const agentActivity = useAgentActivity(messages, room.id)
 
   useEffect(() => {
     onAgentActivity?.(agentActivity)
@@ -406,8 +333,8 @@ export default function ChatView({
   }, [room.id])
 
   const handleUploadFile = useCallback(
-    async (file: File) => api.uploadFile(room.id, file),
-    [room.id]
+    (file: File) => uploadFileMutation.mutateAsync({ roomId: room.id, file }),
+    [room.id, uploadFileMutation]
   )
 
   const handleSend = useCallback(
@@ -426,22 +353,10 @@ export default function ChatView({
       setForceScrollCounter(c => c + 1)
 
       try {
-        const result = await api.sendMessage(
-          room.id,
-          userName,
-          content,
-          attachmentIds.length > 0 ? attachmentIds : undefined
-        )
+        await api.sendMessage(room.id, userName, content, attachmentIds.length > 0 ? attachmentIds : undefined)
         setMessages(prev =>
           prev.map(m => (m.tempId === tempId ? { ...m, status: 'sent' as const } : m))
         )
-
-        if (attachmentIds.length > 0 && result.id) {
-          setAttachmentCounts(prev => ({
-            ...prev,
-            [result.id]: attachmentIds.length,
-          }))
-        }
       } catch {
         await queue({
           tempId,
@@ -590,7 +505,6 @@ export default function ChatView({
         open={activityDrawerOpen}
         onOpenChange={setActivityDrawerOpen}
         messages={messages}
-        teamInfo={ctxTeamInfo}
       />
       <ChatInput roomName={room.name} onSend={handleSend} onUploadFile={handleUploadFile} />
     </>

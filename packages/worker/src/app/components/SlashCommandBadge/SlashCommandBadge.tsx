@@ -1,9 +1,9 @@
-import type { CommandInfo } from '../../lib/types'
+import type { CommandItem } from '../../lib/fetchers'
 
 type SlashCommandBadgeProps = {
   commandName: string
   promptText: string
-  commandType: CommandInfo['type']
+  commandType: CommandItem['type']
 }
 
 export default function SlashCommandBadge({ commandName, promptText, commandType }: SlashCommandBadgeProps) {

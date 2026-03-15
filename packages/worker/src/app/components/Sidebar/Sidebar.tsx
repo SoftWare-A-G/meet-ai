@@ -1,5 +1,6 @@
 import { useMemo, useState, useCallback } from 'react'
-import { Link, useParams } from '@tanstack/react-router'
+import { Link, useNavigate, useParams } from '@tanstack/react-router'
+import { toast } from 'sonner'
 import {
   Sidebar as ShadcnSidebar,
   SidebarContent,
@@ -26,38 +27,44 @@ import SidebarFooterContent from '../SidebarFooter'
 import DeleteConfirmPopover from '../DeleteConfirmPopover'
 import { IconTrash } from '../../icons'
 import { useHaptics } from '../../hooks/useHaptics'
+import { useDeleteRoom } from '../../hooks/useRoomMutations'
+import { useRenameProject } from '../../hooks/useProjectMutations'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '../ui/dropdown-menu'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog'
 import { Input } from '../ui/input'
 import { Button } from '../ui/button'
 import { EllipsisIcon, ChevronRightIcon } from 'lucide-react'
-import type { Project, Room } from '../../lib/types'
+import type { RoomsResponse, ProjectsResponse } from '../../lib/fetchers'
+
+type Room = RoomsResponse[number]
+type Project = ProjectsResponse[number]
 
 type SidebarProps = {
-  rooms: Room[]
-  projects: Project[]
+  rooms: RoomsResponse
+  projects: ProjectsResponse
   userName: string
   onNameChange: (name: string) => void
   onSettingsClick: () => void
   onSpawnClick: () => void
   onInstallClick: () => void
-  onDeleteRoom?: (id: string) => void
-  onRenameProject?: (id: string, name: string) => void
 }
 
-function ProjectActions({ project, onRename }: { project: Project; onRename?: (id: string, name: string) => void }) {
+function ProjectActions({ project }: { project: Project }) {
   const [renameOpen, setRenameOpen] = useState(false)
   const [name, setName] = useState(project.name)
+  const renameProjectMutation = useRenameProject()
 
   const handleSave = useCallback(() => {
     const trimmed = name.trim()
-    if (trimmed && trimmed !== project.name && onRename) {
-      onRename(project.id, trimmed)
+    if (trimmed && trimmed !== project.name) {
+      renameProjectMutation.mutate({ param: { id: project.id }, json: { name: trimmed } }, {
+        onError: () => {
+          toast.error('Failed to rename project.')
+        },
+      })
     }
     setRenameOpen(false)
-  }, [name, project.id, project.name, onRename])
-
-  if (!onRename) return null
+  }, [name, project.id, project.name, renameProjectMutation])
 
   return (
     <>
@@ -95,10 +102,25 @@ function ProjectActions({ project, onRename }: { project: Project; onRename?: (i
   )
 }
 
+function RoomDeleteButton({ room, onDelete }: { room: Room; onDelete: (id: string) => void }) {
+  return (
+    <DeleteConfirmPopover roomName={room.name} onConfirm={() => onDelete(room.id)}>
+      <button
+        type="button"
+        aria-label={`Delete ${room.name}`}
+        className="flex h-7 w-7 cursor-pointer items-center justify-center rounded border-none bg-transparent text-gray-500 opacity-0 transition-opacity duration-100 group-hover/room:opacity-100 group-has-data-popup-open/room:opacity-100 hover:text-red-400 data-[popup-open]:text-red-400"
+        onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
+      >
+        <IconTrash size={14} />
+      </button>
+    </DeleteConfirmPopover>
+  )
+}
+
 function RoomSubItem({ room, isActive, onDelete, onLinkClick }: {
   room: Room
   isActive: boolean
-  onDelete?: (id: string) => void
+  onDelete: (id: string) => void
   onLinkClick: () => void
 }) {
   return (
@@ -112,20 +134,7 @@ function RoomSubItem({ room, isActive, onDelete, onLinkClick }: {
         <span className="truncate">{room.name}</span>
       </SidebarMenuSubButton>
       <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center gap-0.5">
-        {onDelete ? (
-          <DeleteConfirmPopover roomName={room.name} onConfirm={() => onDelete(room.id)}>
-            <button
-              type="button"
-              aria-label={`Delete ${room.name}`}
-              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded border-none bg-transparent text-gray-500 opacity-0 transition-opacity duration-100 group-hover/room:opacity-100 group-has-data-popup-open/room:opacity-100 hover:text-red-400 data-[popup-open]:text-red-400"
-              onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
-            >
-              <IconTrash size={14} />
-            </button>
-          </DeleteConfirmPopover>
-        ) : (
-          <div className="h-7 w-7" />
-        )}
+        <RoomDeleteButton room={room} onDelete={onDelete} />
         <ChevronRightIcon className={`size-4 shrink-0 ${isActive ? 'text-sidebar-accent-foreground' : 'invisible'}`} />
       </div>
     </SidebarMenuSubItem>
@@ -135,7 +144,7 @@ function RoomSubItem({ room, isActive, onDelete, onLinkClick }: {
 function RoomMenuItem({ room, isActive, onDelete, onLinkClick }: {
   room: Room
   isActive: boolean
-  onDelete?: (id: string) => void
+  onDelete: (id: string) => void
   onLinkClick: () => void
 }) {
   return (
@@ -149,31 +158,35 @@ function RoomMenuItem({ room, isActive, onDelete, onLinkClick }: {
         <span className="truncate">{room.name}</span>
       </SidebarMenuButton>
       <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center gap-0.5">
-        {onDelete ? (
-          <DeleteConfirmPopover roomName={room.name} onConfirm={() => onDelete(room.id)}>
-            <button
-              type="button"
-              aria-label={`Delete ${room.name}`}
-              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded border-none bg-transparent text-gray-500 opacity-0 transition-opacity duration-100 group-hover/room:opacity-100 group-has-data-popup-open/room:opacity-100 hover:text-red-400 data-[popup-open]:text-red-400"
-              onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
-            >
-              <IconTrash size={14} />
-            </button>
-          </DeleteConfirmPopover>
-        ) : (
-          <div className="h-7 w-7" />
-        )}
+        <RoomDeleteButton room={room} onDelete={onDelete} />
         <ChevronRightIcon className={`size-4 shrink-0 ${isActive ? 'text-sidebar-accent-foreground' : 'invisible'}`} />
       </div>
     </SidebarMenuItem>
   )
 }
 
-export default function Sidebar({ rooms, projects, userName, onNameChange, onSettingsClick, onSpawnClick, onInstallClick, onDeleteRoom, onRenameProject }: SidebarProps) {
+export default function Sidebar({ rooms, projects, userName, onNameChange, onSettingsClick, onSpawnClick, onInstallClick }: SidebarProps) {
   const [search, setSearch] = useState('')
   const { trigger } = useHaptics()
   const { isMobile, setOpenMobile } = useSidebar()
   const params = useParams({ strict: false }) as { id?: string }
+  const navigate = useNavigate()
+  const deleteRoomMutation = useDeleteRoom()
+
+  const handleDeleteRoom = useCallback((id: string) => {
+    const room = rooms.find(r => r.id === id)
+    deleteRoomMutation.mutate({ param: { id } }, {
+      onSuccess: () => {
+        toast.success(`"${room?.name}" deleted`)
+        if (params.id === id) {
+          navigate({ to: '/chat' })
+        }
+      },
+      onError: () => {
+        toast.error('Failed to delete room. Please try again.')
+      },
+    })
+  }, [rooms, deleteRoomMutation, params.id, navigate])
 
   const handleLinkClick = useCallback(() => {
     trigger('light')
@@ -227,7 +240,7 @@ export default function Sidebar({ rooms, projects, userName, onNameChange, onSet
                       <ChevronRightIcon className="size-4 shrink-0 transition-transform duration-150 group-aria-expanded/menu-button:rotate-90" />
                       {project.name}
                     </SidebarMenuButton>
-                    <ProjectActions project={project} onRename={onRenameProject} />
+                    <ProjectActions project={project} />
                   </div>
                   <CollapsibleContent>
                     <SidebarMenuSub>
@@ -236,7 +249,7 @@ export default function Sidebar({ rooms, projects, userName, onNameChange, onSet
                           key={room.id}
                           room={room}
                           isActive={params.id === room.id}
-                          onDelete={onDeleteRoom}
+                          onDelete={handleDeleteRoom}
                           onLinkClick={handleLinkClick}
                         />
                       ))}
@@ -250,7 +263,7 @@ export default function Sidebar({ rooms, projects, userName, onNameChange, onSet
                 key={room.id}
                 room={room}
                 isActive={params.id === room.id}
-                onDelete={onDeleteRoom}
+                onDelete={handleDeleteRoom}
                 onLinkClick={handleLinkClick}
               />
             ))}

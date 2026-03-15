@@ -1,18 +1,23 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import clsx from 'clsx'
+import { getRouteApi } from '@tanstack/react-router'
 import { hashColor, ensureSenderContrast } from '../../lib/colors'
 import { formatTime } from '../../lib/dates'
 import { textToSpeech } from '../../lib/api'
 import { IconCopy, IconCheck, IconShare, IconVolume, IconPlayerStop, IconLoader } from '../../icons'
 import MarkdownContent from '../MarkdownContent'
 import SlashCommandBadge from '../SlashCommandBadge'
+import { useCommandsCache } from '../../hooks/useCommandsCache'
+import { useTeamInfoQuery } from '../../hooks/useTeamInfoQuery'
 import { useChatContext } from '../../lib/chat-context'
 import { useHaptics } from '../../hooks/useHaptics'
-import type { CommandInfo } from '../../lib/types'
+import type { CommandItem } from '../../lib/fetchers'
+
+const chatRoute = getRouteApi('/chat/$id')
 
 type TtsState = 'idle' | 'loading' | 'playing'
 
-function parseSlashCommand(content: string, commands: CommandInfo[] | null): { command: CommandInfo; promptText: string } | null {
+function parseSlashCommand(content: string, commands: CommandItem[] | null): { command: CommandItem; promptText: string } | null {
   if (!commands || !content.startsWith('/')) return null
   const trimmed = content.slice(1)
   // Match longest command name first (e.g., "ce:plan" before "ce")
@@ -40,7 +45,10 @@ type MessageProps = {
 
 export default function Message({ sender, content, color, timestamp, tempId, status = 'sent', onRetry, attachmentCount, voiceAvailable }: MessageProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
-  const { commandsInfo, insertMention, teamInfo } = useChatContext()
+  const { id: roomId } = chatRoute.useParams()
+  const { data: teamInfo } = useTeamInfoQuery(roomId)
+  const { data: commandsInfo } = useCommandsCache(roomId)
+  const { insertMention } = useChatContext()
   const { trigger } = useHaptics()
   const senderTeamColor = teamInfo?.members.find(member => member.name === sender)?.color
   const senderColor = senderTeamColor

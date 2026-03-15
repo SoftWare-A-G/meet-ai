@@ -1,8 +1,11 @@
 import { Dialog, DialogContent, DialogTitle } from '../ui/dialog'
 import clsx from 'clsx'
-import { useState, useCallback, useMemo, useEffect } from 'react'
-import * as api from '../../lib/api'
-import type { TaskItem, TasksInfo, TeamInfo, TeamMember } from '../../lib/types'
+import { useState, useCallback, useMemo } from 'react'
+import { useTasksQuery } from '../../hooks/useTasksQuery'
+import { useTeamInfoQuery } from '../../hooks/useTeamInfoQuery'
+import { useCreateTask, useUpdateTask } from '../../hooks/useTaskMutations'
+import type { TaskItem } from '../../lib/fetchers'
+import type { TeamMember } from '../../lib/types'
 import { Button } from '../ui/button'
 import {
   DropdownMenu,
@@ -13,8 +16,6 @@ import {
 
 type TaskBoardModalProps = {
   roomId: string
-  tasksInfo: TasksInfo | null
-  teamInfo: TeamInfo | null
   onClose: () => void
 }
 
@@ -80,47 +81,39 @@ function TaskCard({
   task,
   members,
   roomId,
-  onOptimisticUpdate,
   inflight,
   onInflightChange,
+  updateTaskMutation,
 }: {
   task: TaskItem
   members: TeamMember[]
   roomId: string
-  onOptimisticUpdate: (updated: TaskItem) => void
   inflight: boolean
   onInflightChange: (taskId: string, pending: boolean) => void
+  updateTaskMutation: ReturnType<typeof useUpdateTask>
 }) {
   const statusColor = task.status === 'completed' ? 'border-l-[#22c55e]'
     : task.status === 'in_progress' ? 'border-l-[#eab308]'
     : 'border-l-[#6b7280]'
 
-  const handleStatusClick = useCallback(async () => {
+  const handleStatusClick = useCallback(() => {
     if (inflight) return
     const newStatus = NEXT_STATUS[task.status]
-    onOptimisticUpdate({ ...task, status: newStatus })
     onInflightChange(task.id, true)
-    try {
-      await api.updateTask(roomId, task.id, { status: newStatus })
-    } catch {
-      onOptimisticUpdate(task)
-    } finally {
-      onInflightChange(task.id, false)
-    }
-  }, [task, roomId, onOptimisticUpdate, inflight, onInflightChange])
+    updateTaskMutation.mutate(
+      { param: { id: roomId, taskId: task.id }, json: { status: newStatus } },
+      { onSettled: () => onInflightChange(task.id, false) },
+    )
+  }, [task, roomId, inflight, onInflightChange, updateTaskMutation])
 
-  const handleAssigneeChange = useCallback(async (assignee: string | null) => {
+  const handleAssigneeChange = useCallback((assignee: string | null) => {
     if (inflight) return
-    onOptimisticUpdate({ ...task, assignee })
     onInflightChange(task.id, true)
-    try {
-      await api.updateTask(roomId, task.id, { assignee })
-    } catch {
-      onOptimisticUpdate(task)
-    } finally {
-      onInflightChange(task.id, false)
-    }
-  }, [task, roomId, onOptimisticUpdate, inflight, onInflightChange])
+    updateTaskMutation.mutate(
+      { param: { id: roomId, taskId: task.id }, json: { assignee: assignee ?? undefined } },
+      { onSettled: () => onInflightChange(task.id, false) },
+    )
+  }, [task, roomId, inflight, onInflightChange, updateTaskMutation])
 
   return (
     <div className={clsx('rounded-md border border-border bg-white/[0.04] p-2.5 border-l-[3px]', statusColor)}>
@@ -160,18 +153,18 @@ function Column({
   count,
   members,
   roomId,
-  onOptimisticUpdate,
   inflightIds,
   onInflightChange,
+  updateTaskMutation,
 }: {
   title: string
   tasks: TaskItem[]
   count: number
   members: TeamMember[]
   roomId: string
-  onOptimisticUpdate: (updated: TaskItem) => void
   inflightIds: Set<string>
   onInflightChange: (taskId: string, pending: boolean) => void
+  updateTaskMutation: ReturnType<typeof useUpdateTask>
 }) {
   return (
     <div className="flex-1 min-w-0 flex flex-col">
@@ -186,9 +179,9 @@ function Column({
             task={t}
             members={members}
             roomId={roomId}
-            onOptimisticUpdate={onOptimisticUpdate}
             inflight={inflightIds.has(t.id)}
             onInflightChange={onInflightChange}
+            updateTaskMutation={updateTaskMutation}
           />
         ))}
         {tasks.length === 0 && (
@@ -199,51 +192,25 @@ function Column({
   )
 }
 
-export default function TaskBoardModal({ roomId, tasksInfo, teamInfo, onClose }: TaskBoardModalProps) {
+export default function TaskBoardModal({ roomId, onClose }: TaskBoardModalProps) {
   const [subject, setSubject] = useState('')
   const [description, setDescription] = useState('')
   const [assignee, setAssignee] = useState<string | null>(null)
-  const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [optimisticTasks, setOptimisticTasks] = useState<TaskItem[]>([])
   const [inflightIds, setInflightIds] = useState<Set<string>>(new Set())
+
+  const { data: tasksData } = useTasksQuery(roomId)
+  const { data: teamInfo } = useTeamInfoQuery(roomId)
+  const createTaskMutation = useCreateTask(roomId)
+  const updateTaskMutation = useUpdateTask(roomId)
 
   const members = teamInfo?.members ?? []
 
-  // Clear optimistic entries when WS catches up (same state)
-  useEffect(() => {
-    if (optimisticTasks.length === 0) return
-    const stale = optimisticTasks.filter(ot => {
-      const ws = tasksInfo?.tasks?.find(t => t.id === ot.id)
-      if (!ws) return false
-      return ws.status === ot.status && ws.assignee === ot.assignee
-    })
-    if (stale.length > 0) {
-      const staleIds = new Set(stale.map(t => t.id))
-      setOptimisticTasks(prev => prev.filter(t => !staleIds.has(t.id)))
-    }
-  }, [tasksInfo, optimisticTasks])
-
-  const tasks = useMemo(() => {
-    const wsTasks = tasksInfo?.tasks ?? []
-    const wsMap = new Map(wsTasks.map(t => [t.id, t]))
-    // Merge: optimistic always overrides WS
-    for (const ot of optimisticTasks) {
-      wsMap.set(ot.id, ot)
-    }
-    return [...wsMap.values()]
-  }, [tasksInfo, optimisticTasks])
+  const tasks = useMemo(() => tasksData?.tasks ?? [], [tasksData])
 
   const pending = tasks.filter(t => t.status === 'pending')
   const inProgress = tasks.filter(t => t.status === 'in_progress')
   const completed = tasks.filter(t => t.status === 'completed')
-
-  const handleOptimisticUpdate = useCallback((updated: TaskItem) => {
-    setOptimisticTasks(prev => {
-      const filtered = prev.filter(t => t.id !== updated.id)
-      return [...filtered, updated]
-    })
-  }, [])
 
   const handleInflightChange = useCallback((taskId: string, pending: boolean) => {
     setInflightIds(prev => {
@@ -257,22 +224,30 @@ export default function TaskBoardModal({ roomId, tasksInfo, teamInfo, onClose }:
   const handleSubmit = useCallback(async (e: React.FormEvent & { currentTarget: HTMLFormElement }) => {
     e.preventDefault()
     const trimmed = subject.trim()
-    if (!trimmed || submitting) return
+    if (!trimmed || createTaskMutation.isPending) return
 
     setError('')
-    setSubmitting(true)
-    try {
-      const result = await api.createTask(roomId, trimmed, description.trim() || undefined, assignee)
-      setOptimisticTasks(prev => [...prev, result.task])
-      setSubject('')
-      setDescription('')
-      setAssignee(null)
-    } catch {
-      setError('Failed to create task. Please try again.')
-    } finally {
-      setSubmitting(false)
-    }
-  }, [roomId, subject, description, assignee, submitting])
+    createTaskMutation.mutate(
+      {
+        param: { id: roomId },
+        json: {
+          subject: trimmed,
+          description: description.trim() || undefined,
+          assignee: assignee ?? undefined,
+        },
+      },
+      {
+        onSuccess: () => {
+          setSubject('')
+          setDescription('')
+          setAssignee(null)
+        },
+        onError: () => {
+          setError('Failed to create task. Please try again.')
+        },
+      },
+    )
+  }, [roomId, subject, description, assignee, createTaskMutation])
 
   return (
     <Dialog open onOpenChange={open => { if (!open) onClose() }}>
@@ -311,7 +286,7 @@ export default function TaskBoardModal({ roomId, tasksInfo, teamInfo, onClose }:
             )}
             <Button
               type="submit"
-              disabled={!subject.trim() || submitting}
+              disabled={!subject.trim() || createTaskMutation.isPending}
             >
               Add
             </Button>
@@ -328,9 +303,9 @@ export default function TaskBoardModal({ roomId, tasksInfo, teamInfo, onClose }:
         </form>
 
         <div className="flex gap-4 max-[600px]:flex-col">
-          <Column title="Pending" tasks={pending} count={pending.length} members={members} roomId={roomId} onOptimisticUpdate={handleOptimisticUpdate} inflightIds={inflightIds} onInflightChange={handleInflightChange} />
-          <Column title="In Progress" tasks={inProgress} count={inProgress.length} members={members} roomId={roomId} onOptimisticUpdate={handleOptimisticUpdate} inflightIds={inflightIds} onInflightChange={handleInflightChange} />
-          <Column title="Completed" tasks={completed} count={completed.length} members={members} roomId={roomId} onOptimisticUpdate={handleOptimisticUpdate} inflightIds={inflightIds} onInflightChange={handleInflightChange} />
+          <Column title="Pending" tasks={pending} count={pending.length} members={members} roomId={roomId} inflightIds={inflightIds} onInflightChange={handleInflightChange} updateTaskMutation={updateTaskMutation} />
+          <Column title="In Progress" tasks={inProgress} count={inProgress.length} members={members} roomId={roomId} inflightIds={inflightIds} onInflightChange={handleInflightChange} updateTaskMutation={updateTaskMutation} />
+          <Column title="Completed" tasks={completed} count={completed.length} members={members} roomId={roomId} inflightIds={inflightIds} onInflightChange={handleInflightChange} updateTaskMutation={updateTaskMutation} />
         </div>
       </DialogContent>
     </Dialog>

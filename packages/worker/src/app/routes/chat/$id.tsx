@@ -1,11 +1,12 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { useChatContext } from '../../lib/chat-context'
-import { deleteRoom, renameRoom, updateRoomProject } from '../../lib/api'
-import MainHeader from '../../components/MainHeader'
-import ChatView from '../../components/ChatView'
 import CanvasView from '../../components/CanvasView'
+import ChatView from '../../components/ChatView'
+import MainHeader from '../../components/MainHeader'
+import { useDeleteRoom, useRenameRoom, useUpdateRoomProject } from '../../hooks/useRoomMutations'
+import { useTeamInfoQuery } from '../../hooks/useTeamInfoQuery'
+import { useChatContext } from '../../lib/chat-context'
 
 export const Route = createFileRoute('/chat/$id')({
   component: ChatRoom,
@@ -13,55 +14,86 @@ export const Route = createFileRoute('/chat/$id')({
 
 function ChatRoom() {
   const { id } = Route.useParams()
-  const navigate = useNavigate()
-  const { rooms, projects, removeRoom, updateRoom, apiKey, userName, isStandalone, teamInfo, setTeamSidebarOpen, setTeamInfo, setTasksInfo, setCommandsInfo, setAgentActivity, showQR } = useChatContext()
+  const navigate = Route.useNavigate()
+  const {
+    rooms,
+    projects,
+    apiKey,
+    userName,
+    isStandalone,
+    setTeamSidebarOpen,
+    setAgentActivity,
+    showQR,
+  } = useChatContext()
+  const { data: teamInfo } = useTeamInfoQuery(id)
   const [terminalOpen, setTerminalOpen] = useState(false)
   const [canvasOpen, setCanvasOpen] = useState(false)
+
+  const deleteRoomMutation = useDeleteRoom()
+  const renameRoomMutation = useRenameRoom()
+  const updateRoomProjectMutation = useUpdateRoomProject()
 
   const room = rooms.find(r => r.id === id)
   const roomName = room?.name ?? 'Loading...'
 
   useEffect(() => {
     document.title = room ? `Meet AI: ${room.name}` : 'Meet AI'
-    return () => { document.title = 'Meet AI' }
+    return () => {
+      document.title = 'Meet AI'
+    }
   }, [room])
 
-  const handleDeleteConfirm = useCallback(async () => {
+  const handleDeleteConfirm = useCallback(() => {
     if (!room) return
-    try {
-      await deleteRoom(room.id)
-      removeRoom(room.id)
-      toast.success(`"${room.name}" deleted`)
-      navigate({ to: '/chat' })
-    } catch {
-      toast.error('Failed to delete room. Please try again.')
-    }
-  }, [room, removeRoom, navigate])
+    deleteRoomMutation.mutate({ param: { id: room.id } }, {
+      onSuccess: () => {
+        toast.success(`"${room.name}" deleted`)
+        navigate({ to: '/chat' })
+      },
+      onError: () => {
+        toast.error('Failed to delete room. Please try again.')
+      },
+    })
+  }, [room, deleteRoomMutation, navigate])
 
-  const handleRename = useCallback(async (name: string) => {
-    if (!room) return
-    try {
-      await renameRoom(room.id, name)
-      updateRoom(room.id, { name })
-      toast.success('Room renamed')
-    } catch {
-      toast.error('Failed to rename room.')
-    }
-  }, [room, updateRoom])
+  const handleRename = useCallback(
+    (name: string) => {
+      if (!room) return
+      renameRoomMutation.mutate(
+        { param: { id: room.id }, json: { name } },
+        {
+          onSuccess: () => {
+            toast.success('Room renamed')
+          },
+          onError: () => {
+            toast.error('Failed to rename room.')
+          },
+        }
+      )
+    },
+    [room, renameRoomMutation]
+  )
 
-  const handleAttachProject = useCallback(async (projectId: string | null) => {
-    if (!room) return
-    try {
-      await updateRoomProject(room.id, projectId)
-      updateRoom(room.id, { project_id: projectId })
-      toast.success(projectId ? 'Room attached to project' : 'Room detached from project')
-    } catch {
-      toast.error('Failed to update project.')
-    }
-  }, [room, updateRoom])
+  const handleAttachProject = useCallback(
+    (projectId: string | null) => {
+      if (!room) return
+      updateRoomProjectMutation.mutate(
+        { param: { id: room.id }, json: { project_id: projectId } },
+        {
+          onSuccess: () => {
+            toast.success(projectId ? 'Room attached to project' : 'Room detached from project')
+          },
+          onError: () => {
+            toast.error('Failed to update project.')
+          },
+        }
+      )
+    },
+    [room, updateRoomProjectMutation]
+  )
 
   return (
-    <div className="flex-1 flex flex-col bg-chat-bg text-msg-text min-w-0 h-dvh">
+    <div className="bg-chat-bg text-msg-text flex h-dvh min-w-0 flex-1 flex-col">
       <MainHeader
         room={room}
         projects={projects}
@@ -83,9 +115,6 @@ function ChatRoom() {
             room={room}
             apiKey={apiKey}
             userName={userName}
-            onTeamInfo={setTeamInfo}
-            onTasksInfo={setTasksInfo}
-            onCommandsInfo={setCommandsInfo}
             onAgentActivity={setAgentActivity}
             terminalOpen={terminalOpen}
             onTerminalClose={() => setTerminalOpen(false)}

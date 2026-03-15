@@ -17,8 +17,26 @@ import {
   upsertTaskSchema,
   terminalDataSchema,
 } from '../schemas/rooms'
-import type { TeamInfoPayload } from '../schemas/rooms'
 import type { AppEnv } from '../lib/types'
+import type { TeamInfoPayload } from '../schemas/rooms'
+
+type TaskPayload = {
+  id: string
+  subject: string
+  description?: string
+  status: 'pending' | 'in_progress' | 'completed'
+  assignee: string | null
+  owner: string | null
+  source: 'claude' | 'codex' | 'pi' | 'meet_ai'
+  source_id: string | null
+  updated_by: string | null
+  updated_at: number
+}
+
+type TasksPayload = {
+  type: 'tasks_info'
+  tasks: TaskPayload[]
+}
 
 export const roomsRoute = new Hono<AppEnv>()
 
@@ -39,6 +57,8 @@ export const roomsRoute = new Hono<AppEnv>()
     const id = crypto.randomUUID()
     const db = queries(c.env.DB)
     let projectName: string | null = null
+    let projectCreatedAt: string | null = null
+    let projectUpdatedAt: string | null = null
 
     // Validate project exists if project_id is provided
     if (body.project_id) {
@@ -47,6 +67,8 @@ export const roomsRoute = new Hono<AppEnv>()
         return c.json({ error: 'project not found' }, 404)
       }
       projectName = project.name
+      projectCreatedAt = project.created_at
+      projectUpdatedAt = project.updated_at
     }
 
     const room = await db.insertRoom(id, keyId, body.name, body.project_id)
@@ -62,8 +84,11 @@ export const roomsRoute = new Hono<AppEnv>()
             type: 'room_created',
             id,
             name: body.name,
+            created_at: room.created_at,
             project_id: body.project_id ?? null,
             project_name: projectName,
+            project_created_at: projectCreatedAt,
+            project_updated_at: projectUpdatedAt,
           }),
         })
       )
@@ -277,10 +302,8 @@ export const roomsRoute = new Hono<AppEnv>()
 
     const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
     const stub = c.env.CHAT_ROOM.get(doId)
-    const res = await stub.fetch(
-      new Request('http://internal/team-info', { method: 'GET' })
-    )
-    const data = await res.json() as TeamInfoPayload
+    const res = await stub.fetch(new Request('http://internal/team-info', { method: 'GET' }))
+    const data = (await res.json()) as TeamInfoPayload
     return c.json<TeamInfoPayload>(data)
   })
 
@@ -310,29 +333,34 @@ export const roomsRoute = new Hono<AppEnv>()
   })
 
   // PATCH /api/rooms/:id/team-info/members — upsert a single team member
-  .patch('/:id/team-info/members', requireAuth, zValidator('json', teamInfoUpsertSchema), async c => {
-    const keyId = c.get('keyId')
-    const roomId = c.req.param('id')
-    const db = queries(c.env.DB)
+  .patch(
+    '/:id/team-info/members',
+    requireAuth,
+    zValidator('json', teamInfoUpsertSchema),
+    async c => {
+      const keyId = c.get('keyId')
+      const roomId = c.req.param('id')
+      const db = queries(c.env.DB)
 
-    const room = await db.findRoom(roomId, keyId)
-    if (!room) {
-      return c.json({ error: 'room not found' }, 404)
+      const room = await db.findRoom(roomId, keyId)
+      if (!room) {
+        return c.json({ error: 'room not found' }, 404)
+      }
+
+      const body = c.req.valid('json')
+
+      const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
+      const stub = c.env.CHAT_ROOM.get(doId)
+      await stub.fetch(
+        new Request('http://internal/team-info/upsert', {
+          method: 'POST',
+          body: JSON.stringify(body),
+        })
+      )
+
+      return c.json({ ok: true })
     }
-
-    const body = c.req.valid('json')
-
-    const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
-    const stub = c.env.CHAT_ROOM.get(doId)
-    await stub.fetch(
-      new Request('http://internal/team-info/upsert', {
-        method: 'POST',
-        body: JSON.stringify(body),
-      })
-    )
-
-    return c.json({ ok: true })
-  })
+  )
 
   // POST /api/rooms/:id/commands — push commands info to ChatRoom DO
   .post('/:id/commands', requireAuth, zValidator('json', commandsSchema), async c => {
@@ -457,11 +485,8 @@ export const roomsRoute = new Hono<AppEnv>()
 
     const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
     const stub = c.env.CHAT_ROOM.get(doId)
-    const res = await stub.fetch(
-      new Request('http://internal/tasks', { method: 'GET' })
-    )
-    const data = await res.json()
-    return c.json(data)
+    const res = await stub.fetch(new Request('http://internal/tasks', { method: 'GET' }))
+    return c.json<TasksPayload>(await res.json())
   })
 
   // GET /api/rooms/:id/tasks/:taskId — get a single task
@@ -486,8 +511,7 @@ export const roomsRoute = new Hono<AppEnv>()
       return c.json({ error: 'task not found' }, 404)
     }
 
-    const task = await taskRes.json()
-    return c.json(task)
+    return c.json<TaskPayload>(await taskRes.json())
   })
 
   // PATCH /api/rooms/:id/tasks/:taskId — update a task
@@ -517,8 +541,7 @@ export const roomsRoute = new Hono<AppEnv>()
       return c.json({ error: 'task not found' }, 404)
     }
 
-    const task = await taskRes.json()
-    return c.json(task)
+    return c.json<TaskPayload>(await taskRes.json())
   })
 
   // DELETE /api/rooms/:id/tasks/:taskId — delete a task
@@ -674,11 +697,12 @@ export const roomsRoute = new Hono<AppEnv>()
       // Destroy CanvasRoom DO (closes sessions, wipes SQLite storage)
       const canvasDoId = c.env.CANVAS_ROOM.idFromName(`${keyId}:${canvas.id}`)
       const canvasStub = c.env.CANVAS_ROOM.get(canvasDoId)
-      await canvasStub.fetch(new Request('http://internal/destroy', {
-        method: 'DELETE',
-        headers: { 'X-Room-Id': roomId },
-      }))
-
+      await canvasStub.fetch(
+        new Request('http://internal/destroy', {
+          method: 'DELETE',
+          headers: { 'X-Room-Id': roomId },
+        })
+      )
     }
 
     await db.deleteRoom(keyId, roomId)

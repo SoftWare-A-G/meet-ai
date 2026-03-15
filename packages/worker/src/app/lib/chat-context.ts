@@ -1,21 +1,13 @@
 import { createContext, useContext } from 'react'
-import type { Project, Room, TeamInfo, TasksInfo, CommandInfo } from './types'
+import type { RoomsResponse, ProjectsResponse } from './fetchers'
 import type { AgentActivity } from './activity'
 
 export type ChatContextValue = {
-  rooms: Room[]
-  projects: Project[]
-  removeRoom: (id: string) => void
-  updateRoom: (id: string, updates: Partial<Room>) => void
+  rooms: RoomsResponse
+  projects: ProjectsResponse
   apiKey: string
   userName: string
   colorSchema: string
-  teamInfo: TeamInfo | null
-  setTeamInfo: (info: TeamInfo | null) => void
-  tasksInfo: TasksInfo | null
-  setTasksInfo: (info: TasksInfo | null) => void
-  commandsInfo: CommandInfo[] | null
-  setCommandsInfo: (commands: CommandInfo[] | null) => void
   agentActivity: Map<string, AgentActivity>
   setAgentActivity: (activity: Map<string, AgentActivity>) => void
   teamSidebarOpen: boolean

@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { loadMessagesSinceSeq } from '../lib/api'
-import type { Message, TeamInfo, TasksInfo, CommandInfo, CommandsInfo } from '../lib/types'
+import { queryKeys } from '../lib/query-keys'
+import type { CommandsInfo, TaskItem, TeamInfoResponse } from '../lib/fetchers'
+import type { Message, TerminalDataEvent } from '../lib/types'
 
 type PlanDecisionEvent = {
   type: 'plan_decision'
@@ -27,9 +31,26 @@ type PermissionDecisionEvent = {
   decided_by?: string
 }
 
+// Discriminated union for all WebSocket event types
+type WsEvent =
+  | (TeamInfoResponse & { type: 'team_info' })
+  | CommandsInfo
+  | { type: 'tasks_info'; tasks: TaskItem[] }
+  | PlanDecisionEvent
+  | QuestionAnswerEvent
+  | PermissionDecisionEvent
+  | TerminalDataEvent
+  | (Omit<Message, 'type'> & { type: 'message' | 'log' })
+
+function parseWsEvent(raw: string): WsEvent | null {
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return null
+  }
+}
+
 type UseRoomWebSocketOptions = {
-  onTeamInfo?: (info: TeamInfo) => void
-  onCommandsInfo?: (commands: CommandInfo[]) => void
   onPlanDecision?: (event: PlanDecisionEvent) => void
   onQuestionAnswer?: (event: QuestionAnswerEvent) => void
   onPermissionDecision?: (event: PermissionDecisionEvent) => void
@@ -48,10 +69,6 @@ export function useRoomWebSocket(
   const wsRef = useRef<WebSocket | null>(null)
   const onMessageRef = useRef(onMessage)
   onMessageRef.current = onMessage
-  const onTeamInfoRef = useRef(options?.onTeamInfo)
-  onTeamInfoRef.current = options?.onTeamInfo
-  const onCommandsInfoRef = useRef(options?.onCommandsInfo)
-  onCommandsInfoRef.current = options?.onCommandsInfo
   const onPlanDecisionRef = useRef(options?.onPlanDecision)
   onPlanDecisionRef.current = options?.onPlanDecision
   const onQuestionAnswerRef = useRef(options?.onQuestionAnswer)
@@ -60,13 +77,14 @@ export function useRoomWebSocket(
   onPermissionDecisionRef.current = options?.onPermissionDecision
   const onTerminalDataRef = useRef(options?.onTerminalData)
   onTerminalDataRef.current = options?.onTerminalData
-  const lastSeqRef = useRef<number>(0) as { current: number }
-  const backoffRef = useRef<number>(MIN_BACKOFF) as { current: number }
+  const queryClient = useQueryClient()
+  const lastSeqRef = useRef(0)
+  const backoffRef = useRef(MIN_BACKOFF)
   const [connected, setConnected] = useState(true)
-  const [tasksInfo, setTasksInfo] = useState<TasksInfo | null>(null)
 
   useEffect(() => {
     if (!roomId || !apiKey) return
+    const key = apiKey
 
     async function catchUp() {
       if (!roomId || lastSeqRef.current === 0) return
@@ -86,7 +104,7 @@ export function useRoomWebSocket(
     function connect() {
       if (wsRef.current) wsRef.current.close()
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
-      const tokenParam = `?token=${encodeURIComponent(apiKey as string)}`
+      const tokenParam = `?token=${encodeURIComponent(key)}`
       const ws = new WebSocket(`${protocol}//${location.host}/api/rooms/${roomId}/ws${tokenParam}`)
 
       ws.onopen = () => {
@@ -97,45 +115,68 @@ export function useRoomWebSocket(
       }
 
       ws.onmessage = e => {
-        try {
-          const data = JSON.parse(e.data)
-          if (data.type === 'team_info') {
-            onTeamInfoRef.current?.(data as TeamInfo)
-            return
+        const event = parseWsEvent(e.data)
+        if (!event) return
+
+        if (event.type === 'team_info') {
+          if (roomId) {
+            void queryClient.cancelQueries({ queryKey: queryKeys.rooms.teamInfo(roomId) })
+            const prev = queryClient.getQueryData<TeamInfoResponse>(queryKeys.rooms.teamInfo(roomId))
+            const { type: _, ...teamInfo } = event
+            queryClient.setQueryData<TeamInfoResponse>(queryKeys.rooms.teamInfo(roomId), teamInfo)
+            if (prev) {
+              const prevNames = new Set(prev.members.map(m => m.name))
+              for (const m of teamInfo.members) {
+                if (!prevNames.has(m.name) && m.status === 'active') {
+                  toast.success(m.name, { description: 'Ready to work', duration: 5000 })
+                }
+              }
+              for (const m of teamInfo.members) {
+                const old = prev.members.find(p => p.name === m.name)
+                if (old && old.status === 'active' && m.status === 'inactive') {
+                  toast(m.name, { description: 'Signed off', icon: '\uD83D\uDC4B', duration: 5000 })
+                }
+              }
+            }
           }
-          if (data.type === 'commands_info') {
-            onCommandsInfoRef.current?.((data as CommandsInfo).commands)
-            return
-          }
-          if (data.type === 'tasks_info') {
-            setTasksInfo(data as TasksInfo)
-            return
-          }
-          if (data.type === 'plan_decision') {
-            onPlanDecisionRef.current?.(data as PlanDecisionEvent)
-            return
-          }
-          if (data.type === 'question_answer') {
-            onQuestionAnswerRef.current?.(data as QuestionAnswerEvent)
-            return
-          }
-          if (data.type === 'permission_decision') {
-            onPermissionDecisionRef.current?.(data as PermissionDecisionEvent)
-            return
-          }
-          if (data.type === 'terminal_data' && typeof data.data === 'string') {
-            onTerminalDataRef.current?.(data.data)
-            return
-          }
-          const msg = data as Message
-          if (!msg.sender || !msg.content) return
-          if (msg.seq && msg.seq > lastSeqRef.current) {
-            lastSeqRef.current = msg.seq
-          }
-          onMessageRef.current?.(msg)
-        } catch {
-          /* ignore malformed */
+          return
         }
+        if (event.type === 'commands_info') {
+          if (roomId) {
+            void queryClient.cancelQueries({ queryKey: queryKeys.rooms.commands(roomId) })
+            queryClient.setQueryData(queryKeys.rooms.commands(roomId), event.commands)
+          }
+          return
+        }
+        if (event.type === 'tasks_info') {
+          if (roomId) {
+            void queryClient.cancelQueries({ queryKey: queryKeys.rooms.tasks(roomId) })
+            queryClient.setQueryData(queryKeys.rooms.tasks(roomId), event)
+          }
+          return
+        }
+        if (event.type === 'plan_decision') {
+          onPlanDecisionRef.current?.(event)
+          return
+        }
+        if (event.type === 'question_answer') {
+          onQuestionAnswerRef.current?.(event)
+          return
+        }
+        if (event.type === 'permission_decision') {
+          onPermissionDecisionRef.current?.(event)
+          return
+        }
+        if (event.type === 'terminal_data') {
+          onTerminalDataRef.current?.(event.data)
+          return
+        }
+        // Fallback: chat message or log
+        if (!event.sender || !event.content) return
+        if (event.seq && event.seq > lastSeqRef.current) {
+          lastSeqRef.current = event.seq
+        }
+        onMessageRef.current?.(event)
       }
 
       ws.onerror = error => console.error('WebSocket error', error)
@@ -198,5 +239,5 @@ export function useRoomWebSocket(
     }
   }
 
-  return { wsRef, connected, tasksInfo, sendTerminalSubscribe, sendTerminalUnsubscribe, sendTerminalResize }
+  return { wsRef, connected, sendTerminalSubscribe, sendTerminalUnsubscribe, sendTerminalResize }
 }

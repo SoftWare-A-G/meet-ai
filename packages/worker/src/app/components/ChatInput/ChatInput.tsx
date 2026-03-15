@@ -1,10 +1,14 @@
 import { useRef, useCallback, useState, useMemo, useEffect, type RefObject } from 'react'
 import clsx from 'clsx'
+import { getRouteApi } from '@tanstack/react-router'
 import { MentionsInput, Mention } from 'react-mentions-ts'
 import type { MentionsInputClassNames, MentionsInputChangeEvent } from 'react-mentions-ts'
 import { IconPaperclip, IconSend, IconMicrophone } from '../../icons'
-import { useChatContext } from '../../lib/chat-context'
+import { useCommandsCache } from '../../hooks/useCommandsCache'
+import { useTeamInfoQuery } from '../../hooks/useTeamInfoQuery'
 import { useVoiceInput } from '../../hooks/useVoiceInput'
+
+const chatRoute = getRouteApi('/chat/$id')
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 
@@ -44,7 +48,9 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
   const [value, setValue] = useState('')
   const [plainText, setPlainText] = useState('')
 
-  const { teamInfo, commandsInfo } = useChatContext()
+  const { id: roomId } = chatRoute.useParams()
+  const { data: commandsInfo } = useCommandsCache(roomId)
+  const { data: teamInfo } = useTeamInfoQuery(roomId)
 
   const interimRef = useRef('')
   const baseTextRef = useRef('')
