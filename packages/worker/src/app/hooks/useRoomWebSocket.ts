@@ -4,7 +4,9 @@ import { toast } from 'sonner'
 import { fetchMessagesSinceSeq } from '../lib/fetchers'
 import { queryKeys } from '../lib/query-keys'
 import { mergeIntoTimeline, reconcileOptimistic } from './useRoomTimeline'
+import { emptyDecisionsData } from './useDecisionsCache'
 import type { TimelineItem } from './useRoomTimeline'
+import type { DecisionsData } from './useDecisionsCache'
 import type { CommandsInfo, TaskItem, TeamInfoResponse } from '../lib/fetchers'
 import type { Message, TerminalDataEvent } from '../lib/types'
 
@@ -53,9 +55,6 @@ function parseWsEvent(raw: string): WsEvent | null {
 }
 
 type UseRoomWebSocketOptions = {
-  onPlanDecision?: (event: PlanDecisionEvent) => void
-  onQuestionAnswer?: (event: QuestionAnswerEvent) => void
-  onPermissionDecision?: (event: PermissionDecisionEvent) => void
   onTerminalData?: (data: string) => void
 }
 
@@ -71,12 +70,6 @@ export function useRoomWebSocket(
   const wsRef = useRef<WebSocket | null>(null)
   const onMessageRef = useRef(onMessage)
   onMessageRef.current = onMessage
-  const onPlanDecisionRef = useRef(options?.onPlanDecision)
-  onPlanDecisionRef.current = options?.onPlanDecision
-  const onQuestionAnswerRef = useRef(options?.onQuestionAnswer)
-  onQuestionAnswerRef.current = options?.onQuestionAnswer
-  const onPermissionDecisionRef = useRef(options?.onPermissionDecision)
-  onPermissionDecisionRef.current = options?.onPermissionDecision
   const onTerminalDataRef = useRef(options?.onTerminalData)
   onTerminalDataRef.current = options?.onTerminalData
   const queryClient = useQueryClient()
@@ -176,15 +169,61 @@ export function useRoomWebSocket(
           return
         }
         if (event.type === 'plan_decision') {
-          onPlanDecisionRef.current?.(event)
+          if (roomId) {
+            void queryClient.cancelQueries({ queryKey: queryKeys.rooms.decisions(roomId) })
+            queryClient.setQueryData<DecisionsData>(queryKeys.rooms.decisions(roomId), old => {
+              const current = old ?? emptyDecisionsData()
+              return {
+                ...current,
+                plan: {
+                  ...current.plan,
+                  [event.plan_review_id]: {
+                    status: event.status,
+                    feedback: event.feedback ?? undefined,
+                    permissionMode: event.permission_mode,
+                  },
+                },
+              }
+            })
+          }
           return
         }
         if (event.type === 'question_answer') {
-          onQuestionAnswerRef.current?.(event)
+          if (roomId) {
+            void queryClient.cancelQueries({ queryKey: queryKeys.rooms.decisions(roomId) })
+            queryClient.setQueryData<DecisionsData>(queryKeys.rooms.decisions(roomId), old => {
+              const current = old ?? emptyDecisionsData()
+              return {
+                ...current,
+                question: {
+                  ...current.question,
+                  [event.question_review_id]: {
+                    status: event.status,
+                    answers: event.answers,
+                  },
+                },
+              }
+            })
+          }
           return
         }
         if (event.type === 'permission_decision') {
-          onPermissionDecisionRef.current?.(event)
+          if (roomId) {
+            void queryClient.cancelQueries({ queryKey: queryKeys.rooms.decisions(roomId) })
+            queryClient.setQueryData<DecisionsData>(queryKeys.rooms.decisions(roomId), old => {
+              const current = old ?? emptyDecisionsData()
+              return {
+                ...current,
+                permission: {
+                  ...current.permission,
+                  [event.permission_review_id]: {
+                    status: event.status,
+                    feedback: event.feedback ?? undefined,
+                  },
+                },
+              }
+            })
+          }
           return
         }
         if (event.type === 'terminal_data') {

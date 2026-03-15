@@ -4,7 +4,9 @@ import DOMPurify from 'dompurify'
 import { Renderer, parse } from 'marked'
 import { formatTime } from '../../lib/dates'
 import { useAnnotations } from '../../hooks/useAnnotations'
+import { useDecisionsCache } from '../../hooks/useDecisionsCache'
 import { useHighlighter } from '../../hooks/useHighlighter'
+import { useReviewMutations } from '../../hooks/useReviewMutations'
 import type { SelectionInfo } from '../../hooks/useHighlighter'
 import type { AnnotationType } from './annotations'
 import ModeSwitcher from './ModeSwitcher'
@@ -18,10 +20,8 @@ type PlanReviewCardProps = {
   content: string
   timestamp?: string
   reviewId: string
-  status?: 'pending' | 'approved' | 'denied' | 'expired'
-  feedback?: string
-  onDecide: (reviewId: string, approved: boolean, feedback?: string, permissionMode?: string) => void
-  onDismiss?: (reviewId: string) => void
+  roomId: string
+  userName: string
 }
 
 const PURPLE = '#8b5cf6'
@@ -127,14 +127,18 @@ export default function PlanReviewCard({
   content,
   timestamp,
   reviewId,
-  status = 'pending',
-  feedback: existingFeedback,
-  onDecide,
-  onDismiss,
+  roomId,
+  userName,
 }: PlanReviewCardProps) {
+  const { planDecisions } = useDecisionsCache(roomId)
+  const { decidePlan, expirePlan } = useReviewMutations(roomId, userName)
+
+  const decision = planDecisions[reviewId]
+  const status = decision?.status ?? 'pending'
+  const existingFeedback = decision?.feedback
+
   const [showFeedbackInput, setShowFeedbackInput] = useState(false)
   const [feedbackText, setFeedbackText] = useState('')
-  const [submitting, setSubmitting] = useState(false)
   const [selection, setSelection] = useState<SelectionInfo | null>(null)
   const [showAnnotationPanel, setShowAnnotationPanel] = useState(false)
   const [showGlobalInput, setShowGlobalInput] = useState(false)
@@ -272,12 +276,12 @@ export default function PlanReviewCard({
   const segments = useMemo(() => parsePlanMarkdown(content), [content])
 
   const decided = status === 'approved' || status === 'denied' || status === 'expired'
+  const submitting = decidePlan.isPending || expirePlan.isPending
 
   const handleApprove = useCallback(() => {
     if (decided || submitting) return
-    setSubmitting(true)
-    onDecide(reviewId, true, undefined, permissionMode)
-  }, [decided, submitting, onDecide, reviewId, permissionMode])
+    decidePlan.mutate({ reviewId, approved: true, permission_mode: permissionMode })
+  }, [decided, submitting, decidePlan, reviewId, permissionMode])
 
   // Keyboard shortcuts: Cmd+Enter to approve
   useEffect(() => {
@@ -299,19 +303,17 @@ export default function PlanReviewCard({
     // If there are annotations, submit structured feedback immediately
     if (annotations.length > 0) {
       const feedback = exportDiff(annotations)
-      setSubmitting(true)
-      onDecide(reviewId, false, feedback, permissionMode)
+      decidePlan.mutate({ reviewId, approved: false, feedback, permission_mode: permissionMode })
       return
     }
     // Otherwise, show the textarea for manual feedback
     setShowFeedbackInput(true)
-  }, [decided, submitting, annotations, onDecide, reviewId, permissionMode])
+  }, [decided, submitting, annotations, decidePlan, reviewId, permissionMode])
 
   const handleSubmitFeedback = useCallback(() => {
     if (decided || submitting || !feedbackText.trim()) return
-    setSubmitting(true)
-    onDecide(reviewId, false, feedbackText.trim(), permissionMode)
-  }, [decided, submitting, feedbackText, onDecide, reviewId, permissionMode])
+    decidePlan.mutate({ reviewId, approved: false, feedback: feedbackText.trim(), permission_mode: permissionMode })
+  }, [decided, submitting, feedbackText, decidePlan, reviewId, permissionMode])
 
   const borderColor = status === 'approved'
     ? '#22c55e'
@@ -502,17 +504,14 @@ export default function PlanReviewCard({
       {!decided && (
         <div className="mt-3 flex items-center gap-2 justify-between">
           {/* Dismiss — left side */}
-          {onDismiss && (
-            <button
-              type="button"
-              disabled={submitting}
-              onClick={() => { setSubmitting(true); onDismiss(reviewId) }}
-              className="text-xs text-[#8b8fa3] hover:text-msg-text cursor-pointer transition-colors"
-            >
-              Dismiss
-            </button>
-          )}
-          {!onDismiss && <div />}
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={() => expirePlan.mutate({ reviewId })}
+            className="text-xs text-[#8b8fa3] hover:text-msg-text cursor-pointer transition-colors"
+          >
+            Dismiss
+          </button>
           <div className="flex items-center gap-2">
             {showFeedbackInput ? (
               <>
@@ -542,7 +541,12 @@ export default function PlanReviewCard({
                 {!decided && !showFeedbackInput && (
                   <select
                     value={permissionMode}
-                    onChange={(e) => setPermissionMode(e.target.value as typeof permissionMode)}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      if (v === 'default' || v === 'acceptEdits' || v === 'bypassPermissions') {
+                        setPermissionMode(v)
+                      }
+                    }}
                     className="rounded-lg border border-zinc-600 bg-zinc-800 px-2 py-1.5 text-xs text-zinc-300 cursor-pointer focus:outline-none focus:border-purple-500/50"
                   >
                     <option value="default">Default mode</option>

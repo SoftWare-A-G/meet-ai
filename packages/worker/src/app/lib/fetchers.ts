@@ -126,3 +126,47 @@ export async function fetchMessagesSinceSeq(roomId: string, seq: number) {
   if (!res.ok) throw new ApiError(res.status, await res.text())
   return res.json()
 }
+
+// Review decision mutation types — inferred from hc client
+export type DecidePlanReviewInput = InferRequestType<ApiClient['api']['rooms'][':id']['plan-reviews'][':reviewId']['decide']['$post']>
+export type ExpirePlanReviewInput = InferRequestType<ApiClient['api']['rooms'][':id']['plan-reviews'][':reviewId']['expire']['$post']>
+export type AnswerQuestionInput = InferRequestType<ApiClient['api']['rooms'][':id']['question-reviews'][':reviewId']['answer']['$post']>
+export type ExpireQuestionInput = InferRequestType<ApiClient['api']['rooms'][':id']['question-reviews'][':reviewId']['expire']['$post']>
+export type DecidePermissionInput = InferRequestType<ApiClient['api']['rooms'][':id']['permission-reviews'][':reviewId']['decide']['$post']>
+export type ExpirePermissionInput = InferRequestType<ApiClient['api']['rooms'][':id']['permission-reviews'][':reviewId']['expire']['$post']>
+
+export async function decidePlanReview(input: DecidePlanReviewInput) {
+  const res = await getApiClient().api.rooms[':id']['plan-reviews'][':reviewId'].decide.$post(input)
+  if (!res.ok) throw new ApiError(res.status, await res.text())
+  return res.json()
+}
+
+export async function expirePlanReview(input: ExpirePlanReviewInput) {
+  const res = await getApiClient().api.rooms[':id']['plan-reviews'][':reviewId'].expire.$post(input)
+  if (!res.ok) throw new ApiError(res.status, await res.text())
+  return res.json()
+}
+
+export async function answerQuestion(input: AnswerQuestionInput) {
+  const res = await getApiClient().api.rooms[':id']['question-reviews'][':reviewId'].answer.$post(input)
+  if (!res.ok) throw new ApiError(res.status, await res.text())
+  return res.json()
+}
+
+export async function expireQuestion(input: ExpireQuestionInput) {
+  const res = await getApiClient().api.rooms[':id']['question-reviews'][':reviewId'].expire.$post(input)
+  if (!res.ok) throw new ApiError(res.status, await res.text())
+  return res.json()
+}
+
+export async function decidePermission(input: DecidePermissionInput) {
+  const res = await getApiClient().api.rooms[':id']['permission-reviews'][':reviewId'].decide.$post(input)
+  if (!res.ok) throw new ApiError(res.status, await res.text())
+  return res.json()
+}
+
+export async function expirePermission(input: ExpirePermissionInput) {
+  const res = await getApiClient().api.rooms[':id']['permission-reviews'][':reviewId'].expire.$post(input)
+  if (!res.ok) throw new ApiError(res.status, await res.text())
+  return res.json()
+}

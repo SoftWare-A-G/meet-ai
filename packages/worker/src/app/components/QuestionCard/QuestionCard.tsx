@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import clsx from 'clsx'
 import { formatTime } from '../../lib/dates'
+import { useDecisionsCache } from '../../hooks/useDecisionsCache'
+import { useReviewMutations } from '../../hooks/useReviewMutations'
 
 type ParsedOption = {
   label: string
@@ -19,9 +21,8 @@ type QuestionCardProps = {
   onSend: (answer: string) => void
   answeredWith?: string
   questionReviewId?: string
-  questionReviewStatus?: 'pending' | 'answered' | 'expired'
-  questionReviewAnswers?: Record<string, string>
-  onQuestionAnswer?: (reviewId: string, answers: Record<string, string>) => void
+  roomId: string
+  userName: string
 }
 
 // Answers stored as arrays to support multiSelect
@@ -133,7 +134,14 @@ function deriveFromReviewAnswers(reviewAnswers: Record<string, string> | undefin
   return result
 }
 
-export default function QuestionCard({ content, timestamp, onSend, answeredWith, questionReviewId, questionReviewStatus, questionReviewAnswers, onQuestionAnswer }: QuestionCardProps) {
+export default function QuestionCard({ content, timestamp, onSend, answeredWith, questionReviewId, roomId, userName }: QuestionCardProps) {
+  const { questionAnswers } = useDecisionsCache(roomId)
+  const { answerQuestion } = useReviewMutations(roomId, userName)
+
+  const questionDecision = questionReviewId ? questionAnswers[questionReviewId] : undefined
+  const questionReviewStatus = questionDecision?.status
+  const questionReviewAnswers = questionDecision?.answers
+
   const questions = useMemo(() => parseQuestions(content), [content])
   const reviewDerived = useMemo(() => deriveFromReviewAnswers(questionReviewAnswers, questions), [questionReviewAnswers, questions])
   const textDerived = useMemo(() => deriveAnswers(answeredWith, questions), [answeredWith, questions])
@@ -183,12 +191,12 @@ export default function QuestionCard({ content, timestamp, onSend, answeredWith,
     setSubmitted(true)
 
     // If we have a question review, submit via the review API
-    if (questionReviewId && onQuestionAnswer) {
+    if (questionReviewId) {
       const answersMap: Record<string, string> = {}
       for (let i = 0; i < questions.length; i++) {
         answersMap[questions[i].question] = answers[i].join(', ')
       }
-      onQuestionAnswer(questionReviewId, answersMap)
+      answerQuestion.mutate({ reviewId: questionReviewId, answers: answersMap })
       return
     }
 
@@ -198,7 +206,7 @@ export default function QuestionCard({ content, timestamp, onSend, answeredWith,
       ? formatAnswer(0)
       : questions.map((q, i) => `${q.question}: ${formatAnswer(i)}`).join('\n')
     onSend(response)
-  }, [allAnswered, submitted, questions, answers, onSend, questionReviewId, onQuestionAnswer])
+  }, [allAnswered, submitted, questions, answers, onSend, questionReviewId, answerQuestion])
 
   if (questions.length === 0) return null
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAgentActivity } from '../../hooks/useAgentActivity'
 import { useAttachmentCountsQuery } from '../../hooks/useAttachmentCountsQuery'
 import { useHaptics } from '../../hooks/useHaptics'
@@ -44,78 +44,9 @@ export default function ChatView({
   const [unreadCount, setUnreadCount] = useState(0)
   const [forceScrollCounter, setForceScrollCounter] = useState(0)
   const [voiceAvailable, setVoiceAvailable] = useState(false)
-  const [wsPlanDecisions, setWsPlanDecisions] = useState<
-    Record<
-      string,
-      {
-        status: 'pending' | 'approved' | 'denied' | 'expired'
-        feedback?: string
-        permissionMode?: string
-      }
-    >
-  >({})
-  const [wsQuestionAnswers, setWsQuestionAnswers] = useState<
-    Record<string, { status: 'pending' | 'answered' | 'expired'; answers?: Record<string, string> }>
-  >({})
-  const [wsPermissionDecisions, setWsPermissionDecisions] = useState<
-    Record<string, { status: 'pending' | 'approved' | 'denied' | 'expired'; feedback?: string }>
-  >({})
   const [terminalData, setTerminalData] = useState<string | null>(null)
   const { queue, remove, getForRoom } = useOfflineQueue()
   const { triggerForMessage } = useHaptics()
-
-  // Derive plan decisions from timeline data + WS overrides
-  const planDecisions = useMemo(() => {
-    const fromTimeline: Record<
-      string,
-      { status: 'pending' | 'approved' | 'denied' | 'expired'; feedback?: string; permissionMode?: string }
-    > = {}
-    for (const msg of timeline) {
-      if (msg.plan_review_id && msg.plan_review_status) {
-        fromTimeline[msg.plan_review_id] = {
-          status: msg.plan_review_status,
-          feedback: msg.plan_review_feedback,
-        }
-      }
-    }
-    return { ...fromTimeline, ...wsPlanDecisions }
-  }, [timeline, wsPlanDecisions])
-
-  // Derive question answers from timeline data + WS overrides
-  const questionAnswers = useMemo(() => {
-    const fromTimeline: Record<
-      string,
-      { status: 'pending' | 'answered' | 'expired'; answers?: Record<string, string> }
-    > = {}
-    for (const msg of timeline) {
-      if (msg.question_review_id && msg.question_review_status) {
-        fromTimeline[msg.question_review_id] = {
-          status: msg.question_review_status,
-          answers: msg.question_review_answers
-            ? JSON.parse(msg.question_review_answers)
-            : undefined,
-        }
-      }
-    }
-    return { ...fromTimeline, ...wsQuestionAnswers }
-  }, [timeline, wsQuestionAnswers])
-
-  // Derive permission decisions from timeline data + WS overrides
-  const permissionDecisions = useMemo(() => {
-    const fromTimeline: Record<
-      string,
-      { status: 'pending' | 'approved' | 'denied' | 'expired'; feedback?: string }
-    > = {}
-    for (const msg of timeline) {
-      if (msg.permission_review_id && msg.permission_review_status) {
-        fromTimeline[msg.permission_review_id] = {
-          status: msg.permission_review_status,
-          feedback: msg.permission_review_feedback,
-        }
-      }
-    }
-    return { ...fromTimeline, ...wsPermissionDecisions }
-  }, [timeline, wsPermissionDecisions])
 
   // Check TTS availability once on mount
   useEffect(() => {
@@ -181,59 +112,6 @@ export default function ChatView({
     [userName, triggerForMessage],
   )
 
-  const onPlanDecisionWs = useCallback(
-    (event: {
-      plan_review_id: string
-      status: 'approved' | 'denied' | 'expired'
-      feedback?: string | null
-      permission_mode?: string
-    }) => {
-      setWsPlanDecisions(prev => ({
-        ...prev,
-        [event.plan_review_id]: {
-          status: event.status,
-          feedback: event.feedback ?? undefined,
-          permissionMode: event.permission_mode,
-        },
-      }))
-    },
-    [],
-  )
-
-  const onQuestionAnswerWs = useCallback(
-    (event: {
-      question_review_id: string
-      status: 'answered' | 'expired'
-      answers?: Record<string, string>
-    }) => {
-      setWsQuestionAnswers(prev => ({
-        ...prev,
-        [event.question_review_id]: {
-          status: event.status,
-          answers: event.answers,
-        },
-      }))
-    },
-    [],
-  )
-
-  const onPermissionDecisionWs = useCallback(
-    (event: {
-      permission_review_id: string
-      status: 'approved' | 'denied' | 'expired'
-      feedback?: string | null
-    }) => {
-      setWsPermissionDecisions(prev => ({
-        ...prev,
-        [event.permission_review_id]: {
-          status: event.status,
-          feedback: event.feedback ?? undefined,
-        },
-      }))
-    },
-    [],
-  )
-
   const onTerminalDataWs = useCallback((data: string) => {
     setTerminalData(data)
   }, [])
@@ -244,9 +122,6 @@ export default function ChatView({
     sendTerminalUnsubscribe,
     sendTerminalResize,
   } = useRoomWebSocket(room.id, apiKey, onWsMessage, {
-    onPlanDecision: onPlanDecisionWs,
-    onQuestionAnswer: onQuestionAnswerWs,
-    onPermissionDecision: onPermissionDecisionWs,
     onTerminalData: onTerminalDataWs,
   })
 
@@ -326,78 +201,6 @@ export default function ChatView({
     [room.id, userName, apiKey, queue, appendOptimistic, updateItemStatus],
   )
 
-  const handlePlanDecide = useCallback(
-    async (reviewId: string, approved: boolean, feedback?: string, permissionMode?: string) => {
-      setWsPlanDecisions(prev => ({
-        ...prev,
-        [reviewId]: { status: approved ? 'approved' : 'denied', feedback, permissionMode },
-      }))
-      try {
-        await api.decidePlanReview(room.id, reviewId, approved, feedback, userName, permissionMode)
-      } catch {
-        setWsPlanDecisions(prev => ({
-          ...prev,
-          [reviewId]: { status: 'pending' },
-        }))
-      }
-    },
-    [room.id, userName],
-  )
-
-  const handlePlanDismiss = useCallback(
-    async (reviewId: string) => {
-      setWsPlanDecisions(prev => ({
-        ...prev,
-        [reviewId]: { status: 'expired' },
-      }))
-      try {
-        await api.expirePlanReview(room.id, reviewId)
-      } catch {
-        setWsPlanDecisions(prev => ({
-          ...prev,
-          [reviewId]: { status: 'pending' },
-        }))
-      }
-    },
-    [room.id],
-  )
-
-  const handleQuestionAnswer = useCallback(
-    async (reviewId: string, answers: Record<string, string>) => {
-      setWsQuestionAnswers(prev => ({
-        ...prev,
-        [reviewId]: { status: 'answered', answers },
-      }))
-      try {
-        await api.answerQuestionReview(room.id, reviewId, answers, userName)
-      } catch {
-        setWsQuestionAnswers(prev => ({
-          ...prev,
-          [reviewId]: { status: 'pending' },
-        }))
-      }
-    },
-    [room.id, userName],
-  )
-
-  const handlePermissionDecide = useCallback(
-    async (reviewId: string, approved: boolean, feedback?: string) => {
-      setWsPermissionDecisions(prev => ({
-        ...prev,
-        [reviewId]: { status: approved ? 'approved' : 'denied', feedback },
-      }))
-      try {
-        await api.decidePermissionReview(room.id, reviewId, approved, userName, feedback)
-      } catch {
-        setWsPermissionDecisions(prev => ({
-          ...prev,
-          [reviewId]: { status: 'pending' },
-        }))
-      }
-    },
-    [room.id, userName],
-  )
-
   const handleRetry = useCallback(
     async (tempId: string) => {
       const msg = timeline.find(m => m.tempId === tempId)
@@ -425,18 +228,13 @@ export default function ChatView({
       <MessageList
         messages={timeline}
         attachmentCounts={attachmentCounts}
-        planDecisions={planDecisions}
-        questionAnswers={questionAnswers}
-        permissionDecisions={permissionDecisions}
+        roomId={room.id}
+        userName={userName}
         unreadCount={unreadCount}
         forceScrollCounter={forceScrollCounter}
         onScrollToBottom={() => setUnreadCount(0)}
         onRetry={handleRetry}
         onSend={handleSend}
-        onPlanDecide={handlePlanDecide}
-        onPlanDismiss={handlePlanDismiss}
-        onQuestionAnswer={handleQuestionAnswer}
-        onPermissionDecide={handlePermissionDecide}
         connected={connected}
         voiceAvailable={voiceAvailable}
       />

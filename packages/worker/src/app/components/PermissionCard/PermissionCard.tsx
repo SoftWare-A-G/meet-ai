@@ -1,15 +1,16 @@
 import { useMemo, useState } from 'react'
 import clsx from 'clsx'
 import { formatTime } from '../../lib/dates'
+import { useDecisionsCache } from '../../hooks/useDecisionsCache'
+import { useReviewMutations } from '../../hooks/useReviewMutations'
 import { Button } from '../ui/button'
 
 type PermissionCardProps = {
   content: string
   timestamp?: string
   reviewId: string
-  status?: 'pending' | 'approved' | 'denied' | 'expired'
-  feedback?: string
-  onDecide?: (reviewId: string, approved: boolean, feedback?: string) => void
+  roomId: string
+  userName: string
 }
 
 type ContentSegment =
@@ -42,8 +43,15 @@ function parseContent(content: string): ContentSegment[] {
   return segments
 }
 
-export default function PermissionCard({ content, timestamp, reviewId, status, feedback, onDecide }: PermissionCardProps) {
-  const isPending = !status || status === 'pending'
+export default function PermissionCard({ content, timestamp, reviewId, roomId, userName }: PermissionCardProps) {
+  const { permissionDecisions } = useDecisionsCache(roomId)
+  const { decidePermission } = useReviewMutations(roomId, userName)
+
+  const decision = permissionDecisions[reviewId]
+  const status = decision?.status ?? 'pending'
+  const feedback = decision?.feedback
+
+  const isPending = status === 'pending'
   const isApproved = status === 'approved'
   const isDenied = status === 'denied'
   const isExpired = status === 'expired'
@@ -91,7 +99,7 @@ export default function PermissionCard({ content, timestamp, reviewId, status, f
         </div>
       )}
 
-      {isPending && onDecide && (
+      {isPending && (
         <div className="mt-3 flex flex-col gap-2">
           <textarea
             value={text}
@@ -104,14 +112,14 @@ export default function PermissionCard({ content, timestamp, reviewId, status, f
             <Button
               variant="destructive"
               size="sm"
-              onClick={() => onDecide(reviewId, false, text || undefined)}
+              onClick={() => decidePermission.mutate({ reviewId, approved: false, feedback: text || undefined })}
             >
               Deny
             </Button>
             <Button
               size="sm"
               className="bg-[#22c55e] text-black hover:bg-[#22c55e]/80"
-              onClick={() => onDecide(reviewId, true, text || undefined)}
+              onClick={() => decidePermission.mutate({ reviewId, approved: true, feedback: text || undefined })}
             >
               Allow
             </Button>
