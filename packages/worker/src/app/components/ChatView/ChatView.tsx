@@ -1,20 +1,27 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
+import { useAgentActivity } from '../../hooks/useAgentActivity'
+import { useHaptics } from '../../hooks/useHaptics'
+import { useOfflineQueue } from '../../hooks/useOfflineQueue'
+import { useRoomWebSocket } from '../../hooks/useRoomWebSocket'
+import * as api from '../../lib/api'
+import { useChatContext } from '../../lib/chat-context'
+import { parseUtcDate } from '../../lib/dates'
+import { requestPermission, notifyIfHidden } from '../../lib/notifications'
 import ActivityBar from '../ActivityBar'
 import ActivityLogDrawer from '../ActivityLogDrawer'
-import MessageList from '../MessageList'
 import ChatInput from '../ChatInput'
+import MessageList from '../MessageList'
 import TerminalViewerModal from '../TerminalViewerModal'
-import { useRoomWebSocket } from '../../hooks/useRoomWebSocket'
-import { useChatContext } from '../../lib/chat-context'
-import { useOfflineQueue } from '../../hooks/useOfflineQueue'
-import * as api from '../../lib/api'
-import { requestPermission, notifyIfHidden } from '../../lib/notifications'
-import { useHaptics } from '../../hooks/useHaptics'
-import { parseUtcDate } from '../../lib/dates'
 import type { AgentActivity } from '../../lib/activity'
-import type { Message as MessageType, Room, TeamInfo, TeamMember, TasksInfo, CommandInfo } from '../../lib/types'
-import { useAgentActivity } from '../../hooks/useAgentActivity'
+import type {
+  Message as MessageType,
+  Room,
+  TeamInfo,
+  TeamMember,
+  TasksInfo,
+  CommandInfo,
+} from '../../lib/types'
 
 type DisplayMessage = MessageType & {
   tempId?: string
@@ -33,16 +40,39 @@ type ChatViewProps = {
   onTerminalClose?: () => void
 }
 
-export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksInfo, onCommandsInfo, onAgentActivity, terminalOpen = false, onTerminalClose }: ChatViewProps) {
+export default function ChatView({
+  room,
+  apiKey,
+  userName,
+  onTeamInfo,
+  onTasksInfo,
+  onCommandsInfo,
+  onAgentActivity,
+  terminalOpen = false,
+  onTerminalClose,
+}: ChatViewProps) {
   const [messages, setMessages] = useState<DisplayMessage[]>([])
   const [activityDrawerOpen, setActivityDrawerOpen] = useState(false)
   const [attachmentCounts, setAttachmentCounts] = useState<Record<string, number>>({})
   const [unreadCount, setUnreadCount] = useState(0)
   const [forceScrollCounter, setForceScrollCounter] = useState(0)
   const [voiceAvailable, setVoiceAvailable] = useState(false)
-  const [planDecisions, setPlanDecisions] = useState<Record<string, { status: 'pending' | 'approved' | 'denied' | 'expired'; feedback?: string; permissionMode?: string }>>({})
-  const [questionAnswers, setQuestionAnswers] = useState<Record<string, { status: 'pending' | 'answered' | 'expired'; answers?: Record<string, string> }>>({})
-  const [permissionDecisions, setPermissionDecisions] = useState<Record<string, { status: 'pending' | 'approved' | 'denied' | 'expired'; feedback?: string }>>({})
+  const [planDecisions, setPlanDecisions] = useState<
+    Record<
+      string,
+      {
+        status: 'pending' | 'approved' | 'denied' | 'expired'
+        feedback?: string
+        permissionMode?: string
+      }
+    >
+  >({})
+  const [questionAnswers, setQuestionAnswers] = useState<
+    Record<string, { status: 'pending' | 'answered' | 'expired'; answers?: Record<string, string> }>
+  >({})
+  const [permissionDecisions, setPermissionDecisions] = useState<
+    Record<string, { status: 'pending' | 'approved' | 'denied' | 'expired'; feedback?: string }>
+  >({})
   const [terminalData, setTerminalData] = useState<string | null>(null)
   const { queue, remove, getForRoom } = useOfflineQueue()
   const { triggerForMessage } = useHaptics()
@@ -85,7 +115,10 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
       setAttachmentCounts(counts)
 
       // Populate plan decisions from loaded messages
-      const decisions: Record<string, { status: 'pending' | 'approved' | 'denied' | 'expired'; feedback?: string }> = {}
+      const decisions: Record<
+        string,
+        { status: 'pending' | 'approved' | 'denied' | 'expired'; feedback?: string }
+      > = {}
       for (const msg of history) {
         if (msg.plan_review_id && msg.plan_review_status) {
           decisions[msg.plan_review_id] = {
@@ -99,12 +132,17 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
       }
 
       // Populate question answers from loaded messages
-      const qAnswers: Record<string, { status: 'pending' | 'answered' | 'expired'; answers?: Record<string, string> }> = {}
+      const qAnswers: Record<
+        string,
+        { status: 'pending' | 'answered' | 'expired'; answers?: Record<string, string> }
+      > = {}
       for (const msg of history) {
         if (msg.question_review_id && msg.question_review_status) {
           qAnswers[msg.question_review_id] = {
             status: msg.question_review_status,
-            answers: msg.question_review_answers ? JSON.parse(msg.question_review_answers) : undefined,
+            answers: msg.question_review_answers
+              ? JSON.parse(msg.question_review_answers)
+              : undefined,
           }
         }
       }
@@ -113,7 +151,10 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
       }
 
       // Populate permission decisions from loaded messages
-      const pDecisions: Record<string, { status: 'pending' | 'approved' | 'denied' | 'expired'; feedback?: string }> = {}
+      const pDecisions: Record<
+        string,
+        { status: 'pending' | 'approved' | 'denied' | 'expired'; feedback?: string }
+      > = {}
       for (const msg of history) {
         if (msg.permission_review_id && msg.permission_review_status) {
           pDecisions[msg.permission_review_id] = {
@@ -151,110 +192,157 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
               await api.sendMessage(msg.roomId, msg.sender, msg.content)
               await remove(msg.tempId)
               if (!cancelled) {
-                setMessages(prev => prev.map(m =>
-                  m.tempId === msg.tempId ? { ...m, status: 'sent' as const } : m
-                ))
+                setMessages(prev =>
+                  prev.map(m => (m.tempId === msg.tempId ? { ...m, status: 'sent' as const } : m))
+                )
               }
             } catch {
               // leave as failed
             }
           }
         }
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }
     load()
-    return () => { cancelled = true }
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- getForRoom/remove are stable callbacks
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- getForRoom/remove are stable callbacks
   }, [room.id])
 
   // Request notification permission once on mount
-  useEffect(() => { requestPermission() }, [])
+  useEffect(() => {
+    requestPermission()
+  }, [])
 
   // WebSocket for real-time messages
-  const onWsMessage = useCallback((msg: MessageType) => {
-    notifyIfHidden(msg, userName)
+  const onWsMessage = useCallback(
+    (msg: MessageType) => {
+      notifyIfHidden(msg, userName)
 
-    // Deduplicate own echoed messages
-    if (msg.sender === userName) {
-      setMessages(prev => {
-        const pendingIdx = prev.findIndex(m => m.tempId && m.content === msg.content)
-        if (pendingIdx !== -1) {
-          const updated = [...prev]
-          updated[pendingIdx] = { ...msg, tempId: prev[pendingIdx].tempId, status: 'sent' as const }
-          return updated
-        }
-        return [...prev, { ...msg, status: 'sent' as const }]
-      })
-    } else {
-      setMessages(prev => [...prev, { ...msg, status: 'sent' as const }])
-      if (msg.type !== 'log' && msg.sender !== 'hook') {
-        setUnreadCount(c => c + 1)
-        triggerForMessage(msg)
-      }
-    }
-  }, [userName, triggerForMessage])
-
-  const onTeamInfoWs = useCallback((info: TeamInfo) => {
-    const prev = prevMembersRef.current
-    if (prev) {
-      const prevNames = new Set(prev.map(m => m.name))
-      for (const m of info.members) {
-        if (!prevNames.has(m.name) && m.status === 'active') {
-          toast.success(m.name, { description: 'Ready to work', duration: 5000 })
+      // Deduplicate own echoed messages
+      if (msg.sender === userName) {
+        setMessages(prev => {
+          const pendingIdx = prev.findIndex(m => m.tempId && m.content === msg.content)
+          if (pendingIdx !== -1) {
+            const updated = [...prev]
+            updated[pendingIdx] = {
+              ...msg,
+              tempId: prev[pendingIdx].tempId,
+              status: 'sent' as const,
+            }
+            return updated
+          }
+          return [...prev, { ...msg, status: 'sent' as const }]
+        })
+      } else {
+        setMessages(prev => [...prev, { ...msg, status: 'sent' as const }])
+        if (msg.type !== 'log' && msg.sender !== 'hook') {
+          setUnreadCount(c => c + 1)
+          triggerForMessage(msg)
         }
       }
-      for (const m of info.members) {
-        const old = prev.find(p => p.name === m.name)
-        if (old && old.status === 'active' && m.status === 'inactive') {
-          toast(m.name, { description: 'Signed off', icon: '👋', duration: 5000 })
+    },
+    [userName, triggerForMessage]
+  )
+
+  const onTeamInfoWs = useCallback(
+    (info: TeamInfo) => {
+      const prev = prevMembersRef.current
+      if (prev) {
+        const prevNames = new Set(prev.map(m => m.name))
+        for (const m of info.members) {
+          if (!prevNames.has(m.name) && m.status === 'active') {
+            toast.success(m.name, { description: 'Ready to work', duration: 5000 })
+          }
+        }
+        for (const m of info.members) {
+          const old = prev.find(p => p.name === m.name)
+          if (old && old.status === 'active' && m.status === 'inactive') {
+            toast(m.name, { description: 'Signed off', icon: '👋', duration: 5000 })
+          }
         }
       }
-    }
-    prevMembersRef.current = info.members
-    wsTeamDeliveredRef.current = true
-    onTeamInfo?.(info)
-  }, [onTeamInfo])
+      prevMembersRef.current = info.members
+      wsTeamDeliveredRef.current = true
+      onTeamInfo?.(info)
+    },
+    [onTeamInfo]
+  )
 
-  const onCommandsInfoWs = useCallback((commands: CommandInfo[]) => {
-    onCommandsInfo?.(commands)
-  }, [onCommandsInfo])
+  const onCommandsInfoWs = useCallback(
+    (commands: CommandInfo[]) => {
+      onCommandsInfo?.(commands)
+    },
+    [onCommandsInfo]
+  )
 
-  const onPlanDecisionWs = useCallback((event: { plan_review_id: string; status: 'approved' | 'denied' | 'expired'; feedback?: string | null; permission_mode?: string }) => {
-    setPlanDecisions(prev => ({
-      ...prev,
-      [event.plan_review_id]: {
-        status: event.status,
-        feedback: event.feedback ?? undefined,
-        permissionMode: event.permission_mode,
-      },
-    }))
-  }, [])
+  const onPlanDecisionWs = useCallback(
+    (event: {
+      plan_review_id: string
+      status: 'approved' | 'denied' | 'expired'
+      feedback?: string | null
+      permission_mode?: string
+    }) => {
+      setPlanDecisions(prev => ({
+        ...prev,
+        [event.plan_review_id]: {
+          status: event.status,
+          feedback: event.feedback ?? undefined,
+          permissionMode: event.permission_mode,
+        },
+      }))
+    },
+    []
+  )
 
-  const onQuestionAnswerWs = useCallback((event: { question_review_id: string; status: 'answered' | 'expired'; answers?: Record<string, string> }) => {
-    setQuestionAnswers(prev => ({
-      ...prev,
-      [event.question_review_id]: {
-        status: event.status,
-        answers: event.answers,
-      },
-    }))
-  }, [])
+  const onQuestionAnswerWs = useCallback(
+    (event: {
+      question_review_id: string
+      status: 'answered' | 'expired'
+      answers?: Record<string, string>
+    }) => {
+      setQuestionAnswers(prev => ({
+        ...prev,
+        [event.question_review_id]: {
+          status: event.status,
+          answers: event.answers,
+        },
+      }))
+    },
+    []
+  )
 
-  const onPermissionDecisionWs = useCallback((event: { permission_review_id: string; status: 'approved' | 'denied' | 'expired'; feedback?: string | null }) => {
-    setPermissionDecisions(prev => ({
-      ...prev,
-      [event.permission_review_id]: {
-        status: event.status,
-        feedback: event.feedback ?? undefined,
-      },
-    }))
-  }, [])
+  const onPermissionDecisionWs = useCallback(
+    (event: {
+      permission_review_id: string
+      status: 'approved' | 'denied' | 'expired'
+      feedback?: string | null
+    }) => {
+      setPermissionDecisions(prev => ({
+        ...prev,
+        [event.permission_review_id]: {
+          status: event.status,
+          feedback: event.feedback ?? undefined,
+        },
+      }))
+    },
+    []
+  )
 
   const onTerminalDataWs = useCallback((data: string) => {
     setTerminalData(data)
   }, [])
 
-  const { connected, tasksInfo, sendTerminalSubscribe, sendTerminalUnsubscribe, sendTerminalResize } = useRoomWebSocket(room.id, apiKey, onWsMessage, {
+  const {
+    connected,
+    tasksInfo,
+    sendTerminalSubscribe,
+    sendTerminalUnsubscribe,
+    sendTerminalResize,
+  } = useRoomWebSocket(room.id, apiKey, onWsMessage, {
     onTeamInfo: onTeamInfoWs,
     onCommandsInfo: onCommandsInfoWs,
     onPlanDecision: onPlanDecisionWs,
@@ -266,7 +354,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
   useEffect(() => {
     if (tasksInfo) wsTasksDeliveredRef.current = true
     onTasksInfo?.(tasksInfo)
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- onTasksInfo is stable
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- onTasksInfo is stable
   }, [tasksInfo])
 
   useEffect(() => {
@@ -276,7 +364,7 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
       sendTerminalUnsubscribe()
       setTerminalData(null)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- sendTerminal* are stable functions
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sendTerminal* are stable functions
   }, [terminalOpen, connected])
 
   // Derive per-agent activity from log messages
@@ -293,145 +381,183 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
       try {
         const queued = await getForRoom(room.id)
         for (const msg of queued) {
-          setMessages(prev => prev.map(m =>
-            m.tempId === msg.tempId ? { ...m, status: 'pending' as const } : m
-          ))
+          setMessages(prev =>
+            prev.map(m => (m.tempId === msg.tempId ? { ...m, status: 'pending' as const } : m))
+          )
           try {
             await api.sendMessage(msg.roomId, msg.sender, msg.content)
             await remove(msg.tempId)
-            setMessages(prev => prev.map(m =>
-              m.tempId === msg.tempId ? { ...m, status: 'sent' as const } : m
-            ))
+            setMessages(prev =>
+              prev.map(m => (m.tempId === msg.tempId ? { ...m, status: 'sent' as const } : m))
+            )
           } catch {
-            setMessages(prev => prev.map(m =>
-              m.tempId === msg.tempId ? { ...m, status: 'failed' as const } : m
-            ))
+            setMessages(prev =>
+              prev.map(m => (m.tempId === msg.tempId ? { ...m, status: 'failed' as const } : m))
+            )
           }
         }
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }
     window.addEventListener('online', handler)
     return () => window.removeEventListener('online', handler)
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- getForRoom/remove are stable callbacks
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- getForRoom/remove are stable callbacks
   }, [room.id])
 
-  const handleUploadFile = useCallback(async (file: File) => api.uploadFile(room.id, file), [room.id])
+  const handleUploadFile = useCallback(
+    async (file: File) => api.uploadFile(room.id, file),
+    [room.id]
+  )
 
-  const handleSend = useCallback(async (content: string, attachmentIds: string[] = []) => {
-    const tempId = `pending-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
-    setMessages(prev => [...prev, {
-      sender: userName,
-      content,
-      created_at: new Date().toISOString(),
-      tempId,
-      status: 'pending' as const,
-    }])
-    setForceScrollCounter(c => c + 1)
+  const handleSend = useCallback(
+    async (content: string, attachmentIds: string[] = []) => {
+      const tempId = `pending-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+      setMessages(prev => [
+        ...prev,
+        {
+          sender: userName,
+          content,
+          created_at: new Date().toISOString(),
+          tempId,
+          status: 'pending' as const,
+        },
+      ])
+      setForceScrollCounter(c => c + 1)
 
-    try {
-      const result = await api.sendMessage(room.id, userName, content, attachmentIds.length > 0 ? attachmentIds : undefined)
-      setMessages(prev => prev.map(m =>
-        m.tempId === tempId ? { ...m, status: 'sent' as const } : m
-      ))
+      try {
+        const result = await api.sendMessage(
+          room.id,
+          userName,
+          content,
+          attachmentIds.length > 0 ? attachmentIds : undefined
+        )
+        setMessages(prev =>
+          prev.map(m => (m.tempId === tempId ? { ...m, status: 'sent' as const } : m))
+        )
 
-      if (attachmentIds.length > 0 && result.id) {
-        setAttachmentCounts(prev => ({
+        if (attachmentIds.length > 0 && result.id) {
+          setAttachmentCounts(prev => ({
+            ...prev,
+            [result.id]: attachmentIds.length,
+          }))
+        }
+      } catch {
+        await queue({
+          tempId,
+          roomId: room.id,
+          sender: userName,
+          content,
+          apiKey,
+          timestamp: Date.now(),
+        })
+        setMessages(prev =>
+          prev.map(m => (m.tempId === tempId ? { ...m, status: 'failed' as const } : m))
+        )
+      }
+    },
+    [room.id, userName, apiKey, queue]
+  )
+
+  const handlePlanDecide = useCallback(
+    async (reviewId: string, approved: boolean, feedback?: string, permissionMode?: string) => {
+      // Optimistically update the decision state
+      setPlanDecisions(prev => ({
+        ...prev,
+        [reviewId]: { status: approved ? 'approved' : 'denied', feedback, permissionMode },
+      }))
+      try {
+        await api.decidePlanReview(room.id, reviewId, approved, feedback, userName, permissionMode)
+      } catch {
+        // Revert on failure
+        setPlanDecisions(prev => ({
           ...prev,
-          [result.id]: attachmentIds.length,
+          [reviewId]: { status: 'pending' },
         }))
       }
-    } catch {
-      await queue({ tempId, roomId: room.id, sender: userName, content, apiKey, timestamp: Date.now() })
-      setMessages(prev => prev.map(m =>
-        m.tempId === tempId ? { ...m, status: 'failed' as const } : m
-      ))
-    }
-  }, [room.id, userName, apiKey, queue])
+    },
+    [room.id, userName]
+  )
 
-  const handlePlanDecide = useCallback(async (reviewId: string, approved: boolean, feedback?: string, permissionMode?: string) => {
-    // Optimistically update the decision state
-    setPlanDecisions(prev => ({
-      ...prev,
-      [reviewId]: { status: approved ? 'approved' : 'denied', feedback, permissionMode },
-    }))
-    try {
-      await api.decidePlanReview(room.id, reviewId, approved, feedback, userName, permissionMode)
-    } catch {
-      // Revert on failure
+  const handlePlanDismiss = useCallback(
+    async (reviewId: string) => {
       setPlanDecisions(prev => ({
         ...prev,
-        [reviewId]: { status: 'pending' },
+        [reviewId]: { status: 'expired' },
       }))
-    }
-  }, [room.id, userName])
+      try {
+        await api.expirePlanReview(room.id, reviewId)
+      } catch {
+        setPlanDecisions(prev => ({
+          ...prev,
+          [reviewId]: { status: 'pending' },
+        }))
+      }
+    },
+    [room.id]
+  )
 
-  const handlePlanDismiss = useCallback(async (reviewId: string) => {
-    setPlanDecisions(prev => ({
-      ...prev,
-      [reviewId]: { status: 'expired' },
-    }))
-    try {
-      await api.expirePlanReview(room.id, reviewId)
-    } catch {
-      setPlanDecisions(prev => ({
-        ...prev,
-        [reviewId]: { status: 'pending' },
-      }))
-    }
-  }, [room.id])
-
-  const handleQuestionAnswer = useCallback(async (reviewId: string, answers: Record<string, string>) => {
-    // Optimistic update
-    setQuestionAnswers(prev => ({
-      ...prev,
-      [reviewId]: { status: 'answered', answers },
-    }))
-    try {
-      await api.answerQuestionReview(room.id, reviewId, answers, userName)
-    } catch {
-      // Revert on failure
+  const handleQuestionAnswer = useCallback(
+    async (reviewId: string, answers: Record<string, string>) => {
+      // Optimistic update
       setQuestionAnswers(prev => ({
         ...prev,
-        [reviewId]: { status: 'pending' },
+        [reviewId]: { status: 'answered', answers },
       }))
-    }
-  }, [room.id, userName])
+      try {
+        await api.answerQuestionReview(room.id, reviewId, answers, userName)
+      } catch {
+        // Revert on failure
+        setQuestionAnswers(prev => ({
+          ...prev,
+          [reviewId]: { status: 'pending' },
+        }))
+      }
+    },
+    [room.id, userName]
+  )
 
-  const handlePermissionDecide = useCallback(async (reviewId: string, approved: boolean, feedback?: string) => {
-    // Optimistic update
-    setPermissionDecisions(prev => ({
-      ...prev,
-      [reviewId]: { status: approved ? 'approved' : 'denied', feedback },
-    }))
-    try {
-      await api.decidePermissionReview(room.id, reviewId, approved, userName, feedback)
-    } catch {
-      // Revert on failure
+  const handlePermissionDecide = useCallback(
+    async (reviewId: string, approved: boolean, feedback?: string) => {
+      // Optimistic update
       setPermissionDecisions(prev => ({
         ...prev,
-        [reviewId]: { status: 'pending' },
+        [reviewId]: { status: approved ? 'approved' : 'denied', feedback },
       }))
-    }
-  }, [room.id, userName])
+      try {
+        await api.decidePermissionReview(room.id, reviewId, approved, userName, feedback)
+      } catch {
+        // Revert on failure
+        setPermissionDecisions(prev => ({
+          ...prev,
+          [reviewId]: { status: 'pending' },
+        }))
+      }
+    },
+    [room.id, userName]
+  )
 
-  const handleRetry = useCallback(async (tempId: string) => {
-    const msg = messages.find(m => m.tempId === tempId)
-    if (!msg) return
-    setMessages(prev => prev.map(m =>
-      m.tempId === tempId ? { ...m, status: 'pending' as const } : m
-    ))
-    try {
-      await api.sendMessage(room.id, userName, msg.content)
-      setMessages(prev => prev.map(m =>
-        m.tempId === tempId ? { ...m, status: 'sent' as const } : m
-      ))
-      await remove(tempId)
-    } catch {
-      setMessages(prev => prev.map(m =>
-        m.tempId === tempId ? { ...m, status: 'failed' as const } : m
-      ))
-    }
-  }, [room.id, userName, messages, remove])
+  const handleRetry = useCallback(
+    async (tempId: string) => {
+      const msg = messages.find(m => m.tempId === tempId)
+      if (!msg) return
+      setMessages(prev =>
+        prev.map(m => (m.tempId === tempId ? { ...m, status: 'pending' as const } : m))
+      )
+      try {
+        await api.sendMessage(room.id, userName, msg.content)
+        setMessages(prev =>
+          prev.map(m => (m.tempId === tempId ? { ...m, status: 'sent' as const } : m))
+        )
+        await remove(tempId)
+      } catch {
+        setMessages(prev =>
+          prev.map(m => (m.tempId === tempId ? { ...m, status: 'failed' as const } : m))
+        )
+      }
+    },
+    [room.id, userName, messages, remove]
+  )
 
   return (
     <>
@@ -459,20 +585,14 @@ export default function ChatView({ room, apiKey, userName, onTeamInfo, onTasksIn
         connected={connected}
         voiceAvailable={voiceAvailable}
       />
-      {!activityDrawerOpen && (
-        <ActivityBar onClick={() => setActivityDrawerOpen(true)} />
-      )}
+      <ActivityBar onClick={() => setActivityDrawerOpen(true)} />
       <ActivityLogDrawer
         open={activityDrawerOpen}
         onOpenChange={setActivityDrawerOpen}
         messages={messages}
         teamInfo={ctxTeamInfo}
       />
-      <ChatInput
-        roomName={room.name}
-        onSend={handleSend}
-        onUploadFile={handleUploadFile}
-      />
+      <ChatInput roomName={room.name} onSend={handleSend} onUploadFile={handleUploadFile} />
     </>
   )
 }

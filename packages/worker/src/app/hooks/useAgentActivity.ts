@@ -52,21 +52,26 @@ export function useAgentActivity(
     setActivity(next)
   }, [teamInfo])
 
+  // Keep a stable ref to the latest computeActivity so throttle timers
+  // never call a stale closure (e.g. one that captured teamInfo = null).
+  const computeRef = useRef(computeActivity)
+  computeRef.current = computeActivity
+
   // Throttled compute — max 2Hz
   const scheduleUpdate = useCallback(() => {
     if (throttleRef.current) {
       pendingUpdateRef.current = true
       return
     }
-    computeActivity()
+    computeRef.current()
     throttleRef.current = setTimeout(() => {
       throttleRef.current = null
       if (pendingUpdateRef.current) {
         pendingUpdateRef.current = false
-        computeActivity()
+        computeRef.current()
       }
     }, THROTTLE_MS)
-  }, [computeActivity])
+  }, [])
 
   // Process messages to extract latest per-agent log
   useEffect(() => {
@@ -99,10 +104,11 @@ export function useAgentActivity(
     }
   }, [messages, scheduleUpdate])
 
-  // Recompute when teamInfo changes
+  // Recompute immediately when teamInfo changes — don't throttle this
+  // since it's a rare event and we need the activity bar to appear promptly.
   useEffect(() => {
-    scheduleUpdate()
-  }, [teamInfo, scheduleUpdate])
+    computeRef.current()
+  }, [teamInfo])
 
   // Cleanup timers on unmount
   useEffect(() => {

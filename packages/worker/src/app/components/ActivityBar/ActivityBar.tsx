@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
 import clsx from 'clsx'
 import { ChevronUp } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
 import { useChatContext } from '../../lib/chat-context'
 import { formatRelativeTime } from '../../lib/dates'
 import type { AgentActivity, AgentState } from '../../lib/activity'
@@ -13,7 +13,7 @@ function StateDot({ state }: { state: AgentState }) {
       className={clsx(
         'inline-block w-1.5 h-1.5 rounded-full shrink-0',
         state === 'working' && 'bg-green-500 animate-pulse',
-        state === 'idle' && 'bg-neutral-500',
+        state === 'idle' && 'bg-neutral-500'
       )}
     />
   )
@@ -60,8 +60,6 @@ export default function ActivityBar({ onClick }: ActivityBarProps) {
     return a.lastActivityAt > best.lastActivityAt ? a : best
   }, null)
 
-  if (allIdle && !mostRecent && entries.length === 0) return null
-
   const announcement = buildAriaAnnouncement(entries)
   if (announcement !== prevAnnouncementRef.current) {
     prevAnnouncementRef.current = announcement
@@ -72,54 +70,64 @@ export default function ActivityBar({ onClick }: ActivityBarProps) {
   return (
     <div
       className={clsx(
-        'border-t border-neutral-800 bg-neutral-900/50 px-3 py-1.5 text-xs text-neutral-300 shrink-0 overflow-hidden',
+        'w-full border-t border-neutral-800 bg-neutral-900/50 px-3 py-1.5 text-xs text-neutral-300 shrink-0 overflow-hidden',
         onClick && 'cursor-pointer hover:bg-neutral-800/50 transition-colors'
       )}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
-      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') onClick() } : undefined}
-    >
+      onKeyDown={
+        onClick
+          ? e => {
+              if (e.key === 'Enter' || e.key === ' ') onClick()
+            }
+          : undefined
+      }>
       <span aria-live="polite" className="sr-only">
         {prevAnnouncementRef.current}
       </span>
-      <div className="flex items-center gap-2">
-        <div className="flex-1 min-w-0">
+      <div className="flex min-w-0 items-center gap-2">
+        <div className="min-w-0 flex-1">
           {allIdle ? (
-            <div className="flex items-center gap-1.5 opacity-50 min-w-0">
+            <div className="flex min-w-0 items-center gap-1.5 opacity-50">
               <StateDot state="idle" />
-              <span className="truncate">All agents idle</span>
+              <span className="shrink-0">All agents idle</span>
               {timeStr && (
                 <>
-                  <span>&middot;</span>
-                  <span>last activity {timeStr}</span>
+                  <span className="shrink-0 opacity-40">&middot;</span>
+                  <span className="shrink-0 whitespace-nowrap opacity-40">
+                    last activity {timeStr}
+                  </span>
                 </>
               )}
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 min-w-0">
+            <div className="flex min-w-0 items-center gap-1.5">
+              {/* Fixed left: status + label */}
               <StateDot state="working" />
-              <span className="shrink-0">
+              <span className="shrink-0 whitespace-nowrap">
                 {workingCount} agent{workingCount !== 1 ? 's' : ''} working
               </span>
+              {/* Flexible middle: action text — sole truncation target */}
               {mostRecent?.latestAction && (
                 <>
-                  <span className="opacity-40 shrink-0">&middot;</span>
-                  <span className="truncate opacity-70">{mostRecent.latestAction}</span>
+                  <span className="shrink-0 opacity-40">&middot;</span>
+                  <span className="min-w-0 flex-1 truncate opacity-70">
+                    {mostRecent.latestAction}
+                  </span>
                 </>
               )}
+              {/* Fixed right: timestamp */}
               {timeStr && (
                 <>
-                  <span className="opacity-40 shrink-0">&middot;</span>
-                  <span className="opacity-40 whitespace-nowrap shrink-0">{timeStr}</span>
+                  <span className="shrink-0 opacity-40">&middot;</span>
+                  <span className="shrink-0 whitespace-nowrap opacity-40">{timeStr}</span>
                 </>
               )}
             </div>
           )}
         </div>
-        {onClick && (
-          <ChevronUp className="w-3.5 h-3.5 shrink-0 opacity-40" />
-        )}
+        {onClick && <ChevronUp className="h-3.5 w-3.5 shrink-0 opacity-40" />}
       </div>
     </div>
   )

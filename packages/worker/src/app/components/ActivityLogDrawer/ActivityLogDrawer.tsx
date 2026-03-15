@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import clsx from 'clsx'
-import { DrawerRoot, DrawerPopup, DrawerHandle, DrawerTitle } from '../ui/drawer'
+import { DrawerRoot, DrawerPopup, DrawerContent, DrawerHandle, DrawerTitle } from '../ui/drawer'
 import DiffBlock from '../DiffBlock'
 import { parseAgentActivity } from '../../lib/activity'
 import { formatRelativeTime } from '../../lib/dates'
@@ -122,7 +122,7 @@ export default function ActivityLogDrawer({ open, onOpenChange, messages, teamIn
       modal={false}
       snapPoints={[0.5]}
     >
-      <DrawerPopup className="z-40" showBackdrop={false}>
+      <DrawerPopup className="h-[50dvh]" showBackdrop={false} showCloseButton={false}>
         {/* Swipe handle */}
         <DrawerHandle>
           <div className="h-1 w-8 rounded-full bg-neutral-600" />
@@ -137,14 +137,14 @@ export default function ActivityLogDrawer({ open, onOpenChange, messages, teamIn
 
         {/* Agent filter pills */}
         {agents.length > 0 && (
-          <div className="flex shrink-0 basis-auto gap-1.5 overflow-x-auto px-4 pb-2 scrollbar-none" role="tablist">
+          <div className="flex shrink-0 basis-auto items-center gap-1.5 overflow-x-auto px-4 py-2.5 scrollbar-none" role="tablist">
             <button
               type="button"
               role="tab"
               aria-selected={filter.agent === null}
               onClick={() => setFilter({ agent: null })}
               className={clsx(
-                'inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium leading-none transition-colors',
+                'inline-flex h-8 items-center justify-center whitespace-nowrap rounded-full px-3 text-xs font-medium transition-colors',
                 filter.agent === null
                   ? 'bg-neutral-300 text-neutral-900'
                   : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
@@ -167,9 +167,9 @@ export default function ActivityLogDrawer({ open, onOpenChange, messages, teamIn
                   aria-selected={isSelected}
                   onClick={() => setFilter({ agent: isSelected ? null : agent.name })}
                   className={clsx(
-                    'inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium leading-none transition-colors',
+                    'inline-flex h-8 items-center justify-center whitespace-nowrap rounded-full px-3 text-xs font-medium transition-colors',
                     isSelected
-                      ? 'ring-1 ring-white/30'
+                      ? 'ring-1 ring-inset ring-white/30'
                       : !agent.active
                         ? 'bg-neutral-900 opacity-40 hover:opacity-60'
                         : 'bg-neutral-800 hover:bg-neutral-700'
@@ -186,8 +186,8 @@ export default function ActivityLogDrawer({ open, onOpenChange, messages, teamIn
           </div>
         )}
 
-        {/* Log entries — swipe-ignore so scrolling doesn't dismiss drawer */}
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4" role="log" data-base-ui-swipe-ignore>
+        {/* Log entries — DrawerContent prevents pointer-swipe dismissal while scrolling */}
+        <DrawerContent className="min-h-0 overflow-y-auto px-4 pb-4" role="log">
           {filteredLogs.length === 0 ? (
             <div className="py-8 text-center text-xs text-neutral-500">
               No activity logs yet
@@ -212,7 +212,7 @@ export default function ActivityLogDrawer({ open, onOpenChange, messages, teamIn
               )}
             </div>
           )}
-        </div>
+        </DrawerContent>
       </DrawerPopup>
     </DrawerRoot>
   )

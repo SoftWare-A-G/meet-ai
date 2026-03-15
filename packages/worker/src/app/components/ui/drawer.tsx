@@ -23,7 +23,7 @@ function DrawerBackdrop({
     <DrawerPrimitive.Backdrop
       data-slot="drawer-backdrop"
       className={cn(
-        "fixed inset-0 z-40 bg-black/5 duration-100 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        "fixed inset-0 z-40 bg-black/20 opacity-0 transition-opacity duration-300 ease-out data-open:opacity-100",
         className
       )}
       {...props}
@@ -44,31 +44,36 @@ function DrawerPopup({
   return (
     <DrawerPortal>
       {showBackdrop && <DrawerBackdrop />}
-      <DrawerPrimitive.Popup
-        data-slot="drawer-popup"
-        className={cn(
-          "fixed inset-x-0 bottom-0 z-40 flex max-h-[80dvh] flex-col rounded-t-xl bg-neutral-900 text-sm text-neutral-200 ring-1 ring-neutral-700/50 outline-none pb-[env(safe-area-inset-bottom)]",
-          className
-        )}
-        {...props}
+      <DrawerPrimitive.Viewport
+        data-slot="drawer-viewport"
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex h-dvh items-end"
       >
-        {children}
-        {showCloseButton && (
-          <DrawerPrimitive.Close
-            data-slot="drawer-close"
-            render={
-              <Button
-                variant="ghost"
-                className="absolute top-2 right-2"
-                size="icon-sm"
-              />
-            }
-          >
-            <XIcon />
-            <span className="sr-only">Close</span>
-          </DrawerPrimitive.Close>
-        )}
-      </DrawerPrimitive.Popup>
+        <DrawerPrimitive.Popup
+          data-slot="drawer-popup"
+          className={cn(
+            "pointer-events-auto w-full flex max-h-[80dvh] flex-col rounded-t-xl bg-neutral-900 text-sm text-neutral-200 ring-1 ring-neutral-700/50 outline-none pb-[env(safe-area-inset-bottom)]",
+            className
+          )}
+          {...props}
+        >
+          {children}
+          {showCloseButton && (
+            <DrawerPrimitive.Close
+              data-slot="drawer-close"
+              render={
+                <Button
+                  variant="ghost"
+                  className="absolute top-2 right-2"
+                  size="icon-sm"
+                />
+              }
+            >
+              <XIcon />
+              <span className="sr-only">Close</span>
+            </DrawerPrimitive.Close>
+          )}
+        </DrawerPrimitive.Popup>
+      </DrawerPrimitive.Viewport>
     </DrawerPortal>
   )
 }
@@ -99,6 +104,19 @@ function DrawerTitle({
   )
 }
 
+function DrawerContent({
+  className,
+  ...props
+}: DrawerPrimitive.Content.Props) {
+  return (
+    <DrawerPrimitive.Content
+      data-slot="drawer-content"
+      className={cn("flex min-h-0 flex-1 flex-col", className)}
+      {...props}
+    />
+  )
+}
+
 function DrawerClose({ ...props }: DrawerPrimitive.Close.Props) {
   return <DrawerPrimitive.Close data-slot="drawer-close" {...props} />
 }
@@ -108,6 +126,7 @@ export {
   DrawerPortal,
   DrawerBackdrop,
   DrawerPopup,
+  DrawerContent,
   DrawerHandle,
   DrawerTitle,
   DrawerClose,
