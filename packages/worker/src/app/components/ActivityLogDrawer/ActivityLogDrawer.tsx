@@ -4,8 +4,24 @@ import { DrawerRoot, DrawerPopup, DrawerHandle, DrawerTitle } from '../ui/drawer
 import DiffBlock from '../DiffBlock'
 import { parseAgentActivity } from '../../lib/activity'
 import { formatRelativeTime } from '../../lib/dates'
-import { ensureSenderContrast, hashColor } from '../../lib/colors'
+import { ensureSenderContrast, hashColor, resolveColor } from '../../lib/colors'
+import { contrastRatio } from '../../lib/theme'
 import type { Message, TeamInfo } from '../../lib/types'
+
+/** Ensure a color works as a pill background on the dark drawer surface (#171717). */
+function pillBgColor(rawColor: string): string {
+  const DRAWER_BG = '#171717'
+  const MIN_RATIO = 2.5
+  const resolved = resolveColor(rawColor)
+  if (contrastRatio(resolved, DRAWER_BG) >= MIN_RATIO) return rawColor
+  // Brighten until it clears the minimum contrast
+  const [r, g, b] = resolved.replace('#', '').match(/.{2}/g)!.map(h => parseInt(h, 16))
+  for (let f = 1.3; f <= 3; f += 0.2) {
+    const boosted = `#${[r, g, b].map(v => Math.min(255, Math.round(v * f)).toString(16).padStart(2, '0')).join('')}`
+    if (contrastRatio(boosted, DRAWER_BG) >= MIN_RATIO) return boosted
+  }
+  return rawColor
+}
 
 type DisplayMessage = Message & {
   tempId?: string
@@ -25,9 +41,11 @@ type FilterState = {
 }
 
 const TIMESTAMP_INTERVAL = 15_000
+const PAGE_SIZE = 100
 
 export default function ActivityLogDrawer({ open, onOpenChange, messages, teamInfo }: ActivityLogDrawerProps) {
   const [filter, setFilter] = useState<FilterState>({ agent: null })
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const [, setTick] = useState(0)
 
   // 15s timestamp refresh
@@ -59,6 +77,11 @@ export default function ActivityLogDrawer({ open, onOpenChange, messages, teamIn
     return Array.from(agentMap.values())
   }, [logMessages, teamInfo])
 
+  // Reset visible count when filter changes
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE)
+  }, [filter.agent])
+
   // Filter logs by selected agent
   const filteredLogs = useMemo(() => {
     const logs = filter.agent
@@ -67,6 +90,9 @@ export default function ActivityLogDrawer({ open, onOpenChange, messages, teamIn
     // Reverse chronological (newest first)
     return [...logs].reverse()
   }, [logMessages, filter.agent])
+
+  const visibleLogs = filteredLogs.slice(0, visibleCount)
+  const hasMore = filteredLogs.length > visibleCount
 
   return (
     <DrawerRoot
@@ -90,16 +116,16 @@ export default function ActivityLogDrawer({ open, onOpenChange, messages, teamIn
 
         {/* Agent filter pills */}
         {agents.length > 0 && (
-          <div className="flex gap-1.5 overflow-x-auto px-4 pb-2 scrollbar-none" role="tablist">
+          <div className="flex shrink-0 gap-1.5 overflow-x-auto px-4 pb-2 scrollbar-none" role="tablist">
             <button
               type="button"
               role="tab"
               aria-selected={filter.agent === null}
               onClick={() => setFilter({ agent: null })}
               className={clsx(
-                'shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors',
+                'shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors',
                 filter.agent === null
-                  ? 'bg-neutral-600 text-white'
+                  ? 'bg-neutral-300 text-neutral-900'
                   : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
               )}
             >
@@ -107,7 +133,10 @@ export default function ActivityLogDrawer({ open, onOpenChange, messages, teamIn
             </button>
             {agents.map(agent => {
               const isActive = filter.agent === agent.name
-              const color = agent.color ? ensureSenderContrast(agent.color) : hashColor(agent.name)
+              const rawColor = agent.color || hashColor(agent.name)
+              const bg = pillBgColor(rawColor)
+              const resolvedBg = resolveColor(bg)
+              const textColor = contrastRatio('#fff', resolvedBg) >= contrastRatio('#000', resolvedBg) ? '#fff' : '#000'
               return (
                 <button
                   type="button"
@@ -116,12 +145,10 @@ export default function ActivityLogDrawer({ open, onOpenChange, messages, teamIn
                   aria-selected={isActive}
                   onClick={() => setFilter({ agent: isActive ? null : agent.name })}
                   className={clsx(
-                    'shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors',
-                    isActive
-                      ? 'bg-neutral-600 text-white'
-                      : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
+                    'shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                    isActive && 'ring-1 ring-white/30'
                   )}
-                  style={isActive ? { backgroundColor: color, color: '#fff' } : undefined}
+                  style={{ backgroundColor: bg, color: textColor, opacity: isActive ? 1 : 0.75 }}
                 >
                   {agent.name}
                 </button>
@@ -131,20 +158,29 @@ export default function ActivityLogDrawer({ open, onOpenChange, messages, teamIn
         )}
 
         {/* Log entries — swipe-ignore so scrolling doesn't dismiss drawer */}
-        <div className="flex-1 overflow-y-auto px-4 pb-4" role="log" data-base-ui-swipe-ignore>
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4" role="log" data-base-ui-swipe-ignore>
           {filteredLogs.length === 0 ? (
             <div className="py-8 text-center text-xs text-neutral-500">
               No activity logs yet
             </div>
           ) : (
             <div className="flex flex-col gap-px">
-              {filteredLogs.map((msg, i) => (
+              {visibleLogs.map((msg, i) => (
                 <LogEntry
                   key={`${msg.sender}-${msg.created_at}-${i}`}
                   msg={msg}
                   teamInfo={teamInfo}
                 />
               ))}
+              {hasMore && (
+                <button
+                  type="button"
+                  onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
+                  className="mt-2 self-center rounded-full bg-neutral-800 px-3 py-1 text-xs text-neutral-400 transition-colors hover:bg-neutral-700 hover:text-neutral-300"
+                >
+                  Show more ({filteredLogs.length - visibleCount} remaining)
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -173,7 +209,7 @@ function LogEntry({ msg, teamInfo }: { msg: DisplayMessage; teamInfo: TeamInfo |
 
   return (
     <div className="flex items-baseline gap-1.5 py-0.5 font-mono text-xs">
-      <span className="shrink-0 whitespace-nowrap text-neutral-500">
+      <span className="w-[4.5rem] shrink-0 text-right tabular-nums whitespace-nowrap text-neutral-500">
         {timeStr}
       </span>
       <span className="shrink-0 whitespace-nowrap font-semibold" style={{ color: nameColor }}>
