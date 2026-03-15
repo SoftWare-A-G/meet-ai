@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.1.2](https://github.com/SoftWare-A-G/meet-ai/compare/2.1.1...2.1.2) (2026-03-15)
+
+### Features
+
+- add real-time agent activity visibility to the web UI, including a floating `ActivityBar`, a bottom activity-log drawer with per-agent filtering, relative timestamps, and richer sidebar activity context so operators can track live Codex, Claude, and Pi work without leaving chat
+
+### Bug Fixes
+
+- fix activity-log attribution and rendering by resolving hook agent names from room session data, passing sender names through Codex and Pi listener logs, filtering unattributed hook events, and stabilizing the drawer and `ActivityBar` layout to prevent stale activity state, overflow, unreadable pills, and snap-point jitter
+- align the CLI and worker package manifests at `2.1.2` for the release
+
+### Tests
+
+- add CLI hook and worker activity coverage for room and agent-name resolution, sender attribution, activity parsing, and relative-time formatting used by the new visibility surfaces
+
 ## [2.1.1](https://github.com/SoftWare-A-G/meet-ai/compare/2.1.0...2.1.1) (2026-03-15)
 
 ### Bug Fixes

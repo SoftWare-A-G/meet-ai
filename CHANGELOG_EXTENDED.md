@@ -1,5 +1,37 @@
 # Changelog
 
+## [2.1.2](https://github.com/SoftWare-A-G/meet-ai/compare/2.1.1...2.1.2) (2026-03-15)
+
+### Features
+
+- add live agent-activity visibility across the web UI:
+  - add a floating `ActivityBar` between the message list and composer so operators can see each active agent's current status, latest action summary, and relative timestamp at a glance
+  - add an `ActivityLogDrawer` that expands from the bar into a reverse-chronological, per-agent-filterable activity feed with diff rendering support for log entries that carry patch payloads
+  - enrich the room sidebar and chat route wiring so the same activity state is available alongside the existing team roster instead of being trapped inside the raw message stream
+- complete the hook-to-UI attribution path needed for per-agent activity:
+  - keep hook-created log entries tagged with the originating agent when room lookup can resolve the session transcript or lead-agent config
+  - expose Codex and Pi sender names explicitly from the listener-side activity log writers so their work appears under the correct agent instead of the generic `hook` sender bucket
+
+### Bug Fixes
+
+- harden activity attribution and session lookup for hook-driven logs:
+  - extend `packages/cli/src/lib/hooks/find-room.ts` to scan more team/session metadata, auto-register transcript-backed sessions, and resolve agent names from transcript JSONL or config fallback paths
+  - keep `sendLogEntry()` defaulting to `hook` only when no agent can be resolved, while the worker-side activity parser ignores unattributed hook events so the new UI stays agent-scoped
+  - preserve the existing shutdown/log-tool-use behavior while making the agent sender available to the worker activity surfaces
+- stabilize the new activity surfaces in the web client:
+  - fix the Base UI drawer structure by restoring the required `Viewport` to `Popup` hierarchy and adding the snap-point transition styling expected by the drawer primitives
+  - prevent `ActivityBar` and sidebar layout overflow with the required flex and `min-w-0` adjustments in the chat layout
+  - improve filter-pill readability with contrast-aware text, clearer selected and unselected states, inactive-agent handling, and fixed timestamp alignment inside the drawer list
+  - fix stale throttled activity state in `useAgentActivity` so rapid hook events keep the visible activity list current instead of lagging behind the latest log entry
+- align the CLI and worker package manifests at `2.1.2` for the release
+
+### Tests
+
+- expand CLI hook coverage for the new attribution path:
+  - add `packages/cli/test/hooks/find-room.test.ts` coverage for transcript and config-based agent-name resolution plus transcript-path auto-registration
+  - add `packages/cli/test/hooks/client.test.ts` and `packages/cli/test/hooks/log-tool-use.test.ts` coverage proving sender names are preserved when available and still fall back safely to `hook`
+- add `packages/worker/test/activity.unit.test.ts` coverage for agent-log parsing, `hook` sender filtering, trimmed activity text, and relative-time formatting used by the `ActivityBar` and `ActivityLogDrawer`
+
 ## [2.1.1](https://github.com/SoftWare-A-G/meet-ai/compare/2.1.0...2.1.1) (2026-03-15)
 
 ### Bug Fixes
