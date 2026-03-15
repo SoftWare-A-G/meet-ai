@@ -72,7 +72,7 @@ export default function ActivityBar({ onClick }: ActivityBarProps) {
   return (
     <div
       className={clsx(
-        'border-t border-neutral-800 bg-neutral-900/50 px-3 py-1.5 text-xs text-neutral-300 shrink-0',
+        'border-t border-neutral-800 bg-neutral-900/50 px-3 py-1.5 text-xs text-neutral-300 shrink-0 overflow-hidden',
         onClick && 'cursor-pointer hover:bg-neutral-800/50 transition-colors'
       )}
       onClick={onClick}
@@ -86,9 +86,9 @@ export default function ActivityBar({ onClick }: ActivityBarProps) {
       <div className="flex items-center gap-2">
         <div className="flex-1 min-w-0">
           {allIdle ? (
-            <div className="flex items-center gap-1.5 opacity-50">
+            <div className="flex items-center gap-1.5 opacity-50 min-w-0">
               <StateDot state="idle" />
-              <span>All agents idle</span>
+              <span className="truncate">All agents idle</span>
               {timeStr && (
                 <>
                   <span>&middot;</span>

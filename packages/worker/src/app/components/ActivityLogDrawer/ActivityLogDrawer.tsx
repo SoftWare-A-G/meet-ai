@@ -61,9 +61,11 @@ export default function ActivityLogDrawer({ open, onOpenChange, messages, teamIn
     [messages]
   )
 
-  // Derive unique agents from log messages
+  // Derive unique agents from log messages + team info, inactive agents sorted last
   const agents = useMemo(() => {
-    const agentMap = new Map<string, { name: string; color: string }>()
+    const agentMap = new Map<string, { name: string; color: string; active: boolean }>()
+
+    // Agents that have log messages
     for (const msg of logMessages) {
       const parsed = parseAgentActivity(msg)
       if (parsed && !agentMap.has(parsed.agentName)) {
@@ -71,10 +73,29 @@ export default function ActivityLogDrawer({ open, onOpenChange, messages, teamIn
         agentMap.set(parsed.agentName, {
           name: parsed.agentName,
           color: member?.color || msg.color || '',
+          active: member?.status !== 'inactive',
         })
       }
     }
-    return Array.from(agentMap.values())
+
+    // Include team members that have no log messages yet (e.g. just joined)
+    if (teamInfo) {
+      for (const member of teamInfo.members) {
+        if (!agentMap.has(member.name)) {
+          agentMap.set(member.name, {
+            name: member.name,
+            color: member.color || '',
+            active: member.status !== 'inactive',
+          })
+        }
+      }
+    }
+
+    // Active agents first, inactive at the end
+    return Array.from(agentMap.values()).sort((a, b) => {
+      if (a.active === b.active) return 0
+      return a.active ? -1 : 1
+    })
   }, [logMessages, teamInfo])
 
   // Reset visible count when filter changes
@@ -99,7 +120,7 @@ export default function ActivityLogDrawer({ open, onOpenChange, messages, teamIn
       open={open}
       onOpenChange={(nextOpen) => onOpenChange(nextOpen)}
       modal={false}
-      snapPoints={[0.3, 0.7]}
+      snapPoints={[0.5]}
     >
       <DrawerPopup className="z-40" showBackdrop={false}>
         {/* Swipe handle */}
@@ -116,14 +137,14 @@ export default function ActivityLogDrawer({ open, onOpenChange, messages, teamIn
 
         {/* Agent filter pills */}
         {agents.length > 0 && (
-          <div className="flex shrink-0 gap-1.5 overflow-x-auto px-4 pb-2 scrollbar-none" role="tablist">
+          <div className="flex shrink-0 basis-auto gap-1.5 overflow-x-auto px-4 pb-2 scrollbar-none" role="tablist">
             <button
               type="button"
               role="tab"
               aria-selected={filter.agent === null}
               onClick={() => setFilter({ agent: null })}
               className={clsx(
-                'shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                'inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium leading-none transition-colors',
                 filter.agent === null
                   ? 'bg-neutral-300 text-neutral-900'
                   : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
@@ -132,23 +153,31 @@ export default function ActivityLogDrawer({ open, onOpenChange, messages, teamIn
               All
             </button>
             {agents.map(agent => {
-              const isActive = filter.agent === agent.name
+              const isSelected = filter.agent === agent.name
               const rawColor = agent.color || hashColor(agent.name)
               const bg = pillBgColor(rawColor)
               const resolvedBg = resolveColor(bg)
               const textColor = contrastRatio('#fff', resolvedBg) >= contrastRatio('#000', resolvedBg) ? '#fff' : '#000'
+              const unselectedTextColor = ensureSenderContrast(rawColor)
               return (
                 <button
                   type="button"
                   key={agent.name}
                   role="tab"
-                  aria-selected={isActive}
-                  onClick={() => setFilter({ agent: isActive ? null : agent.name })}
+                  aria-selected={isSelected}
+                  onClick={() => setFilter({ agent: isSelected ? null : agent.name })}
                   className={clsx(
-                    'shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors',
-                    isActive && 'ring-1 ring-white/30'
+                    'inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium leading-none transition-colors',
+                    isSelected
+                      ? 'ring-1 ring-white/30'
+                      : !agent.active
+                        ? 'bg-neutral-900 opacity-40 hover:opacity-60'
+                        : 'bg-neutral-800 hover:bg-neutral-700'
                   )}
-                  style={{ backgroundColor: bg, color: textColor, opacity: isActive ? 1 : 0.75 }}
+                  style={isSelected
+                    ? { backgroundColor: bg, color: textColor }
+                    : { color: agent.active ? unselectedTextColor : undefined }
+                  }
                 >
                   {agent.name}
                 </button>
