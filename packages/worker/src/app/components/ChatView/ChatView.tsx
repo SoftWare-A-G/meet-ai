@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useAgentActivity } from '../../hooks/useAgentActivity'
 import { useAttachmentCountsQuery } from '../../hooks/useAttachmentCountsQuery'
 import { useHaptics } from '../../hooks/useHaptics'
 import { useOfflineQueue } from '../../hooks/useOfflineQueue'
@@ -14,7 +13,6 @@ import ActivityLogDrawer from '../ActivityLogDrawer'
 import ChatInput from '../ChatInput'
 import MessageList from '../MessageList'
 import TerminalViewerModal from '../TerminalViewerModal'
-import type { AgentActivity } from '../../lib/activity'
 import type {
   Message as MessageType,
   Room,
@@ -24,7 +22,6 @@ type ChatViewProps = {
   room: Room
   apiKey: string
   userName: string
-  onAgentActivity?: (activity: Map<string, AgentActivity>) => void
   terminalOpen?: boolean
   onTerminalClose?: () => void
 }
@@ -33,7 +30,6 @@ export default function ChatView({
   room,
   apiKey,
   userName,
-  onAgentActivity,
   terminalOpen = false,
   onTerminalClose,
 }: ChatViewProps) {
@@ -124,13 +120,6 @@ export default function ChatView({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sendTerminal* are stable functions
   }, [terminalOpen, connected])
-
-  // Derive per-agent activity from timeline
-  const agentActivity = useAgentActivity(timeline, room.id)
-
-  useEffect(() => {
-    onAgentActivity?.(agentActivity)
-  }, [agentActivity, onAgentActivity])
 
   // Flush queue on coming online — use retry() to avoid duplicates and handle IndexedDB removal
   useEffect(() => {

@@ -1,17 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useRoomTimeline } from './useRoomTimeline'
 import { useTeamInfoQuery } from './useTeamInfoQuery'
 import { parseAgentActivity } from '../lib/activity'
 import type { AgentActivity } from '../lib/activity'
-import type { Message } from '../lib/types'
 
 const IDLE_TIMEOUT = 20_000 // 20 seconds
 const THROTTLE_MS = 500 // max 2Hz updates
 
-export function useAgentActivity(
-  messages: Message[],
-  roomId: string | null,
-): Map<string, AgentActivity> {
+export function useAgentActivity(roomId: string | null): Map<string, AgentActivity> {
   const { data: teamInfo } = useTeamInfoQuery(roomId)
+  const { data: messages = [] } = useRoomTimeline(roomId)
   const [activity, setActivity] = useState<Map<string, AgentActivity>>(() => new Map())
   const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   const latestRef = useRef<Map<string, { action: string; timestamp: string }>>(new Map())

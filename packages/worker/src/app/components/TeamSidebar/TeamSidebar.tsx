@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
 import clsx from 'clsx'
+import { useAgentActivity } from '../../hooks/useAgentActivity'
 import { useTasksQuery } from '../../hooks/useTasksQuery'
 import { useTeamInfoQuery } from '../../hooks/useTeamInfoQuery'
 import type { TaskItem } from '../../lib/fetchers'
 import type { TeamMember } from '../../lib/types'
 import { ensureSenderContrast } from '../../lib/colors'
 import { formatRelativeTime } from '../../lib/dates'
-import { useChatContext } from '../../lib/chat-context'
 import { useHaptics } from '../../hooks/useHaptics'
 
 const TIMESTAMP_INTERVAL = 15_000
@@ -18,8 +18,8 @@ type TeamSidebarProps = {
   onOpenTaskBoard?: () => void
 }
 
-function MemberRow({ member, inactive }: { member: TeamMember; inactive?: boolean }) {
-  const { agentActivity } = useChatContext()
+function MemberRow({ member, inactive, roomId }: { member: TeamMember; inactive?: boolean; roomId: string | null }) {
+  const agentActivity = useAgentActivity(roomId)
   const activity = !inactive ? agentActivity.get(member.name) : undefined
   const hasActivity = activity && activity.latestAction
 
@@ -117,13 +117,13 @@ function TeamSidebarContent({ teamInfo, roomId, onOpenTaskBoard }: { teamInfo: N
       {active.length > 0 && (
         <div className="py-1">
           <div className="px-4 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide opacity-50">Active</div>
-          {active.map(m => <MemberRow key={m.name} member={m} />)}
+          {active.map(m => <MemberRow key={m.name} member={m} roomId={roomId} />)}
         </div>
       )}
       {inactive.length > 0 && (
         <div className="py-1">
           <div className="px-4 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide opacity-50">Inactive</div>
-          {inactive.map(m => <MemberRow key={m.name} member={m} inactive />)}
+          {inactive.map(m => <MemberRow key={m.name} member={m} inactive roomId={roomId} />)}
         </div>
       )}
     </>

@@ -4,7 +4,9 @@ import { toast } from 'sonner'
 import CanvasView from '../../components/CanvasView'
 import ChatView from '../../components/ChatView'
 import MainHeader from '../../components/MainHeader'
+import { useProjectsQuery } from '../../hooks/useProjectsQuery'
 import { useDeleteRoom, useRenameRoom, useUpdateRoomProject } from '../../hooks/useRoomMutations'
+import { useRoomsQuery } from '../../hooks/useRoomsQuery'
 import { useTeamInfoQuery } from '../../hooks/useTeamInfoQuery'
 import { useChatContext } from '../../lib/chat-context'
 
@@ -16,15 +18,14 @@ function ChatRoom() {
   const { id } = Route.useParams()
   const navigate = Route.useNavigate()
   const {
-    rooms,
-    projects,
     apiKey,
     userName,
     isStandalone,
     setTeamSidebarOpen,
-    setAgentActivity,
     showQR,
   } = useChatContext()
+  const { data: rooms = [] } = useRoomsQuery()
+  const { data: projects = [] } = useProjectsQuery()
   const { data: teamInfo } = useTeamInfoQuery(id)
   const [terminalOpen, setTerminalOpen] = useState(false)
   const [canvasOpen, setCanvasOpen] = useState(false)
@@ -115,7 +116,6 @@ function ChatRoom() {
             room={room}
             apiKey={apiKey}
             userName={userName}
-            onAgentActivity={setAgentActivity}
             terminalOpen={terminalOpen}
             onTerminalClose={() => setTerminalOpen(false)}
           />

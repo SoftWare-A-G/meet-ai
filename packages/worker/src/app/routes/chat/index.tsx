@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useCallback } from 'react'
 import LobbyView from '../../components/LobbyView'
 import MainHeader from '../../components/MainHeader'
-import { useChatContext } from '../../lib/chat-context'
+import { useRoomsQuery } from '../../hooks/useRoomsQuery'
 import type { Room } from '../../lib/types'
 
 export const Route = createFileRoute('/chat/')({
@@ -10,7 +10,7 @@ export const Route = createFileRoute('/chat/')({
 })
 
 function ChatLobby() {
-  const { rooms } = useChatContext()
+  const { data: rooms = [] } = useRoomsQuery()
   const navigate = Route.useNavigate()
 
   const handleSelectRoom = useCallback(

@@ -2,8 +2,8 @@ import clsx from 'clsx'
 import { ChevronUp } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { getRouteApi } from '@tanstack/react-router'
+import { useAgentActivity } from '../../hooks/useAgentActivity'
 import { useTeamInfoQuery } from '../../hooks/useTeamInfoQuery'
-import { useChatContext } from '../../lib/chat-context'
 import { formatRelativeTime } from '../../lib/dates'
 import type { AgentActivity, AgentState } from '../../lib/activity'
 
@@ -36,7 +36,7 @@ type ActivityBarProps = {
 export default function ActivityBar({ onClick }: ActivityBarProps) {
   const { id: roomId } = chatRoute.useParams()
   const { data: teamInfo } = useTeamInfoQuery(roomId)
-  const { agentActivity } = useChatContext()
+  const agentActivity = useAgentActivity(roomId)
   const [, setTick] = useState(0)
   const prevAnnouncementRef = useRef('')
 

@@ -1,15 +1,9 @@
 import { createContext, useContext } from 'react'
-import type { RoomsResponse, ProjectsResponse } from './fetchers'
-import type { AgentActivity } from './activity'
 
 export type ChatContextValue = {
-  rooms: RoomsResponse
-  projects: ProjectsResponse
   apiKey: string
   userName: string
   colorSchema: string
-  agentActivity: Map<string, AgentActivity>
-  setAgentActivity: (activity: Map<string, AgentActivity>) => void
   teamSidebarOpen: boolean
   setTeamSidebarOpen: (open: boolean | ((prev: boolean) => boolean)) => void
   insertMention: (name: string) => void

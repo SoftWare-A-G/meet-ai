@@ -20,7 +20,6 @@ import { ChatContext } from '../lib/chat-context'
 import { STORAGE_KEYS, DEFAULT_SCHEMA } from '../lib/constants'
 import { getOrCreateHandle } from '../lib/handle'
 import { applySchema } from '../lib/theme'
-import type { AgentActivity } from '../lib/activity'
 
 export const Route = createFileRoute('/chat')({
   component: ChatPage,
@@ -110,7 +109,6 @@ function ChatLayout({
   const toastManager = Toast.useToastManager()
   const [teamSidebarOpen, setTeamSidebarOpen] = useState(false)
   const [showTaskBoard, setShowTaskBoard] = useState(false)
-  const [agentActivity, setAgentActivity] = useState<Map<string, AgentActivity>>(() => new Map())
   const roomId = useParams({ from: '/chat/$id', shouldThrow: false })?.id
 
   const isStandalone =
@@ -133,13 +131,9 @@ function ChatLayout({
 
   const ctx = useMemo(
     () => ({
-      rooms,
-      projects,
       apiKey,
       userName,
       colorSchema,
-      agentActivity,
-      setAgentActivity,
       teamSidebarOpen,
       setTeamSidebarOpen,
       insertMention: (name: string) => {
@@ -153,12 +147,9 @@ function ChatLayout({
       isStandalone,
     }),
     [
-      rooms,
-      projects,
       apiKey,
       userName,
       colorSchema,
-      agentActivity,
       teamSidebarOpen,
       onNameChange,
       onSchemaChange,
