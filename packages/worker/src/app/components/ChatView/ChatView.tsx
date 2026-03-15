@@ -5,6 +5,7 @@ import { useHaptics } from '../../hooks/useHaptics'
 import { useOfflineQueue } from '../../hooks/useOfflineQueue'
 import { useRoomTimeline, useTimelineUpdater } from '../../hooks/useRoomTimeline'
 import { useRoomWebSocket } from '../../hooks/useRoomWebSocket'
+import { useSendMessage } from '../../hooks/useSendMessage'
 import { useUploadFile } from '../../hooks/useUploadFile'
 import * as api from '../../lib/api'
 import { requestPermission, notifyIfHidden } from '../../lib/notifications'
@@ -38,14 +39,15 @@ export default function ChatView({
 }: ChatViewProps) {
   const { data: attachmentCounts } = useAttachmentCountsQuery(room.id)
   const { data: timeline = [] } = useRoomTimeline(room.id)
-  const { appendOptimistic, updateItemStatus, appendItems } = useTimelineUpdater(room.id)
+  const { appendItems } = useTimelineUpdater(room.id)
+  const { send: handleSend, retry: handleRetry } = useSendMessage(room.id, userName, apiKey)
   const uploadFileMutation = useUploadFile()
   const [activityDrawerOpen, setActivityDrawerOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
   const [forceScrollCounter, setForceScrollCounter] = useState(0)
   const [voiceAvailable, setVoiceAvailable] = useState(false)
   const [terminalData, setTerminalData] = useState<string | null>(null)
-  const { queue, remove, getForRoom } = useOfflineQueue()
+  const { getForRoom } = useOfflineQueue()
   const { triggerForMessage } = useHaptics()
 
   // Check TTS availability once on mount
@@ -74,18 +76,11 @@ export default function ChatView({
             status: 'failed' as const,
           })),
         )
-        // Auto-flush if online
+        // Auto-flush if online — use retry() which handles IndexedDB removal on success
         if (navigator.onLine) {
           for (const msg of queued) {
-            try {
-              await api.sendMessage(msg.roomId, msg.sender, msg.content)
-              await remove(msg.tempId)
-              if (!cancelled) {
-                updateItemStatus(msg.tempId, 'sent')
-              }
-            } catch {
-              // leave as failed
-            }
+            if (cancelled) break
+            handleRetry(msg.tempId)
           }
         }
       } catch {
@@ -96,7 +91,7 @@ export default function ChatView({
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- getForRoom/remove/appendItems/updateItemStatus are stable
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- getForRoom/remove/appendItems/updateItemStatus/handleSend are stable
   }, [room.id])
 
   // WebSocket — simplified callback for side effects only
@@ -142,20 +137,13 @@ export default function ChatView({
     onAgentActivity?.(agentActivity)
   }, [agentActivity, onAgentActivity])
 
-  // Flush queue on coming online
+  // Flush queue on coming online — use retry() to avoid duplicates and handle IndexedDB removal
   useEffect(() => {
     const handler = async () => {
       try {
         const queued = await getForRoom(room.id)
         for (const msg of queued) {
-          updateItemStatus(msg.tempId, 'pending')
-          try {
-            await api.sendMessage(msg.roomId, msg.sender, msg.content)
-            await remove(msg.tempId)
-            updateItemStatus(msg.tempId, 'sent')
-          } catch {
-            updateItemStatus(msg.tempId, 'failed')
-          }
+          handleRetry(msg.tempId)
         }
       } catch {
         /* ignore */
@@ -163,7 +151,7 @@ export default function ChatView({
     }
     window.addEventListener('online', handler)
     return () => window.removeEventListener('online', handler)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- getForRoom/remove/updateItemStatus are stable
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- getForRoom/handleRetry are stable
   }, [room.id])
 
   const handleUploadFile = useCallback(
@@ -171,50 +159,12 @@ export default function ChatView({
     [room.id, uploadFileMutation],
   )
 
-  const handleSend = useCallback(
-    async (content: string, attachmentIds: string[] = []) => {
-      const tempId = `pending-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
-      appendOptimistic({
-        sender: userName,
-        content,
-        created_at: new Date().toISOString(),
-        tempId,
-        status: 'pending',
-      })
+  const handleSendWithScroll = useCallback(
+    (content: string, attachmentIds: string[] = []) => {
+      handleSend(content, attachmentIds)
       setForceScrollCounter(c => c + 1)
-
-      try {
-        await api.sendMessage(room.id, userName, content, attachmentIds.length > 0 ? attachmentIds : undefined)
-        // WS echo will reconcile the optimistic item via reconcileOptimistic
-      } catch {
-        await queue({
-          tempId,
-          roomId: room.id,
-          sender: userName,
-          content,
-          apiKey,
-          timestamp: Date.now(),
-        })
-        updateItemStatus(tempId, 'failed')
-      }
     },
-    [room.id, userName, apiKey, queue, appendOptimistic, updateItemStatus],
-  )
-
-  const handleRetry = useCallback(
-    async (tempId: string) => {
-      const msg = timeline.find(m => m.tempId === tempId)
-      if (!msg) return
-      updateItemStatus(tempId, 'pending')
-      try {
-        await api.sendMessage(room.id, userName, msg.content)
-        updateItemStatus(tempId, 'sent')
-        await remove(tempId)
-      } catch {
-        updateItemStatus(tempId, 'failed')
-      }
-    },
-    [room.id, userName, timeline, remove, updateItemStatus],
+    [handleSend],
   )
 
   return (
@@ -234,7 +184,7 @@ export default function ChatView({
         forceScrollCounter={forceScrollCounter}
         onScrollToBottom={() => setUnreadCount(0)}
         onRetry={handleRetry}
-        onSend={handleSend}
+        onSend={handleSendWithScroll}
         connected={connected}
         voiceAvailable={voiceAvailable}
       />
@@ -244,7 +194,7 @@ export default function ChatView({
         onOpenChange={setActivityDrawerOpen}
         messages={timeline}
       />
-      <ChatInput roomName={room.name} onSend={handleSend} onUploadFile={handleUploadFile} />
+      <ChatInput roomName={room.name} onSend={handleSendWithScroll} onUploadFile={handleUploadFile} />
     </>
   )
 }

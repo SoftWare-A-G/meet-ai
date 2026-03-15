@@ -127,6 +127,16 @@ export async function fetchMessagesSinceSeq(roomId: string, seq: number) {
   return res.json()
 }
 
+// Send message
+export type SendMessageInput = InferRequestType<ApiClient['api']['rooms'][':id']['messages']['$post']>
+export type SendMessageResponse = InferResponseType<ApiClient['api']['rooms'][':id']['messages']['$post'], 201>
+
+export async function sendMessage(input: SendMessageInput) {
+  const res = await getApiClient().api.rooms[':id'].messages.$post(input)
+  if (!res.ok) throw new ApiError(res.status, await res.text())
+  return res.json()
+}
+
 // Review decision mutation types — inferred from hc client
 export type DecidePlanReviewInput = InferRequestType<ApiClient['api']['rooms'][':id']['plan-reviews'][':reviewId']['decide']['$post']>
 export type ExpirePlanReviewInput = InferRequestType<ApiClient['api']['rooms'][':id']['plan-reviews'][':reviewId']['expire']['$post']>
