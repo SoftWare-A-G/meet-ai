@@ -376,7 +376,7 @@ export function listenCodex(
         if (!activityParentId) {
           activityParentId = await sendParentMessage(hookClient, roomId)
         }
-        await sendLogEntry(hookClient, roomId, summary, activityParentId ?? undefined)
+        await sendLogEntry(hookClient, roomId, summary, activityParentId ?? undefined, codexSender)
       })
       .catch(error => {
         console.error(

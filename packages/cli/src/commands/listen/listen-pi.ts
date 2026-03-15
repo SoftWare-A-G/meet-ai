@@ -248,7 +248,7 @@ export function listenPi(
         if (!activityParentId) {
           activityParentId = await sendParentMessage(hookClient, roomId)
         }
-        await sendLogEntry(hookClient, roomId, summary, activityParentId ?? undefined)
+        await sendLogEntry(hookClient, roomId, summary, activityParentId ?? undefined, piSender)
       })
       .catch(error => {
         emitPiLog('error', 'listen-pi', 'activity_log.failed', {
