@@ -1,6 +1,8 @@
 import { Field } from '@base-ui/react/field'
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import type React from 'react'
+import { useClaimToken } from '../../hooks/useAuthMutations'
+import { setApiKey } from '../../lib/api'
 import KeyHeadline from '../KeyHeadline'
 import { Button } from '../ui/button'
 
@@ -11,17 +13,10 @@ type KeyPasteStateProps = {
 
 export default function KeyPasteState({ onConnect, onBack }: KeyPasteStateProps) {
   const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const claim = useClaimToken()
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      inputRef.current?.focus()
-    }, 400)
-    return () => clearTimeout(timer)
-  }, [])
-
-  const connectWithKey = useCallback(async () => {
+  const connectWithKey = useCallback(() => {
     const value = inputRef.current?.value.trim() || ''
 
     if (!value) {
@@ -39,36 +34,21 @@ export default function KeyPasteState({ onConnect, onBack }: KeyPasteStateProps)
       }
       const token = match[1]
 
-      setLoading(true)
-
-      try {
-        const res = await fetch(`/api/auth/claim/${encodeURIComponent(token)}`)
-        if (!res.ok) {
-          const body = await res.text()
-          throw new Error(body || `HTTP ${res.status}`)
-        }
-        const data: any = await res.json()
-        const key = data.api_key || data.key || data.apiKey
-        if (!key) throw new Error('No key returned')
-
-        localStorage.setItem('meet-ai-key', key)
-
-        const roomId = data.room_id || data.roomId
-        if (roomId) {
-          window.location.href = `/chat/${roomId}`
-        } else {
-          onConnect(key)
-        }
-      } catch (error: any) {
-        setLoading(false)
-        setError(`Failed to claim link: ${error.message}`)
-      }
+      claim.mutate(token, {
+        onSuccess: (data) => {
+          setApiKey(data.api_key)
+          onConnect(data.api_key)
+        },
+        onError: (err) => {
+          setError(`Failed to claim link: ${err.message}`)
+        },
+      })
     } else if (value.startsWith('mai_')) {
       onConnect(value)
     } else {
       setError('Invalid key or link. Keys start with mai_ and links contain /auth/.')
     }
-  }, [onConnect])
+  }, [onConnect, claim])
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -97,15 +77,15 @@ export default function KeyPasteState({ onConnect, onBack }: KeyPasteStateProps)
               autoCapitalize="off"
               spellCheck={false}
               onKeyDown={handleKeyDown}
-              disabled={loading}
+              disabled={claim.isPending}
               className="flex-1 rounded-lg border border-edge-light border-l-[3px] border-l-blue-600 bg-edge px-3.5 py-3 font-mono text-base text-text-primary outline-none transition-[border-color] duration-150 focus:border-edge-hover focus:border-l-blue-600 max-[520px]:w-full"
             />
             <Button
               variant="outline"
               className="whitespace-nowrap px-4 py-3 max-[520px]:w-full"
               onClick={connectWithKey}
-              disabled={loading}>
-              {loading ? '...' : 'Connect'}
+              disabled={claim.isPending}>
+              {claim.isPending ? '...' : 'Connect'}
             </Button>
           </div>
           {error && <Field.Error className="text-center text-sm text-red-400" match>{error}</Field.Error>}

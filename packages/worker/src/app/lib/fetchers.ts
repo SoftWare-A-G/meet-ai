@@ -209,3 +209,31 @@ export async function expirePermission(input: ExpirePermissionInput) {
   if (!res.ok) throw new ApiError(res.status, await res.text())
   return res.json()
 }
+
+// Auth fetchers
+export type ClaimTokenResponse = InferResponseType<ApiClient['api']['auth']['claim'][':token']['$get'], 200>
+export type ShareAuthResponse = InferResponseType<ApiClient['api']['auth']['share']['$post'], 201>
+export type GenerateKeyResponse = InferResponseType<ApiClient['api']['keys']['$post'], 201>
+
+// claimToken is a PUBLIC endpoint (no auth required).
+// Uses raw fetch to bypass the hc client's 401 interceptor in api-client.ts,
+// which would redirect to /key before the claim UI can show its inline error.
+export async function claimToken(token: string): Promise<ClaimTokenResponse> {
+  const res = await fetch(`/api/auth/claim/${encodeURIComponent(token)}`)
+  if (!res.ok) throw new ApiError(res.status, 'Link expired or invalid')
+  return res.json()
+}
+
+export async function shareAuth() {
+  const res = await getApiClient().api.auth.share.$post()
+  if (!res.ok) throw new ApiError(res.status, 'Failed to create share link')
+  return res.json()
+}
+
+// generateKey is a PUBLIC endpoint (no auth required).
+// Uses raw fetch to bypass the hc client's 401 interceptor.
+export async function generateKey(): Promise<GenerateKeyResponse> {
+  const res = await fetch('/api/keys', { method: 'POST' })
+  if (!res.ok) throw new ApiError(res.status, await res.text())
+  return res.json()
+}

@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogClose } from '../ui/dialog'
 import qrcode from 'qrcode-generator'
-import { useState, useEffect, useCallback } from 'react'
-import * as api from '../../lib/api'
+import { useState, useCallback, useRef } from 'react'
+import { useShareAuth } from '../../hooks/useAuthMutations'
 
 type QRShareModalProps = {
   onClose: () => void
@@ -9,46 +9,37 @@ type QRShareModalProps = {
 }
 
 export default function QRShareModal({ onClose, onToast: _onToast }: QRShareModalProps) {
-  const [url, setUrl] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const hasFired = useRef(false)
+  const share = useShareAuth()
 
-  useEffect(() => {
-    let cancelled = false
-    async function load() {
-      try {
-        const data = await api.shareAuth()
-        if (cancelled) return
-        setUrl(data.url)
-      } catch (error: any) {
-        if (!cancelled) setError(error.message || 'Failed to create share link')
-      }
-    }
-    load()
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  // Ref callback: fire share mutation once when the QR container mounts,
+  // then render the QR image into the container on success.
+  const qrRef = useCallback((container: HTMLDivElement | null) => {
+    if (!container || hasFired.current) return
+    hasFired.current = true
+    share.mutate(undefined, {
+      onSuccess: (data) => {
+        try {
+          const qr = qrcode(0, 'M')
+          qr.addData(data.url)
+          qr.make()
+          // qrcode-generator's createImgTag produces a safe <img> element
+          container.innerHTML = qr.createImgTag(4, 2) // eslint-disable-line
+        } catch {
+          /* ignore */
+        }
+      },
+    })
+  }, [share])
 
-  // Generate QR when URL is available
-  useEffect(() => {
-    if (!url) return
-    const container = document.getElementById('qr-container')
-    if (!container) return
-    try {
-      const qr = qrcode(0, 'M')
-      qr.addData(url)
-      qr.make()
-      container.innerHTML = qr.createImgTag(4, 2)
-    } catch {
-      /* ignore */
-    }
-  }, [url])
+  const shareUrl = share.data?.url
+  const shareError = share.error
 
   const handleCopy = useCallback(async () => {
-    if (!url) return
+    if (!shareUrl) return
     try {
-      await navigator.clipboard.writeText(url)
+      await navigator.clipboard.writeText(shareUrl)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
@@ -61,7 +52,7 @@ export default function QRShareModal({ onClose, onToast: _onToast }: QRShareModa
         window.getSelection()?.addRange(range)
       }
     }
-  }, [url])
+  }, [shareUrl])
 
   const handleOpenChange = useCallback(
     (open: boolean) => {
@@ -77,21 +68,21 @@ export default function QRShareModal({ onClose, onToast: _onToast }: QRShareModa
         <DialogDescription className="mb-4 text-[13px] opacity-60">
           Scan with your phone camera to sign in
         </DialogDescription>
-        <div className="mx-auto mb-5 flex max-w-[200px] items-center justify-center overflow-hidden rounded-lg [&_img]:block [&_img]:w-full [&_img]:!h-auto" id="qr-container">
-          {!url && !error && (
+        <div ref={qrRef} className="mx-auto mb-5 flex max-w-[200px] items-center justify-center overflow-hidden rounded-lg [&_img]:block [&_img]:w-full [&_img]:!h-auto">
+          {!shareUrl && !shareError && (
             <div className="mx-auto flex h-[200px] w-[200px] items-center justify-center">
               <div className="border-border border-t-primary h-8 w-8 animate-spin rounded-full border-3" />
             </div>
           )}
-          {error && <p className="text-[#F85149]">{error}</p>}
+          {shareError && <p className="text-[#F85149]">{shareError.message || 'Failed to create share link'}</p>}
         </div>
-        {url && (
+        {shareUrl && (
           <div
             className="border-border relative mb-2 cursor-pointer rounded-md border bg-white/10 px-2.5 py-2 font-mono text-xs break-all hover:bg-white/[0.15]"
             id="qr-url"
             onClick={handleCopy}
             title="Click to copy">
-            {url}
+            {shareUrl}
           </div>
         )}
         <div className="relative mb-1 h-[18px] text-xs text-[#3FB950]">

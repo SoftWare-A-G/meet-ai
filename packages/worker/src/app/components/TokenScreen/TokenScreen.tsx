@@ -1,6 +1,6 @@
 import { Separator } from '@base-ui/react/separator'
-import { useState, useCallback } from 'react'
-import * as api from '../../lib/api'
+import { useCallback } from 'react'
+import { useClaimToken } from '../../hooks/useAuthMutations'
 import { Button } from '../ui/button'
 
 type TokenScreenProps = {
@@ -9,30 +9,24 @@ type TokenScreenProps = {
 }
 
 export default function TokenScreen({ token, onLogin }: TokenScreenProps) {
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const claim = useClaimToken()
 
   const isStandalone =
-    (window.navigator as any).standalone === true ||
+    ('standalone' in window.navigator && window.navigator.standalone === true) ||
     window.matchMedia('(display-mode: standalone)').matches
   const isIOS =
     /iPad|iPhone|iPod/.test(navigator.userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
   const isAndroid = /Android/.test(navigator.userAgent)
 
-  const handleConnect = useCallback(async () => {
-    setLoading(true)
-    setError('')
-    try {
-      const data = await api.claimToken(token)
-      onLogin(data.api_key)
-    } catch (error: any) {
-      setError(error.message || 'Connection error. Try again.')
-      setLoading(false)
-    }
-  }, [token, onLogin])
+  const handleConnect = useCallback(() => {
+    claim.mutate(token, {
+      onSuccess: (data) => onLogin(data.api_key),
+    })
+  }, [token, onLogin, claim])
 
-  const buttonText = loading ? 'Connecting...' : isStandalone ? 'Connect' : 'Connect in browser'
+  const buttonText = claim.isPending ? 'Connecting...' : isStandalone ? 'Connect' : 'Connect in browser'
+  const claimError = claim.error?.message || ''
 
   let steps = null
   if (!isStandalone) {
@@ -118,10 +112,10 @@ export default function TokenScreen({ token, onLogin }: TokenScreenProps) {
 
         {isStandalone ? (
           <div className="w-full max-w-[400px] bg-[#161B22] border border-[#30363D] rounded-xl p-6 flex flex-col gap-4">
-            <Button className="w-full py-3.5 text-base font-semibold" onClick={handleConnect} disabled={loading}>
+            <Button className="w-full py-3.5 text-base font-semibold" onClick={handleConnect} disabled={claim.isPending}>
               {buttonText}
             </Button>
-            <div className="text-[#F85149] text-[13px] text-center min-h-[18px]">{error}</div>
+            <div className="text-[#F85149] text-[13px] text-center min-h-[18px]">{claimError}</div>
           </div>
         ) : (
           <>
@@ -129,10 +123,10 @@ export default function TokenScreen({ token, onLogin }: TokenScreenProps) {
             <Separator className="w-full border-t border-[#30363D] my-1" />
             <p className="text-[13px] text-[#8B949E] text-center">Or connect directly in this browser:</p>
             <div className="w-full max-w-[400px] bg-[#161B22] border border-[#30363D] rounded-xl p-6 flex flex-col gap-4">
-              <Button className="w-full py-3.5 text-base font-semibold" onClick={handleConnect} disabled={loading}>
+              <Button className="w-full py-3.5 text-base font-semibold" onClick={handleConnect} disabled={claim.isPending}>
                 {buttonText}
               </Button>
-              <div className="text-[#F85149] text-[13px] text-center min-h-[18px]">{error}</div>
+              <div className="text-[#F85149] text-[13px] text-center min-h-[18px]">{claimError}</div>
             </div>
           </>
         )}

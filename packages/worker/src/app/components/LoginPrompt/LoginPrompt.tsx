@@ -1,6 +1,6 @@
 import { Field } from '@base-ui/react/field'
-import React, { useState, useCallback, useRef, useEffect } from 'react'
-import * as api from '../../lib/api'
+import React, { useState, useCallback, useRef } from 'react'
+import { useClaimToken } from '../../hooks/useAuthMutations'
 import { Button } from '../ui/button'
 
 type LoginPromptProps = {
@@ -11,10 +11,7 @@ export default function LoginPrompt({ onLogin }: LoginPromptProps) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    inputRef.current?.focus()
-  }, [])
+  const claim = useClaimToken()
 
   const handleLogin = useCallback(async () => {
     const val = inputRef.current?.value.trim()
@@ -22,23 +19,20 @@ export default function LoginPrompt({ onLogin }: LoginPromptProps) {
     setError('')
     setLoading(true)
 
-    try {
-      if (val.startsWith('http') && val.includes('/auth/')) {
-        const token = val.split('/auth/').pop()?.split('?')[0]?.split('#')[0]
-        if (!token) { setError('Invalid link'); setLoading(false); return }
-        const data = await api.claimToken(token)
-        onLogin(data.api_key)
-      } else if (val.startsWith('mai_')) {
-        onLogin(val)
-      } else {
-        setError('Invalid link or key')
-        setLoading(false)
-      }
-    } catch (error: any) {
-      setError(error.message || 'Connection error. Try again.')
+    if (val.startsWith('http') && val.includes('/auth/')) {
+      const token = val.split('/auth/').pop()?.split('?')[0]?.split('#')[0]
+      if (!token) { setError('Invalid link'); setLoading(false); return }
+      claim.mutate(token, {
+        onSuccess: (data) => onLogin(data.api_key),
+        onError: (err) => { setError(err.message || 'Connection error. Try again.'); setLoading(false) },
+      })
+    } else if (val.startsWith('mai_')) {
+      onLogin(val)
+    } else {
+      setError('Invalid link or key')
       setLoading(false)
     }
-  }, [onLogin])
+  }, [onLogin, claim])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') { e.preventDefault(); handleLogin() }

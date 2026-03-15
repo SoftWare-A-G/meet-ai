@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { useGenerateKey } from '../hooks/useAuthMutations'
 import { Button } from '../components/ui/button'
 import KeyErrorState from '../components/KeyErrorState'
 import KeyExistingState from '../components/KeyExistingState'
@@ -55,6 +56,7 @@ function KeyPage() {
   const [reducedMotion, setReducedMotion] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const pendingStateRef = useRef<KeyState | null>(null)
+  const generate = useGenerateKey()
 
   useEffect(() => {
     setReducedMotion(window.matchMedia('(prefers-reduced-motion: reduce)').matches)
@@ -117,25 +119,18 @@ function KeyPage() {
       })
   }, [transitionTo])
 
-  const handleGenerate = useCallback(async () => {
+  const handleGenerate = useCallback(() => {
     transitionTo({ view: 'loading' })
-
-    try {
-      const res = await fetch('/api/keys', { method: 'POST' })
-      if (!res.ok) {
-        const body = await res.text()
-        throw new Error(body || `HTTP ${res.status}`)
-      }
-      const data: any = await res.json()
-      const key = data.key || data.apiKey || data.token
-      if (!key) throw new Error('No key returned from server')
-
-      localStorage.setItem(STORAGE_KEY, key)
-      transitionTo({ view: 'result', key })
-    } catch (error: any) {
-      transitionTo({ view: 'error', message: `Failed to generate key: ${error.message}` })
-    }
-  }, [transitionTo])
+    generate.mutate(undefined, {
+      onSuccess: (data) => {
+        localStorage.setItem(STORAGE_KEY, data.key)
+        transitionTo({ view: 'result', key: data.key })
+      },
+      onError: (err) => {
+        transitionTo({ view: 'error', message: `Failed to generate key: ${err.message}` })
+      },
+    })
+  }, [transitionTo, generate])
 
   const handlePaste = useCallback(() => {
     transitionTo({ view: 'paste' })
