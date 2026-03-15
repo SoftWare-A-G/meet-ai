@@ -16,7 +16,7 @@ export type Message = {
   message_id?: string | null
   sender: string
   content: string
-  color?: string
+  color?: string | null
   created_at: string
   type?: 'message' | 'log'
   seq?: number | null

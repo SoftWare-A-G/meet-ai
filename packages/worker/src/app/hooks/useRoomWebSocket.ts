@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { loadMessagesSinceSeq } from '../lib/api'
+import { fetchMessagesSinceSeq } from '../lib/fetchers'
 import { queryKeys } from '../lib/query-keys'
+import { mergeIntoTimeline, reconcileOptimistic } from './useRoomTimeline'
+import type { TimelineItem } from './useRoomTimeline'
 import type { CommandsInfo, TaskItem, TeamInfoResponse } from '../lib/fetchers'
 import type { Message, TerminalDataEvent } from '../lib/types'
 
@@ -89,11 +91,29 @@ export function useRoomWebSocket(
     async function catchUp() {
       if (!roomId || lastSeqRef.current === 0) return
       try {
-        const missed = await loadMessagesSinceSeq(roomId, lastSeqRef.current)
+        const missed = await fetchMessagesSinceSeq(roomId, lastSeqRef.current)
+        if (missed.length === 0) return
+
+        // Update lastSeqRef
         for (const msg of missed) {
-          if (msg.seq && msg.seq > lastSeqRef.current) {
+          if (msg.seq != null && msg.seq > lastSeqRef.current) {
             lastSeqRef.current = msg.seq
           }
+        }
+
+        // Merge into timeline cache
+        void queryClient.cancelQueries({ queryKey: queryKeys.rooms.timeline(roomId) })
+        queryClient.setQueryData<TimelineItem[]>(
+          queryKeys.rooms.timeline(roomId),
+          old => {
+            const tagged = missed.map(m => ({ ...m, status: 'sent' as const }))
+            if (!old) return tagged
+            return mergeIntoTimeline(old, tagged)
+          },
+        )
+
+        // Side effects for missed messages
+        for (const msg of missed) {
           onMessageRef.current?.(msg)
         }
       } catch {
@@ -176,6 +196,21 @@ export function useRoomWebSocket(
         if (event.seq && event.seq > lastSeqRef.current) {
           lastSeqRef.current = event.seq
         }
+
+        // Write to timeline cache
+        if (roomId) {
+          void queryClient.cancelQueries({ queryKey: queryKeys.rooms.timeline(roomId) })
+          queryClient.setQueryData<TimelineItem[]>(
+            queryKeys.rooms.timeline(roomId),
+            old => {
+              const item = { ...event, status: 'sent' as const }
+              if (!old) return [item]
+              return reconcileOptimistic(old, item)
+            },
+          )
+        }
+
+        // Side effects (notifications, haptics, unread count)
         onMessageRef.current?.(event)
       }
 

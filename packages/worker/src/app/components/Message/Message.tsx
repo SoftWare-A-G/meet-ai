@@ -34,7 +34,7 @@ function parseSlashCommand(content: string, commands: CommandItem[] | null): { c
 type MessageProps = {
   sender: string
   content: string
-  color?: string
+  color?: string | null
   timestamp?: string
   tempId?: string
   status?: 'sent' | 'pending' | 'failed'

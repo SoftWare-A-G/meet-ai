@@ -101,3 +101,28 @@ export async function fetchTeamInfo(roomId: string) {
   if (!res.ok) throw new ApiError(res.status, await res.text())
   return res.json()
 }
+
+// Timeline fetchers (messages + logs)
+export type MessagesResponse = InferResponseType<ApiClient['api']['rooms'][':id']['messages']['$get'], 200>
+export type LogsResponse = InferResponseType<ApiClient['api']['rooms'][':id']['logs']['$get'], 200>
+
+export async function fetchMessages(roomId: string) {
+  const res = await getApiClient().api.rooms[':id'].messages.$get({ param: { id: roomId }, query: {} })
+  if (!res.ok) throw new ApiError(res.status, await res.text())
+  return res.json()
+}
+
+export async function fetchLogs(roomId: string) {
+  const res = await getApiClient().api.rooms[':id'].logs.$get({ param: { id: roomId } })
+  if (!res.ok) throw new ApiError(res.status, await res.text())
+  return res.json()
+}
+
+export async function fetchMessagesSinceSeq(roomId: string, seq: number) {
+  const res = await getApiClient().api.rooms[':id'].messages.$get({
+    param: { id: roomId },
+    query: { since_seq: String(seq) },
+  })
+  if (!res.ok) throw new ApiError(res.status, await res.text())
+  return res.json()
+}

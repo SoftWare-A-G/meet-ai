@@ -5,7 +5,7 @@ import { formatTimeWithSeconds } from '../../lib/dates'
 type LogEntry = {
   sender: string
   content: string
-  color?: string
+  color?: string | null
   created_at: string
 }
 
