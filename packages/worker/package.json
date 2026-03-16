@@ -49,8 +49,8 @@
     "zustand": "catalog:"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "1.28.0",
-    "@cloudflare/vitest-pool-workers": "0.13.0",
+    "@cloudflare/vite-plugin": "1.29.0",
+    "@cloudflare/vitest-pool-workers": "0.13.1",
     "@cloudflare/workers-types": "catalog:",
     "@tailwindcss/vite": "catalog:",
     "@types/dompurify": "3.2.0",
@@ -63,6 +63,6 @@
     "vite": "catalog:",
     "vite-tsconfig-paths": "6.1.1",
     "vitest": "catalog:",
-    "wrangler": "4.73.0"
+    "wrangler": "4.74.0"
   }
 }

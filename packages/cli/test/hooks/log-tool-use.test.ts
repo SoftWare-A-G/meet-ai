@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach, afterEach, mock } from 'bun:test'
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { processHookInput } from '@meet-ai/cli/commands/hook/log-tool-use/usecase'
 import { setMeetAiDirOverride, writeHomeConfig } from '@meet-ai/cli/lib/meetai-home'
+import { withMockFetch } from '../helpers/mock-fetch'
 
 const TEST_DIR = '/tmp/meet-ai-hook-test-teams-cli'
 const TEMP_MEET_AI_DIR = '/tmp/meet-ai-log-tool-use-test-home'
@@ -13,15 +14,12 @@ function writeTeamFile(data: { session_id: string; room_id: string }) {
   writeFileSync(`${dir}/meet-ai.json`, JSON.stringify(data))
 }
 
-const originalFetch = globalThis.fetch
-
 describe('processHookInput', () => {
+  withMockFetch(() => Promise.resolve(new Response('{}', { status: 201 })))
+
   beforeEach(() => {
     mkdirSync(TEST_DIR, { recursive: true })
     rmSync(TEMP_MEET_AI_DIR, { recursive: true, force: true })
-    globalThis.fetch = mock(() =>
-      Promise.resolve(new Response('{}', { status: 201 }))
-    ) as unknown as typeof fetch
     setMeetAiDirOverride(TEMP_MEET_AI_DIR)
     writeHomeConfig({
       defaultEnv: 'default',
@@ -35,7 +33,6 @@ describe('processHookInput', () => {
   afterEach(() => {
     rmSync(TEST_DIR, { recursive: true, force: true })
     rmSync(TEMP_MEET_AI_DIR, { recursive: true, force: true })
-    globalThis.fetch = originalFetch
     setMeetAiDirOverride(undefined)
     // Clean up msgid files
     try {

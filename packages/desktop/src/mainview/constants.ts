@@ -29,7 +29,7 @@ export const AGENT_CLASSES: Record<string, AgentClass> = {
   },
   scholar: {
     title: '📚 Scholar',
-    bodyScale: { x: 0.9, y: 1.0, z: 0.9 },
+    bodyScale: { x: 0.9, y: 1, z: 0.9 },
     headSize: 0.25,
     emissiveIntensity: 0.2,
     metalness: 0.1,
@@ -61,7 +61,7 @@ export const AGENT_CLASSES: Record<string, AgentClass> = {
   },
   default: {
     title: '👤 Agent',
-    bodyScale: { x: 1.0, y: 1.0, z: 1.0 },
+    bodyScale: { x: 1, y: 1, z: 1 },
     headSize: 0.2,
     emissiveIntensity: 0.15,
     metalness: 0.2,
@@ -75,11 +75,11 @@ export function classifyAgent(name: string, role: string): AgentClass {
 
   // Commander: team-lead, lead, planner, orchestrator
   if (n.includes('lead') || n.includes('planner') || r.includes('lead') || r.includes('orchestrat'))
-    return AGENT_CLASSES.commander
+    {return AGENT_CLASSES.commander}
 
   // Scholar: researcher, research, reader
   if (n.includes('research') || r.includes('research') || n.includes('reader'))
-    return AGENT_CLASSES.scholar
+    {return AGENT_CLASSES.scholar}
 
   // Artificer: codex, coder, builder, fix, migration
   if (
@@ -89,11 +89,11 @@ export function classifyAgent(name: string, role: string): AgentClass {
     n.includes('builder') ||
     n.includes('migration')
   )
-    return AGENT_CLASSES.artificer
+    {return AGENT_CLASSES.artificer}
 
   // Sentinel: reviewer, verify, audit, guard
   if (n.includes('review') || n.includes('verify') || n.includes('audit') || n.includes('sentinel'))
-    return AGENT_CLASSES.sentinel
+    {return AGENT_CLASSES.sentinel}
 
   // Oracle: pi, oracle, advisor
   if (n === 'pi' || n.includes('oracle') || r.includes('oracle')) return AGENT_CLASSES.oracle
@@ -101,9 +101,9 @@ export function classifyAgent(name: string, role: string): AgentClass {
   return AGENT_CLASSES.default
 }
 
-export const LERP_SPEED = 3.0
+export const LERP_SPEED = 3
 export const BOB_AMPLITUDE = 0.06
-export const BOB_FREQUENCY = 2.0
+export const BOB_FREQUENCY = 2
 export const GLOW_PULSE_SPEED = 3.5
 export const BUBBLE_DURATION = 5000
 export const IDLE_TIMEOUT = 30000
@@ -111,7 +111,7 @@ export const WANDER_INTERVAL_MIN = 5000
 export const WANDER_INTERVAL_MAX = 10000
 export const WANDER_RADIUS = 1.5
 export const IDLE_SPIN_SPEED = 0.3
-export const SPAWN_RADIUS = 2.0
+export const SPAWN_RADIUS = 2
 export const ZONE_SCATTER_RADIUS = 1.5
 
 export const FATIGUE_TOOL_COST = 2

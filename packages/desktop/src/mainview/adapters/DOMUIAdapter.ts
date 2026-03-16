@@ -182,12 +182,12 @@ export class DOMUIAdapter implements IUIAdapter {
     this.agentPanel = panel
 
     // Action handlers
-    panel.querySelectorAll('.agent-panel-btn').forEach(btn => {
+    for (const btn of panel.querySelectorAll('.agent-panel-btn')) {
       btn.addEventListener('click', e => {
         const action = (e.currentTarget as HTMLElement).dataset.action
         if (action) onAction(action)
       })
-    })
+    }
   }
 
   hideAgentPanel(): void {
@@ -205,7 +205,7 @@ export class DOMUIAdapter implements IUIAdapter {
       error: '#ef4444',
     }
     while (this.eventLogEntries.firstChild)
-      this.eventLogEntries.removeChild(this.eventLogEntries.firstChild)
+      {this.eventLogEntries.removeChild(this.eventLogEntries.firstChild)}
     for (const e of entries) {
       const d = new Date(e.time)
       const ts = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`

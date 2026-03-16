@@ -5,6 +5,6 @@ installErrorHandlers()
 
 try {
 	createGame()
-} catch (err) {
-	showErrorOverlay(err)
+} catch (error) {
+	showErrorOverlay(error)
 }

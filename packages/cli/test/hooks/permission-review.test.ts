@@ -1,6 +1,7 @@
-import { describe, expect, it, mock, beforeEach, afterEach } from 'bun:test'
+import { describe, expect, it, beforeEach, afterEach } from 'bun:test'
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { setMeetAiDirOverride, writeHomeConfig } from '@meet-ai/cli/lib/meetai-home'
+import { withMockFetch } from '../helpers/mock-fetch'
 
 const TEST_DIR = '/tmp/meet-ai-pr-test-teams'
 const TEMP_MEET_AI_DIR = '/tmp/meet-ai-pr-test-home'
@@ -24,10 +25,8 @@ function makeInput(overrides: Record<string, unknown> = {}) {
   })
 }
 
-const originalFetch = globalThis.fetch
-
 describe('processPermissionReview', () => {
-  let mockFetch: ReturnType<typeof mock>
+  const mockFetch = withMockFetch()
   let stderrOutput: string
   let stdoutOutput: string
   const originalStderrWrite = process.stderr.write.bind(process.stderr)
@@ -36,8 +35,6 @@ describe('processPermissionReview', () => {
   beforeEach(() => {
     mkdirSync(TEST_DIR, { recursive: true })
     rmSync(TEMP_MEET_AI_DIR, { recursive: true, force: true })
-    mockFetch = mock()
-    globalThis.fetch = mockFetch as unknown as typeof fetch
     setMeetAiDirOverride(TEMP_MEET_AI_DIR)
     writeHomeConfig({
       defaultEnv: 'default',
@@ -58,7 +55,6 @@ describe('processPermissionReview', () => {
   afterEach(() => {
     rmSync(TEST_DIR, { recursive: true, force: true })
     rmSync(TEMP_MEET_AI_DIR, { recursive: true, force: true })
-    globalThis.fetch = originalFetch
     setMeetAiDirOverride(undefined)
     process.stderr.write = originalStderrWrite
     process.stdout.write = originalStdoutWrite

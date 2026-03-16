@@ -2,7 +2,7 @@
 
 ## Worker tests
 
-`packages/worker` uses vitest (not bun:test) because `@cloudflare/vitest-pool-workers` is the only way to test inside the Workers runtime with D1/DO bindings. The pool-workers package requires vitest@3 — vitest@4 is not supported yet.
+`packages/worker` uses vitest (not bun:test) because `@cloudflare/vitest-pool-workers` is the only way to test inside the Workers runtime with D1/DO bindings. The pool-workers package now supports vitest@4, and vite 8 requires `@cloudflare/vite-plugin >= 1.29.0`.
 
 ## Commands
 

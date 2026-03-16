@@ -1,19 +1,16 @@
-import { describe, expect, it, mock, beforeEach, afterEach } from 'bun:test'
+import { describe, expect, it, beforeEach, afterEach } from 'bun:test'
 import { mkdirSync, rmSync } from 'node:fs'
 import { setMeetAiDirOverride, writeHomeConfig } from '@meet-ai/cli/lib/meetai-home'
+import { withMockFetch } from '../helpers/mock-fetch'
 
 const TEMP_MEET_AI_DIR = '/tmp/meet-ai-canvas-test-home'
 
-const originalFetch = globalThis.fetch
-
 describe('canvas hook wrappers', () => {
-  let mockFetch: ReturnType<typeof mock>
+  const mockFetch = withMockFetch()
 
   beforeEach(() => {
     rmSync(TEMP_MEET_AI_DIR, { recursive: true, force: true })
     mkdirSync(TEMP_MEET_AI_DIR, { recursive: true })
-    mockFetch = mock()
-    globalThis.fetch = mockFetch as unknown as typeof fetch
     setMeetAiDirOverride(TEMP_MEET_AI_DIR)
     writeHomeConfig({
       defaultEnv: 'default',
@@ -23,7 +20,6 @@ describe('canvas hook wrappers', () => {
 
   afterEach(() => {
     rmSync(TEMP_MEET_AI_DIR, { recursive: true, force: true })
-    globalThis.fetch = originalFetch
     setMeetAiDirOverride(undefined)
   })
 

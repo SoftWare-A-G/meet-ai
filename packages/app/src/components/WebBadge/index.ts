@@ -1,0 +1,1 @@
+export { WebBadge } from './WebBadge';

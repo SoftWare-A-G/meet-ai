@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { ZodError } from 'zod'
 import { listen } from './usecase'
 import { setMeetAiDirOverride, writeHomeConfig } from '@meet-ai/cli/lib/meetai-home'
+import { withMockFetch } from '../../../test/helpers/mock-fetch'
 import type IInboxRouter from '@meet-ai/cli/domain/interfaces/IInboxRouter'
 import type { CodexAppServerEvent } from '@meet-ai/cli/lib/codex-app-server'
 import type { HookClient } from '@meet-ai/cli/lib/hooks/client'
@@ -135,7 +136,7 @@ function makeTask(
 describe('listen', () => {
   let logSpy: ReturnType<typeof spyOn>
   let errorSpy: ReturnType<typeof spyOn>
-  const originalFetch = globalThis.fetch
+  withMockFetch()
   const originalExit = process.exit
   const originalOn = process.on
   const savedRuntime = process.env.MEET_AI_RUNTIME
@@ -169,7 +170,6 @@ describe('listen', () => {
   afterEach(() => {
     logSpy.mockRestore()
     errorSpy.mockRestore()
-    globalThis.fetch = originalFetch
     process.exit = originalExit
     process.on = originalOn
     rmSync(codexHome, { recursive: true, force: true })

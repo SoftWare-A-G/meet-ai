@@ -21,10 +21,10 @@ const client = new MeetAiClient(credentials)
 let selectedRoom: Awaited<ReturnType<typeof selectRoom>> = null
 try {
   selectedRoom = await selectRoom(client)
-} catch (err) {
-  showErrorScreen(`Failed to connect: ${err instanceof Error ? err.message : String(err)}`)
+} catch (error) {
+  showErrorScreen(`Failed to connect: ${error instanceof Error ? error.message : String(error)}`)
   setInterval(() => {}, 60000)
-  throw err
+  throw error
 }
 
 if (!selectedRoom) {

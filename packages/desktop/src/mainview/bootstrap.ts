@@ -8,8 +8,7 @@ import { HandleMessage } from './domain/usecases/HandleMessage'
 import { HandleTasks } from './domain/usecases/HandleTasks'
 import { HandleTeamInfo } from './domain/usecases/HandleTeamInfo'
 import { UpdateGameTick } from './domain/usecases/UpdateGameTick'
-import { initInputHandler } from './ui/InputHandler'
-import { refreshSelectedAgentPanel } from './ui/InputHandler'
+import { initInputHandler, refreshSelectedAgentPanel } from './ui/InputHandler'
 
 // Manual DI container — mirrors CLI's createContainer() pattern.
 export function createGame(): void {

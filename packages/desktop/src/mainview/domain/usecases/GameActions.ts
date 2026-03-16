@@ -5,8 +5,7 @@ import type { ZONES } from '../../constants'
 import { classifyAgent } from '../../constants'
 import { getGuildLevel, getGuildReputation } from '../models/GuildModel'
 import { getAgentSpecialty } from '../services/AgentClassifier'
-import { addXP as domainAddXP } from '../models/AgentModel'
-import { computeZoneTarget } from '../models/AgentModel'
+import { addXP as domainAddXP, computeZoneTarget } from '../models/AgentModel'
 
 // Shared actions used by multiple usecases — injected with adapters.
 export class GameActions {
@@ -56,7 +55,7 @@ export class GameActions {
 		if (result.leveledUp) {
 			const pos = this.scene.getAgentPosition(agentId)
 			if (pos) {
-				this.scene.setAgentEmissiveIntensity(agentId, 1.0)
+				this.scene.setAgentEmissiveIntensity(agentId, 1)
 				this.scene.createParticleBurst(pos.x, 0, pos.z, 0xffd700, 30)
 				this.scene.createFloatingText(pos.x, 0, pos.z, `Level ${result.newLevel}!`, '#ffd700')
 				setTimeout(() => this.scene.setAgentEmissiveIntensity(agentId, 0.15), 1000)

@@ -1,11 +1,11 @@
-import { describe, expect, it, mock, beforeEach, afterEach } from 'bun:test'
+import { describe, expect, it, beforeEach, afterEach } from 'bun:test'
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { setMeetAiDirOverride, writeHomeConfig } from '@meet-ai/cli/lib/meetai-home'
+import { withMockFetch } from '../helpers/mock-fetch'
 
 const TEST_DIR = '/tmp/meet-ai-plan-review-test-teams'
 const TEMP_MEET_AI_DIR = '/tmp/meet-ai-plan-review-test-home'
 
-const originalFetch = globalThis.fetch
 const originalStdout = process.stdout.write
 const originalStderr = process.stderr.write
 
@@ -29,15 +29,13 @@ async function loadUsecase() {
 }
 
 describe('plan-review usecase', () => {
-  let mockFetch: ReturnType<typeof mock>
+  const mockFetch = withMockFetch()
   let stdoutCapture: string
   let stderrCapture: string
 
   beforeEach(() => {
     mkdirSync(TEST_DIR, { recursive: true })
     rmSync(TEMP_MEET_AI_DIR, { recursive: true, force: true })
-    mockFetch = mock()
-    globalThis.fetch = mockFetch as unknown as typeof fetch
     stdoutCapture = ''
     stderrCapture = ''
     process.stdout.write = ((chunk: string) => { stdoutCapture += chunk; return true }) as typeof process.stdout.write
@@ -51,7 +49,6 @@ describe('plan-review usecase', () => {
   })
 
   afterEach(() => {
-    globalThis.fetch = originalFetch
     process.stdout.write = originalStdout
     process.stderr.write = originalStderr
     setMeetAiDirOverride(undefined)

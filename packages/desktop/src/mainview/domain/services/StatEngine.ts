@@ -1,5 +1,4 @@
-import type { AgentData } from '../../types'
-import type { FrameContext } from '../../types'
+import type { AgentData, FrameContext } from '../../types'
 
 export interface StatDecayResult {
 	idleTimeout: boolean
@@ -22,8 +21,8 @@ export function updateAgentStats(agent: AgentData, frame: FrameContext): StatDec
 		agent.focus = Math.max(0, agent.focus - frame.delta * 0.8)
 		if (agent.fatigue > 80) agent.mood = Math.max(0, agent.mood - frame.delta * 0.5)
 	} else if (agent.status === 'idle') {
-		agent.fatigue = Math.max(0, agent.fatigue - frame.delta * 3.0)
-		agent.focus = Math.min(100, agent.focus + frame.delta * 2.0)
+		agent.fatigue = Math.max(0, agent.fatigue - frame.delta * 3)
+		agent.focus = Math.min(100, agent.focus + frame.delta * 2)
 		agent.mood = Math.min(100, agent.mood + frame.delta * 0.3)
 	}
 

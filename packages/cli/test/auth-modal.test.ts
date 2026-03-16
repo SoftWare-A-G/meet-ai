@@ -1,4 +1,4 @@
-import { test, expect, describe, beforeEach, afterEach, mock } from 'bun:test'
+import { test, expect, describe, beforeEach, afterEach } from 'bun:test'
 import { mkdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
@@ -10,6 +10,7 @@ import {
   deriveEnvName,
   DEFAULT_URL,
 } from '@meet-ai/cli/commands/dashboard/auth-helpers'
+import { withMockFetch } from './helpers/mock-fetch'
 
 let tempDir: string
 
@@ -93,6 +94,8 @@ describe('deriveEnvName', () => {
 })
 
 describe('resolveKeyInput', () => {
+  const mockFetch = withMockFetch()
+
   test('accepts direct mai_ key as-is', async () => {
     const key = await resolveKeyInput('https://meet-ai.cc', 'mai_testkey123')
     expect(key).toBe('mai_testkey123')
@@ -122,74 +125,54 @@ describe('resolveKeyInput', () => {
   })
 
   test('claims auth token via fetch on auth link', async () => {
-    const originalFetch = globalThis.fetch
-    globalThis.fetch = mock(async () =>
+    mockFetch.mockImplementation(async () =>
       new Response(JSON.stringify({ api_key: 'mai_claimed_key' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       }),
-    ) as unknown as typeof fetch
+    )
 
-    try {
-      const key = await resolveKeyInput(
-        'https://meet-ai.cc',
-        'https://meet-ai.cc/auth/my-token',
-      )
-      expect(key).toBe('mai_claimed_key')
-      expect(globalThis.fetch).toHaveBeenCalledTimes(1)
-    } finally {
-      globalThis.fetch = originalFetch
-    }
+    const key = await resolveKeyInput(
+      'https://meet-ai.cc',
+      'https://meet-ai.cc/auth/my-token',
+    )
+    expect(key).toBe('mai_claimed_key')
+    expect(mockFetch).toHaveBeenCalledTimes(1)
   })
 
   test('claims auth token from bare path', async () => {
-    const originalFetch = globalThis.fetch
-    globalThis.fetch = mock(async () =>
+    mockFetch.mockImplementation(async () =>
       new Response(JSON.stringify({ api_key: 'mai_from_path' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       }),
-    ) as unknown as typeof fetch
+    )
 
-    try {
-      const key = await resolveKeyInput('https://meet-ai.cc', '/auth/some-token')
-      expect(key).toBe('mai_from_path')
-    } finally {
-      globalThis.fetch = originalFetch
-    }
+    const key = await resolveKeyInput('https://meet-ai.cc', '/auth/some-token')
+    expect(key).toBe('mai_from_path')
   })
 
   test('throws on claim failure (HTTP error)', async () => {
-    const originalFetch = globalThis.fetch
-    globalThis.fetch = mock(async () =>
+    mockFetch.mockImplementation(async () =>
       new Response('Not found', { status: 404 }),
-    ) as unknown as typeof fetch
+    )
 
-    try {
-      await expect(
-        resolveKeyInput('https://meet-ai.cc', '/auth/bad-token'),
-      ).rejects.toThrow('Claim failed (404)')
-    } finally {
-      globalThis.fetch = originalFetch
-    }
+    await expect(
+      resolveKeyInput('https://meet-ai.cc', '/auth/bad-token'),
+    ).rejects.toThrow('Claim failed (404)')
   })
 
   test('throws when claim response has no api_key', async () => {
-    const originalFetch = globalThis.fetch
-    globalThis.fetch = mock(async () =>
+    mockFetch.mockImplementation(async () =>
       new Response(JSON.stringify({ error: 'nope' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       }),
-    ) as unknown as typeof fetch
+    )
 
-    try {
-      await expect(
-        resolveKeyInput('https://meet-ai.cc', '/auth/some-token'),
-      ).rejects.toThrow('missing api_key')
-    } finally {
-      globalThis.fetch = originalFetch
-    }
+    await expect(
+      resolveKeyInput('https://meet-ai.cc', '/auth/some-token'),
+    ).rejects.toThrow('missing api_key')
   })
 })
 

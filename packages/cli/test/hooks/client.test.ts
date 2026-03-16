@@ -1,22 +1,12 @@
-import { describe, expect, it, mock, beforeEach, afterEach } from 'bun:test'
+import { describe, expect, it } from 'bun:test'
 import { createHookClient, sendParentMessage, sendLogEntry } from '@meet-ai/cli/lib/hooks/client'
+import { withMockFetch } from '../helpers/mock-fetch'
 
 const MOCK_URL = 'http://localhost:9999'
 const MOCK_KEY = 'mai_test123'
 
-const originalFetch = globalThis.fetch
-
 describe('client', () => {
-  let mockFetch: ReturnType<typeof mock>
-
-  beforeEach(() => {
-    mockFetch = mock()
-    globalThis.fetch = mockFetch as unknown as typeof fetch
-  })
-
-  afterEach(() => {
-    globalThis.fetch = originalFetch
-  })
+  const mockFetch = withMockFetch()
 
   describe('sendParentMessage', () => {
     it('posts to /api/rooms/:id/messages and returns message id', async () => {
