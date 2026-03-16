@@ -220,6 +220,13 @@ export async function fetchTtsStatus() {
   return res.json()
 }
 
+// Canvas — ensure a canvas exists for a room
+export async function ensureCanvas(roomId: string) {
+  const res = await getApiClient().api.rooms[':id'].canvas.$post({ param: { id: roomId } })
+  if (!res.ok) throw new ApiError(res.status, await res.text())
+  return res.json()
+}
+
 // TTS generation — raw fetch (returns ArrayBuffer, not JSON).
 // hc() can't handle non-JSON responses, so we use a thin fetch wrapper.
 export async function textToSpeech(text: string) {

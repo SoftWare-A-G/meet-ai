@@ -34,7 +34,7 @@ export default function ChatView({
   onTerminalClose,
 }: ChatViewProps) {
   const { data: attachmentCounts } = useAttachmentCountsQuery(room.id)
-  const { data: timeline = [] } = useRoomTimeline(room.id)
+  const { data: timeline = [], isLoading: timelineLoading, error: timelineError } = useRoomTimeline(room.id)
   const { appendItems } = useTimelineUpdater(room.id)
   const { send: handleSend, retry: handleRetry } = useSendMessage(room.id, userName, apiKey)
   const uploadFileMutation = useUploadFile()
@@ -159,19 +159,30 @@ export default function ChatView({
         data={terminalData}
         onResize={sendTerminalResize}
       />
-      <MessageList
-        messages={timeline}
-        attachmentCounts={attachmentCounts}
-        roomId={room.id}
-        userName={userName}
-        unreadCount={unreadCount}
-        forceScrollCounter={forceScrollCounter}
-        onScrollToBottom={() => setUnreadCount(0)}
-        onRetry={handleRetry}
-        onSend={handleSendWithScroll}
-        connected={connected}
-        voiceAvailable={ttsStatus?.available}
-      />
+      {timelineLoading && timeline.length === 0 ? (
+        <div className="flex flex-1 items-center justify-center min-h-0">
+          <div className="text-sm text-[#888]">Loading messages...</div>
+        </div>
+      ) : timelineError && timeline.length === 0 ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 min-h-0">
+          <div className="text-sm text-[#e74c3c]">Failed to load messages</div>
+          <div className="text-xs text-[#888]">{timelineError.message}</div>
+        </div>
+      ) : (
+        <MessageList
+          messages={timeline}
+          attachmentCounts={attachmentCounts}
+          roomId={room.id}
+          userName={userName}
+          unreadCount={unreadCount}
+          forceScrollCounter={forceScrollCounter}
+          onScrollToBottom={() => setUnreadCount(0)}
+          onRetry={handleRetry}
+          onSend={handleSendWithScroll}
+          connected={connected}
+          voiceAvailable={ttsStatus?.available}
+        />
+      )}
       <ActivityBar onClick={() => setActivityDrawerOpen(true)} />
       <ActivityLogDrawer
         open={activityDrawerOpen}

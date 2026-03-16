@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react'
 import IOSInstallModal from '../components/IOSInstallModal'
 import LoginPrompt from '../components/LoginPrompt'
 import QRShareModal from '../components/QRShareModal'
+import QueryErrorBoundary from '../components/QueryErrorBoundary'
 import SettingsModal from '../components/SettingsModal'
 import Sidebar from '../components/Sidebar'
 import SpawnTeamModal from '../components/SpawnTeamModal'
@@ -15,7 +16,7 @@ import { useLobbyWebSocket } from '../hooks/useLobbyWebSocket'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import { useProjectsQuery } from '../hooks/useProjectsQuery'
 import { useRoomsQuery } from '../hooks/useRoomsQuery'
-import * as api from '../lib/api'
+import { getApiKey, setApiKey } from '../lib/api'
 import { ChatContext } from '../lib/chat-context'
 import { STORAGE_KEYS, DEFAULT_SCHEMA } from '../lib/constants'
 import { getOrCreateHandle } from '../lib/handle'
@@ -37,7 +38,7 @@ function ChatPage() {
 }
 
 function ChatApp() {
-  const [apiKey, setApiKeyState] = useState<string | null>(() => api.getApiKey())
+  const [apiKey, setApiKeyState] = useState<string | null>(() => getApiKey())
   const [userName, setUserName] = useLocalStorage(STORAGE_KEYS.handle, getOrCreateHandle())
   const [colorSchema, setColorSchema] = useLocalStorage(STORAGE_KEYS.colorSchema, DEFAULT_SCHEMA)
 
@@ -48,7 +49,7 @@ function ChatApp() {
   }, [colorSchema])
 
   const handleLogin = useCallback((key: string) => {
-    api.setApiKey(key)
+    setApiKey(key)
     setApiKeyState(key)
     history.replaceState(null, '', '/chat')
     location.reload()
@@ -75,13 +76,15 @@ function ChatApp() {
   }
 
   return (
-    <ChatLayout
-      apiKey={apiKey}
-      userName={userName}
-      colorSchema={colorSchema}
-      onNameChange={setUserName}
-      onSchemaChange={handleSchemaChange}
-    />
+    <QueryErrorBoundary>
+      <ChatLayout
+        apiKey={apiKey}
+        userName={userName}
+        colorSchema={colorSchema}
+        onNameChange={setUserName}
+        onSchemaChange={handleSchemaChange}
+      />
+    </QueryErrorBoundary>
   )
 }
 
@@ -100,8 +103,8 @@ function ChatLayout({
   onNameChange,
   onSchemaChange,
 }: ChatLayoutProps) {
-  const { data: rooms = [] } = useRoomsQuery()
-  const { data: projects = [] } = useProjectsQuery()
+  const { data: rooms = [], isLoading: roomsLoading, error: roomsError } = useRoomsQuery()
+  const { data: projects = [], isLoading: projectsLoading, error: projectsError } = useProjectsQuery()
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [showSpawnModal, setShowSpawnModal] = useState(false)
   const [showQRModal, setShowQRModal] = useState(false)
@@ -163,6 +166,9 @@ function ChatLayout({
         <Sidebar
           rooms={rooms}
           projects={projects}
+          activeRoomId={roomId}
+          isLoading={roomsLoading || projectsLoading}
+          error={roomsError ?? projectsError}
           userName={userName}
           onNameChange={onNameChange}
           onSettingsClick={() => setShowSettingsModal(true)}

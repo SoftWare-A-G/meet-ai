@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback } from 'react'
-import { Link, useNavigate, useParams } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import {
   Sidebar as ShadcnSidebar,
@@ -42,6 +42,9 @@ type Project = ProjectsResponse[number]
 type SidebarProps = {
   rooms: RoomsResponse
   projects: ProjectsResponse
+  activeRoomId?: string
+  isLoading?: boolean
+  error?: Error | null
   userName: string
   onNameChange: (name: string) => void
   onSettingsClick: () => void
@@ -165,11 +168,10 @@ function RoomMenuItem({ room, isActive, onDelete, onLinkClick }: {
   )
 }
 
-export default function Sidebar({ rooms, projects, userName, onNameChange, onSettingsClick, onSpawnClick, onInstallClick }: SidebarProps) {
+export default function Sidebar({ rooms, projects, activeRoomId, isLoading, error, userName, onNameChange, onSettingsClick, onSpawnClick, onInstallClick }: SidebarProps) {
   const [search, setSearch] = useState('')
   const { trigger } = useHaptics()
   const { isMobile, setOpenMobile } = useSidebar()
-  const params = useParams({ strict: false }) as { id?: string }
   const navigate = useNavigate()
   const deleteRoomMutation = useDeleteRoom()
 
@@ -178,7 +180,7 @@ export default function Sidebar({ rooms, projects, userName, onNameChange, onSet
     deleteRoomMutation.mutate({ param: { id } }, {
       onSuccess: () => {
         toast.success(`"${room?.name}" deleted`)
-        if (params.id === id) {
+        if (activeRoomId === id) {
           navigate({ to: '/chat' })
         }
       },
@@ -186,7 +188,7 @@ export default function Sidebar({ rooms, projects, userName, onNameChange, onSet
         toast.error('Failed to delete room. Please try again.')
       },
     })
-  }, [rooms, deleteRoomMutation, params.id, navigate])
+  }, [rooms, deleteRoomMutation, activeRoomId, navigate])
 
   const handleLinkClick = useCallback(() => {
     trigger('light')
@@ -228,6 +230,19 @@ export default function Sidebar({ rooms, projects, userName, onNameChange, onSet
       <SidebarContent className="overflow-y-auto">
         <SidebarGroup>
           <SidebarMenu>
+            {isLoading && rooms.length === 0 && (
+              <div className="space-y-2 px-2 py-3">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="h-9 animate-pulse rounded bg-sidebar-accent/30" />
+                ))}
+              </div>
+            )}
+            {error && rooms.length === 0 && (
+              <div className="px-4 py-6 text-center">
+                <div className="text-[13px] text-[#e74c3c]">Failed to load rooms</div>
+                <div className="mt-1 text-[11px] text-[#888]">{error.message}</div>
+              </div>
+            )}
             {projectGroups.map(({ project, rooms: projectRooms }) => (
               <Collapsible
                 key={project.id}
@@ -248,7 +263,7 @@ export default function Sidebar({ rooms, projects, userName, onNameChange, onSet
                         <RoomSubItem
                           key={room.id}
                           room={room}
-                          isActive={params.id === room.id}
+                          isActive={activeRoomId === room.id}
                           onDelete={handleDeleteRoom}
                           onLinkClick={handleLinkClick}
                         />
@@ -262,7 +277,7 @@ export default function Sidebar({ rooms, projects, userName, onNameChange, onSet
               <RoomMenuItem
                 key={room.id}
                 room={room}
-                isActive={params.id === room.id}
+                isActive={activeRoomId === room.id}
                 onDelete={handleDeleteRoom}
                 onLinkClick={handleLinkClick}
               />

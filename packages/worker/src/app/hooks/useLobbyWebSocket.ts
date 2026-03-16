@@ -40,12 +40,21 @@ export function useLobbyWebSocket(apiKey: string | null) {
       ws.onmessage = e => {
         const evt = parseLobbyEvent(e.data)
         if (!evt) return
+        if (evt.type === 'room_deleted') {
+          void queryClient.cancelQueries({ queryKey: queryKeys.rooms.all })
+          queryClient.setQueryData<RoomsResponse>(queryKeys.rooms.all, old =>
+            old ? old.filter(r => r.id !== evt.id) : []
+          )
+          return
+        }
         if (evt.type === 'room_created') {
+          void queryClient.cancelQueries({ queryKey: queryKeys.rooms.all })
           queryClient.setQueryData<RoomsResponse>(queryKeys.rooms.all, old => {
             if (old?.some(r => r.id === evt.id)) return old
             return [{ id: evt.id, name: evt.name, project_id: evt.project_id ?? null, created_at: evt.created_at }, ...(old ?? [])]
           })
           if (evt.project_id && evt.project_name && evt.project_created_at && evt.project_updated_at) {
+            void queryClient.cancelQueries({ queryKey: queryKeys.projects.all })
             queryClient.setQueryData<ProjectsResponse>(queryKeys.projects.all, old => {
               if (old?.some(p => p.id === evt.project_id)) return old
               return [

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogClose } from '../ui/dialog'
-import * as api from '../../lib/api'
+import { getApiKey } from '../../lib/api'
+import { ensureCanvas } from '../../lib/fetchers'
 
 const CanvasInner = lazy(() => import('./CanvasInner'))
 
@@ -26,8 +27,8 @@ export default function CanvasView({ roomId, open, onClose, userName }: CanvasVi
     setLoading(true)
     setError(null)
     try {
-      await api.ensureCanvas(roomId)
-      const key = api.getApiKey()
+      await ensureCanvas(roomId)
+      const key = getApiKey()
       if (!key) throw new Error('No API key')
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
       setWsUrl(`${protocol}//${location.host}/api/rooms/${roomId}/canvas/ws?token=${encodeURIComponent(key)}`)

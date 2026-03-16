@@ -313,5 +313,5 @@ export function useRoomWebSocket(
     }
   }
 
-  return { wsRef, connected, sendTerminalSubscribe, sendTerminalUnsubscribe, sendTerminalResize }
+  return { connected, sendTerminalSubscribe, sendTerminalUnsubscribe, sendTerminalResize }
 }

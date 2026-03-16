@@ -131,7 +131,7 @@ function TeamSidebarContent({ teamInfo, roomId, onOpenTaskBoard }: { teamInfo: N
 }
 
 export default function TeamSidebar({ roomId, isOpen, onClose, onOpenTaskBoard }: TeamSidebarProps) {
-  const { data: teamInfo } = useTeamInfoQuery(roomId)
+  const { data: teamInfo, isLoading: teamLoading } = useTeamInfoQuery(roomId)
   const activeCount = teamInfo?.members.filter(m => m.status === 'active').length ?? 0
   const totalCount = teamInfo?.members.length ?? 0
 
@@ -164,6 +164,9 @@ export default function TeamSidebar({ roomId, isOpen, onClose, onOpenTaskBoard }
             &times;
           </button>
         </div>
+        {teamLoading && !teamInfo && (
+          <div className="px-4 py-6 text-center text-[13px] text-[#888]">Loading team...</div>
+        )}
         {teamInfo && <TeamSidebarContent teamInfo={teamInfo} roomId={roomId} onOpenTaskBoard={onOpenTaskBoard} />}
       </div>
     </>

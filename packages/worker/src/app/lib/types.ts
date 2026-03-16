@@ -1,10 +1,3 @@
-export type Project = {
-  id: string
-  name: string
-  created_at: string
-  updated_at: string
-}
-
 export type Room = {
   id: string
   name: string
@@ -51,39 +44,4 @@ export type TeamMember = {
   joinedAt: number
 }
 
-export type TeamInfo = {
-  team_name: string
-  members: TeamMember[]
-}
-
-export type TaskItem = {
-  id: string
-  subject: string
-  description?: string
-  status: 'pending' | 'in_progress' | 'completed'
-  assignee: string | null
-  owner: string | null
-  source: 'claude' | 'codex' | 'pi' | 'meet_ai'
-  source_id: string | null
-  updated_by: string | null
-  updated_at: number
-}
-
-export type TasksInfo = {
-  tasks: TaskItem[]
-}
-
-export type CommandInfo = {
-  name: string
-  description: string
-  type?: 'command' | 'skill'
-  source?: string
-}
-
-export type CommandsInfo = { type: 'commands_info'; commands: CommandInfo[] }
-
-export type Screen = 'login' | 'token' | 'chat'
-
 export type TerminalDataEvent = { type: 'terminal_data'; data: string }
-export type TerminalSubscribeEvent = { type: 'terminal_subscribe'; paneId: string }
-export type TerminalUnsubscribeEvent = { type: 'terminal_unsubscribe' }

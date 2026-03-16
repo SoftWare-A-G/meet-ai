@@ -24,7 +24,7 @@ function ChatRoom() {
     setTeamSidebarOpen,
     showQR,
   } = useChatContext()
-  const { data: rooms = [] } = useRoomsQuery()
+  const { data: rooms = [], isLoading: roomsLoading } = useRoomsQuery()
   const { data: projects = [] } = useProjectsQuery()
   const { data: teamInfo } = useTeamInfoQuery(id)
   const [terminalOpen, setTerminalOpen] = useState(false)
@@ -35,7 +35,7 @@ function ChatRoom() {
   const updateRoomProjectMutation = useUpdateRoomProject()
 
   const room = rooms.find(r => r.id === id)
-  const roomName = room?.name ?? 'Loading...'
+  const roomName = room?.name ?? (roomsLoading ? 'Loading...' : 'Room not found')
 
   useEffect(() => {
     document.title = room ? `Meet AI: ${room.name}` : 'Meet AI'
@@ -109,7 +109,7 @@ function ChatRoom() {
         onTerminalClick={() => setTerminalOpen(true)}
         onCanvasClick={() => setCanvasOpen(true)}
       />
-      {room && (
+      {room ? (
         <>
           <ChatView
             key={room.id}
@@ -126,7 +126,11 @@ function ChatRoom() {
             userName={userName}
           />
         </>
-      )}
+      ) : !roomsLoading ? (
+        <div className="flex flex-1 items-center justify-center">
+          <div className="text-sm text-[#888]">This room doesn&apos;t exist or has been deleted.</div>
+        </div>
+      ) : null}
     </div>
   )
 }
