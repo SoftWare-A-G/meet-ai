@@ -1,9 +1,9 @@
-import type { Context } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { requireAuth, extractToken } from '../middleware/auth'
 import type { AppEnv } from '../lib/types'
+import type { Context } from 'hono'
 
 const VOICE_ID = 'JBFqnCBsd6RMkjVDRZzb'
 const MODEL_ID = 'eleven_flash_v2_5'
@@ -39,15 +39,15 @@ function isVoiceAuthorized(c: Context<AppEnv>): boolean {
 async function hashText(text: string): Promise<string> {
   const data = new TextEncoder().encode(text)
   const hash = await crypto.subtle.digest('SHA-256', data)
-  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('')
+  return Array.from(new Uint8Array(hash))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')
 }
 
 export const ttsRoute = new Hono<AppEnv>()
 
   // GET /api/tts/status — check if TTS is available for this key
-  .get('/status', requireAuth, c =>
-    c.json({ available: isVoiceAuthorized(c) })
-  )
+  .get('/status', requireAuth, c => c.json({ available: isVoiceAuthorized(c) }))
 
   // POST /api/tts — generate or return cached TTS audio
   .post('/', requireAuth, zValidator('json', ttsSchema), async c => {
@@ -83,10 +83,7 @@ export const ttsRoute = new Hono<AppEnv>()
         'xi-api-key': c.env.ELEVENLABS_API_KEY,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        text,
-        model_id: MODEL_ID,
-      }),
+      body: JSON.stringify({ text, model_id: MODEL_ID }),
     })
 
     if (!response.ok) {
@@ -98,9 +95,7 @@ export const ttsRoute = new Hono<AppEnv>()
     const audioBytes = await response.arrayBuffer()
 
     // Store in KV with 7-day TTL (non-blocking)
-    c.executionCtx.waitUntil(
-      c.env.UPLOADS.put(cacheKey, audioBytes, { expirationTtl: CACHE_TTL })
-    )
+    c.executionCtx.waitUntil(c.env.UPLOADS.put(cacheKey, audioBytes, { expirationTtl: CACHE_TTL }))
 
     return new Response(audioBytes, {
       headers: {
