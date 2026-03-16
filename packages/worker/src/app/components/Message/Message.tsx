@@ -7,7 +7,7 @@ import { useTextToSpeech } from '../../hooks/useTtsQuery'
 import { IconCopy, IconCheck, IconShare, IconVolume, IconPlayerStop, IconLoader } from '../../icons'
 import MarkdownContent from '../MarkdownContent'
 import SlashCommandBadge from '../SlashCommandBadge'
-import { useCommandsCache } from '../../hooks/useCommandsCache'
+import { useCommands } from '../../stores/useRoomStore'
 import { useTeamInfoQuery } from '../../hooks/useTeamInfoQuery'
 import { useChatContext } from '../../lib/chat-context'
 import { useHaptics } from '../../hooks/useHaptics'
@@ -47,7 +47,7 @@ export default function Message({ sender, content, color, timestamp, tempId, sta
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const { id: roomId } = chatRoute.useParams()
   const { data: teamInfo } = useTeamInfoQuery(roomId)
-  const { data: commandsInfo } = useCommandsCache(roomId)
+  const commandsInfo = useCommands(roomId)
   const { insertMention } = useChatContext()
   const { trigger } = useHaptics()
   const senderTeamColor = teamInfo?.members.find(member => member.name === sender)?.color

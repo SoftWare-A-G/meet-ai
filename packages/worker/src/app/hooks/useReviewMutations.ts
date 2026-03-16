@@ -1,5 +1,6 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { queryKeys } from '../lib/query-keys'
+import { useMutation } from '@tanstack/react-query'
+import { useRoomStore, emptyDecisionsData } from '../stores/useRoomStore'
+import type { DecisionsData } from '../stores/useRoomStore'
 import {
   decidePlanReview,
   expirePlanReview,
@@ -12,8 +13,6 @@ import type {
   AnswerQuestionInput,
   DecidePermissionInput,
 } from '../lib/fetchers'
-import { emptyDecisionsData } from './useDecisionsCache'
-import type { DecisionsData } from './useDecisionsCache'
 
 // Vars types derived from hc InferRequestType — never hand-written
 type DecidePlanVars = {
@@ -32,9 +31,20 @@ type DecidePermissionVars = {
   reviewId: DecidePermissionInput['param']['reviewId']
 } & Omit<DecidePermissionInput['json'], 'decided_by'>
 
+/** Snapshot the current decisions for a room so we can rollback on error */
+function snapshotDecisions(roomId: string): DecisionsData {
+  return useRoomStore.getState().decisions[roomId] ?? emptyDecisionsData()
+}
+
+/** Restore a previous decisions snapshot on mutation error */
+function rollbackDecisions(roomId: string, prev: DecisionsData) {
+  useRoomStore.setState((s) => ({
+    decisions: { ...s.decisions, [roomId]: prev },
+  }))
+}
+
 export function useReviewMutations(roomId: string, userName: string) {
-  const queryClient = useQueryClient()
-  const decisionsKey = queryKeys.rooms.decisions(roomId)
+  const { setPlanDecision, setQuestionAnswer, setPermissionDecision } = useRoomStore.getState()
 
   const decidePlan = useMutation({
     mutationFn: ({ reviewId, approved, feedback, permission_mode }: DecidePlanVars) => decidePlanReview({
@@ -46,29 +56,17 @@ export function useReviewMutations(roomId: string, userName: string) {
         permission_mode,
       },
     }),
-    onMutate: async (vars) => {
-      await queryClient.cancelQueries({ queryKey: decisionsKey })
-      const prev = queryClient.getQueryData<DecisionsData>(decisionsKey)
-      queryClient.setQueryData<DecisionsData>(decisionsKey, old => {
-        const current = old ?? emptyDecisionsData()
-        return {
-          ...current,
-          plan: {
-            ...current.plan,
-            [vars.reviewId]: {
-              status: vars.approved ? 'approved' : 'denied',
-              feedback: vars.feedback,
-              permissionMode: vars.permission_mode,
-            },
-          },
-        }
+    onMutate: (vars) => {
+      const prev = snapshotDecisions(roomId)
+      setPlanDecision(roomId, vars.reviewId, {
+        status: vars.approved ? 'approved' : 'denied',
+        feedback: vars.feedback,
+        permissionMode: vars.permission_mode,
       })
       return { prev }
     },
     onError: (_err, _vars, context) => {
-      if (context?.prev) {
-        queryClient.setQueryData(decisionsKey, context.prev)
-      }
+      if (context?.prev) rollbackDecisions(roomId, context.prev)
     },
   })
 
@@ -76,25 +74,13 @@ export function useReviewMutations(roomId: string, userName: string) {
     mutationFn: ({ reviewId }: ExpirePlanVars) => expirePlanReview({
       param: { id: roomId, reviewId },
     }),
-    onMutate: async (vars) => {
-      await queryClient.cancelQueries({ queryKey: decisionsKey })
-      const prev = queryClient.getQueryData<DecisionsData>(decisionsKey)
-      queryClient.setQueryData<DecisionsData>(decisionsKey, old => {
-        const current = old ?? emptyDecisionsData()
-        return {
-          ...current,
-          plan: {
-            ...current.plan,
-            [vars.reviewId]: { status: 'expired' },
-          },
-        }
-      })
+    onMutate: (vars) => {
+      const prev = snapshotDecisions(roomId)
+      setPlanDecision(roomId, vars.reviewId, { status: 'expired' })
       return { prev }
     },
     onError: (_err, _vars, context) => {
-      if (context?.prev) {
-        queryClient.setQueryData(decisionsKey, context.prev)
-      }
+      if (context?.prev) rollbackDecisions(roomId, context.prev)
     },
   })
 
@@ -106,25 +92,13 @@ export function useReviewMutations(roomId: string, userName: string) {
         answered_by: userName,
       },
     }),
-    onMutate: async (vars) => {
-      await queryClient.cancelQueries({ queryKey: decisionsKey })
-      const prev = queryClient.getQueryData<DecisionsData>(decisionsKey)
-      queryClient.setQueryData<DecisionsData>(decisionsKey, old => {
-        const current = old ?? emptyDecisionsData()
-        return {
-          ...current,
-          question: {
-            ...current.question,
-            [vars.reviewId]: { status: 'answered', answers: vars.answers },
-          },
-        }
-      })
+    onMutate: (vars) => {
+      const prev = snapshotDecisions(roomId)
+      setQuestionAnswer(roomId, vars.reviewId, { status: 'answered', answers: vars.answers })
       return { prev }
     },
     onError: (_err, _vars, context) => {
-      if (context?.prev) {
-        queryClient.setQueryData(decisionsKey, context.prev)
-      }
+      if (context?.prev) rollbackDecisions(roomId, context.prev)
     },
   })
 
@@ -137,28 +111,16 @@ export function useReviewMutations(roomId: string, userName: string) {
         feedback,
       },
     }),
-    onMutate: async (vars) => {
-      await queryClient.cancelQueries({ queryKey: decisionsKey })
-      const prev = queryClient.getQueryData<DecisionsData>(decisionsKey)
-      queryClient.setQueryData<DecisionsData>(decisionsKey, old => {
-        const current = old ?? emptyDecisionsData()
-        return {
-          ...current,
-          permission: {
-            ...current.permission,
-            [vars.reviewId]: {
-              status: vars.approved ? 'approved' : 'denied',
-              feedback: vars.feedback,
-            },
-          },
-        }
+    onMutate: (vars) => {
+      const prev = snapshotDecisions(roomId)
+      setPermissionDecision(roomId, vars.reviewId, {
+        status: vars.approved ? 'approved' : 'denied',
+        feedback: vars.feedback,
       })
       return { prev }
     },
     onError: (_err, _vars, context) => {
-      if (context?.prev) {
-        queryClient.setQueryData(decisionsKey, context.prev)
-      }
+      if (context?.prev) rollbackDecisions(roomId, context.prev)
     },
   })
 

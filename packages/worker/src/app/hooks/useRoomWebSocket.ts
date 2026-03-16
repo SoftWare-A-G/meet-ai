@@ -3,10 +3,9 @@ import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { fetchMessagesSinceSeq } from '../lib/fetchers'
 import { queryKeys } from '../lib/query-keys'
+import { useRoomStore } from '../stores/useRoomStore'
 import { mergeIntoTimeline, reconcileOptimistic } from './useRoomTimeline'
-import { emptyDecisionsData } from './useDecisionsCache'
 import type { TimelineItem } from './useRoomTimeline'
-import type { DecisionsData } from './useDecisionsCache'
 import type { CommandsInfo, TaskItem, TeamInfoResponse } from '../lib/fetchers'
 import type { Message, TerminalDataEvent } from '../lib/types'
 
@@ -81,6 +80,10 @@ export function useRoomWebSocket(
     if (!roomId || !apiKey) return
     const key = apiKey
 
+    // Grab Zustand actions once (stable references, no re-render deps)
+    const { setCommands, setPlanDecision, setQuestionAnswer, setPermissionDecision } =
+      useRoomStore.getState()
+
     async function catchUp() {
       if (!roomId || lastSeqRef.current === 0) return
       try {
@@ -154,75 +157,46 @@ export function useRoomWebSocket(
           }
           return
         }
+
+        // ── Zustand-managed state ────────────────────────────────────
         if (event.type === 'commands_info') {
-          if (roomId) {
-            void queryClient.cancelQueries({ queryKey: queryKeys.rooms.commands(roomId) })
-            queryClient.setQueryData(queryKeys.rooms.commands(roomId), event.commands)
-          }
-          return
-        }
-        if (event.type === 'tasks_info') {
-          if (roomId) {
-            void queryClient.cancelQueries({ queryKey: queryKeys.rooms.tasks(roomId) })
-            queryClient.setQueryData(queryKeys.rooms.tasks(roomId), event)
-          }
+          if (roomId) setCommands(roomId, event.commands)
           return
         }
         if (event.type === 'plan_decision') {
           if (roomId) {
-            void queryClient.cancelQueries({ queryKey: queryKeys.rooms.decisions(roomId) })
-            queryClient.setQueryData<DecisionsData>(queryKeys.rooms.decisions(roomId), old => {
-              const current = old ?? emptyDecisionsData()
-              return {
-                ...current,
-                plan: {
-                  ...current.plan,
-                  [event.plan_review_id]: {
-                    status: event.status,
-                    feedback: event.feedback ?? undefined,
-                    permissionMode: event.permission_mode,
-                  },
-                },
-              }
+            setPlanDecision(roomId, event.plan_review_id, {
+              status: event.status,
+              feedback: event.feedback ?? undefined,
+              permissionMode: event.permission_mode,
             })
           }
           return
         }
         if (event.type === 'question_answer') {
           if (roomId) {
-            void queryClient.cancelQueries({ queryKey: queryKeys.rooms.decisions(roomId) })
-            queryClient.setQueryData<DecisionsData>(queryKeys.rooms.decisions(roomId), old => {
-              const current = old ?? emptyDecisionsData()
-              return {
-                ...current,
-                question: {
-                  ...current.question,
-                  [event.question_review_id]: {
-                    status: event.status,
-                    answers: event.answers,
-                  },
-                },
-              }
+            setQuestionAnswer(roomId, event.question_review_id, {
+              status: event.status,
+              answers: event.answers,
             })
           }
           return
         }
         if (event.type === 'permission_decision') {
           if (roomId) {
-            void queryClient.cancelQueries({ queryKey: queryKeys.rooms.decisions(roomId) })
-            queryClient.setQueryData<DecisionsData>(queryKeys.rooms.decisions(roomId), old => {
-              const current = old ?? emptyDecisionsData()
-              return {
-                ...current,
-                permission: {
-                  ...current.permission,
-                  [event.permission_review_id]: {
-                    status: event.status,
-                    feedback: event.feedback ?? undefined,
-                  },
-                },
-              }
+            setPermissionDecision(roomId, event.permission_review_id, {
+              status: event.status,
+              feedback: event.feedback ?? undefined,
             })
+          }
+          return
+        }
+
+        // ── TanStack Query–managed state (genuine server data) ───────
+        if (event.type === 'tasks_info') {
+          if (roomId) {
+            void queryClient.cancelQueries({ queryKey: queryKeys.rooms.tasks(roomId) })
+            queryClient.setQueryData(queryKeys.rooms.tasks(roomId), event)
           }
           return
         }

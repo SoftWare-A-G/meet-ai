@@ -4,7 +4,7 @@ import { getRouteApi } from '@tanstack/react-router'
 import { MentionsInput, Mention } from 'react-mentions-ts'
 import type { MentionsInputClassNames, MentionsInputChangeEvent } from 'react-mentions-ts'
 import { IconPaperclip, IconSend, IconMicrophone } from '../../icons'
-import { useCommandsCache } from '../../hooks/useCommandsCache'
+import { useCommands } from '../../stores/useRoomStore'
 import { useTeamInfoQuery } from '../../hooks/useTeamInfoQuery'
 import { useVoiceInput } from '../../hooks/useVoiceInput'
 
@@ -49,7 +49,7 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
   const [plainText, setPlainText] = useState('')
 
   const { id: roomId } = chatRoute.useParams()
-  const { data: commandsInfo } = useCommandsCache(roomId)
+  const commandsInfo = useCommands(roomId)
   const { data: teamInfo } = useTeamInfoQuery(roomId)
 
   const interimRef = useRef('')

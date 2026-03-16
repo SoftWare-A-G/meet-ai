@@ -400,7 +400,7 @@ describe('listen', () => {
     expect(postLogMock).toHaveBeenCalledWith({
       param: { id: 'df75b1db-f583-4d9f-8e34-9b3d614f152c' },
       json: expect.objectContaining({
-        sender: 'hook',
+        sender: 'codex',
         content: expect.stringContaining('Codex plan updated: Bind plan mode to the room UI'),
       }),
     })
