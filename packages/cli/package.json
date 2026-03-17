@@ -37,7 +37,7 @@
   "dependencies": {
     "@tldraw/tlschema": "4.4.1",
     "citty": "0.2.1",
-    "evlog": "2.7.0",
+    "evlog": "2.8.0",
     "hono": "4.12.8",
     "ink": "6.8.0",
     "picocolors": "1.1.1",
@@ -46,7 +46,7 @@
     "zod": "4.3.6"
   },
   "devDependencies": {
-    "@mariozechner/pi-coding-agent": "0.58.1",
+    "@mariozechner/pi-coding-agent": "0.58.4",
     "@sinclair/typebox": "0.34.48",
     "@types/node": "25.5.0",
     "@types/react": "19.2.14",
