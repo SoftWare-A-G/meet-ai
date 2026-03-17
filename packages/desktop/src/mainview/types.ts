@@ -1,6 +1,4 @@
-import type * as THREE from 'three'
-import type { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import type { CSS2DObject, CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
+import * as Phaser from 'phaser'
 
 export interface TeamMember {
   teammate_id: string
@@ -20,7 +18,7 @@ export interface StoredTask {
   assignee?: string
 }
 
-// Pure data fields — no Three.js types
+// Pure data fields — no rendering types
 export interface AgentData {
   id: string
   name: string
@@ -45,45 +43,49 @@ export interface AgentData {
   lastToolXpTime: number
 }
 
-// Three.js render handles
+// Phaser render handles
 export interface AgentRenderState {
-  position: THREE.Vector3
-  targetPosition: THREE.Vector3
-  group: THREE.Group
-  bodyMesh: THREE.Mesh
-  glowMesh: THREE.Mesh
-  nameLabel: CSS2DObject
-  bubble: CSS2DObject | null
+  position: { x: number; y: number }
+  targetPosition: { x: number; y: number }
+  worldX: number
+  worldZ: number
+  targetWorldX: number
+  targetWorldZ: number
+  group: Phaser.GameObjects.Container
+  bodyMesh: Phaser.GameObjects.Graphics
+  glowMesh: Phaser.GameObjects.Graphics
+  nameLabel: Phaser.GameObjects.Text
+  bubble: Phaser.GameObjects.DOMElement | null
   bubbleTimeout: ReturnType<typeof setTimeout> | null
-  activityRing: THREE.Mesh
-  headMesh?: THREE.Mesh
+  activityRing: Phaser.GameObjects.Graphics
+  headMesh: Phaser.GameObjects.Graphics
 }
 
 // Combined type for backward compatibility during migration
 export type AgentState = AgentData & AgentRenderState
 
 export interface SpawnBeam {
-  mesh: THREE.Mesh
+  graphic: Phaser.GameObjects.Graphics
   startTime: number
   duration: number
 }
 
 export interface ParticleEffect {
-  points: THREE.Points
+  emitter: Phaser.GameObjects.Particles.ParticleEmitter
   velocities: Float32Array
   startTime: number
   duration: number
 }
 
 export interface FloatingText {
-  label: CSS2DObject
+  text: Phaser.GameObjects.Text
   startTime: number
   duration: number
   startY: number
 }
 
 export interface ZoneParticleSystem {
-  points: THREE.Points
+  emitter: Phaser.GameObjects.Particles.ParticleEmitter
   behavior: string
   zoneX: number
   zoneZ: number
@@ -96,7 +98,7 @@ export interface Contract {
   status: 'posted' | 'claimed' | 'active' | 'completed' | 'failed'
   difficulty: 'easy' | 'normal' | 'hard'
   reward: number
-  scrollObject?: CSS2DObject
+  scrollObject?: Phaser.GameObjects.Text
 }
 
 export interface EventLogEntry {
@@ -113,10 +115,6 @@ export interface FrameContext {
 }
 
 export interface SceneContext {
-  renderer: THREE.WebGLRenderer
-  cssRenderer: CSS2DRenderer
-  scene: THREE.Scene
-  camera: THREE.PerspectiveCamera
-  controls: OrbitControls
-  canvas: HTMLCanvasElement
+  game: Phaser.Game
+  scene: Phaser.Scene
 }

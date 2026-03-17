@@ -1,6 +1,6 @@
 import { DOMUIAdapter } from './adapters/DOMUIAdapter'
 import { initRPC } from './adapters/RPCAdapter'
-import { ThreeSceneAdapter } from './adapters/ThreeSceneAdapter'
+import { PhaserSceneAdapter } from './adapters/PhaserSceneAdapter'
 import { GameState } from './domain/GameState'
 import { GameActions } from './domain/usecases/GameActions'
 import { HandleLog } from './domain/usecases/HandleLog'
@@ -15,8 +15,8 @@ export function createGame(): void {
 	// State
 	const state = new GameState()
 
-	// Adapters (ThreeSceneAdapter owns all rendering setup internally)
-	const sceneAdapter = new ThreeSceneAdapter()
+	// Adapters (PhaserSceneAdapter owns all rendering setup internally)
+	const sceneAdapter = new PhaserSceneAdapter()
 	const uiAdapter = new DOMUIAdapter()
 
 	// Shared actions

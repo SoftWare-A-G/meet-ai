@@ -2,7 +2,7 @@ import type { AgentData, StoredTask } from '../../types'
 import type { EventLog } from '../models/EventLog'
 import type { ZoneTracker } from '../services/ZoneTracker'
 
-// Pure contract data — no Three.js types (scrollObject lives in rendering)
+// Pure contract data — no Phaser types (scrollObject lives in rendering)
 export interface ContractData {
   id: string
   title: string

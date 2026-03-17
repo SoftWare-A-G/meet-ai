@@ -3,8 +3,16 @@ import { createGame } from './bootstrap'
 
 installErrorHandlers()
 
-try {
-	createGame()
-} catch (error) {
-	showErrorOverlay(error)
+function boot() {
+	try {
+		createGame()
+	} catch (error) {
+		showErrorOverlay(error)
+	}
+}
+
+if (document.readyState === 'loading') {
+	document.addEventListener('DOMContentLoaded', boot)
+} else {
+	boot()
 }

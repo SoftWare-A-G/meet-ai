@@ -4,7 +4,7 @@
 		"useDefineForClassFields": true,
 		"module": "ESNext",
 		"resolveJsonModule": true,
-		"allowJs": true,
+		"allowJs": false,
 		"isolatedModules": true,
 		"moduleDetection": "force",
 		"noEmit": true,
@@ -12,8 +12,9 @@
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
 		"noFallthroughCasesInSwitch": true,
-		"moduleResolution": "bundler"
+		"moduleResolution": "bundler",
+		"skipLibCheck": true
 	},
 	"include": ["src"],
-	"exclude": ["node_modules", "dist", "build", "../../package/dist"]
+	"exclude": ["node_modules", "dist", "build"]
 }

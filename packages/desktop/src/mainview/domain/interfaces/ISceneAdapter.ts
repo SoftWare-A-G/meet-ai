@@ -1,8 +1,8 @@
 import type { AgentData, FrameContext, TeamMember } from '../../types'
 import type { ContractData } from './IGameState'
 
-// Scene adapter contract — all Three.js operations the domain/usecases can request.
-// Implementation: adapters/ThreeSceneAdapter.ts
+// Scene adapter contract — all Phaser operations the domain/usecases can request.
+// Implementation: adapters/PhaserSceneAdapter.ts
 // rendering/* modules are PRIVATE internals of the adapter — never imported by domain.
 
 export interface ISceneAdapter {
