@@ -3,27 +3,23 @@ import clsx from 'clsx'
 import { getRouteApi } from '@tanstack/react-router'
 import { MentionsInput, Mention } from 'react-mentions-ts'
 import type { MentionsInputClassNames, MentionsInputChangeEvent } from 'react-mentions-ts'
-import { IconPaperclip, IconSend, IconMicrophone } from '../../icons'
+import { IconPaperclip, IconSend } from '../../icons'
 import { useCommands } from '../../stores/useRoomStore'
 import { useTeamInfoQuery } from '../../hooks/useTeamInfoQuery'
 import { useVoiceInput } from '../../hooks/useVoiceInput'
+import SlashCommandDropdown from './SlashCommandDropdown'
+import MentionDropdown from './MentionDropdown'
+import AttachmentStrip from './AttachmentStrip'
+import type { PendingFile } from './AttachmentStrip'
+import VoiceInputButton from './VoiceInputButton'
 
 const chatRoute = getRouteApi('/chat/$id')
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 
-const preventBlur = (e: { preventDefault: () => void }) => e.preventDefault()
-
 const isTouchDevice = () => matchMedia('(pointer: coarse)').matches
 
-type PendingFile = {
-  file: File
-  status: 'pending' | 'uploading' | 'done' | 'error'
-  attachmentId?: string
-  error?: string
-}
-
-type ChatInputProps = {
+interface ChatInputProps {
   roomName: string
   onSend: (content: string, attachmentIds: string[]) => void
   onUploadFile: (file: File) => Promise<{ id: string }>
@@ -357,63 +353,23 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
     <div className="chat-input-wrapper shrink-0 pb-[env(safe-area-inset-bottom)] bg-chat-bg">
       <div className="relative border-t border-b border-border bg-input-bg">
         {showCommandDropdown && (
-          <div className="absolute bottom-full left-0 right-0 z-10 border border-border border-b-0 bg-input-bg shadow-xl rounded-t-lg overflow-hidden">
-            <ul className="max-h-48 overflow-y-auto">
-              {filteredCommands.map((cmd, i) => (
-                <li key={cmd.name}>
-                  <button
-                    ref={(el) => { commandItemRefs.current[i] = el }}
-                    type="button"
-                    className={clsx(
-                      'w-full text-left px-3 py-2 flex gap-2 items-baseline cursor-pointer border-none bg-transparent text-msg-text text-sm',
-                      i === selectedCommandIndex ? 'bg-white/10' : 'hover:bg-white/5'
-                    )}
-                    onMouseDown={preventBlur}
-                    onClick={() => selectCommand(cmd.name)}
-                  >
-                    <span className="font-semibold shrink-0">/{cmd.name}</span>
-                    <span className="text-msg-text opacity-50 truncate">{cmd.description}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <SlashCommandDropdown
+            commands={filteredCommands}
+            selectedIndex={selectedCommandIndex}
+            itemRefs={commandItemRefs}
+            onSelect={selectCommand}
+          />
         )}
         {showMentionDropdown && (
-          <div className="absolute bottom-full left-0 right-0 z-10 border border-border border-b-0 bg-input-bg shadow-xl rounded-t-lg overflow-hidden">
-            <ul className="max-h-48 overflow-y-auto">
-              {filteredMentions.map((member, i) => (
-                <li key={member.id}>
-                  <button
-                    ref={(el) => { mentionItemRefs.current[i] = el }}
-                    type="button"
-                    className={clsx(
-                      'w-full text-left px-3 py-2 flex gap-2 items-baseline cursor-pointer border-none bg-transparent text-msg-text text-sm',
-                      i === selectedMentionIndex ? 'bg-white/10' : 'hover:bg-white/5'
-                    )}
-                    onMouseDown={preventBlur}
-                    onTouchStart={preventBlur}
-                    onClick={() => selectMention(member.display)}
-                  >
-                    <span className="font-semibold shrink-0">@{member.display}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <MentionDropdown
+            members={filteredMentions}
+            selectedIndex={selectedMentionIndex}
+            itemRefs={mentionItemRefs}
+            onSelect={selectMention}
+          />
         )}
         {pendingFiles.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 p-3 border-b border-border">
-            {pendingFiles.map((pf) => (
-              <div className={clsx('flex items-center gap-1 bg-white/[0.15] rounded-md px-2 py-1 text-xs max-w-[200px]', pf.status === 'error' && 'bg-[#F85149]/15 text-[#F85149]', pf.status === 'uploading' && 'opacity-70', pf.status === 'done' && 'bg-[#3AD900]/[0.12]')} key={pf.file.name + pf.file.size}>
-                <span className="overflow-hidden text-ellipsis whitespace-nowrap max-w-[120px]">{pf.file.name}</span>
-                {pf.status === 'uploading' && <span className="opacity-60 whitespace-nowrap">uploading...</span>}
-                {pf.status === 'error' && <span className="text-[11px] whitespace-nowrap">{pf.error}</span>}
-                {pf.status === 'done' && <span className="opacity-60 whitespace-nowrap">ready</span>}
-                <button type="button" className="bg-transparent border-none text-msg-text cursor-pointer text-sm px-0.5 opacity-50 leading-none hover:opacity-100" onClick={() => removeFile(pf.file)} title="Remove">×</button>
-              </div>
-            ))}
-          </div>
+          <AttachmentStrip files={pendingFiles} onRemove={removeFile} />
         )}
 
         <MentionsInput
@@ -439,7 +395,7 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
             <button
               type="button"
               className="flex items-center gap-1.5 px-3 h-9 rounded-lg border border-border bg-transparent text-msg-text opacity-70 hover:opacity-100 hover:bg-white/5 cursor-pointer text-sm transition-all"
-              onMouseDown={preventBlur}
+              onMouseDown={e => e.preventDefault()}
               onClick={handleFileSelect}
             >
               <IconPaperclip size={16} />
@@ -447,20 +403,7 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
             </button>
 
             {voiceSupported && (
-              <button
-                type="button"
-                aria-label={isListening ? 'Stop recording' : 'Start voice input'}
-                className={clsx(
-                  'h-9 w-9 rounded-lg border flex items-center justify-center cursor-pointer text-sm transition-all',
-                  isListening
-                    ? 'bg-[#F85149]/20 border-[#F85149]/50 text-[#F85149] animate-pulse'
-                    : 'border-border bg-transparent text-msg-text opacity-70 hover:opacity-100 hover:bg-white/5'
-                )}
-                onMouseDown={preventBlur}
-                onClick={toggleVoice}
-              >
-                <IconMicrophone size={16} />
-              </button>
+              <VoiceInputButton isListening={isListening} onToggle={toggleVoice} />
             )}
           </div>
 
@@ -474,7 +417,7 @@ export default function ChatInput({ roomName, onSend, onUploadFile }: ChatInputP
                 ? 'opacity-50 cursor-default'
                 : 'cursor-pointer hover:brightness-110'
             )}
-            onMouseDown={preventBlur}
+            onMouseDown={e => e.preventDefault()}
             onClick={handleSend}
           >
             <IconSend size={16} />

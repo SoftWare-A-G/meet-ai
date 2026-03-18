@@ -17,21 +17,15 @@ body {
 
 /* ── Canvas ── */
 
-#game-canvas {
+#game-container {
 	position: fixed;
 	inset: 0;
 	width: 100%;
 	height: 100%;
-	display: block;
 }
 
-/* ── UI Overlay (CSS2DRenderer output) ── */
-
-#ui-overlay {
-	position: fixed;
-	inset: 0;
-	pointer-events: none;
-	z-index: 10;
+#game-container canvas {
+	display: block;
 }
 
 /* ── Zone Labels ── */
