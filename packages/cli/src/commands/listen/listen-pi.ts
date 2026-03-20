@@ -297,6 +297,7 @@ export function listenPi(
     piBridgeOverride ??
     createPiBridge(findPiCli(), process.cwd(), {
       extensions: [resolvePiExtensionPath('task-tools'), resolvePiExtensionPath('canvas-tools')],
+      env: { MEET_AI_ROOM_ID: roomId },
     })
 
   piBridge.setEventHandler((event: PiAgentEvent) => {

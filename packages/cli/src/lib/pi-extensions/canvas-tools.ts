@@ -11,17 +11,18 @@
  * which handles tldraw schema normalization, shape validation, etc.
  */
 
-import type { ExtensionAPI } from '@mariozechner/pi-coding-agent'
 import { Type } from '@sinclair/typebox'
 import { hc } from 'hono/client'
+import { executeCanvasTool, CANVAS_TOOL_SPECS, type CanvasOperations } from '../codex-canvas-tools'
 import { getHomeCredentials } from '../meetai-home'
-import {
-  executeCanvasTool,
-  CANVAS_TOOL_SPECS,
-  type CanvasOperations,
-} from '../codex-canvas-tools'
-import type { Canvas, CanvasSnapshot, CanvasMutationResult, CanvasMutationPut } from '../hooks/canvas'
 import type { AppType } from '../../../../worker/src/index'
+import type {
+  Canvas,
+  CanvasSnapshot,
+  CanvasMutationResult,
+  CanvasMutationPut,
+} from '../hooks/canvas'
+import type { ExtensionAPI } from '@mariozechner/pi-coding-agent'
 
 function ok(data: unknown) {
   return {
@@ -78,9 +79,7 @@ export default function (pi: ExtensionAPI) {
   const ops = {
     async ensureCanvas(): Promise<Canvas | null> {
       try {
-        const res = await client.api.rooms[':id'].canvas.$post({
-          param: { id: roomId },
-        })
+        const res = await client.api.rooms[':id'].canvas.$post({ param: { id: roomId } })
         if (!res.ok) return null
         return (await res.json()) as Canvas
       } catch {
@@ -90,9 +89,7 @@ export default function (pi: ExtensionAPI) {
 
     async getSnapshot(): Promise<CanvasSnapshot | null> {
       try {
-        const res = await client.api.rooms[':id'].canvas.snapshot.$get({
-          param: { id: roomId },
-        })
+        const res = await client.api.rooms[':id'].canvas.snapshot.$get({ param: { id: roomId } })
         if (!res.ok) return null
         return (await res.json()) as CanvasSnapshot
       } catch {

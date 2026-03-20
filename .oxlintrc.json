@@ -202,19 +202,9 @@
     "unicorn/prefer-set-size": "warn",
     "unicorn/prefer-string-starts-ends-with": "warn",
     "unicorn/require-number-to-fixed-digits-argument": "error",
-    "unicorn/switch-case-braces": "error"
+    "unicorn/switch-case-braces": "error",
   },
   "settings": {
-    "jsx-a11y": {
-      "polymorphicPropName": null,
-      "components": {},
-      "attributes": {}
-    },
-    "react": {
-      "formComponents": [],
-      "linkComponents": [],
-      "version": null
-    },
     "jsdoc": {
       "ignorePrivate": false,
       "ignoreInternal": false,
@@ -223,14 +213,14 @@
       "augmentsExtendsReplacesDocs": false,
       "implementsReplacesDocs": false,
       "exemptDestructuredRootsFromChecks": false,
-      "tagNamePreference": {}
+      "tagNamePreference": {},
     },
     "vitest": {
-      "typecheck": false
-    }
+      "typecheck": false,
+    },
   },
   "env": {
-    "builtin": true
+    "builtin": true,
   },
-  "globals": {}
+  "globals": {},
 }

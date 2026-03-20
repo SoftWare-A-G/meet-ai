@@ -65,6 +65,7 @@ export default function CanvasInner({ wsUrl, userName, userColor }: CanvasInnerP
 
   return (
     <Tldraw
+      licenseKey={import.meta.env.VITE_TLDRAW_LICENSE_KEY}
       store={store.store}
       assetUrls={SELF_HOSTED_ASSET_URLS}
       acceptedImageMimeTypes={[]}

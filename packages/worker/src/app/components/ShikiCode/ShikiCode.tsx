@@ -1,10 +1,11 @@
+import { highlighter } from '@git-diff-view/react'
 import { useEffect, useState } from 'react'
 import type { JSX } from 'react'
-import { highlighter } from '@git-diff-view/react'
 
 declare global {
   interface ImportMetaEnv {
     readonly SSR: boolean
+    readonly VITE_TLDRAW_LICENSE_KEY: string
   }
 
   interface ImportMeta {

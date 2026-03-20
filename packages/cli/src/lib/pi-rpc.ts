@@ -56,6 +56,8 @@ type PendingRequest = {
 export interface PiBridgeOptions {
   /** Paths to Pi extension files to load via --extension */
   extensions?: string[]
+  /** Extra environment variables to pass to the Pi child process */
+  env?: Record<string, string>
 }
 
 /**
@@ -161,7 +163,7 @@ export function createPiBridge(binaryPath: string, workDir: string, options?: Pi
       proc = spawn(binaryPath, args, {
         cwd: workDir,
         stdio: ['pipe', 'pipe', 'pipe'],
-        env: { ...process.env },
+        env: { ...process.env, ...options?.env },
       })
 
       // JSONL reader using LF-only splitting (as per Pi RPC spec)

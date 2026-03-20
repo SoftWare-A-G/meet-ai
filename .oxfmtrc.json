@@ -10,8 +10,6 @@
   "arrowParens": "avoid",
   "experimentalSortImports": {
     "groups": [
-      "side-effect",
-      "side-effect-style",
       "builtin",
       "subpath",
       "external",
@@ -21,10 +19,10 @@
       "index",
       "type",
       "import",
-      "style"
+      "style",
     ],
-    "newlinesBetween": false
+    "newlinesBetween": false,
   },
   "experimentalTailwindcss": {},
-  "ignorePatterns": ["**/*.yml"]
+  "ignorePatterns": ["**/*.yml"],
 }
