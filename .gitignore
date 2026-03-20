@@ -13,6 +13,5 @@ packages/cli/src/generated/codex-app-server/
 .obsidian/
 build/
 artifacts/
-*.json
 *.txt
 !robots.txt

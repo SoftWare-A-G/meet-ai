@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://meet-ai.cc/schemas/config.json",
+  "title": "Meet AI CLI Configuration",
+  "description": "Configuration file for the Meet AI CLI (~/.meetai/config.json)",
+  "type": "object",
+  "required": ["defaultEnv", "envs"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference"
+    },
+    "defaultEnv": {
+      "type": "string",
+      "description": "Name of the default environment to use"
+    },
+    "envs": {
+      "type": "object",
+      "description": "Map of named environments",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["url", "key"],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Meet AI server URL"
+          },
+          "key": {
+            "type": "string",
+            "pattern": "^mai_",
+            "description": "Meet AI API key (must start with mai_)"
+          }
+        },
+        "additionalProperties": false
+      },
+      "minProperties": 1
+    }
+  },
+  "additionalProperties": false
+}

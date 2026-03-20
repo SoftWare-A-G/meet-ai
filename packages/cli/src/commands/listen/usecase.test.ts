@@ -561,9 +561,9 @@ describe('listen', () => {
     process.env.MEET_AI_AGENT_NAME = 'my-codex'
 
     writeCodexSessionTranscript('sess-team-bound', process.cwd())
-    mkdirSync(`${codexHome}/.claude/teams/demo-team`, { recursive: true })
+    mkdirSync(`${codexHome}/.meet-ai/teams/demo-team`, { recursive: true })
     writeFileSync(
-      `${codexHome}/.claude/teams/demo-team/meet-ai.json`,
+      `${codexHome}/.meet-ai/teams/demo-team/meet-ai.json`,
       JSON.stringify({
         session_id: 'sess-team-bound',
         room_id: 'df75b1db-f583-4d9f-8e34-9b3d614f152c',

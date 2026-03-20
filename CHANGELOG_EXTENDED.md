@@ -1,5 +1,60 @@
 # Changelog
 
+## [2.1.4](https://github.com/SoftWare-A-G/meet-ai/compare/2.1.3...2.1.4) (2026-03-20)
+
+### Features
+
+- finish packaging the reintroduced Expo app so it can ship as a first-class workspace:
+  - add `packages/app/package.json` with Expo Router entrypoints and platform scripts
+  - add `packages/app/app.json`, `packages/app/tsconfig.json`, and tracked icon metadata so native and web app configuration stops depending on ignored JSON files
+  - add `packages/worker/public/schemas/config.json` so operators can point `~/.meet-ai/config.json` at a published JSON schema
+- continue the 2.1.4 client refresh across desktop and web surfaces:
+  - migrate the desktop renderer from `ThreeSceneAdapter` to `PhaserSceneAdapter`, with the new `GameScene` and `IsoProjection` runtime plus the renamed `@meet-ai/desktop` package manifest
+  - decompose the web `ChatInput` into dedicated attachment, mention, slash-command, and voice-button subcomponents so the composer is easier to evolve and test
+
+### Bug Fixes
+
+- restore room context inside Pi extensions:
+  - pass `MEET_AI_ROOM_ID` through `packages/cli/src/commands/listen/listen-pi.ts` into `createPiBridge()`
+  - merge that env override into the Pi child process in `packages/cli/src/lib/pi-rpc.ts`
+  - keep Pi task and canvas extensions room-aware instead of forcing them to infer room state indirectly
+- finish the `meet-ai.json` home migration without breaking older installs:
+  - add `packages/cli/src/lib/paths.ts` and make `findRoom()` prefer `~/.meet-ai/teams`, auto-create that directory when transcript-backed sessions are registered, and fall back to `~/.claude/teams` when needed
+  - make team-member registration scan `~/.meet-ai/teams` first and fall back to `~/.claude/teams` for older room bindings
+  - update the Claude starting prompt and listen-flow tests so new team leads write bindings into `~/.meet-ai/teams/<team-name>/meet-ai.json`
+- keep packaged artifacts versionable and runtime config explicit:
+  - stop ignoring repo JSON files globally so tracked app and schema artifacts can live in source control
+  - wire the upgraded canvas/code surfaces to the explicit `VITE_TLDRAW_LICENSE_KEY` typing used by the newer `tldraw` stack
+- align the CLI, worker, desktop, and app package manifests at `2.1.4` for the release
+
+### Tests
+
+- add `packages/cli/src/lib/hooks/find-room.test.ts` coverage for `~/.meet-ai/teams` primary lookup, `~/.claude/teams` fallback lookup, and primary-precedence behavior
+- expand `packages/cli/src/lib/team-member-registration.test.ts` coverage for room-binding fallback and precedence across the two team directories
+- keep `packages/cli/src/commands/listen/usecase.test.ts` aligned with the new `~/.meet-ai/teams` path, with the targeted room-binding suites and current app, CLI, and worker typechecks used as the patch-release validation surface
+
+## [2.1.3](https://github.com/SoftWare-A-G/meet-ai/compare/2.1.2...2.1.3) (2026-03-16)
+
+### Features
+
+- complete the worker TanStack Query and `hono` client migration:
+  - add a centralized API client, query client, and query-key factory so room, project, task, team, attachment, upload, auth, timeline, and TTS flows read from one cache-aware data layer
+  - replace ad-hoc chat-context state with websocket cache writers plus a small Zustand room store for command lists and review-decision overrides
+  - add a reusable `QueryErrorBoundary` and route-level loading/error handling so sidebar and chat surfaces fail more predictably
+
+### Bug Fixes
+
+- stabilize the migrated worker data flow:
+  - reconcile optimistic timeline items against websocket and catch-up responses so missed messages, logs, and terminal events stop leaving stale room state behind
+  - keep `claimToken`, `generateKey`, and TTS on the required raw/auth paths so 401 handling and `ArrayBuffer` responses still behave correctly after the client migration
+  - deduplicate slash-command suggestions and keep message rendering plus TTS/team lookups reading from the new cache-backed sources
+- align the CLI and worker package manifests at `2.1.3` for the release
+
+### Tests
+
+- move the worker harness to Vitest 4 with the newer `@cloudflare/vitest-pool-workers` config/plugin shape so the migrated suites keep running under the updated toolchain
+- keep the existing worker and CLI regression suites aligned with the migrated query and caching surfaces; no release-only test files were added in the `2.1.3` bump
+
 ## [2.1.2](https://github.com/SoftWare-A-G/meet-ai/compare/2.1.1...2.1.2) (2026-03-15)
 
 ### Features

@@ -1,8 +1,8 @@
 import { readdirSync, readFileSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { createHookClient, getTeamInfo, sendTeamMemberUpsert } from './hooks/client'
 import { getHomeCredentials } from './meetai-home'
+import { getMeetAiTeamsDir, getClaudeTeamsDir } from './paths'
 
 type TeamConfigMember = {
   agentId?: string
@@ -28,10 +28,6 @@ export type TeamMemberRegistrar = (input: {
   joinedAt?: number
 }) => Promise<void>
 
-function getTeamsDir(): string {
-  return join(process.env.HOME ?? homedir(), '.claude', 'teams')
-}
-
 function readJsonFile<T>(filePath: string): T | null {
   try {
     return JSON.parse(readFileSync(filePath, 'utf8')) as T
@@ -40,17 +36,17 @@ function readJsonFile<T>(filePath: string): T | null {
   }
 }
 
-function findTeamNameByRoomId(roomId: string): string | null {
+function scanTeamsDirForRoom(dir: string, roomId: string): string | null {
   let entries: string[]
   try {
-    entries = readdirSync(getTeamsDir())
+    entries = readdirSync(dir)
   } catch {
     return null
   }
 
   for (const entry of entries) {
     const roomBinding = readJsonFile<{ room_id?: string; team_name?: string }>(
-      join(getTeamsDir(), entry, 'meet-ai.json')
+      join(dir, entry, 'meet-ai.json')
     )
     if (roomBinding?.room_id === roomId) {
       return roomBinding.team_name || entry
@@ -60,8 +56,13 @@ function findTeamNameByRoomId(roomId: string): string | null {
   return null
 }
 
+function findTeamNameByRoomId(roomId: string): string | null {
+  return scanTeamsDirForRoom(getMeetAiTeamsDir(), roomId)
+    ?? scanTeamsDirForRoom(getClaudeTeamsDir(), roomId)
+}
+
 function readTeamConfig(teamName: string): TeamConfig | null {
-  return readJsonFile<TeamConfig>(join(getTeamsDir(), teamName, 'config.json'))
+  return readJsonFile<TeamConfig>(join(getClaudeTeamsDir(), teamName, 'config.json'))
 }
 
 function resolveLeadAgentName(config: TeamConfig | null): string | undefined {

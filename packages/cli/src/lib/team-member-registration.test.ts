@@ -92,8 +92,9 @@ describe('registerActiveTeamMember', () => {
   })
 
   it('resolves the team name from room bindings for codex registration', async () => {
+    mkdirSync(`${tempHome}/.meet-ai/teams/demo-team`, { recursive: true })
     writeFileSync(
-      `${tempHome}/.claude/teams/demo-team/meet-ai.json`,
+      `${tempHome}/.meet-ai/teams/demo-team/meet-ai.json`,
       JSON.stringify({
         room_id: '30c9e52e-5f4d-4298-a995-efb5c27623d6',
         team_name: 'demo-team',
@@ -120,6 +121,67 @@ describe('registerActiveTeamMember', () => {
         status: 'active',
         joinedAt: expect.any(Number),
       }
+    )
+  })
+
+  it('falls back to ~/.claude/teams when primary has no room binding', async () => {
+    // Primary dir exists but is empty (no meet-ai.json matching this room)
+    mkdirSync(`${tempHome}/.meet-ai/teams`, { recursive: true })
+
+    // Legacy dir has the binding
+    writeFileSync(
+      `${tempHome}/.claude/teams/demo-team/meet-ai.json`,
+      JSON.stringify({
+        room_id: '30c9e52e-5f4d-4298-a995-efb5c27623d6',
+        team_name: 'demo-team',
+      })
+    )
+
+    await registerActiveTeamMember({
+      roomId: '30c9e52e-5f4d-4298-a995-efb5c27623d6',
+      agentName: 'codex',
+      role: 'codex',
+      model: 'gpt-5',
+    })
+
+    expect(mockSendTeamMemberUpsert).toHaveBeenCalledWith(
+      { api: {} },
+      '30c9e52e-5f4d-4298-a995-efb5c27623d6',
+      'demo-team',
+      expect.objectContaining({ name: 'codex', role: 'codex' })
+    )
+  })
+
+  it('prefers primary ~/.meet-ai/teams over ~/.claude/teams for room binding', async () => {
+    mkdirSync(`${tempHome}/.meet-ai/teams/primary-team`, { recursive: true })
+    writeFileSync(
+      `${tempHome}/.meet-ai/teams/primary-team/meet-ai.json`,
+      JSON.stringify({
+        room_id: '30c9e52e-5f4d-4298-a995-efb5c27623d6',
+        team_name: 'primary-team',
+      })
+    )
+    writeFileSync(
+      `${tempHome}/.claude/teams/demo-team/meet-ai.json`,
+      JSON.stringify({
+        room_id: '30c9e52e-5f4d-4298-a995-efb5c27623d6',
+        team_name: 'legacy-team',
+      })
+    )
+
+    await registerActiveTeamMember({
+      roomId: '30c9e52e-5f4d-4298-a995-efb5c27623d6',
+      agentName: 'codex',
+      role: 'codex',
+      model: 'gpt-5',
+    })
+
+    // Should use 'primary-team' from ~/.meet-ai/teams, not 'legacy-team' from ~/.claude/teams
+    expect(mockSendTeamMemberUpsert).toHaveBeenCalledWith(
+      { api: {} },
+      '30c9e52e-5f4d-4298-a995-efb5c27623d6',
+      'primary-team',
+      expect.objectContaining({ name: 'codex' })
     )
   })
 

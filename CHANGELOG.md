@@ -1,5 +1,37 @@
 # Changelog
 
+## [2.1.4](https://github.com/SoftWare-A-G/meet-ai/compare/2.1.3...2.1.4) (2026-03-20)
+
+### Features
+
+- add a packaged Expo app workspace and published config-schema support, including tracked `packages/app` manifests, native/web app config, and the worker-hosted `schemas/config.json` for `~/.meet-ai/config.json`
+- migrate the desktop client from the old Three.js renderer to Phaser and split the web chat composer into dedicated attachment, mention, slash-command, and voice subcomponents for easier maintenance
+
+### Bug Fixes
+
+- fix Pi room-scoped task and canvas tooling by passing `MEET_AI_ROOM_ID` into the spawned Pi RPC bridge and wiring the worker canvas view to the configured `VITE_TLDRAW_LICENSE_KEY`
+- move team room bindings to `~/.meet-ai/teams` while preserving fallback reads from legacy `~/.claude/teams`, so `findRoom()`, team-member registration, Claude startup instructions, and session auto-registration keep working across migrated and unmigrated installs
+- align the CLI, worker, desktop, and app package manifests at `2.1.4` for the release
+
+### Tests
+
+- add CLI coverage for `meet-ai.json` primary and fallback lookup plus registration precedence, and keep the updated listen flow plus app, CLI, and worker typechecks aligned for the patch release
+
+## [2.1.3](https://github.com/SoftWare-A-G/meet-ai/compare/2.1.2...2.1.3) (2026-03-16)
+
+### Features
+
+- migrate the worker web app onto TanStack Query and shared `hono` RPC fetchers, including a centralized query client, route-level query hooks, websocket cache writers, and a Zustand-backed per-room store for commands and review decisions
+
+### Bug Fixes
+
+- fix stale room state and duplicated slash-command suggestions by reconciling optimistic websocket timeline updates, moving review, task, and team state onto cache-backed reads, and keeping auth/TTS special cases on the correct fetch paths during the migration
+- align the CLI and worker package manifests at `2.1.3` for the release
+
+### Tests
+
+- move the worker test harness onto Vitest 4 and keep the migrated room and chat surfaces covered by the existing worker and CLI regression suites
+
 ## [2.1.2](https://github.com/SoftWare-A-G/meet-ai/compare/2.1.1...2.1.2) (2026-03-15)
 
 ### Features
