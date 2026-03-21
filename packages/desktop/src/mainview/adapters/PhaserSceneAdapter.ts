@@ -130,10 +130,21 @@ export class PhaserSceneAdapter implements ISceneAdapter {
 		if (!rs) return
 		let color: number
 		switch (status) {
-			case 'working': color = 0x22cc55; break
-			case 'talking': color = 0xeebb33; break
-			case 'error': color = 0xee3333; break
-			default: color = 0x3388ff
+			case 'working': {
+				color = 0x22cc55
+				break
+			}
+			case 'talking': {
+				color = 0xeebb33
+				break
+			}
+			case 'error': {
+				color = 0xee3333
+				break
+			}
+			default: {
+				color = 0x3388ff
+			}
 		}
 		rs.glowMesh.clear()
 		rs.glowMesh.fillStyle(color, 0.5)
@@ -155,10 +166,8 @@ export class PhaserSceneAdapter implements ISceneAdapter {
 		const r = parseInt(color.slice(1, 3), 16)
 		const g = parseInt(color.slice(3, 5), 16)
 		const b = parseInt(color.slice(5, 7), 16)
-		const dimmed =
-			(Math.round(r * fatigueScale) << 16) |
-			(Math.round(g * fatigueScale) << 8) |
-			Math.round(b * fatigueScale)
+		// eslint-disable-next-line no-bitwise
+		const dimmed = ((Math.round(r * fatigueScale) << 16) | (Math.round(g * fatigueScale) << 8) | Math.round(b * fatigueScale))
 
 		rs.bodyMesh.clear()
 		rs.bodyMesh.fillStyle(dimmed, 1)

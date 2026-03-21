@@ -1,6 +1,6 @@
 {
   "name": "@meet-ai/desktop",
-  "version": "2.1.4",
+  "version": "2.2.0",
   "description": "Meet AI desktop game client",
   "type": "module",
   "scripts": {

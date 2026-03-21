@@ -5,6 +5,7 @@ import { defineCommand } from 'citty'
 import { listenClaude } from './listen-claude'
 import { listenCodex } from './listen-codex'
 import { listenPi } from './listen-pi'
+import { listenOpencode } from './listen-opencode'
 
 export default defineCommand({
   meta: {
@@ -58,6 +59,11 @@ export default defineCommand({
 
       if (getMeetAiRuntime() === 'pi') {
         listenPi(client, input)
+        return
+      }
+
+      if (getMeetAiRuntime() === 'opencode') {
+        void listenOpencode(client, input)
         return
       }
 

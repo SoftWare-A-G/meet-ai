@@ -9,6 +9,7 @@ import { buildClaudeSystemPrompt } from './prompts/claude-system-prompt'
 import { buildClaudeStartingPrompt } from './prompts/claude-starting-prompt'
 import { buildCodexBootstrapPrompt } from './prompts/codex-bootstrap-prompt'
 import { buildPiStartingPrompt } from './prompts/pi-starting-prompt'
+import { buildOpencodeStartingPrompt } from './prompts/opencode-starting-prompt'
 
 export type ProcessStatus = 'starting' | 'running' | 'exited' | 'error'
 
@@ -47,7 +48,7 @@ const SessionEntrySchema = z.object({
   sessionName: z.string(),
   roomId: z.string(),
   roomName: z.string(),
-  codingAgent: z.enum(['claude', 'codex', 'pi']).default('claude'),
+  codingAgent: z.enum(['claude', 'codex', 'pi', 'opencode']).default('claude'),
   createdAt: z.string(),
 })
 
@@ -202,6 +203,14 @@ export class ProcessManager {
       sessionEnv.MEET_AI_AGENT_NAME = 'pi'
       sessionEnv.MEET_AI_ROOM_ID = roomId
     }
+
+    if (codingAgent === 'opencode') {
+      sessionEnv.MEET_AI_RUNTIME = 'opencode'
+      sessionEnv.MEET_AI_OPENCODE_PATH = agentBinary
+      sessionEnv.MEET_AI_OPENCODE_BOOTSTRAP_PROMPT = fullPrompt
+      sessionEnv.MEET_AI_AGENT_NAME = 'opencode'
+      sessionEnv.MEET_AI_ROOM_ID = roomId
+    }
     for (const key of ENV_ALLOWLIST) {
       const value = process.env[key]
       if (value) sessionEnv[key] = value
@@ -214,7 +223,9 @@ export class ProcessManager {
         ? this.buildCodexListenCommandArgs(roomId, sessionEnv.MEET_AI_AGENT_NAME ?? 'codex')
         : codingAgent === 'pi'
           ? this.buildPiListenCommandArgs(roomId, sessionEnv.MEET_AI_AGENT_NAME ?? 'pi')
-          : [agentBinary, ...this.buildClaudeCommandArgs(roomId, fullPrompt)]
+          : codingAgent === 'opencode'
+            ? this.buildOpencodeListenCommandArgs(roomId, sessionEnv.MEET_AI_AGENT_NAME ?? 'opencode')
+            : [agentBinary, ...this.buildClaudeCommandArgs(roomId, fullPrompt)]
 
     if (this.opts.debug) {
       team.lines.push(`[debug] AGENT: ${codingAgent}`)
@@ -404,6 +415,10 @@ export class ProcessManager {
       return buildPiStartingPrompt(roomId)
     }
 
+    if (codingAgent === 'opencode') {
+      return buildOpencodeStartingPrompt(roomId)
+    }
+
     return buildClaudeStartingPrompt(roomId)
   }
 
@@ -427,6 +442,10 @@ export class ProcessManager {
   }
 
   private buildPiListenCommandArgs(roomId: string, agentName: string): string[] {
+    return [...resolveSelfCliCommand(), 'listen', roomId, '--exclude', agentName]
+  }
+
+  private buildOpencodeListenCommandArgs(roomId: string, agentName: string): string[] {
     return [...resolveSelfCliCommand(), 'listen', roomId, '--exclude', agentName]
   }
 }
