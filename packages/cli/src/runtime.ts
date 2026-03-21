@@ -1,4 +1,4 @@
-export type MeetAiRuntime = 'claude' | 'codex' | 'pi'
+export type MeetAiRuntime = 'claude' | 'codex' | 'pi' | 'opencode'
 
 export function getMeetAiRuntime(
   env: NodeJS.ProcessEnv = process.env,
@@ -6,6 +6,7 @@ export function getMeetAiRuntime(
   const raw = env.MEET_AI_RUNTIME?.trim().toLowerCase()
   if (raw === 'codex') return 'codex'
   if (raw === 'pi') return 'pi'
+  if (raw === 'opencode') return 'opencode'
   return 'claude'
 }
 

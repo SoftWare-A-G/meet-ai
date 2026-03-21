@@ -101,8 +101,32 @@ Please install Pi or set MEET_AI_PI_PATH to the Pi CLI path.
   }
 }
 
+export function findOpencodeCli(): string {
+  const home = homedir()
+  try {
+    return findBinary('opencode', 'MEET_AI_OPENCODE_PATH', [
+      join(home, '.bun', 'bin', 'opencode'),
+      '/opt/homebrew/bin/opencode',
+      '/usr/local/bin/opencode',
+      join(home, '.local', 'bin', 'opencode'),
+    ])
+  } catch {
+    throw new Error(
+      `
+OpenCode CLI is not installed
+
+Please install OpenCode:
+  bun add -g opencode-ai
+
+Or set MEET_AI_OPENCODE_PATH to the OpenCode CLI path.
+      `.trim()
+    )
+  }
+}
+
 export function findCodingAgentCli(agentId: CodingAgentId): string {
   if (agentId === 'codex') return findCodexCli()
   if (agentId === 'pi') return findPiCli()
+  if (agentId === 'opencode') return findOpencodeCli()
   return findClaudeCli()
 }

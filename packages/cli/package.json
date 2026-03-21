@@ -1,6 +1,6 @@
 {
   "name": "@meet-ai/cli",
-  "version": "2.1.4",
+  "version": "2.2.0",
   "description": "CLI for meet-ai chat rooms — create rooms, send messages, and stream via WebSocket",
   "keywords": [
     "chat",
@@ -35,6 +35,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@mariozechner/pi-coding-agent": "0.61.1",
+    "@opencode-ai/sdk": "1.2.27",
+    "@sinclair/typebox": "0.34.48",
     "@tldraw/tlschema": "4.5.3",
     "citty": "0.2.1",
     "evlog": "2.8.0",
@@ -46,8 +49,6 @@
     "zod": "4.3.6"
   },
   "devDependencies": {
-    "@mariozechner/pi-coding-agent": "0.60.0",
-    "@sinclair/typebox": "0.34.48",
     "@types/node": "25.5.0",
     "@types/react": "19.2.14",
     "typescript": "5.9.3"

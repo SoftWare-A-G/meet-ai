@@ -3,7 +3,7 @@ import { createRoom } from '@meet-ai/cli/commands/create-room/usecase'
 import { ProcessManager } from '@meet-ai/cli/lib/process-manager'
 import { restartApp } from '@meet-ai/cli/lib/auto-update'
 import { TmuxClient, parseVersion } from '@meet-ai/cli/lib/tmux-client'
-import { findClaudeCli, findCodexCli, findPiCli } from '@meet-ai/cli/spawner'
+import { findClaudeCli, findCodexCli, findOpencodeCli, findPiCli } from '@meet-ai/cli/spawner'
 import { App } from '@meet-ai/cli/tui/app'
 import { render } from 'ink'
 import React from 'react'
@@ -45,13 +45,16 @@ export async function startDashboard(
   try {
     agentBinaries.pi = findPiCli()
   } catch {}
+  try {
+    agentBinaries.opencode = findOpencodeCli()
+  } catch {}
 
   const availableCodingAgents = CODING_AGENT_DEFINITIONS.filter(agent =>
     Boolean(agentBinaries[agent.id])
   )
   if (availableCodingAgents.length === 0) {
     console.error('No supported coding agent CLI was found.')
-    console.error('Install Claude Code, Codex, or Pi, or set MEET_AI_CLAUDE_PATH / MEET_AI_CODEX_PATH / MEET_AI_PI_PATH.')
+    console.error('Install Claude Code, Codex, Pi, or OpenCode, or set MEET_AI_CLAUDE_PATH / MEET_AI_CODEX_PATH / MEET_AI_PI_PATH / MEET_AI_OPENCODE_PATH.')
     process.exit(1)
   }
 

@@ -1,5 +1,30 @@
 # Changelog
 
+## [2.2.0](https://github.com/SoftWare-A-G/meet-ai/compare/2.1.4...2.2.0) (2026-03-21)
+
+### Features
+
+- add OpenCode as a first-class Meet AI runtime across the CLI, dashboard, and worker-facing agent metadata:
+  - extend `CodingAgentId` and agent option lists in both `packages/cli/src/coding-agents.ts` and `packages/worker/src/app/lib/coding-agents.ts` so OpenCode appears anywhere operators can pick or display a coding agent
+  - teach `packages/cli/src/commands/dashboard/usecase.ts` and `packages/cli/src/spawner.ts` how to discover the OpenCode binary, expose `MEET_AI_OPENCODE_PATH`, and include OpenCode in the supported-agent startup messaging
+  - wire `packages/cli/src/runtime.ts`, `packages/cli/src/commands/listen/command.ts`, and `packages/cli/src/lib/process-manager.ts` so spawned OpenCode sessions use `MEET_AI_RUNTIME=opencode`, receive a dedicated bootstrap prompt, and enter the existing room-listen flow like the other runtimes
+- add the initial SDK-backed OpenCode listener implementation:
+  - add `packages/cli/src/commands/listen/listen-opencode.ts` to create an OpenCode session per Meet AI room, send the bootstrap prompt without requesting a reply, relay incoming room messages, and serialize image attachments into OpenCode file parts when possible
+  - add `packages/cli/src/lib/prompts/opencode-starting-prompt.ts` with runtime-specific coordination rules so OpenCode launches with Meet AI room context and the same no-CLI/task-tool guidance expected of teammate agents
+  - add `packages/cli/src/lib/opencode-evlog.ts` so OpenCode startup, prompt, permission, and idle events are emitted through `evlog` instead of being silent during multi-agent runs
+
+### Bug Fixes
+
+- keep the surrounding contracts compatible with the new OpenCode runtime:
+  - allow `opencode` as a valid task source in `packages/worker/src/schemas/rooms.ts` so task creation, updates, and upserts do not reject work attributed to the new agent
+  - populate `MEET_AI_OPENCODE_PATH`, `MEET_AI_OPENCODE_BOOTSTRAP_PROMPT`, `MEET_AI_AGENT_NAME`, and `MEET_AI_ROOM_ID` from `packages/cli/src/lib/process-manager.ts` so room-bound OpenCode sessions start with the same env guarantees as the existing Claude, Codex, and Pi runtimes
+  - update the dashboard's missing-agent error text to mention OpenCode explicitly, preventing misleading setup guidance when OpenCode is the intended runtime
+- align the CLI, worker, desktop, and app package manifests at `2.2.0` for the release
+
+### Tests
+
+- no automated test changes are included in the staged `2.2.0` release scope
+
 ## [2.1.4](https://github.com/SoftWare-A-G/meet-ai/compare/2.1.3...2.1.4) (2026-03-20)
 
 ### Features

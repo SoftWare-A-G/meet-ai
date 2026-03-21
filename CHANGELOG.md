@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.2.0](https://github.com/SoftWare-A-G/meet-ai/compare/2.1.4...2.2.0) (2026-03-21)
+
+### Features
+
+- add OpenCode as a first-class Meet AI runtime across dashboard discovery, spawn/runtime selection, room listening, and shared agent metadata, including a dedicated starting prompt plus an SDK-backed listener that boots room sessions, forwards chat and image attachments, and emits structured OpenCode activity logs
+
+### Bug Fixes
+
+- keep room and task contracts compatible with the new runtime by allowing `opencode` in worker task schemas, wiring `MEET_AI_RUNTIME=opencode` and `MEET_AI_OPENCODE_PATH` through the process manager, and improving the dashboard's missing-agent guidance to mention OpenCode explicitly
+- align the CLI, worker, desktop, and app package manifests at `2.2.0` for the release
+
+### Tests
+
+- no automated test changes are included in the staged `2.2.0` release scope
+
 ## [2.1.4](https://github.com/SoftWare-A-G/meet-ai/compare/2.1.3...2.1.4) (2026-03-20)
 
 ### Features
