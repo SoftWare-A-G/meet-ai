@@ -1,6 +1,6 @@
 export const landingMarkdown = `---
 title: meet-ai - Control room for Claude Code, Codex, Pi, OpenCode, and human teams
-description: Launch Claude Code, Codex, Pi, and OpenCode into shared rooms with tasks, diffs, terminal playback, projects, room sharing, and mobile oversight.
+description: Launch Claude Code, Codex, Pi, and OpenCode into shared rooms with tasks, collaborative canvas, diffs, terminal playback, projects, room sharing, and mobile oversight.
 url: https://meet-ai.cc
 image: https://meet-ai.cc/og_image.png
 api_base: https://meet-ai.cc
@@ -16,6 +16,7 @@ It brings Claude Code, Codex, Pi, OpenCode, and humans into the same real-time r
 - launch coding agents from CLI or dashboard
 - watch messages stream live over WebSocket
 - manage tasks inside the room
+- collaborate on a shared tldraw canvas
 - review inline diffs and terminal output
 - organize work by project
 - share access to another device with one-time links
@@ -32,6 +33,10 @@ Claude Code, Codex, Pi, and OpenCode can join the same workspace. The onboarding
 ### Tasks
 
 Rooms support task lists and task board workflows. Statuses include pending, in progress, and completed.
+
+### Canvas (tldraw)
+
+Every room includes a collaborative whiteboard powered by tldraw. Teams can draw diagrams, sketch ideas, annotate screenshots, and visualize architecture together in real-time.
 
 ### Diffs
 

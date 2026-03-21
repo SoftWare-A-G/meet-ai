@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import {
+  Activity,
   ArrowDown,
   AtSign,
   Check,
@@ -80,12 +81,18 @@ const gridItems = [
     desc: 'Tag agents and humans by name in any message.',
     color: C.green,
   },
-{
-  icon: Cpu,
-  title: 'Multi-Agent Support',
-  desc: 'Claude, Codex, Pi, and OpenCode agents all in one room.',
-  color: C.cyan,
-},
+  {
+    icon: Cpu,
+    title: 'Multi-Agent Support',
+    desc: 'Claude, Codex, Pi, and OpenCode agents all in one room.',
+    color: C.cyan,
+  },
+  {
+    icon: Palette,
+    title: 'tldraw Canvas',
+    desc: 'Collaborative whiteboard in every room. Draw diagrams, annotate ideas, and visualize together.',
+    color: '#FF6B35',
+  },
   {
     icon: Mic,
     title: 'Voice Input',
@@ -121,6 +128,12 @@ const gridItems = [
     title: 'TUI Dashboard',
     desc: 'Manage rooms and teams from your terminal.',
     color: C.pink,
+  },
+  {
+    icon: Activity,
+    title: 'Activity Feed',
+    desc: 'Watch agent actions in real-time. See tools, edits, and commands as they happen.',
+    color: C.green,
   },
 ]
 
@@ -366,7 +379,21 @@ function LandingPage() {
                   <DiffMockup />
                 </Feature>
 
-                {/* d) Terminal viewer */}
+                {/* d) Canvas / Whiteboard */}
+                <Feature
+                  title="Visualize ideas on a shared canvas"
+                  desc="Every room has a collaborative whiteboard. Sketch architecture, annotate screenshots, draw diagrams together.">
+                  <div className="flex flex-col gap-2">
+                    <CanvasMockup />
+                    <div className="flex items-center gap-2 text-[10px]" style={{ color: C.textMuted, fontFamily: MONO }}>
+                      <span className="rounded px-1.5 py-0.5" style={{ backgroundColor: `${C.pink}20`, color: C.pink }}>
+                        BACKED BY TLDRAW
+                      </span>
+                    </div>
+                  </div>
+                </Feature>
+
+                {/* e) Terminal viewer */}
                 <Feature
                   title="See agents work in real time"
                   desc="Live terminal view right in the room. Watch what agents are doing without switching windows.">
@@ -537,8 +564,8 @@ function LandingPage() {
                     className="no-underline transition-colors"
                     style={{ color: C.cyan }}>
                     TanStack Start
-                  </a>{' '}
-                  &amp;{' '}
+                  </a>
+                  ,{' '}
                   <a
                     href="https://workers.cloudflare.com/"
                     target="_blank"
@@ -546,6 +573,15 @@ function LandingPage() {
                     className="no-underline transition-colors"
                     style={{ color: C.cyan }}>
                     Cloudflare Workers
+                  </a>
+                  , &amp;{' '}
+                  <a
+                    href="https://tldraw.dev/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="no-underline transition-colors"
+                    style={{ color: C.cyan }}>
+                    tldraw
                   </a>
                   .
                 </p>
@@ -1297,6 +1333,96 @@ function DiffMockup() {
               <span style={{ color: lineColor(line.type) }}>{line.text}</span>
             </div>
           ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function CanvasMockup() {
+  return (
+    <div className="overflow-hidden rounded-lg" style={{ backgroundColor: '#F5F5F5', minHeight: 200 }}>
+      {/* Canvas toolbar */}
+      <div className="flex items-center gap-2 border-b px-3 py-2" style={{ backgroundColor: '#FFFFFF', borderColor: '#E5E5E5' }}>
+        <div className="flex gap-1">
+          <span className="h-3 w-3 rounded-full bg-[#FF5F57]" />
+          <span className="h-3 w-3 rounded-full bg-[#FEBC2E]" />
+          <span className="h-3 w-3 rounded-full bg-[#28C840]" />
+        </div>
+        <div className="ml-2 flex gap-2">
+          <span className="rounded px-2 py-0.5 text-[9px]" style={{ backgroundColor: '#F0F0F0', color: '#666' }}>Select</span>
+          <span className="rounded px-2 py-0.5 text-[9px]" style={{ backgroundColor: '#E8F4FD', color: '#0066CC' }}>Draw</span>
+          <span className="rounded px-2 py-0.5 text-[9px]" style={{ backgroundColor: '#F0F0F0', color: '#666' }}>Text</span>
+          <span className="rounded px-2 py-0.5 text-[9px]" style={{ backgroundColor: '#F0F0F0', color: '#666' }}>Shape</span>
+        </div>
+      </div>
+
+      {/* Canvas content */}
+      <div className="relative p-4" style={{ minHeight: 180 }}>
+        {/* Grid background */}
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `radial-gradient(circle, #E0E0E0 1px, transparent 1px)`,
+            backgroundSize: '20px 20px',
+          }}
+        />
+
+        {/* Sample drawings */}
+        <div className="relative">
+          {/* Architecture diagram box */}
+          <div
+            className="absolute rounded border-2 p-2"
+            style={{
+              borderColor: C.cyan,
+              backgroundColor: 'rgba(0, 212, 255, 0.1)',
+              left: 20,
+              top: 20,
+              width: 100,
+            }}>
+            <div className="text-[8px] font-semibold" style={{ color: C.cyan }}>API Gateway</div>
+          </div>
+
+          {/* Another box */}
+          <div
+            className="absolute rounded border-2 p-2"
+            style={{
+              borderColor: C.pink,
+              backgroundColor: 'rgba(255, 0, 128, 0.1)',
+              left: 140,
+              top: 60,
+              width: 100,
+            }}>
+            <div className="text-[8px] font-semibold" style={{ color: C.pink }}>Database</div>
+          </div>
+
+          {/* Arrow connecting them */}
+          <svg className="absolute" style={{ left: 120, top: 35, width: 20, height: 40 }}>
+            <line x1="0" y1="20" x2="20" y2="40" stroke={C.textMuted} strokeWidth="2" markerEnd="url(#arrowhead)" />
+            <defs>
+              <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill={C.textMuted} />
+              </marker>
+            </defs>
+          </svg>
+
+          {/* Annotation */}
+          <div
+            className="absolute rounded p-2 text-[8px]"
+            style={{
+              backgroundColor: '#FFEB3B',
+              color: '#333',
+              left: 20,
+              top: 100,
+              boxShadow: '2px 2px 4px rgba(0,0,0,0.2)',
+            }}>
+            Note: Add caching layer here
+          </div>
+
+          {/* Stick figure */}
+          <div className="absolute text-[20px]" style={{ left: 260, top: 30 }}>
+            🎨
+          </div>
         </div>
       </div>
     </div>
