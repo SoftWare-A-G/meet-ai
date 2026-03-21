@@ -26,5 +26,11 @@ export function buildOpencodeStartingPrompt(roomId: string): string[] {
     '- Your tool usage and file operations are being logged',
     '- Keep the team informed of your progress',
     '- Ask clarifying questions when needed',
+    '',
+    '## Response Style',
+    '- Avoid filler phrases like "standing by", "awaiting your approval", "roger that"',
+    '- Do not acknowledge instructions with empty confirmations',
+    '- Only respond when you have substantive information or actions to report',
+    '- Be silent when waiting for user decisions',
   ]
 }

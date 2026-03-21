@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.2.1](https://github.com/SoftWare-A-G/meet-ai/compare/2.2.0...2.2.1) (2026-03-21)
+
+### Features
+
+- add WebSocket room re-entry freshness fix that seeds `lastSeqRef` from cached timeline state so `catchUp()` fetches missed messages when switching back to a room, plus background timeline invalidation on room navigation
+- add response style guidelines to OpenCode starting prompt to reduce filler phrases and empty acknowledgments
+
+### Bug Fixes
+
+- fix TypeScript type safety in `use-room-websocket.unit.test.ts` by adding required `sender` property to test fixtures
+- align the CLI, worker, desktop, and app package manifests at `2.2.1` for the release
+
+### Tests
+
+- unit test coverage for `getLastTimelineSeq()` helper with proper type-safe fixtures
+
 ## [2.2.0](https://github.com/SoftWare-A-G/meet-ai/compare/2.1.4...2.2.0) (2026-03-21)
 
 ### Features
