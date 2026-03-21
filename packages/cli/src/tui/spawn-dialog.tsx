@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react'
 import { Box, Text, useInput } from 'ink'
-import { Select, Spinner } from '@inkjs/ui'
+import { Spinner } from '@inkjs/ui'
 import Divider from './Divider'
 import type { CodingAgentId } from '@meet-ai/cli/coding-agents'
 import type { Room } from '@meet-ai/cli/types'
 import {
+  clampSelectedRoomIndex,
+  getVisibleRoomWindow,
   markConnectedRooms,
   resolveSpawnSelection,
   type SpawnDialogSelection,
@@ -42,15 +44,6 @@ export function SpawnDialog({
     [rooms, connectedRoomIds],
   )
 
-  const roomOptions = useMemo(
-    () =>
-      sortedRooms.map(room => ({
-        label: room.name + (room.connected ? ' (connected)' : ''),
-        value: room.id,
-      })),
-    [sortedRooms],
-  )
-
   useInput((input, key) => {
     if (key.escape) {
       onCancel()
@@ -66,7 +59,6 @@ export function SpawnDialog({
       return
     }
 
-    // Track list navigation to stay in sync with Select's internal state
     if (focus === 'list') {
       if (key.downArrow) {
         setSelectedRoomIndex(current => Math.min(sortedRooms.length - 1, current + 1))
@@ -137,6 +129,8 @@ export function SpawnDialog({
   })
 
   const selectedAgent = codingAgents[selectedAgentIndex]?.id ?? 'claude'
+  const visibleRooms = getVisibleRoomWindow(selectedRoomIndex, sortedRooms, maxVisibleRooms)
+  const windowStart = visibleRooms.length > 0 ? sortedRooms.indexOf(visibleRooms[0]!) : 0
 
   return (
     <Box
@@ -184,14 +178,21 @@ export function SpawnDialog({
           <Spinner label="Loading rooms..." />
         ) : roomsError ? (
           <Text color="red">{roomsError}</Text>
-        ) : roomOptions.length === 0 ? (
+        ) : visibleRooms.length === 0 ? (
           <Text dimColor>No existing rooms.</Text>
         ) : (
-          <Select
-            options={roomOptions}
-            visibleOptionCount={maxVisibleRooms}
-            isDisabled={focus !== 'list'}
-          />
+          visibleRooms.map((room, visibleIndex) => {
+            const absoluteIndex = windowStart + visibleIndex
+            const isSelected = absoluteIndex === clampSelectedRoomIndex(selectedRoomIndex, sortedRooms)
+            return (
+              <Box key={room.id}>
+                <Text color={isSelected && focus === 'list' ? 'yellow' : undefined} dimColor={room.connected}>
+                  {isSelected ? '>' : ' '} {room.name}
+                </Text>
+                {room.connected ? <Text color="cyan"> ●</Text> : null}
+              </Box>
+            )
+          })
         )}
       </Box>
 
