@@ -2,6 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import {
   ArrowDown,
   AtSign,
+  Check,
   Copy,
   Cpu,
   KeyRound,
@@ -128,6 +129,7 @@ function LandingPage() {
   const [hasKey] = useState(
     () => typeof window !== 'undefined' && !!window.localStorage.getItem('meet-ai-key')
   )
+  const [copied, setCopied] = useState(false)
 
   return (
     <>
@@ -470,11 +472,15 @@ function LandingPage() {
                 </span>
                 <button
                   type="button"
-                  className="transition-colors hover:text-white"
-                  style={{ color: C.textMuted }}
-                  onClick={() => navigator.clipboard?.writeText('npm i -g @meet-ai/cli')}
+                  className="transition-all duration-200 hover:scale-110 hover:text-white active:scale-95"
+                  style={{ color: copied ? C.green : C.textMuted }}
+                  onClick={() => {
+                    navigator.clipboard?.writeText('npm i -g @meet-ai/cli')
+                    setCopied(true)
+                    setTimeout(() => setCopied(false), 2000)
+                  }}
                   aria-label="Copy command">
-                  <Copy size={14} />
+                  {copied ? <Check size={14} /> : <Copy size={14} />}
                 </button>
               </div>
 
