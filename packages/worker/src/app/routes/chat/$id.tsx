@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import CanvasView from '../../components/CanvasView'
@@ -9,6 +10,7 @@ import { useDeleteRoom, useRenameRoom, useUpdateRoomProject } from '../../hooks/
 import { useRoomsQuery } from '../../hooks/useRoomsQuery'
 import { useTeamInfoQuery } from '../../hooks/useTeamInfoQuery'
 import { useChatContext } from '../../lib/chat-context'
+import { queryKeys } from '../../lib/query-keys'
 
 export const Route = createFileRoute('/chat/$id')({
   component: ChatRoom,
@@ -17,6 +19,7 @@ export const Route = createFileRoute('/chat/$id')({
 function ChatRoom() {
   const { id } = Route.useParams()
   const navigate = Route.useNavigate()
+  const queryClient = useQueryClient()
   const {
     apiKey,
     userName,
@@ -43,6 +46,10 @@ function ChatRoom() {
       document.title = 'Meet AI'
     }
   }, [room])
+
+  useEffect(() => {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.rooms.timeline(id) })
+  }, [id, queryClient])
 
   const handleDeleteConfirm = useCallback(() => {
     if (!room) return

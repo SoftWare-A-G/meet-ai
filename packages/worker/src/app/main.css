@@ -187,29 +187,26 @@ body {
 }
 
 /* --- Base UI Drawer: snap-point positioning + transitions --- */
-[data-slot="drawer-popup"] {
+[data-slot='drawer-popup'] {
   transform: translateY(
-    calc(
-      var(--drawer-snap-point-offset, 0px) +
-      var(--drawer-swipe-movement-y, 0px)
-    )
+    calc(var(--drawer-snap-point-offset, 0px) + var(--drawer-swipe-movement-y, 0px))
   );
   /* No base transition — prevents jarring animation on content resize
      (e.g. switching agent filter pills). Open/close use animation/transition below. */
 }
 
 /* Opening: one-shot CSS animation, won't replay on content changes */
-[data-slot="drawer-popup"][data-open]:not([data-ending-style]) {
+[data-slot='drawer-popup'][data-open]:not([data-ending-style]) {
   animation: drawer-slide-up 0.3s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 /* Closing: transition to off-screen */
-[data-slot="drawer-popup"][data-ending-style] {
+[data-slot='drawer-popup'][data-ending-style] {
   transform: translateY(100%);
   transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-[data-slot="drawer-popup"][data-swiping] {
+[data-slot='drawer-popup'][data-swiping] {
   transition: none;
   animation: none;
 }
@@ -220,11 +217,11 @@ body {
   }
 }
 
-[data-slot="drawer-backdrop"] {
+[data-slot='drawer-backdrop'] {
   transition: opacity 0.2s ease;
 }
-[data-slot="drawer-backdrop"][data-starting-style],
-[data-slot="drawer-backdrop"][data-ending-style] {
+[data-slot='drawer-backdrop'][data-starting-style],
+[data-slot='drawer-backdrop'][data-ending-style] {
   opacity: 0;
 }
 
@@ -631,7 +628,7 @@ html {
 }
 
 /* git-diff-view dark theme overrides for DiffBlock */
-.diff-block [data-component="diff-root-view"] {
+.diff-block [data-component='diff-root-view'] {
   --diff-add-line-bg-color: rgba(46, 160, 67, 0.15);
   --diff-add-line-num-bg-color: rgba(46, 160, 67, 0.2);
   --diff-del-line-bg-color: rgba(248, 81, 73, 0.15);

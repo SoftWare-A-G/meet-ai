@@ -60,6 +60,16 @@ type UseRoomWebSocketOptions = {
 const MIN_BACKOFF = 1000
 const MAX_BACKOFF = 30000
 
+export function getLastTimelineSeq(items: TimelineItem[] | undefined): number {
+  let maxSeq = 0
+  for (const item of items ?? []) {
+    if (item.seq != null && item.seq > maxSeq) {
+      maxSeq = item.seq
+    }
+  }
+  return maxSeq
+}
+
 export function useRoomWebSocket(
   roomId: string | null,
   apiKey: string | null,
@@ -79,6 +89,9 @@ export function useRoomWebSocket(
   useEffect(() => {
     if (!roomId || !apiKey) return
     const key = apiKey
+    lastSeqRef.current = getLastTimelineSeq(
+      queryClient.getQueryData<TimelineItem[]>(queryKeys.rooms.timeline(roomId))
+    )
 
     // Grab Zustand actions once (stable references, no re-render deps)
     const { setCommands, setPlanDecision, setQuestionAnswer, setPermissionDecision } =
