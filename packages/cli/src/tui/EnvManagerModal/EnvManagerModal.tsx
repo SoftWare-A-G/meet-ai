@@ -14,6 +14,7 @@ import {
 import { Box, Text, useInput } from 'ink'
 import Link from 'ink-link'
 import { Select, Spinner, TextInput } from '@inkjs/ui'
+import Divider from '../Divider'
 import { useRef, useState } from 'react'
 import type { MeetAiConfig } from '@meet-ai/cli/config'
 
@@ -124,6 +125,8 @@ export default function EnvManagerModal({ onSwitch, onCancel }: EnvManagerModalP
         </Text>
         <Text dimColor>{view === 'switch' ? '[Switch] | Add' : 'Switch | [Add]'}</Text>
       </Box>
+
+      <Divider dividerColor="green" />
 
       {view === 'switch' ? (
         <SwitchView envs={envs} error={error} onSwitch={onSwitch} />

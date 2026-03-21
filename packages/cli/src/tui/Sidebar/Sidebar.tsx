@@ -1,4 +1,5 @@
 import { Box, Text } from 'ink'
+import Divider from '../Divider'
 import type { ProcessStatus } from '@meet-ai/cli/lib/process-manager'
 import { worstStatus, type RoomGroup } from '../room-groups'
 
@@ -23,6 +24,7 @@ export default function Sidebar({ roomGroups, focusedIndex, width, height }: Sid
         <Box paddingX={1}>
           <Text bold>Rooms</Text>
         </Box>
+        <Divider dividerColor="gray" />
         <Box paddingX={1}>
           <Text dimColor>No rooms</Text>
         </Box>
@@ -31,7 +33,7 @@ export default function Sidebar({ roomGroups, focusedIndex, width, height }: Sid
   }
 
   // Scrolling: ensure focused item is visible
-  const maxVisible = Math.max(1, height - 3) // minus header + border
+  const maxVisible = Math.max(1, height - 4) // minus header + divider + border
   const scrollStart = Math.max(0, Math.min(focusedIndex - Math.floor(maxVisible / 2), roomGroups.length - maxVisible))
   const visibleGroups = roomGroups.slice(scrollStart, scrollStart + maxVisible)
 
@@ -40,6 +42,7 @@ export default function Sidebar({ roomGroups, focusedIndex, width, height }: Sid
       <Box paddingX={1}>
         <Text bold>Rooms</Text>
       </Box>
+      <Divider dividerColor="gray" />
       {visibleGroups.map((group, i) => {
         const actualIndex = scrollStart + i
         const isFocused = actualIndex === focusedIndex

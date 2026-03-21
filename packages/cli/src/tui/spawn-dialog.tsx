@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Box, Text, useInput } from 'ink'
 import { Select, Spinner } from '@inkjs/ui'
+import Divider from './Divider'
 import type { CodingAgentId } from '@meet-ai/cli/coding-agents'
 import type { Room } from '@meet-ai/cli/types'
 import {
@@ -175,7 +176,9 @@ export function SpawnDialog({
         )}
       </Box>
 
-      <Box marginTop={1} flexDirection="column">
+      <Divider dividerColor="green" />
+
+      <Box flexDirection="column">
         <Text color={focus === 'list' ? 'green' : undefined}>Existing rooms:</Text>
         {roomsLoading ? (
           <Spinner label="Loading rooms..." />
