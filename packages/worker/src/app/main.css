@@ -45,6 +45,7 @@
 }
 
 :root {
+  --font-scale: 1;
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -537,7 +538,7 @@ html {
   background: rgba(128, 128, 128, 0.15);
   padding: 1px 5px;
   border-radius: 3px;
-  font-size: 13px;
+  font-size: calc(13px * var(--font-scale));
   font-family: 'SF Mono', Monaco, Consolas, monospace;
 }
 .msg-content pre {
@@ -562,7 +563,7 @@ html {
   white-space: pre-wrap;
   word-break: break-word;
   margin: 6px 0;
-  font-size: 13px;
+  font-size: calc(13px * var(--font-scale));
 }
 .msg-content .shiki code {
   background: none;
@@ -643,7 +644,7 @@ html {
   background: #1a1b26;
   border-radius: 6px;
   overflow: hidden;
-  font-size: 12px;
+  font-size: calc(12px * var(--font-scale));
 }
 
 /* Shrink unified diff line-number column only for Write (new file, single column) */
@@ -678,13 +679,13 @@ html {
   margin: 6px 0 4px 0;
 }
 .msg-content h1 {
-  font-size: 18px;
+  font-size: calc(18px * var(--font-scale));
 }
 .msg-content h2 {
-  font-size: 16px;
+  font-size: calc(16px * var(--font-scale));
 }
 .msg-content h3 {
-  font-size: 14px;
+  font-size: calc(14px * var(--font-scale));
 }
 .msg-content blockquote {
   border-left: 3px solid rgba(128, 128, 128, 0.3);
@@ -705,7 +706,7 @@ html {
   border-collapse: collapse;
   margin: 6px 0;
   min-width: 100%;
-  font-size: 13px;
+  font-size: calc(13px * var(--font-scale));
 }
 .msg-content th,
 .msg-content td {

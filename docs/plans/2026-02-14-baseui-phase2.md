@@ -4,11 +4,11 @@
 
 Three migrations that replace custom confirmation UI and mobile drawer sidebars with Base UI primitives. These add proper accessibility (focus trap, Escape key, ARIA roles, scroll lock) and eliminate hand-rolled backdrop/transition logic.
 
-| # | Component | Base UI Primitive | Risk |
-|---|-----------|-------------------|------|
-| 1 | KeyExistingState | AlertDialog | Low |
-| 2 | Sidebar + SidebarBackdrop | Dialog (drawer) | Medium |
-| 3 | TeamSidebar + inline backdrop | Dialog (drawer) | Medium |
+| #   | Component                     | Base UI Primitive | Risk   |
+| --- | ----------------------------- | ----------------- | ------ |
+| 1   | KeyExistingState              | AlertDialog       | Low    |
+| 2   | Sidebar + SidebarBackdrop     | Dialog (drawer)   | Medium |
+| 3   | TeamSidebar + inline backdrop | Dialog (drawer)   | Medium |
 
 ---
 
@@ -47,6 +47,7 @@ const [showConfirm, setShowConfirm] = useState(false)
 ```
 
 **Problems with current approach:**
+
 - No focus trap -- user can tab away from the confirmation
 - No Escape key handling
 - No ARIA roles (`role="alertdialog"`, `aria-labelledby`, `aria-describedby`)
@@ -134,6 +135,7 @@ export default function KeyExistingState({ apiKey, onRegenerate }: KeyExistingSt
 ### Risk Assessment
 
 **Low risk.**
+
 - Self-contained component with no external state dependencies
 - No mobile keyboard or touch gesture concerns (just buttons)
 - The confirmation is currently inline; making it a modal overlay is a UX improvement
@@ -147,11 +149,13 @@ export default function KeyExistingState({ apiKey, onRegenerate }: KeyExistingSt
 ### Current Implementation
 
 **Files:**
+
 - `packages/worker/src/app/components/Sidebar/Sidebar.tsx`
 - `packages/worker/src/app/components/SidebarBackdrop/SidebarBackdrop.tsx`
 - `packages/worker/src/app/routes/chat.tsx` (lines 99, 194-205)
 
 **State management** is in `ChatLayout` (`chat.tsx`):
+
 ```tsx
 const [sidebarOpen, setSidebarOpen] = useState(false)
 // ...
@@ -160,6 +164,7 @@ const [sidebarOpen, setSidebarOpen] = useState(false)
 ```
 
 **Sidebar component** uses CSS translate for the drawer pattern on mobile (`max-[700px]`):
+
 ```tsx
 <aside className={clsx(
   'w-[260px] flex flex-col shrink-0 border-r border-sidebar-border bg-sidebar-bg ...',
@@ -173,8 +178,12 @@ const [sidebarOpen, setSidebarOpen] = useState(false)
 On desktop (>700px), the sidebar is always visible as a static panel. On mobile (<=700px), it slides in from the left and shows a backdrop.
 
 **SidebarBackdrop** is a simple overlay div:
+
 ```tsx
-<div className="fixed inset-0 bg-black/50 z-[49] [-webkit-tap-highlight-color:transparent]" onClick={onClick} />
+<div
+  className="fixed inset-0 bg-black/50 z-[49] [-webkit-tap-highlight-color:transparent]"
+  onClick={onClick}
+/>
 ```
 
 It is conditionally rendered: `{sidebarOpen && <SidebarBackdrop ... />}`.
@@ -210,9 +219,23 @@ More complex, not recommended.
 import { Dialog } from '@base-ui/react/dialog'
 import clsx from 'clsx'
 
-export default function Sidebar({ rooms, currentRoomId, userName, isOpen, onSelectRoom, onNameChange, onSettingsClick, onClose, onInstallClick }: SidebarProps) {
+export default function Sidebar({
+  rooms,
+  currentRoomId,
+  userName,
+  isOpen,
+  onSelectRoom,
+  onNameChange,
+  onSettingsClick,
+  onClose,
+  onInstallClick,
+}: SidebarProps) {
   return (
-    <Dialog.Root open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
+    <Dialog.Root
+      open={isOpen}
+      onOpenChange={open => {
+        if (!open) onClose()
+      }}>
       <Dialog.Portal keepMounted>
         <Dialog.Backdrop className="fixed inset-0 bg-black/50 z-[49] [-webkit-tap-highlight-color:transparent] min-[701px]:hidden" />
         <Dialog.Popup
@@ -223,11 +246,14 @@ export default function Sidebar({ rooms, currentRoomId, userName, isOpen, onSele
             'max-[700px]:transition-transform max-[700px]:duration-[250ms] max-[700px]:ease-out',
             'max-[700px]:-translate-x-full max-[700px]:w-[280px] max-[700px]:max-w-[85vw]',
             isOpen && 'max-[700px]:translate-x-0'
-          )}
-        >
+          )}>
           <SidebarHeader onSettingsClick={onSettingsClick} onCloseClick={onClose} />
           <RoomList rooms={rooms} currentRoomId={currentRoomId} onSelectRoom={onSelectRoom} />
-          <SidebarFooter userName={userName} onNameChange={onNameChange} onInstallClick={onInstallClick} />
+          <SidebarFooter
+            userName={userName}
+            onNameChange={onNameChange}
+            onInstallClick={onInstallClick}
+          />
         </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>
@@ -238,7 +264,9 @@ export default function Sidebar({ rooms, currentRoomId, userName, isOpen, onSele
 ```tsx
 // chat.tsx -- remove SidebarBackdrop import and usage
 // Before:
-{sidebarOpen && <SidebarBackdrop onClick={() => setSidebarOpen(false)} />}
+{
+  sidebarOpen && <SidebarBackdrop onClick={() => setSidebarOpen(false)} />
+}
 // After: removed entirely (backdrop is now inside Sidebar via Dialog.Backdrop)
 ```
 
@@ -268,6 +296,7 @@ export default function Sidebar({ rooms, currentRoomId, userName, isOpen, onSele
 ### Risk Assessment
 
 **Medium risk.**
+
 - The dual desktop-static / mobile-drawer pattern is unusual for Dialog and needs careful testing
 - `keepMounted` + controlled mode is required to maintain desktop layout
 - `modal` behavior must not break desktop scroll/interaction
@@ -282,10 +311,12 @@ export default function Sidebar({ rooms, currentRoomId, userName, isOpen, onSele
 ### Current Implementation
 
 **Files:**
+
 - `packages/worker/src/app/components/TeamSidebar/TeamSidebar.tsx`
 - `packages/worker/src/app/routes/chat.tsx` (lines 106, 207-217)
 
 **State management** in `ChatLayout`:
+
 ```tsx
 const [teamSidebarOpen, setTeamSidebarOpen] = useState(false)
 // ...
@@ -303,6 +334,7 @@ const [teamSidebarOpen, setTeamSidebarOpen] = useState(false)
 ```
 
 **TeamSidebar** uses CSS translate for mobile drawer (right side, `max-[768px]`):
+
 ```tsx
 <div className={clsx(
   'w-[330px] shrink-0 flex flex-col bg-sidebar-bg text-sidebar-text border-l border-sidebar-border overflow-y-auto',
@@ -314,6 +346,7 @@ const [teamSidebarOpen, setTeamSidebarOpen] = useState(false)
 ```
 
 **Key differences from Sidebar migration:**
+
 - Slides from the **right** (not left)
 - Breakpoint is **768px** (not 700px)
 - Backdrop is an **inline div in chat.tsx** (not a separate component)
@@ -332,7 +365,11 @@ export default function TeamSidebar({ teamInfo, tasksInfo, isOpen, onClose }: Te
   const totalCount = teamInfo?.members.length ?? 0
 
   return (
-    <Dialog.Root open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
+    <Dialog.Root
+      open={isOpen}
+      onOpenChange={open => {
+        if (!open) onClose()
+      }}>
       <Dialog.Portal keepMounted>
         <Dialog.Backdrop className="fixed inset-0 bg-black/50 z-49 min-[769px]:hidden" />
         <Dialog.Popup
@@ -342,11 +379,12 @@ export default function TeamSidebar({ teamInfo, tasksInfo, isOpen, onClose }: Te
             'max-[768px]:transition-transform max-[768px]:duration-[250ms] max-[768px]:ease-out',
             'max-[768px]:w-[330px] max-[768px]:max-w-[85vw]',
             isOpen ? 'max-[768px]:translate-x-0' : 'max-[768px]:translate-x-full'
-          )}
-        >
+          )}>
           <div className="px-4 font-bold text-sm border-b border-sidebar-border flex items-center justify-between h-14 shrink-0">
             <span>Team</span>
-            <span className="text-xs font-normal opacity-50">{teamInfo ? `${activeCount}/${totalCount}` : ''}</span>
+            <span className="text-xs font-normal opacity-50">
+              {teamInfo ? `${activeCount}/${totalCount}` : ''}
+            </span>
             <Dialog.Close className="hidden bg-transparent border-none text-sidebar-text cursor-pointer text-[22px] p-1 rounded leading-none opacity-70 hover:opacity-100 hover:bg-hover-item max-[768px]:flex max-[768px]:items-center max-[768px]:justify-center">
               &times;
             </Dialog.Close>
@@ -388,6 +426,7 @@ export default function TeamSidebar({ teamInfo, tasksInfo, isOpen, onClose }: Te
 ### Risk Assessment
 
 **Medium risk.**
+
 - Same desktop-static / mobile-drawer dual behavior as Sidebar migration
 - Same `keepMounted` + `modal` considerations
 - The close button replacement with `Dialog.Close` should be straightforward
@@ -416,12 +455,12 @@ Migrations 2 and 3 could be done in parallel since they touch different componen
 
 ## Estimated Effort
 
-| Migration | Effort | Notes |
-|-----------|--------|-------|
-| 1. AlertDialog (KeyExistingState) | ~30 min | Simple swap, one file |
-| 2. Dialog drawer (Sidebar) | ~1-2 hours | Desktop/mobile dual behavior needs testing |
-| 3. Dialog drawer (TeamSidebar) | ~45 min | Follows pattern from Migration 2 |
-| **Total** | **~2.5-3.5 hours** | |
+| Migration                         | Effort             | Notes                                      |
+| --------------------------------- | ------------------ | ------------------------------------------ |
+| 1. AlertDialog (KeyExistingState) | ~30 min            | Simple swap, one file                      |
+| 2. Dialog drawer (Sidebar)        | ~1-2 hours         | Desktop/mobile dual behavior needs testing |
+| 3. Dialog drawer (TeamSidebar)    | ~45 min            | Follows pattern from Migration 2           |
+| **Total**                         | **~2.5-3.5 hours** |                                            |
 
 ---
 

@@ -1,0 +1,3 @@
+# useEffect in React
+
+NEVER EVER WRITE THIS SHIT OR YOU'LL BE FIRED!

@@ -54,6 +54,12 @@ function deriveBorder(sidebarBg: string, dividerColor: string): string {
   return dividerColor || '#3e4451'
 }
 
+export function applyFontScale(scale: string): void {
+  const s = parseFloat(scale) || 1
+  document.documentElement.style.setProperty('--font-scale', String(s))
+  document.documentElement.style.fontSize = `${s * 100}%`
+}
+
 export function applySchema(schemaStr: string): void {
   const c = parseSchema(schemaStr)
   const root = document.documentElement

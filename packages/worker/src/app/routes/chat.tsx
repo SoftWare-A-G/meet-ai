@@ -1,6 +1,6 @@
 import { Toast } from '@base-ui/react/toast'
 import { ClientOnly, createFileRoute, Outlet, useParams } from '@tanstack/react-router'
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import IOSInstallModal from '../components/IOSInstallModal'
 import LoginPrompt from '../components/LoginPrompt'
 import QRShareModal from '../components/QRShareModal'
@@ -18,9 +18,15 @@ import { useProjectsQuery } from '../hooks/useProjectsQuery'
 import { useRoomsQuery } from '../hooks/useRoomsQuery'
 import { getApiKey, setApiKey } from '../lib/api'
 import { ChatContext } from '../lib/chat-context'
-import { STORAGE_KEYS, DEFAULT_SCHEMA } from '../lib/constants'
+import { STORAGE_KEYS, DEFAULT_SCHEMA, DEFAULT_FONT_SCALE } from '../lib/constants'
 import { getOrCreateHandle } from '../lib/handle'
-import { applySchema } from '../lib/theme'
+import { applySchema, applyFontScale } from '../lib/theme'
+
+// Apply persisted settings before first paint to avoid flash of unstyled content
+if (typeof window !== 'undefined') {
+  applySchema(localStorage.getItem(STORAGE_KEYS.colorSchema) ?? DEFAULT_SCHEMA)
+  applyFontScale(localStorage.getItem(STORAGE_KEYS.fontScale) ?? DEFAULT_FONT_SCALE)
+}
 
 export const Route = createFileRoute('/chat')({
   component: ChatPage,
@@ -41,12 +47,9 @@ function ChatApp() {
   const [apiKey, setApiKeyState] = useState<string | null>(() => getApiKey())
   const [userName, setUserName] = useLocalStorage(STORAGE_KEYS.handle, getOrCreateHandle())
   const [colorSchema, setColorSchema] = useLocalStorage(STORAGE_KEYS.colorSchema, DEFAULT_SCHEMA)
+  const [fontScale, setFontScale] = useLocalStorage(STORAGE_KEYS.fontScale, DEFAULT_FONT_SCALE)
 
   const urlToken = new URLSearchParams(location.search).get('token')
-
-  useEffect(() => {
-    applySchema(colorSchema)
-  }, [colorSchema])
 
   const handleLogin = useCallback((key: string) => {
     setApiKey(key)
@@ -81,8 +84,10 @@ function ChatApp() {
         apiKey={apiKey}
         userName={userName}
         colorSchema={colorSchema}
+        fontScale={fontScale}
         onNameChange={setUserName}
         onSchemaChange={handleSchemaChange}
+        onFontScaleChange={setFontScale}
       />
     </QueryErrorBoundary>
   )
@@ -92,16 +97,20 @@ type ChatLayoutProps = {
   apiKey: string
   userName: string
   colorSchema: string
+  fontScale: string
   onNameChange: (name: string) => void
   onSchemaChange: (schema: string) => void
+  onFontScaleChange: (scale: string) => void
 }
 
 function ChatLayout({
   apiKey,
   userName,
   colorSchema,
+  fontScale,
   onNameChange,
   onSchemaChange,
+  onFontScaleChange,
 }: ChatLayoutProps) {
   const { data: rooms = [], isLoading: roomsLoading, error: roomsError } = useRoomsQuery()
   const { data: projects = [], isLoading: projectsLoading, error: projectsError } = useProjectsQuery()
@@ -125,11 +134,13 @@ function ChatLayout({
   }, [])
 
   const handleSettingsSave = useCallback(
-    (schema: string) => {
+    (schema: string, scale: string) => {
       onSchemaChange(schema)
+      onFontScaleChange(scale)
+      applyFontScale(scale)
       setShowSettingsModal(false)
     },
-    [onSchemaChange]
+    [onSchemaChange, onFontScaleChange]
   )
 
   const ctx = useMemo(
@@ -190,6 +201,7 @@ function ChatLayout({
       {showSettingsModal && (
         <SettingsModal
           currentSchema={colorSchema}
+          currentFontScale={fontScale}
           onSave={handleSettingsSave}
           onClose={() => setShowSettingsModal(false)}
         />

@@ -24,8 +24,18 @@ export const SCHEMA_LABELS = [
   'Text Color', 'Presence', 'Badge', 'Divider', 'Alt Text',
 ]
 
+export const FONT_SCALE_OPTIONS = [
+  { label: 'Small', value: '0.875' },
+  { label: 'Default', value: '1' },
+  { label: 'Large', value: '1.125' },
+  { label: 'Extra Large', value: '1.25' },
+] as const
+
+export const DEFAULT_FONT_SCALE = '1'
+
 export const STORAGE_KEYS = {
   apiKey: 'meet-ai-key',
   handle: 'meet-ai-handle',
   colorSchema: 'meet-ai-color-schema',
+  fontScale: 'meet-ai-font-scale',
 } as const

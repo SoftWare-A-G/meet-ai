@@ -1,6 +1,25 @@
-import { useMemo, useState, useCallback } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
+import { EllipsisIcon, ChevronRightIcon } from 'lucide-react'
+import { useMemo, useState, useCallback } from 'react'
 import { toast } from 'sonner'
+import { useHaptics } from '../../hooks/useHaptics'
+import { useRenameProject } from '../../hooks/useProjectMutations'
+import { useDeleteRoom } from '../../hooks/useRoomMutations'
+import { IconTrash } from '../../icons'
+import DeleteConfirmPopover from '../DeleteConfirmPopover'
+import SearchForm from '../SearchForm'
+import SidebarFooterContent from '../SidebarFooter'
+import SidebarHeaderContent from '../SidebarHeader'
+import { Button } from '../ui/button'
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '../ui/collapsible'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '../ui/dropdown-menu'
+import { Input } from '../ui/input'
 import {
   Sidebar as ShadcnSidebar,
   SidebarContent,
@@ -16,24 +35,6 @@ import {
   SidebarMenuSubButton,
   useSidebar,
 } from '../ui/sidebar'
-import {
-  Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent,
-} from '../ui/collapsible'
-import SidebarHeaderContent from '../SidebarHeader'
-import SearchForm from '../SearchForm'
-import SidebarFooterContent from '../SidebarFooter'
-import DeleteConfirmPopover from '../DeleteConfirmPopover'
-import { IconTrash } from '../../icons'
-import { useHaptics } from '../../hooks/useHaptics'
-import { useDeleteRoom } from '../../hooks/useRoomMutations'
-import { useRenameProject } from '../../hooks/useProjectMutations'
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '../ui/dropdown-menu'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog'
-import { Input } from '../ui/input'
-import { Button } from '../ui/button'
-import { EllipsisIcon, ChevronRightIcon } from 'lucide-react'
 import type { RoomsResponse, ProjectsResponse } from '../../lib/fetchers'
 
 type Room = RoomsResponse[number]
@@ -60,11 +61,14 @@ function ProjectActions({ project }: { project: Project }) {
   const handleSave = useCallback(() => {
     const trimmed = name.trim()
     if (trimmed && trimmed !== project.name) {
-      renameProjectMutation.mutate({ param: { id: project.id }, json: { name: trimmed } }, {
-        onError: () => {
-          toast.error('Failed to rename project.')
-        },
-      })
+      renameProjectMutation.mutate(
+        { param: { id: project.id }, json: { name: trimmed } },
+        {
+          onError: () => {
+            toast.error('Failed to rename project.')
+          },
+        }
+      )
     }
     setRenameOpen(false)
   }, [name, project.id, project.name, renameProjectMutation])
@@ -72,14 +76,15 @@ function ProjectActions({ project }: { project: Project }) {
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger
-          render={<SidebarMenuAction />}
-          onClick={e => e.stopPropagation()}
-        >
+        <DropdownMenuTrigger render={<SidebarMenuAction />} onClick={e => e.stopPropagation()}>
           <EllipsisIcon className="size-4" />
         </DropdownMenuTrigger>
         <DropdownMenuContent side="bottom" align="start">
-          <DropdownMenuItem onClick={() => { setName(project.name); setRenameOpen(true) }}>
+          <DropdownMenuItem
+            onClick={() => {
+              setName(project.name)
+              setRenameOpen(true)
+            }}>
             Rename
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -93,11 +98,17 @@ function ProjectActions({ project }: { project: Project }) {
             autoFocus
             value={name}
             onChange={e => setName(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') handleSave() }}
+            onKeyDown={e => {
+              if (e.key === 'Enter') handleSave()
+            }}
           />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRenameOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={!name.trim()}>Save</Button>
+            <Button variant="outline" onClick={() => setRenameOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={!name.trim()}>
+              Save
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -112,83 +123,114 @@ function RoomDeleteButton({ room, onDelete }: { room: Room; onDelete: (id: strin
         type="button"
         aria-label={`Delete ${room.name}`}
         className="flex h-7 w-7 cursor-pointer items-center justify-center rounded border-none bg-transparent text-gray-500 opacity-0 transition-opacity duration-100 group-hover/room:opacity-100 group-has-data-popup-open/room:opacity-100 hover:text-red-400 data-[popup-open]:text-red-400"
-        onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
-      >
+        onClick={e => {
+          e.preventDefault()
+          e.stopPropagation()
+        }}>
         <IconTrash size={14} />
       </button>
     </DeleteConfirmPopover>
   )
 }
 
-function RoomSubItem({ room, isActive, onDelete, onLinkClick }: {
+function RoomSubItem({
+  room,
+  isActive,
+  onDelete,
+  onLinkClick,
+}: {
   room: Room
   isActive: boolean
   onDelete: (id: string) => void
   onLinkClick: () => void
 }) {
   return (
-    <SidebarMenuSubItem className="group/room relative border-b border-sidebar-border/30 last:border-b-0">
+    <SidebarMenuSubItem className="group/room border-sidebar-border/30 relative border-b last:border-b-0">
       <SidebarMenuSubButton
         isActive={isActive}
         className="pr-14"
         render={<Link to="/chat/$id" params={{ id: room.id }} />}
-        onClick={onLinkClick}
-      >
+        onClick={onLinkClick}>
         <span className="truncate">{room.name}</span>
       </SidebarMenuSubButton>
-      <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center gap-0.5">
+      <div className="absolute top-1/2 right-1 flex -translate-y-1/2 items-center gap-0.5">
         <RoomDeleteButton room={room} onDelete={onDelete} />
-        <ChevronRightIcon className={`size-4 shrink-0 ${isActive ? 'text-sidebar-accent-foreground' : 'invisible'}`} />
+        <ChevronRightIcon
+          className={`size-4 shrink-0 ${isActive ? 'text-sidebar-accent-foreground' : 'invisible'}`}
+        />
       </div>
     </SidebarMenuSubItem>
   )
 }
 
-function RoomMenuItem({ room, isActive, onDelete, onLinkClick }: {
+function RoomMenuItem({
+  room,
+  isActive,
+  onDelete,
+  onLinkClick,
+}: {
   room: Room
   isActive: boolean
   onDelete: (id: string) => void
   onLinkClick: () => void
 }) {
   return (
-    <SidebarMenuItem className="group/room relative border-b border-sidebar-border/30 last:border-b-0">
+    <SidebarMenuItem className="group/room border-sidebar-border/30 relative border-b last:border-b-0">
       <SidebarMenuButton
         className="h-11 pr-14"
         isActive={isActive}
         render={<Link to="/chat/$id" params={{ id: room.id }} />}
-        onClick={onLinkClick}
-      >
+        onClick={onLinkClick}>
         <span className="truncate">{room.name}</span>
       </SidebarMenuButton>
-      <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center gap-0.5">
+      <div className="absolute top-1/2 right-1 flex -translate-y-1/2 items-center gap-0.5">
         <RoomDeleteButton room={room} onDelete={onDelete} />
-        <ChevronRightIcon className={`size-4 shrink-0 ${isActive ? 'text-sidebar-accent-foreground' : 'invisible'}`} />
+        <ChevronRightIcon
+          className={`size-4 shrink-0 ${isActive ? 'text-sidebar-accent-foreground' : 'invisible'}`}
+        />
       </div>
     </SidebarMenuItem>
   )
 }
 
-export default function Sidebar({ rooms, projects, activeRoomId, isLoading, error, userName, onNameChange, onSettingsClick, onSpawnClick, onInstallClick }: SidebarProps) {
+export default function Sidebar({
+  rooms,
+  projects,
+  activeRoomId,
+  isLoading,
+  error,
+  userName,
+  onNameChange,
+  onSettingsClick,
+  onSpawnClick,
+  onInstallClick,
+}: SidebarProps) {
   const [search, setSearch] = useState('')
   const { trigger } = useHaptics()
   const { isMobile, setOpenMobile } = useSidebar()
   const navigate = useNavigate()
   const deleteRoomMutation = useDeleteRoom()
 
-  const handleDeleteRoom = useCallback((id: string) => {
-    const room = rooms.find(r => r.id === id)
-    deleteRoomMutation.mutate({ param: { id } }, {
-      onSuccess: () => {
-        toast.success(`"${room?.name}" deleted`)
-        if (activeRoomId === id) {
-          navigate({ to: '/chat' })
+  const handleDeleteRoom = useCallback(
+    (id: string) => {
+      const room = rooms.find(r => r.id === id)
+      deleteRoomMutation.mutate(
+        { param: { id } },
+        {
+          onSuccess: () => {
+            toast.success(`"${room?.name}" deleted`)
+            if (activeRoomId === id) {
+              navigate({ to: '/chat' })
+            }
+          },
+          onError: () => {
+            toast.error('Failed to delete room. Please try again.')
+          },
         }
-      },
-      onError: () => {
-        toast.error('Failed to delete room. Please try again.')
-      },
-    })
-  }, [rooms, deleteRoomMutation, activeRoomId, navigate])
+      )
+    },
+    [rooms, deleteRoomMutation, activeRoomId, navigate]
+  )
 
   const handleLinkClick = useCallback(() => {
     trigger('light')
@@ -197,9 +239,7 @@ export default function Sidebar({ rooms, projects, activeRoomId, isLoading, erro
 
   const { projectGroups, unassignedRooms } = useMemo(() => {
     const query = search.toLowerCase().trim()
-    const filteredRooms = query
-      ? rooms.filter(r => r.name.toLowerCase().includes(query))
-      : rooms
+    const filteredRooms = query ? rooms.filter(r => r.name.toLowerCase().includes(query)) : rooms
     const projectIds = new Set(projects.map(p => p.id))
     const grouped = new Map<string, Room[]>()
     const unassigned: Room[] = []
@@ -220,9 +260,9 @@ export default function Sidebar({ rooms, projects, activeRoomId, isLoading, erro
 
   return (
     <ShadcnSidebar className="pb-[env(safe-area-inset-bottom,0px)]">
-      <ShadcnSidebarHeader className="border-b border-sidebar-border/30 gap-3">
-        <div className="flex h-8 items-center justify-between px-2">
-          <span className="text-base font-bold">Chats</span>
+      <ShadcnSidebarHeader className="border-sidebar-border/30 gap-3 border-b">
+        <div className="flex h-8 items-center justify-between">
+          <span className="text-base font-bold">Meet AI</span>
           <SidebarHeaderContent onSettingsClick={onSettingsClick} onSpawnClick={onSpawnClick} />
         </div>
         <SearchForm value={search} onValueChange={setSearch} />
@@ -233,7 +273,7 @@ export default function Sidebar({ rooms, projects, activeRoomId, isLoading, erro
             {isLoading && rooms.length === 0 && (
               <div className="space-y-2 px-2 py-3">
                 {[1, 2, 3].map(i => (
-                  <div key={i} className="h-9 animate-pulse rounded bg-sidebar-accent/30" />
+                  <div key={i} className="bg-sidebar-accent/30 h-9 animate-pulse rounded" />
                 ))}
               </div>
             )}
@@ -244,14 +284,12 @@ export default function Sidebar({ rooms, projects, activeRoomId, isLoading, erro
               </div>
             )}
             {projectGroups.map(({ project, rooms: projectRooms }) => (
-              <Collapsible
-                key={project.id}
-                defaultOpen
-                className="group/collapsible"
-              >
-                <SidebarMenuItem className="border-b border-sidebar-border/30">
+              <Collapsible key={project.id} defaultOpen className="group/collapsible">
+                <SidebarMenuItem className="border-sidebar-border/30 border-b">
                   <div className="group/project-row relative">
-                    <SidebarMenuButton className="h-11 group-hover/project-row:bg-sidebar-accent group-hover/project-row:text-sidebar-accent-foreground" render={<CollapsibleTrigger />}>
+                    <SidebarMenuButton
+                      className="group-hover/project-row:bg-sidebar-accent group-hover/project-row:text-sidebar-accent-foreground h-11"
+                      render={<CollapsibleTrigger />}>
                       <ChevronRightIcon className="size-4 shrink-0 transition-transform duration-150 group-aria-expanded/menu-button:rotate-90" />
                       {project.name}
                     </SidebarMenuButton>
@@ -285,8 +323,12 @@ export default function Sidebar({ rooms, projects, activeRoomId, isLoading, erro
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
-      <ShadcnSidebarFooter className="border-t border-sidebar-border/30 p-0">
-        <SidebarFooterContent userName={userName} onNameChange={onNameChange} onInstallClick={onInstallClick} />
+      <ShadcnSidebarFooter className="border-sidebar-border/30 border-t p-0">
+        <SidebarFooterContent
+          userName={userName}
+          onNameChange={onNameChange}
+          onInstallClick={onInstallClick}
+        />
       </ShadcnSidebarFooter>
     </ShadcnSidebar>
   )
