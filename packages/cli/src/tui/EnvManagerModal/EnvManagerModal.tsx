@@ -12,7 +12,7 @@ import {
   addEnv,
 } from '@meet-ai/cli/lib/meetai-home'
 import { Box, Text, useInput } from 'ink'
-import { Select, TextInput } from '@inkjs/ui'
+import { Select, Spinner, TextInput } from '@inkjs/ui'
 import { useRef, useState } from 'react'
 import type { MeetAiConfig } from '@meet-ai/cli/config'
 
@@ -268,7 +268,7 @@ function AddView({
 
       {submitting ? (
         <Box marginTop={1}>
-          <Text color="yellow">Authenticating...</Text>
+          <Spinner label="Authenticating..." />
         </Box>
       ) : null}
 

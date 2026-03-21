@@ -1,4 +1,5 @@
 import { Box, Text } from 'ink'
+import { Spinner } from '@inkjs/ui'
 import type { UpdateState } from '@meet-ai/cli/lib/auto-update'
 
 interface StatusBarProps {
@@ -12,18 +13,10 @@ interface StatusBarProps {
 function UpdateStatus({ state }: { state: UpdateState }) {
   switch (state.status) {
     case 'checking': {
-      return (
-        <Text dimColor>
-          <Text>[</Text><Text bold>u</Text><Text>]pdate checking...</Text>
-        </Text>
-      )
+      return <Spinner label="[u]pdate checking..." />
     }
     case 'downloading': {
-      return (
-        <Text dimColor>
-          <Text>[</Text><Text bold>u</Text><Text>]pdate downloading...</Text>
-        </Text>
-      )
+      return <Spinner label="[u]pdate downloading..." />
     }
     case 'ready_to_restart': {
       return (

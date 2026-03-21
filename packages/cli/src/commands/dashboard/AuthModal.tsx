@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { Box, Text, useInput } from 'ink'
-import { TextInput } from '@inkjs/ui'
+import { Spinner, TextInput } from '@inkjs/ui'
 import { addEnv, readHomeConfigLoose } from '@meet-ai/cli/lib/meetai-home'
 import { DEFAULT_URL, deriveEnvName, resolveKeyInput } from './auth-helpers'
 import type { MeetAiConfig } from '@meet-ai/cli/config'
@@ -133,7 +133,7 @@ export function AuthModal({ onSuccess, onCancel }: AuthModalProps) {
 
       {submitting ? (
         <Box marginTop={1}>
-          <Text color="yellow">Authenticating...</Text>
+          <Spinner label="Authenticating..." />
         </Box>
       ) : null}
 

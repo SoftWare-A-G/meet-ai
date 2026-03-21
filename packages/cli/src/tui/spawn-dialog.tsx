@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Box, Text, useInput } from 'ink'
-import { Select } from '@inkjs/ui'
+import { Select, Spinner } from '@inkjs/ui'
 import type { CodingAgentId } from '@meet-ai/cli/coding-agents'
 import type { Room } from '@meet-ai/cli/types'
 import {
@@ -178,7 +178,7 @@ export function SpawnDialog({
       <Box marginTop={1} flexDirection="column">
         <Text color={focus === 'list' ? 'green' : undefined}>Existing rooms:</Text>
         {roomsLoading ? (
-          <Text dimColor>Loading rooms...</Text>
+          <Spinner label="Loading rooms..." />
         ) : roomsError ? (
           <Text color="red">{roomsError}</Text>
         ) : roomOptions.length === 0 ? (
