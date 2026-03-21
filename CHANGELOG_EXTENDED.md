@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.2.2](https://github.com/SoftWare-A-G/meet-ai/compare/2.2.1...2.2.2) (2026-03-21)
+
+### Bug Fixes
+
+- fix TUI dashboard terminal state restoration to prevent "hanging" terminal after exit:
+  - add `cleanupTerminal()` callback in `packages/cli/src/tui/app.tsx` that explicitly disables raw mode and exits the alternate screen buffer
+  - update 'q' (quit) and 'Q' (kill all and quit) key handlers to call `cleanupTerminal()` before `exit()` so the terminal is properly restored
+  - add `useEffect` cleanup hook that runs `cleanupTerminal` on component unmount, ensuring terminal cleanup even on crashes or unexpected exits
+  - extend `cleanup()` function in `packages/cli/src/commands/dashboard/usecase.ts` to restore terminal state before exiting on SIGINT/SIGTERM signals
+- resolve the issue where keyboard shortcuts (like Cmd+K to clear terminal) would not work after exiting Meet AI, caused by the terminal being left in raw mode or stuck in the alternate screen buffer
+- ensure terminal tab no longer shows a "running process" indicator after Meet AI exits cleanly
+
+### Code Refactoring
+
+- centralize terminal cleanup logic in the dashboard TUI layer so both graceful exits and signal-triggered exits use the same restoration path
+
 ## [2.2.1](https://github.com/SoftWare-A-G/meet-ai/compare/2.2.0...2.2.1) (2026-03-21)
 
 ### Features

@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.2.2](https://github.com/SoftWare-A-G/meet-ai/compare/2.2.1...2.2.2) (2026-03-21)
+
+### Bug Fixes
+
+- fix terminal state cleanup in TUI dashboard to properly restore raw mode and exit alternate screen when quitting, preventing "hanging" terminal state where keyboard shortcuts don't work after exiting Meet AI
+- add explicit terminal cleanup in dashboard signal handlers (SIGINT/SIGTERM) and quit handlers ('q' and 'Q' keys) to ensure terminal is always restored to normal state
+- add useEffect cleanup hook in Ink app component to restore terminal state on component unmount (handles crashes and unexpected exits)
+- align the CLI, worker, desktop, and app package manifests at `2.2.2` for the release
+
 ## [2.2.1](https://github.com/SoftWare-A-G/meet-ai/compare/2.2.0...2.2.1) (2026-03-21)
 
 ### Features

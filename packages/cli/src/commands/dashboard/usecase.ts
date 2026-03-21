@@ -129,6 +129,13 @@ export async function startDashboard(
 
   function cleanup() {
     closeLobby()
+    // Ensure terminal is restored before exit
+    try {
+      process.stdin.setRawMode(false)
+      process.stdout.write('\x1b[?1049l') // leave alt screen
+    } catch {
+      // Ignore errors during cleanup
+    }
     process.exit(0)
   }
 

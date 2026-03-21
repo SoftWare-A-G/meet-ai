@@ -49,6 +49,17 @@ function AppInner({ processManager, client, codingAgents, onAttach, onDetach, on
   const { exit } = useApp()
   const { stdout } = useStdout()
   const { setRawMode } = useStdin()
+  
+  // Cleanup function to restore terminal state
+  const cleanupTerminal = useCallback(() => {
+    try {
+      setRawMode(false)
+      process.stdout.write('\x1b[?1049l') // leave alt screen
+    } catch {
+      // Ignore errors during cleanup
+    }
+  }, [setRawMode])
+  
   const [teams, setTeams] = useState(processManager.list())
   const [focusedRoomIndex, setFocusedRoomIndex] = useState(0)
   const [focusedTeamIndex, setFocusedTeamIndex] = useState(0)
@@ -184,6 +195,9 @@ function AppInner({ processManager, client, codingAgents, onAttach, onDetach, on
     })
   }, [focusedRoomIndex, focusedTeamIndex, processManager, dashboardHeight])
 
+  // Cleanup terminal on unmount (e.g., crash, unexpected exit)
+  useEffect(() => cleanupTerminal, [cleanupTerminal])
+
   useInput((input, key) => {
     if (showSpawn || showEnvManager || busyRef.current) return
     if (restartConfirm || killTargetId) return
@@ -200,6 +214,7 @@ function AppInner({ processManager, client, codingAgents, onAttach, onDetach, on
 
     // Quit (detach — sessions keep running in tmux)
     if (input === 'q') {
+      cleanupTerminal()
       exit()
       return
     }
@@ -207,6 +222,7 @@ function AppInner({ processManager, client, codingAgents, onAttach, onDetach, on
     // Kill all sessions and quit
     if (input === 'Q') {
       processManager.killAll()
+      cleanupTerminal()
       exit()
       return
     }

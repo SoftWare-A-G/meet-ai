@@ -1,3 +1,4 @@
+import { Select, Spinner, TextInput } from '@inkjs/ui'
 import {
   DEFAULT_URL,
   deriveEnvName,
@@ -13,9 +14,8 @@ import {
 } from '@meet-ai/cli/lib/meetai-home'
 import { Box, Text, useInput } from 'ink'
 import Link from 'ink-link'
-import { Select, Spinner, TextInput } from '@inkjs/ui'
-import Divider from '../Divider'
 import { useRef, useState } from 'react'
+import Divider from '../Divider'
 import type { MeetAiConfig } from '@meet-ai/cli/config'
 
 interface EnvManagerModalProps {
@@ -194,8 +194,8 @@ function SwitchView({
             }
             const env = getDefaultEnv(config)
             onSwitch({ url: env.url, key: env.key })
-          } catch (err) {
-            setSwitchError(err instanceof Error ? err.message : String(err))
+          } catch (error) {
+            setSwitchError(error instanceof Error ? error.message : String(error))
           }
         }}
       />
@@ -234,26 +234,25 @@ function AddView({
   error: string | null
   submitting: boolean
 }) {
-  const linkUrl = (() => { try { return url && new URL(url).href } catch { return 'https://meet-ai.cc' } })() || 'https://meet-ai.cc'
+  const linkUrl =
+    (() => {
+      try {
+        return url && new URL(url).href
+      } catch {
+        return 'https://meet-ai.cc'
+      }
+    })() || 'https://meet-ai.cc'
 
   return (
     <Box marginTop={1} flexDirection="column">
       <Box>
         <Text color={focus === 'url' ? 'green' : undefined}>URL: </Text>
-        <TextInput
-          defaultValue={url}
-          onChange={setUrl}
-          isDisabled={focus !== 'url'}
-        />
+        <TextInput defaultValue={url} onChange={setUrl} isDisabled={focus !== 'url'} />
       </Box>
 
       <Box marginTop={1}>
         <Text color={focus === 'key' ? 'green' : undefined}>Key / Auth Link: </Text>
-        <TextInput
-          placeholder="mai_..."
-          onChange={setKeyInput}
-          isDisabled={focus !== 'key'}
-        />
+        <TextInput placeholder="mai_..." onChange={setKeyInput} isDisabled={focus !== 'key'} />
       </Box>
 
       <Box>
