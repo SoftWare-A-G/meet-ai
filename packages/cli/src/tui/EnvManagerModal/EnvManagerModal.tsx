@@ -12,6 +12,7 @@ import {
   addEnv,
 } from '@meet-ai/cli/lib/meetai-home'
 import { Box, Text, useInput } from 'ink'
+import Link from 'ink-link'
 import { Select, Spinner, TextInput } from '@inkjs/ui'
 import { useRef, useState } from 'react'
 import type { MeetAiConfig } from '@meet-ai/cli/config'
@@ -230,6 +231,8 @@ function AddView({
   error: string | null
   submitting: boolean
 }) {
+  const linkUrl = (() => { try { return url && new URL(url).href } catch { return 'https://meet-ai.cc' } })() || 'https://meet-ai.cc'
+
   return (
     <Box marginTop={1} flexDirection="column">
       <Box>
@@ -248,6 +251,11 @@ function AddView({
           onChange={setKeyInput}
           isDisabled={focus !== 'key'}
         />
+      </Box>
+
+      <Box>
+        <Text dimColor>Get your key at </Text>
+        <Link url={linkUrl}>{linkUrl}</Link>
       </Box>
 
       <Box marginTop={1}>

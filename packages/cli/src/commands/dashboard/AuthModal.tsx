@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { Box, Text, useInput } from 'ink'
+import Link from 'ink-link'
 import { Spinner, TextInput } from '@inkjs/ui'
 import { addEnv, readHomeConfigLoose } from '@meet-ai/cli/lib/meetai-home'
 import { DEFAULT_URL, deriveEnvName, resolveKeyInput } from './auth-helpers'
@@ -52,7 +53,7 @@ export function AuthModal({ onSuccess, onCancel }: AuthModalProps) {
       try {
         new URL(url)
       } catch {
-        setError('URL must be a valid URL (e.g. https://meet-ai.cc)')
+        setError('URL must be a valid URL (e.g. https://meet-ai.cc/)')
         return
       }
 
@@ -75,6 +76,8 @@ export function AuthModal({ onSuccess, onCancel }: AuthModalProps) {
         })
     }
   })
+
+  const linkUrl = (() => { try { return url && new URL(url).href } catch { return 'https://meet-ai.cc' } })() || 'https://meet-ai.cc'
 
   return (
     <Box
@@ -110,6 +113,11 @@ export function AuthModal({ onSuccess, onCancel }: AuthModalProps) {
           onChange={setKeyInput}
           isDisabled={focus !== 'key'}
         />
+      </Box>
+
+      <Box>
+        <Text dimColor>Get your key at </Text>
+        <Link url={linkUrl}>{linkUrl}</Link>
       </Box>
 
       <Box marginTop={1}>
