@@ -41,7 +41,7 @@
     "@sinclair/typebox": "0.34.48",
     "@tldraw/tlschema": "4.5.3",
     "citty": "0.2.1",
-    "evlog": "2.8.0",
+    "evlog": "2.9.0",
     "hono": "4.12.8",
     "ink": "6.8.0",
     "ink-link": "5.0.0",
