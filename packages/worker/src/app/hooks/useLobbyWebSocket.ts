@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { useRouter } from '@tanstack/react-router'
 import { queryKeys } from '../lib/query-keys'
 import type { RoomsResponse, ProjectsResponse } from '../lib/fetchers'
 
@@ -26,7 +27,9 @@ function parseLobbyEvent(raw: string): LobbyEvent | null {
 
 export function useLobbyWebSocket(apiKey: string | null) {
   const wsRef = useRef<WebSocket | null>(null)
+  const pendingSpawnRef = useRef(false)
   const queryClient = useQueryClient()
+  const router = useRouter()
 
   useEffect(() => {
     if (!apiKey) return
@@ -53,6 +56,10 @@ export function useLobbyWebSocket(apiKey: string | null) {
             if (old?.some(r => r.id === evt.id)) return old
             return [{ id: evt.id, name: evt.name, project_id: evt.project_id ?? null, created_at: evt.created_at }, ...(old ?? [])]
           })
+          if (pendingSpawnRef.current) {
+            pendingSpawnRef.current = false
+            void router.navigate({ to: '/chat/$id', params: { id: evt.id } })
+          }
           if (evt.project_id && evt.project_name && evt.project_created_at && evt.project_updated_at) {
             void queryClient.cancelQueries({ queryKey: queryKeys.projects.all })
             queryClient.setQueryData<ProjectsResponse>(queryKeys.projects.all, old => {
@@ -89,9 +96,12 @@ export function useLobbyWebSocket(apiKey: string | null) {
         ws.close()
       }
     }
-  }, [apiKey, queryClient])
+  }, [apiKey, queryClient, router])
 
   const send = useCallback((data: object) => {
+    if ('type' in data && data.type === 'spawn_request') {
+      pendingSpawnRef.current = true
+    }
     const ws = wsRef.current
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(data))
