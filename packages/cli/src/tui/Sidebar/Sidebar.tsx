@@ -1,5 +1,4 @@
 import { Box, Text } from 'ink'
-import Divider from '../Divider'
 import type { ProcessStatus } from '@meet-ai/cli/lib/process-manager'
 import { worstStatus, type RoomGroup } from '../room-groups'
 
@@ -24,7 +23,6 @@ export default function Sidebar({ roomGroups, focusedIndex, width, height }: Sid
         <Box paddingX={1}>
           <Text bold>Rooms</Text>
         </Box>
-        <Divider dividerColor="gray" />
         <Box paddingX={1}>
           <Text dimColor>No rooms</Text>
         </Box>
@@ -33,7 +31,7 @@ export default function Sidebar({ roomGroups, focusedIndex, width, height }: Sid
   }
 
   // Scrolling: ensure focused item is visible
-  const maxVisible = Math.max(1, height - 4) // minus header + divider + border
+  const maxVisible = Math.max(1, height - 3) // minus header + border
   const scrollStart = Math.max(0, Math.min(focusedIndex - Math.floor(maxVisible / 2), roomGroups.length - maxVisible))
   const visibleGroups = roomGroups.slice(scrollStart, scrollStart + maxVisible)
 
@@ -42,7 +40,6 @@ export default function Sidebar({ roomGroups, focusedIndex, width, height }: Sid
       <Box paddingX={1}>
         <Text bold>Rooms</Text>
       </Box>
-      <Divider dividerColor="gray" />
       {visibleGroups.map((group, i) => {
         const actualIndex = scrollStart + i
         const isFocused = actualIndex === focusedIndex
@@ -53,9 +50,10 @@ export default function Sidebar({ roomGroups, focusedIndex, width, height }: Sid
         const iconLen = icon.length + 1 // icon + space before it
         const countSuffix = group.teams.length > 1 ? ` ${group.teams.length}×` : ''
         const maxNameLen = innerWidth - 2 - iconLen - countSuffix.length // 2 = "> " prefix
-        const name = group.roomName.length > maxNameLen
-          ? `${group.roomName.slice(0, maxNameLen - 1)}~`
-          : group.roomName.padEnd(maxNameLen)
+        const name =
+          group.roomName.length > maxNameLen
+            ? `${group.roomName.slice(0, maxNameLen - 1)}~`
+            : group.roomName.padEnd(maxNameLen)
 
         return (
           <Box key={group.roomId} paddingX={1} overflowX="hidden">
@@ -63,9 +61,12 @@ export default function Sidebar({ roomGroups, focusedIndex, width, height }: Sid
               bold={isFocused}
               color={isFocused ? 'cyan' : undefined}
               backgroundColor={isFocused ? 'gray' : undefined}
-              wrap="truncate"
-            >
-              {isFocused ? '>' : ' '} {name}{countSuffix} <Text color={color} dimColor={!isFocused}>{icon}</Text>
+              wrap="truncate">
+              {isFocused ? '>' : ' '} {name}
+              {countSuffix}{' '}
+              <Text color={color} dimColor={!isFocused}>
+                {icon}
+              </Text>
             </Text>
           </Box>
         )
