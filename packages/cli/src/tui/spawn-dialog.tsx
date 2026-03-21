@@ -189,7 +189,7 @@ export function SpawnDialog({
                 <Text color={isSelected && focus === 'list' ? 'yellow' : undefined} dimColor={room.connected}>
                   {isSelected ? '>' : ' '} {room.name}
                 </Text>
-                {room.connected ? <Text color="cyan"> ●</Text> : null}
+                {room.connected ? <Text color="green"> ●</Text> : null}
               </Box>
             )
           })

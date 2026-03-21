@@ -1,6 +1,6 @@
-import { useEffect, useRef, useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useRouter } from '@tanstack/react-router'
+import { useEffect, useRef, useCallback } from 'react'
 import { queryKeys } from '../lib/query-keys'
 import type { RoomsResponse, ProjectsResponse } from '../lib/fetchers'
 
@@ -54,13 +54,27 @@ export function useLobbyWebSocket(apiKey: string | null) {
           void queryClient.cancelQueries({ queryKey: queryKeys.rooms.all })
           queryClient.setQueryData<RoomsResponse>(queryKeys.rooms.all, old => {
             if (old?.some(r => r.id === evt.id)) return old
-            return [{ id: evt.id, name: evt.name, project_id: evt.project_id ?? null, created_at: evt.created_at }, ...(old ?? [])]
+            return [
+              {
+                id: evt.id,
+                name: evt.name,
+                project_id: evt.project_id ?? null,
+                created_at: evt.created_at,
+                connected: false,
+              },
+              ...(old ?? []),
+            ]
           })
           if (pendingSpawnRef.current) {
             pendingSpawnRef.current = false
             void router.navigate({ to: '/chat/$id', params: { id: evt.id } })
           }
-          if (evt.project_id && evt.project_name && evt.project_created_at && evt.project_updated_at) {
+          if (
+            evt.project_id &&
+            evt.project_name &&
+            evt.project_created_at &&
+            evt.project_updated_at
+          ) {
             void queryClient.cancelQueries({ queryKey: queryKeys.projects.all })
             queryClient.setQueryData<ProjectsResponse>(queryKeys.projects.all, old => {
               if (old?.some(p => p.id === evt.project_id)) return old

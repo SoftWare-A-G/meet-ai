@@ -53,7 +53,7 @@ export default class ConnectionAdapter implements IConnectionAdapter {
 
     function connect(): WebSocket {
       // Bun's WebSocket supports headers in the second argument (not in the standard spec)
-      const ws = new WebSocket(`${wsUrl}/api/rooms/${roomId}/ws`, wsHeaders as unknown as string[])
+      const ws = new WebSocket(`${wsUrl}/api/rooms/${roomId}/ws?client=cli`, wsHeaders as unknown as string[])
 
       const connectTimeout = setTimeout(() => {
         if (ws.readyState !== WebSocket.OPEN) {
@@ -104,6 +104,10 @@ export default class ConnectionAdapter implements IConnectionAdapter {
             : new TextDecoder().decode(event.data as ArrayBuffer)
         const data = JSON.parse(text)
         if (data.type === 'pong') return
+        if (data.type === 'room_deleted') {
+          options?.onMessage?.(data as Message)
+          return
+        }
         if (
           data.type === 'terminal_subscribe' ||
           data.type === 'terminal_unsubscribe' ||
@@ -125,6 +129,12 @@ export default class ConnectionAdapter implements IConnectionAdapter {
         const code = event.code
         if (code === 1000) {
           wsLog({ event: 'closed', code: 1000 })
+          return
+        }
+
+        if (code === 4040) {
+          wsLog({ event: 'closed', code: 4040, reason: 'room deleted' })
+          console.error('Room deleted. Shutting down.')
           return
         }
 
@@ -214,6 +224,9 @@ export default class ConnectionAdapter implements IConnectionAdapter {
           if (data.type === 'pong') return
           if (data.type === 'room_created' && data.id && data.name) {
             options?.onRoomCreated?.(data.id, data.name)
+          }
+          if (data.type === 'room_deleted' && data.id) {
+            options?.onRoomDeleted?.(data.id)
           }
           if (data.type === 'spawn_request' && data.room_name) {
             const codingAgent =

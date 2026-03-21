@@ -46,7 +46,28 @@ export const roomsRoute = new Hono<AppEnv>()
     const projectId = c.req.query('project_id')
     const db = queries(c.env.DB)
     const rooms = await db.listRooms(keyId, projectId || undefined)
-    return c.json(rooms)
+    const roomsWithConnection = await Promise.all(
+      rooms.map(async room => {
+        try {
+          const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${room.id}`)
+          const stub = c.env.CHAT_ROOM.get(doId)
+          const res = await stub.fetch(new Request('http://internal/presence', { method: 'GET' }))
+          const presence = (await res.json()) as { cli_connections?: number }
+
+          return {
+            ...room,
+            connected: (presence.cli_connections ?? 0) > 0,
+          }
+        } catch {
+          return {
+            ...room,
+            connected: false,
+          }
+        }
+      })
+    )
+
+    return c.json(roomsWithConnection)
   })
 
   // POST /api/rooms — create a room
@@ -704,6 +725,13 @@ export const roomsRoute = new Hono<AppEnv>()
         })
       )
     }
+
+    // Destroy ChatRoom DO (notifies clients, closes WebSockets, wipes storage)
+    const chatDoId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
+    const chatStub = c.env.CHAT_ROOM.get(chatDoId)
+    await chatStub.fetch(
+      new Request('http://internal/destroy', { method: 'DELETE' })
+    )
 
     await db.deleteRoom(keyId, roomId)
 

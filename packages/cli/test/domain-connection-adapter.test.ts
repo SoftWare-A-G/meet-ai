@@ -101,7 +101,7 @@ test('listen constructs correct WebSocket URL with auth header', () => {
   adapter.listen('room-abc')
 
   expect(MockWebSocket.instances).toHaveLength(1)
-  expect(MockWebSocket.instances[0].url).toBe('wss://meet-ai.cc/api/rooms/room-abc/ws')
+  expect(MockWebSocket.instances[0].url).toBe('wss://meet-ai.cc/api/rooms/room-abc/ws?client=cli')
   expect(MockWebSocket.instances[0].options).toEqual({ headers: { Authorization: 'Bearer tok123' } })
 })
 
@@ -111,7 +111,7 @@ test('listen constructs WebSocket URL without token when no apiKey', () => {
 
   adapter.listen('room-xyz')
 
-  expect(MockWebSocket.instances[0].url).toBe('wss://meet-ai.cc/api/rooms/room-xyz/ws')
+  expect(MockWebSocket.instances[0].url).toBe('wss://meet-ai.cc/api/rooms/room-xyz/ws?client=cli')
 })
 
 test('listen converts http to ws in URL', () => {
@@ -120,7 +120,7 @@ test('listen converts http to ws in URL', () => {
 
   adapter.listen('test-room')
 
-  expect(MockWebSocket.instances[0].url).toBe('ws://localhost:8787/api/rooms/test-room/ws')
+  expect(MockWebSocket.instances[0].url).toBe('ws://localhost:8787/api/rooms/test-room/ws?client=cli')
 })
 
 // --- listen: message delivery ---

@@ -50,6 +50,7 @@ export interface MeetAiClient {
   downloadAttachment(attachmentId: string): Promise<string>;
   listenLobby(options?: {
     onRoomCreated?: (id: string, name: string) => void;
+    onRoomDeleted?: (id: string) => void;
     onSpawnRequest?: (request: { roomName: string; codingAgent: CodingAgentId }) => void;
     silent?: boolean;
   }): WebSocket;

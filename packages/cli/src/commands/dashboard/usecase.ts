@@ -88,6 +88,12 @@ export async function startDashboard(
     try {
       lobbyWs = client.listenLobby({
         silent: true,
+        onRoomDeleted: (roomId) => {
+          const teams = processManager.list().filter(t => t.roomId === roomId)
+          for (const team of teams) {
+            processManager.kill(team.teamId)
+          }
+        },
         onSpawnRequest: async ({ roomName, codingAgent }) => {
           const key = `${roomName}:${codingAgent}`
           if (pendingSpawns.has(key)) return

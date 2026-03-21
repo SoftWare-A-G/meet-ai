@@ -53,6 +53,18 @@ type SidebarProps = {
   onInstallClick: () => void
 }
 
+function RoomConnectionIndicator({ connected }: { connected?: boolean }) {
+  if (!connected) return null
+
+  return (
+    <span
+      aria-label="CLI connected"
+      title="CLI connected"
+      className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#22c55e] shadow-[0_0_0_3px_rgba(34,197,94,0.12)]"
+    />
+  )
+}
+
 function ProjectActions({ project }: { project: Project }) {
   const [renameOpen, setRenameOpen] = useState(false)
   const [name, setName] = useState(project.name)
@@ -151,7 +163,10 @@ function RoomSubItem({
         className="pr-14"
         render={<Link to="/chat/$id" params={{ id: room.id }} />}
         onClick={onLinkClick}>
-        <span className="truncate">{room.name}</span>
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="truncate">{room.name}</span>
+          <RoomConnectionIndicator connected={room.connected} />
+        </span>
       </SidebarMenuSubButton>
       <div className="absolute top-1/2 right-1 flex -translate-y-1/2 items-center gap-0.5">
         <RoomDeleteButton room={room} onDelete={onDelete} />
@@ -181,7 +196,10 @@ function RoomMenuItem({
         isActive={isActive}
         render={<Link to="/chat/$id" params={{ id: room.id }} />}
         onClick={onLinkClick}>
-        <span className="truncate">{room.name}</span>
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="truncate">{room.name}</span>
+          <RoomConnectionIndicator connected={room.connected} />
+        </span>
       </SidebarMenuButton>
       <div className="absolute top-1/2 right-1 flex -translate-y-1/2 items-center gap-0.5">
         <RoomDeleteButton room={room} onDelete={onDelete} />

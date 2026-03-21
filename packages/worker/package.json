@@ -1,6 +1,6 @@
 {
   "name": "@meet-ai/worker",
-  "version": "2.2.2",
+  "version": "2.3.0",
   "private": true,
   "scripts": {
     "dev": "vite dev --force",

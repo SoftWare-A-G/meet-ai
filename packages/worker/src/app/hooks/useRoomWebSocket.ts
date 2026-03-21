@@ -134,7 +134,9 @@ export function useRoomWebSocket(
       if (wsRef.current) wsRef.current.close()
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
       const tokenParam = `?token=${encodeURIComponent(key)}`
-      const ws = new WebSocket(`${protocol}//${location.host}/api/rooms/${roomId}/ws${tokenParam}`)
+      const ws = new WebSocket(
+        `${protocol}//${location.host}/api/rooms/${roomId}/ws${tokenParam}&client=web`
+      )
 
       ws.onopen = () => {
         setConnected(true)

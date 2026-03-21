@@ -2,6 +2,8 @@ export type Room = {
   id: string
   name: string
   project_id?: string | null
+  created_at?: string
+  connected?: boolean
 }
 
 export type Message = {

@@ -9,6 +9,7 @@ export interface ListenOptions {
 
 export interface LobbyOptions {
   onRoomCreated?: (id: string, name: string) => void
+  onRoomDeleted?: (id: string) => void
   onSpawnRequest?: (request: { roomName: string; codingAgent: CodingAgentId }) => void
   silent?: boolean
 }

@@ -126,6 +126,12 @@ export async function listenOpencode(
 
     // Define message handler function for recursive calls
     const handleMessage = async (msg: ListenMessage): Promise<void> => {
+      if (msg.type === 'room_deleted') {
+        emitOpencodeLog('info', 'listen-opencode', 'room_deleted', { roomId })
+        console.error(`Room ${roomId} was deleted. Exiting.`)
+        shutdown()
+        return
+      }
       if (terminal.handle(msg)) return
       if (!isPlainChatMessage(msg)) return
       if (isHookAnchorMessage(msg)) return

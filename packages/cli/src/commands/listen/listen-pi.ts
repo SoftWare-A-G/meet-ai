@@ -548,6 +548,12 @@ export function listenPi(
   }
 
   const onMessage = (msg: ListenMessage) => {
+    if (msg.type === 'room_deleted') {
+      emitPiLog('info', 'listen-pi', 'room_deleted', { roomId })
+      console.error(`Room ${roomId} was deleted. Exiting.`)
+      shutdown()
+      return
+    }
     if (terminal.handle(msg)) return
     if (handleTasksInfo(msg)) return
     if (!isPlainChatMessage(msg)) return

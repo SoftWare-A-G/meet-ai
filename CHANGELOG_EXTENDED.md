@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.3.0](https://github.com/SoftWare-A-G/meet-ai/compare/2.2.2...2.3.0) (2026-03-22)
+
+### Features
+
+- add graceful room deletion: ChatRoom DO broadcasts `room_deleted` and closes connections with code 4040; Claude, Codex, OpenCode, and Pi listeners exit cleanly
+- add CLI connection presence tracking: rooms list shows `connected` boolean; green indicator dots in web UI (Sidebar, LobbyView) and CLI spawn dialog
+- add dashboard room deletion cleanup: kills attached team processes via `onRoomDeleted` lobby callback when room is deleted
+- add ChatRoom DO `/presence` endpoint to query CLI connection count per room
+
+### Bug Fixes
+
+- add `?client=cli` query parameter to CLI WebSocket connections and `?client=web` to web connections for proper client type detection
+- fix spawn dialog connection indicator color (cyan → green) for UI consistency
+- ensure lobby WebSocket forwards query parameters correctly to ChatRoom DO
+
+### Tests
+
+- add API test coverage for room deletion flow, CLI presence detection, and lobby notifications
+
 ## [2.2.2](https://github.com/SoftWare-A-G/meet-ai/compare/2.2.1...2.2.2) (2026-03-21)
 
 ### Bug Fixes

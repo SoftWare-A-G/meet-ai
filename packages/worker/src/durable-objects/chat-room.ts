@@ -21,6 +21,10 @@ export class ChatRoom extends DurableObject {
   private tasksInfo: string | null = null
   private commandsInfo: string | null = null
 
+  private getCliConnectionCount(): number {
+    return this.ctx.getWebSockets('cli').length
+  }
+
   private broadcastAll(data: string) {
     for (const ws of this.ctx.getWebSockets()) {
       try {
@@ -54,7 +58,8 @@ export class ChatRoom extends DurableObject {
     if (url.pathname === '/ws') {
       const pair = new WebSocketPair()
       const [client, server] = Object.values(pair)
-      this.ctx.acceptWebSocket(server)
+      const clientType = url.searchParams.get('client') === 'cli' ? 'cli' : 'web'
+      this.ctx.acceptWebSocket(server, [clientType])
 
       // Edge-level auto-response: pings are answered without waking the DO
       this.ctx.setWebSocketAutoResponse(
@@ -95,6 +100,15 @@ export class ChatRoom extends DurableObject {
       }
 
       return new Response(null, { status: 101, webSocket: client })
+    }
+
+    if (url.pathname === '/presence' && request.method === 'GET') {
+      return new Response(
+        JSON.stringify({
+          cli_connections: this.getCliConnectionCount(),
+        }),
+        { headers: { 'Content-Type': 'application/json' } }
+      )
     }
 
     // /broadcast — internal broadcast from Worker
@@ -460,6 +474,26 @@ export class ChatRoom extends DurableObject {
         }
       }
       return new Response('ok')
+    }
+
+    // DELETE /destroy — tear down the chat room (notify clients, close connections, wipe storage)
+    if (url.pathname === '/destroy' && request.method === 'DELETE') {
+      const message = JSON.stringify({ type: 'room_deleted' })
+      for (const ws of this.ctx.getWebSockets()) {
+        try {
+          ws.send(message)
+          ws.close(4040, 'room deleted')
+        } catch {
+          /* already closed */
+        }
+      }
+      this.teamInfo = null
+      this.tasksInfo = null
+      this.commandsInfo = null
+      await this.ctx.storage.deleteAll()
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { 'Content-Type': 'application/json' },
+      })
     }
 
     return new Response('not found', { status: 404 })

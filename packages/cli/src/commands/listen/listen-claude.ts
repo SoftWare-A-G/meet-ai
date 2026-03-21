@@ -42,6 +42,11 @@ export function listenClaude(
   const terminal = createTerminalControlHandler({ client, roomId, teamDir, inboxRouter })
 
   const onMessage = (msg: ListenMessage) => {
+    if (msg.type === 'room_deleted') {
+      console.error(`Room ${roomId} was deleted. Exiting.`)
+      shutdown()
+      return
+    }
     if (terminal.handle(msg)) return
     if (!isPlainChatMessage(msg)) return
     if (isHookAnchorMessage(msg)) return

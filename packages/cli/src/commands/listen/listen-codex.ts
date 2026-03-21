@@ -764,6 +764,12 @@ export function listenCodex(
   }
 
   const onMessage = (msg: ListenMessage) => {
+    if (msg.type === 'room_deleted') {
+      emitCodexAppServerLog('info', 'listen-codex', 'room_deleted', { roomId })
+      console.error(`Room ${roomId} was deleted. Exiting.`)
+      shutdown()
+      return
+    }
     if (terminal.handle(msg)) return
     if (handleTasksInfo(msg)) return
     if (!isPlainChatMessage(msg)) return

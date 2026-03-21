@@ -6,5 +6,6 @@ export function useRoomsQuery() {
   return useQuery({
     queryKey: queryKeys.rooms.all,
     queryFn: fetchRooms,
+    refetchInterval: 60_000,
   })
 }
