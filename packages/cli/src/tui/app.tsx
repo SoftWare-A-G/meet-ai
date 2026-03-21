@@ -1,4 +1,5 @@
 import { Box, Text, useInput, useApp, useStdout, useStdin } from 'ink'
+import { ConfirmInput } from '@inkjs/ui'
 import { useState, useCallback, useEffect, useRef, useMemo, Component, type ReactNode } from 'react'
 import { ProcessManager } from '@meet-ai/cli/lib/process-manager'
 import { getCodingAgentDefinition, type CodingAgentDefinition } from '@meet-ai/cli/coding-agents'
@@ -185,28 +186,7 @@ function AppInner({ processManager, client, codingAgents, onAttach, onDetach, on
 
   useInput((input, key) => {
     if (showSpawn || showEnvManager || busyRef.current) return
-
-    // Restart confirmation mode
-    if (restartConfirm) {
-      if (input === 'y' || input === 'Y') {
-        setRestartConfirm(false)
-        onRequestRestart?.()
-        exit()
-        return
-      }
-      setRestartConfirm(false)
-      return
-    }
-
-    // Kill confirmation mode — uses captured killTargetId (not stale closure)
-    if (killTargetId) {
-      if (input === 'y' || input === 'Y') {
-        processManager.kill(killTargetId)
-        refreshTeams()
-      }
-      setKillTargetId(null)
-      return
-    }
+    if (restartConfirm || killTargetId) return
 
     // Update: check or apply
     if (input === 'u') {
@@ -307,16 +287,29 @@ function AppInner({ processManager, client, codingAgents, onAttach, onDetach, on
         height={dashboardHeight}
       />
       {restartConfirm && updateState.status === 'ready_to_restart' ? (
-        <Box>
-          <Text color="green">Apply update v{updateState.version}? </Text>
-          <Text dimColor>[y/n]</Text>
+        <Box gap={1}>
+          <Text color="green">Apply update v{updateState.version}?</Text>
+          <ConfirmInput
+            onConfirm={() => {
+              setRestartConfirm(false)
+              onRequestRestart?.()
+              exit()
+            }}
+            onCancel={() => setRestartConfirm(false)}
+          />
         </Box>
       ) : killTargetId ? (
-        <Box>
-          <Text color="red">Kill </Text>
-          <Text bold>{killLabel}</Text>
-          <Text color="red">? </Text>
-          <Text dimColor>[y/n]</Text>
+        <Box gap={1}>
+          <Text color="red">Kill <Text bold>{killLabel}</Text>?</Text>
+          <ConfirmInput
+            defaultChoice="cancel"
+            onConfirm={() => {
+              processManager.kill(killTargetId)
+              refreshTeams()
+              setKillTargetId(null)
+            }}
+            onCancel={() => setKillTargetId(null)}
+          />
         </Box>
       ) : showEnvManager ? (
         <EnvManagerModal
