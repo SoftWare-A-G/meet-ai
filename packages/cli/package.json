@@ -35,6 +35,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@inkjs/ui": "2.0.0",
     "@mariozechner/pi-coding-agent": "0.61.1",
     "@opencode-ai/sdk": "1.2.27",
     "@sinclair/typebox": "0.34.48",

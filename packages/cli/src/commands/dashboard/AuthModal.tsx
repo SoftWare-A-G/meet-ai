@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { Box, Text, useInput } from 'ink'
+import { TextInput } from '@inkjs/ui'
 import { addEnv, readHomeConfigLoose } from '@meet-ai/cli/lib/meetai-home'
 import { DEFAULT_URL, deriveEnvName, resolveKeyInput } from './auth-helpers'
 import type { MeetAiConfig } from '@meet-ai/cli/config'
@@ -15,17 +16,15 @@ const FIELDS: Field[] = ['url', 'key', 'envName']
 export function AuthModal({ onSuccess, onCancel }: AuthModalProps) {
   const defaultEnvName = deriveEnvName(DEFAULT_URL)
   const [url, setUrl] = useState(DEFAULT_URL)
-  const [urlCursor, setUrlCursor] = useState(DEFAULT_URL.length)
   const [keyInput, setKeyInput] = useState('')
-  const [keyCursor, setKeyCursor] = useState(0)
   const [envName, setEnvName] = useState(defaultEnvName)
-  const [envNameCursor, setEnvNameCursor] = useState(defaultEnvName.length)
+  const [envNameVersion, setEnvNameVersion] = useState(0)
   const [focus, setFocus] = useState<Field>('key')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const envNameTouched = useRef(false)
 
-  useInput((input, key) => {
+  useInput((_input, key) => {
     if (submitting) return
 
     if (key.escape) {
@@ -36,7 +35,7 @@ export function AuthModal({ onSuccess, onCancel }: AuthModalProps) {
     if (key.tab) {
       setFocus(f => {
         const idx = FIELDS.indexOf(f)
-        return FIELDS[(idx + 1) % FIELDS.length]
+        return FIELDS[(idx + 1) % FIELDS.length]!
       })
       return
     }
@@ -44,7 +43,6 @@ export function AuthModal({ onSuccess, onCancel }: AuthModalProps) {
     if (key.return) {
       setError(null)
 
-      // Validate env name uniqueness
       const trimmedName = envName.trim()
       if (!trimmedName) {
         setError('Environment name is required')
@@ -75,45 +73,6 @@ export function AuthModal({ onSuccess, onCancel }: AuthModalProps) {
           setError(error.message)
           setSubmitting(false)
         })
-      return
-    }
-
-    // Text editing
-    const [value, setValue, cursor, setCursor] =
-      focus === 'url'
-        ? [url, setUrl, urlCursor, setUrlCursor]
-        : focus === 'key'
-          ? [keyInput, setKeyInput, keyCursor, setKeyCursor]
-          : [envName, setEnvName, envNameCursor, setEnvNameCursor]
-
-    if (key.leftArrow) {
-      setCursor(Math.max(0, cursor - 1))
-      return
-    }
-    if (key.rightArrow) {
-      setCursor(Math.min(value.length, cursor + 1))
-      return
-    }
-    if (key.backspace || key.delete) {
-      if (cursor > 0) {
-        setValue(value.slice(0, cursor - 1) + value.slice(cursor))
-        setCursor(cursor - 1)
-        if (focus === 'envName') envNameTouched.current = true
-      }
-      return
-    }
-    if (input && !key.ctrl && !key.meta) {
-      setValue(value.slice(0, cursor) + input + value.slice(cursor))
-      setCursor(cursor + input.length)
-
-      // Auto-derive env name when URL changes (unless user manually edited it)
-      if (focus === 'url' && !envNameTouched.current) {
-        const newUrl = url.slice(0, urlCursor) + input + url.slice(urlCursor)
-        const derived = deriveEnvName(newUrl)
-        setEnvName(derived)
-        setEnvNameCursor(derived.length)
-      }
-      if (focus === 'envName') envNameTouched.current = true
     }
   })
 
@@ -130,17 +89,40 @@ export function AuthModal({ onSuccess, onCancel }: AuthModalProps) {
 
       <Box marginTop={1}>
         <Text color={focus === 'url' ? 'cyan' : undefined}>URL: </Text>
-        <FieldDisplay value={url} cursor={urlCursor} active={focus === 'url'} />
+        <TextInput
+          defaultValue={DEFAULT_URL}
+          onChange={val => {
+            setUrl(val)
+            if (!envNameTouched.current) {
+              const derived = deriveEnvName(val)
+              setEnvName(derived)
+              setEnvNameVersion(v => v + 1)
+            }
+          }}
+          isDisabled={focus !== 'url'}
+        />
       </Box>
 
       <Box marginTop={1}>
         <Text color={focus === 'key' ? 'cyan' : undefined}>Key / Auth Link: </Text>
-        <FieldDisplay value={keyInput} cursor={keyCursor} active={focus === 'key'} />
+        <TextInput
+          placeholder="mai_..."
+          onChange={setKeyInput}
+          isDisabled={focus !== 'key'}
+        />
       </Box>
 
       <Box marginTop={1}>
         <Text color={focus === 'envName' ? 'cyan' : undefined}>Env Name: </Text>
-        <FieldDisplay value={envName} cursor={envNameCursor} active={focus === 'envName'} />
+        <TextInput
+          key={envNameVersion}
+          defaultValue={envName}
+          onChange={val => {
+            setEnvName(val)
+            envNameTouched.current = true
+          }}
+          isDisabled={focus !== 'envName'}
+        />
       </Box>
 
       {error ? (
@@ -159,21 +141,5 @@ export function AuthModal({ onSuccess, onCancel }: AuthModalProps) {
         <Text dimColor>Tab to switch fields, Enter to submit, Esc to cancel.</Text>
       </Box>
     </Box>
-  )
-}
-
-function FieldDisplay({ value, cursor, active }: { value: string; cursor: number; active: boolean }) {
-  const before = value.slice(0, cursor)
-  const at = value[cursor] ?? ' '
-  const after = value.slice(cursor + 1)
-
-  return (
-    <Text>
-      <Text color="cyan">{before}</Text>
-      <Text backgroundColor={active ? 'cyan' : undefined} color={active ? 'black' : 'cyan'}>
-        {at}
-      </Text>
-      <Text color="cyan">{after}</Text>
-    </Text>
   )
 }

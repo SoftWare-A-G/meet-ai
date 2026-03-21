@@ -1,12 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Box, Text, useInput } from 'ink'
+import { Select } from '@inkjs/ui'
 import type { CodingAgentId } from '@meet-ai/cli/coding-agents'
 import type { Room } from '@meet-ai/cli/types'
 import {
-  clampSelectedRoomIndex,
-  getVisibleRoomWindow,
-  resolveSpawnSelection,
   markConnectedRooms,
+  resolveSpawnSelection,
   type SpawnDialogSelection,
 } from './spawn-dialog-state'
 
@@ -42,12 +41,14 @@ export function SpawnDialog({
     [rooms, connectedRoomIds],
   )
 
-  useEffect(() => {
-    setSelectedRoomIndex(current => clampSelectedRoomIndex(current, sortedRooms))
-    if (focus === 'list' && sortedRooms.length === 0) {
-      setFocus('input')
-    }
-  }, [focus, sortedRooms])
+  const roomOptions = useMemo(
+    () =>
+      sortedRooms.map(room => ({
+        label: room.name + (room.connected ? ' (connected)' : ''),
+        value: room.id,
+      })),
+    [sortedRooms],
+  )
 
   useInput((input, key) => {
     if (key.escape) {
@@ -64,6 +65,19 @@ export function SpawnDialog({
       return
     }
 
+    // Track list navigation to stay in sync with Select's internal state
+    if (focus === 'list') {
+      if (key.downArrow) {
+        setSelectedRoomIndex(current => Math.min(sortedRooms.length - 1, current + 1))
+        return
+      }
+      if (key.upArrow) {
+        setSelectedRoomIndex(current => Math.max(0, current - 1))
+        return
+      }
+    }
+
+    // Enter: submit for all focuses
     if (key.return) {
       const selection = resolveSpawnSelection({
         focus,
@@ -76,6 +90,7 @@ export function SpawnDialog({
       return
     }
 
+    // Agent picker: horizontal arrow navigation
     if (focus === 'agent') {
       if (key.upArrow || key.leftArrow) {
         setSelectedAgentIndex(current => Math.max(0, current - 1))
@@ -87,50 +102,40 @@ export function SpawnDialog({
       }
     }
 
-    if (focus === 'list') {
-      if (key.upArrow) {
-        setSelectedRoomIndex(current => clampSelectedRoomIndex(current - 1, sortedRooms))
-        return
-      }
-      if (key.downArrow) {
-        setSelectedRoomIndex(current => clampSelectedRoomIndex(current + 1, sortedRooms))
-        return
-      }
-    }
-
+    // Text input: cursor movement
     if (focus === 'input') {
       if (key.leftArrow) {
-        setCursor(current => Math.max(0, current - 1))
+        setCursor(c => Math.max(0, c - 1))
         return
       }
       if (key.rightArrow) {
-        setCursor(current => Math.min(roomName.length, current + 1))
+        setCursor(c => Math.min(roomName.length, c + 1))
+        return
+      }
+      if (key.backspace || key.delete) {
+        if (cursor > 0) {
+          setRoomName(prev => prev.slice(0, cursor - 1) + prev.slice(cursor))
+          setCursor(c => c - 1)
+        }
         return
       }
     }
 
-    if (key.backspace || key.delete) {
-      if (cursor > 0) {
-        setFocus('input')
-        setRoomName(value => value.slice(0, cursor - 1) + value.slice(cursor))
-        setCursor(current => current - 1)
-      }
-      return
-    }
-
+    // Printable character input (handles both input focus and quick-create from agent/list)
     if (input && !key.ctrl && !key.meta) {
-      setFocus('input')
-      setRoomName(value => value.slice(0, cursor) + input + value.slice(cursor))
-      setCursor(current => current + input.length)
+      if (focus !== 'input') {
+        setFocus('input')
+        // When auto-switching, insert at end
+        setRoomName(prev => prev + input)
+        setCursor(roomName.length + input.length)
+      } else {
+        setRoomName(prev => prev.slice(0, cursor) + input + prev.slice(cursor))
+        setCursor(c => c + input.length)
+      }
     }
   })
 
-  const before = roomName.slice(0, cursor)
-  const at = roomName[cursor] ?? ' '
-  const after = roomName.slice(cursor + 1)
   const selectedAgent = codingAgents[selectedAgentIndex]?.id ?? 'claude'
-  const visibleRooms = getVisibleRoomWindow(selectedRoomIndex, sortedRooms, maxVisibleRooms)
-  const windowStart = visibleRooms.length > 0 ? sortedRooms.indexOf(visibleRooms[0]!) : 0
 
   return (
     <Box
@@ -159,11 +164,15 @@ export function SpawnDialog({
 
       <Box marginTop={1}>
         <Text color={focus === 'input' ? 'green' : undefined}>Create room: </Text>
-        <Text color="cyan">{before}</Text>
-        <Text backgroundColor={focus === 'input' ? 'cyan' : undefined} color={focus === 'input' ? 'black' : 'cyan'}>
-          {at}
-        </Text>
-        <Text color="cyan">{after}</Text>
+        {focus === 'input' ? (
+          <Text>
+            {roomName.slice(0, cursor)}
+            <Text inverse>{roomName[cursor] ?? ' '}</Text>
+            {roomName.slice(cursor + 1)}
+          </Text>
+        ) : (
+          <Text>{roomName || <Text dimColor>room name</Text>}</Text>
+        )}
       </Box>
 
       <Box marginTop={1} flexDirection="column">
@@ -172,22 +181,14 @@ export function SpawnDialog({
           <Text dimColor>Loading rooms...</Text>
         ) : roomsError ? (
           <Text color="red">{roomsError}</Text>
-        ) : visibleRooms.length === 0 ? (
+        ) : roomOptions.length === 0 ? (
           <Text dimColor>No existing rooms.</Text>
         ) : (
-          visibleRooms.map((room, visibleIndex) => {
-            const absoluteIndex = windowStart + visibleIndex
-            const isSelected = absoluteIndex === clampSelectedRoomIndex(selectedRoomIndex, sortedRooms)
-            const marker = isSelected ? '>' : ' '
-            return (
-              <Box key={room.id}>
-                <Text color={isSelected && focus === 'list' ? 'yellow' : undefined} dimColor={room.connected}>
-                  {marker} {room.name}
-                </Text>
-                {room.connected ? <Text dimColor> (connected)</Text> : null}
-              </Box>
-            )
-          })
+          <Select
+            options={roomOptions}
+            visibleOptionCount={maxVisibleRooms}
+            isDisabled={focus !== 'list'}
+          />
         )}
       </Box>
 

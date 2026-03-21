@@ -1,5 +1,5 @@
-import { useState } from 'react'
 import { Box, Text, useInput } from 'ink'
+import { Select } from '@inkjs/ui'
 import { addEnv } from '@meet-ai/cli/lib/meetai-home'
 import type { MeetAiConfig, MigratableConfigSource } from '@meet-ai/cli/config'
 
@@ -10,42 +10,27 @@ interface MigrationModalProps {
   onManualSignIn: () => void
 }
 
+const MANUAL_SIGN_IN_VALUE = '__manual_sign_in__'
+
 export function MigrationModal({
   sources,
   onSuccess,
   onCancel,
   onManualSignIn,
 }: MigrationModalProps) {
-  const [selectedIndex, setSelectedIndex] = useState(0)
-
   useInput((_input, key) => {
     if (key.escape) {
       onCancel()
-      return
-    }
-
-    if (key.upArrow) {
-      setSelectedIndex(i => Math.max(0, i - 1))
-      return
-    }
-
-    if (key.downArrow) {
-      setSelectedIndex(i => Math.min(sources.length, i + 1))
-      return
-    }
-
-    if (key.return) {
-      if (selectedIndex === sources.length) {
-        onManualSignIn()
-        return
-      }
-
-      const chosen = sources[selectedIndex]
-      if (!chosen) return
-      addEnv(chosen.envName, { url: chosen.url, key: chosen.key })
-      onSuccess({ url: chosen.url, key: chosen.key })
     }
   })
+
+  const options = [
+    ...sources.map(source => ({
+      label: `${source.label}: ${source.url} -> ${source.envName}`,
+      value: `${source.kind}:${source.path}`,
+    })),
+    { label: 'Sign in manually', value: MANUAL_SIGN_IN_VALUE },
+  ]
 
   return (
     <Box flexDirection="column" borderStyle="round" borderColor="green" paddingX={1}>
@@ -56,17 +41,21 @@ export function MigrationModal({
         No Meet AI home config was found. Import credentials from an existing tool config.
       </Text>
 
-      <Box marginTop={1} flexDirection="column">
-        {sources.map((source, index) => (
-          <Text key={`${source.kind}:${source.path}`} color={index === selectedIndex ? 'green' : undefined}>
-            {index === selectedIndex ? '> ' : '  '}
-            {source.label}: {source.url} {'->'} {source.envName}
-          </Text>
-        ))}
-        <Text color={selectedIndex === sources.length ? 'green' : undefined}>
-          {selectedIndex === sources.length ? '> ' : '  '}
-          Sign in manually
-        </Text>
+      <Box marginTop={1}>
+        <Select
+          options={options}
+          onChange={value => {
+            if (value === MANUAL_SIGN_IN_VALUE) {
+              onManualSignIn()
+              return
+            }
+
+            const source = sources.find(s => `${s.kind}:${s.path}` === value)
+            if (!source) return
+            addEnv(source.envName, { url: source.url, key: source.key })
+            onSuccess({ url: source.url, key: source.key })
+          }}
+        />
       </Box>
 
       <Box marginTop={1}>
