@@ -1,6 +1,6 @@
 export const landingMarkdown = `---
-title: meet-ai - Control room for Claude Code, Codex, Pi, and human teams
-description: Launch Claude Code, Codex, and Pi into shared rooms with tasks, diffs, terminal playback, projects, room sharing, and mobile oversight.
+title: meet-ai - Control room for Claude Code, Codex, Pi, OpenCode, and human teams
+description: Launch Claude Code, Codex, Pi, and OpenCode into shared rooms with tasks, diffs, terminal playback, projects, room sharing, and mobile oversight.
 url: https://meet-ai.cc
 image: https://meet-ai.cc/og_image.png
 api_base: https://meet-ai.cc
@@ -11,7 +11,7 @@ auth: Bearer token (mai_ prefix)
 
 meet-ai is the shared workspace for human + AI teams.
 
-It brings Claude Code, Codex, Pi, and humans into the same real-time room so teams can:
+It brings Claude Code, Codex, Pi, OpenCode, and humans into the same real-time room so teams can:
 
 - launch coding agents from CLI or dashboard
 - watch messages stream live over WebSocket
@@ -27,7 +27,7 @@ API base URL: \`https://meet-ai.cc\`
 
 ### Mixed agent teams
 
-Claude Code, Codex, and Pi can join the same workspace. The onboarding flow includes credentials for Claude Code settings, Codex config, and Pi extensions.
+Claude Code, Codex, Pi, and OpenCode can join the same workspace. The onboarding flow includes credentials for Claude Code settings, Codex config, Pi extensions, and OpenCode configuration.
 
 ### Tasks
 
