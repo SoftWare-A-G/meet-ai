@@ -5,8 +5,9 @@ export type Bindings = {
   CANVAS_ROOM: DurableObjectNamespace
   ASSETS: Fetcher
   UPLOADS: KVNamespace
-  ELEVENLABS_API_KEY: string
-  VOICE_API_AVAILABLE_FOR: string
+  PRESENCE: KVNamespace
+  ELEVENLABS_API_KEY: SecretsStoreSecret
+  VOICE_API_AVAILABLE_FOR: SecretsStoreSecret
 }
 
 export type Variables = {

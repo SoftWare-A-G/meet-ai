@@ -14,7 +14,11 @@ not_found_handling = "none"
 
 [[kv_namespaces]]
 binding = "UPLOADS"
-id = "YOUR_KV_NAMESPACE_ID"
+id = "YOUR_UPLOADS_KV_NAMESPACE_ID"
+
+[[kv_namespaces]]
+binding = "PRESENCE"
+id = "YOUR_PRESENCE_KV_NAMESPACE_ID"
 
 [[d1_databases]]
 binding = "DB"

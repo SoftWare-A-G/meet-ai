@@ -45,29 +45,12 @@ export const roomsRoute = new Hono<AppEnv>()
     const keyId = c.get('keyId')
     const projectId = c.req.query('project_id')
     const db = queries(c.env.DB)
-    const rooms = await db.listRooms(keyId, projectId || undefined)
-    const roomsWithConnection = await Promise.all(
-      rooms.map(async room => {
-        try {
-          const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${room.id}`)
-          const stub = c.env.CHAT_ROOM.get(doId)
-          const res = await stub.fetch(new Request('http://internal/presence', { method: 'GET' }))
-          const presence = (await res.json()) as { cli_connections?: number }
-
-          return {
-            ...room,
-            connected: (presence.cli_connections ?? 0) > 0,
-          }
-        } catch {
-          return {
-            ...room,
-            connected: false,
-          }
-        }
-      })
-    )
-
-    return c.json(roomsWithConnection)
+    const [rooms, presenceRaw] = await Promise.all([
+      db.listRooms(keyId, projectId || undefined),
+      c.env.PRESENCE.get(`presence:${keyId}`),
+    ])
+    const connectedRooms = new Set<string>(presenceRaw ? (JSON.parse(presenceRaw) as string[]) : [])
+    return c.json(rooms.map(room => ({ ...room, connected: connectedRooms.has(room.id) })))
   })
 
   // POST /api/rooms — create a room

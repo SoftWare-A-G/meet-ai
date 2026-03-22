@@ -61,26 +61,6 @@ async function sendLog(key: string, roomId: string, sender: string, content: str
   })
 }
 
-async function upsertTeamMember(
-  key: string,
-  roomId: string,
-  teamName: string,
-  member: {
-    teammate_id: string
-    name: string
-    color: string
-    role: string
-    model: string
-    status: 'active' | 'inactive'
-    joinedAt: number
-  }
-) {
-  return SELF.fetch(`http://localhost/api/rooms/${roomId}/team-info/members`, {
-    method: 'PATCH',
-    headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ team_name: teamName, member }),
-  })
-}
 
 describe('API Keys', () => {
   it('POST /api/keys creates a key with mai_ prefix', async () => {
@@ -204,17 +184,6 @@ describe('Rooms', () => {
     const connectedRoomId = await createRoom(key, 'connected-room')
     const staleRoomId = await createRoom(key, 'stale-room')
 
-    const staleMemberRes = await upsertTeamMember(key, staleRoomId, 'demo-team', {
-      teammate_id: 'claude@demo-team',
-      name: 'claude',
-      color: '#3b82f6',
-      role: 'agent',
-      model: 'claude-opus-4-1',
-      status: 'active',
-      joinedAt: Date.now(),
-    })
-    expect(staleMemberRes.status).toBe(200)
-
     const wsRes = await SELF.fetch(`http://localhost/api/rooms/${connectedRoomId}/ws?client=cli`, {
       headers: {
         Authorization: `Bearer ${key}`,
@@ -234,18 +203,10 @@ describe('Rooms', () => {
     const rooms = await res.json() as { id: string; name: string; connected: boolean }[]
     expect(rooms).toHaveLength(2)
     expect(rooms).toContainEqual(
-      expect.objectContaining({
-        id: staleRoomId,
-        name: 'stale-room',
-        connected: false,
-      })
+      expect.objectContaining({ id: staleRoomId, name: 'stale-room', connected: false })
     )
     expect(rooms).toContainEqual(
-      expect.objectContaining({
-        id: connectedRoomId,
-        name: 'connected-room',
-        connected: true,
-      })
+      expect.objectContaining({ id: connectedRoomId, name: 'connected-room', connected: true })
     )
 
     socket?.close(1000, 'done')

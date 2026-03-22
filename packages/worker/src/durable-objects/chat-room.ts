@@ -1,4 +1,5 @@
 import { DurableObject } from 'cloudflare:workers'
+import type { Bindings } from '../lib/types'
 
 const STALE_TIMEOUT_MS = 120_000 // 2 minutes
 const ALARM_INTERVAL_MS = 60_000 // check every 60s
@@ -16,13 +17,21 @@ type StoredTask = {
   updated_at: number
 }
 
-export class ChatRoom extends DurableObject {
+export class ChatRoom extends DurableObject<Bindings> {
   private teamInfo: string | null = null
   private tasksInfo: string | null = null
   private commandsInfo: string | null = null
 
-  private getCliConnectionCount(): number {
-    return this.ctx.getWebSockets('cli').length
+  private async updatePresenceKV(keyId: string, roomId: string, connected: boolean) {
+    const kvKey = `presence:${keyId}`
+    const raw = await this.env.PRESENCE.get(kvKey)
+    const connectedRooms = new Set<string>(raw ? (JSON.parse(raw) as string[]) : [])
+    if (connected) {
+      connectedRooms.add(roomId)
+    } else {
+      connectedRooms.delete(roomId)
+    }
+    await this.env.PRESENCE.put(kvKey, JSON.stringify([...connectedRooms]), { expirationTtl: 600 })
   }
 
   private broadcastAll(data: string) {
@@ -59,7 +68,14 @@ export class ChatRoom extends DurableObject {
       const pair = new WebSocketPair()
       const [client, server] = Object.values(pair)
       const clientType = url.searchParams.get('client') === 'cli' ? 'cli' : 'web'
+      const keyId = url.searchParams.get('key_id')
+      const roomId = url.searchParams.get('room_id')
       this.ctx.acceptWebSocket(server, [clientType])
+
+      if (clientType === 'cli' && keyId && roomId) {
+        server.serializeAttachment({ keyId, roomId })
+        await this.updatePresenceKV(keyId, roomId, true)
+      }
 
       // Edge-level auto-response: pings are answered without waking the DO
       this.ctx.setWebSocketAutoResponse(
@@ -100,15 +116,6 @@ export class ChatRoom extends DurableObject {
       }
 
       return new Response(null, { status: 101, webSocket: client })
-    }
-
-    if (url.pathname === '/presence' && request.method === 'GET') {
-      return new Response(
-        JSON.stringify({
-          cli_connections: this.getCliConnectionCount(),
-        }),
-        { headers: { 'Content-Type': 'application/json' } }
-      )
     }
 
     // /broadcast — internal broadcast from Worker
@@ -550,8 +557,12 @@ export class ChatRoom extends DurableObject {
     }
   }
 
-  async webSocketClose(_ws: WebSocket, _code: number, _reason: string, _wasClean: boolean) {
+  async webSocketClose(ws: WebSocket, _code: number, _reason: string, _wasClean: boolean) {
     // Hibernation API handles cleanup — no need to call ws.close() again
+    const attachment = ws.deserializeAttachment() as { keyId?: string; roomId?: string } | null
+    if (attachment?.keyId && attachment?.roomId && this.ctx.getWebSockets('cli').length === 0) {
+      await this.updatePresenceKV(attachment.keyId, attachment.roomId, false)
+    }
   }
 
   async webSocketError(ws: WebSocket, _error: unknown) {

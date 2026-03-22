@@ -24,6 +24,8 @@ export const wsRoute = new Hono<AppEnv>()
     const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
     const stub = c.env.CHAT_ROOM.get(doId)
     const originalUrl = new URL(c.req.url)
+    originalUrl.searchParams.set('key_id', keyId)
+    originalUrl.searchParams.set('room_id', roomId)
 
     return stub.fetch(
       new Request(`http://internal/ws${originalUrl.search}`, {

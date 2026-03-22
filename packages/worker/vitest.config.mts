@@ -16,7 +16,7 @@ export default defineConfig(async () => {
         wrangler: { configPath: './wrangler.toml' },
         miniflare: {
           d1Databases: ['DB'],
-          kvNamespaces: ['UPLOADS'],
+          kvNamespaces: ['UPLOADS', 'PRESENCE'],
           bindings: { TEST_MIGRATIONS: migrations },
         },
       }),

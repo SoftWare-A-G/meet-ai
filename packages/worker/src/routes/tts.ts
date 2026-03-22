@@ -32,8 +32,8 @@ function checkTtsApiLimit(keyId: string): boolean {
   return true
 }
 
-function isVoiceAuthorized(c: Context<AppEnv>): boolean {
-  return extractToken(c) === c.env.VOICE_API_AVAILABLE_FOR
+async function isVoiceAuthorized(c: Context<AppEnv>): Promise<boolean> {
+  return extractToken(c) === (await c.env.VOICE_API_AVAILABLE_FOR.get())
 }
 
 async function hashText(text: string): Promise<string> {
@@ -47,7 +47,7 @@ async function hashText(text: string): Promise<string> {
 export const ttsRoute = new Hono<AppEnv>()
 
   // GET /api/tts/status — check if TTS is available for this key
-  .get('/status', requireAuth, c => c.json({ available: isVoiceAuthorized(c) }))
+  .get('/status', requireAuth, async c => c.json({ available: await isVoiceAuthorized(c) }))
 
   // POST /api/tts — generate or return cached TTS audio
   .post('/', requireAuth, zValidator('json', ttsSchema), async c => {
@@ -80,7 +80,7 @@ export const ttsRoute = new Hono<AppEnv>()
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
       method: 'POST',
       headers: {
-        'xi-api-key': c.env.ELEVENLABS_API_KEY,
+        'xi-api-key': await c.env.ELEVENLABS_API_KEY.get(),
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ text, model_id: MODEL_ID }),
