@@ -20,6 +20,20 @@ export {
   upsertTaskSchema,
 }
 
+// --- Stored team info (storage-specific schemas) ---
+
+export const storedTeamInfoMemberSchema = teamInfoMemberSchema.extend({
+  teammate_id: z.string(),
+})
+export type StoredTeamInfoMember = z.infer<typeof storedTeamInfoMemberSchema>
+
+export const storedTeamInfoSchema = z.object({
+  type: z.literal('team_info'),
+  team_name: z.string(),
+  members: z.array(storedTeamInfoMemberSchema),
+})
+export type StoredTeamInfo = z.infer<typeof storedTeamInfoSchema>
+
 // --- Broadcast event types (discriminated union) ---
 
 export const chatRoomMessageEventSchema = z.object({
