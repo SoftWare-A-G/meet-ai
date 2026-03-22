@@ -21,6 +21,7 @@ import type { AppEnv } from '../lib/types'
 import { createDOClient } from '../lib/do-client'
 import type { LobbyApp } from '../durable-objects/lobby'
 import type { CanvasRoomApp } from '../durable-objects/canvas-room'
+import type { ChatRoomApp } from '../durable-objects/chat-room'
 import type { TeamInfoPayload } from '../schemas/rooms'
 
 type TaskPayload = {
@@ -709,9 +710,8 @@ export const roomsRoute = new Hono<AppEnv>()
     // Destroy ChatRoom DO (notifies clients, closes WebSockets, wipes storage)
     const chatDoId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
     const chatStub = c.env.CHAT_ROOM.get(chatDoId)
-    await chatStub.fetch(
-      new Request('http://internal/destroy', { method: 'DELETE' })
-    )
+    const chatClient = createDOClient<ChatRoomApp>(chatStub)
+    await chatClient.destroy.$delete()
 
     await db.deleteRoom(keyId, roomId)
 

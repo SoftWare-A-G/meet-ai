@@ -104,6 +104,24 @@ export const chatRoomBroadcastSchema = z.discriminatedUnion('type', [
 ])
 export type ChatRoomBroadcast = z.infer<typeof chatRoomBroadcastSchema>
 
+// --- WebSocket query params (GET /ws) ---
+
+export const wsQuerySchema = z.object({
+  client: z.enum(['cli', 'web']).optional(),
+  key_id: z.string().optional(),
+  room_id: z.string().optional(),
+})
+export type WsQuery = z.infer<typeof wsQuerySchema>
+
+// --- WebSocket incoming messages (webSocketMessage lifecycle) ---
+
+export const wsIncomingMessageSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('terminal_subscribe'), paneId: z.string() }),
+  z.object({ type: z.literal('terminal_unsubscribe') }),
+  z.object({ type: z.literal('terminal_resize'), cols: z.number() }),
+])
+export type WsIncomingMessage = z.infer<typeof wsIncomingMessageSchema>
+
 // --- Terminal ---
 
 export const terminalSchema = z.object({

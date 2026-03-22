@@ -2,7 +2,7 @@ import { DurableObject } from 'cloudflare:workers'
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod/v4'
-import { chatRoomBroadcastSchema, terminalSchema, commandsSchema, teamInfoSchema, teamInfoUpsertSchema, tasksFullReplaceSchema, createTaskSchema, updateTaskSchema, upsertTaskSchema, storedTeamInfoSchema } from '../schemas/chat-room'
+import { chatRoomBroadcastSchema, terminalSchema, commandsSchema, teamInfoSchema, teamInfoUpsertSchema, tasksFullReplaceSchema, createTaskSchema, updateTaskSchema, upsertTaskSchema, storedTeamInfoSchema, wsQuerySchema, wsIncomingMessageSchema } from '../schemas/chat-room'
 import type { StoredTask, StoredTeamInfo } from '../schemas/chat-room'
 import type { TeamInfoPayload, TeamInfoUpsertPayload } from '../schemas/rooms'
 import type { Bindings } from '../lib/types'
@@ -92,6 +92,20 @@ function createApp(getChatRoom: () => ChatRoom) {
       if (!result) return c.json({ error: 'subject is required when creating a new task' }, 400)
       const status = result.upserted === 'created' ? 201 : 200
       return c.json(result, status)
+    })
+    .get('/ws', zValidator('query', wsQuerySchema), async (c) => {
+      const room = getChatRoom()
+      const query = c.req.valid('query')
+      const client = await room.handleWebSocketUpgrade({
+        clientType: query.client === 'cli' ? 'cli' : 'web',
+        keyId: query.key_id,
+        roomId: query.room_id,
+      })
+      return new Response(null, { status: 101, webSocket: client })
+    })
+    .delete('/destroy', async (c) => {
+      await getChatRoom().destroy()
+      return c.json({ ok: true as const })
     })
 }
 
@@ -338,84 +352,76 @@ export class ChatRoom extends DurableObject<Bindings> {
     return { ...newTask, upserted: 'created' }
   }
 
-  async fetch(request: Request): Promise<Response> {
-    const url = new URL(request.url)
+  /** Handle a WebSocket upgrade: create pair, accept with hibernation, send cached state, schedule alarm. */
+  async handleWebSocketUpgrade(params: { clientType: 'cli' | 'web'; keyId?: string | undefined; roomId?: string | undefined }): Promise<WebSocket> {
+    const pair = new WebSocketPair()
+    const [client, server] = Object.values(pair)
+    this.ctx.acceptWebSocket(server, [params.clientType])
 
-    // /ws — WebSocket upgrade
-    if (url.pathname === '/ws') {
-      const pair = new WebSocketPair()
-      const [client, server] = Object.values(pair)
-      const clientType = url.searchParams.get('client') === 'cli' ? 'cli' : 'web'
-      const keyId = url.searchParams.get('key_id')
-      const roomId = url.searchParams.get('room_id')
-      this.ctx.acceptWebSocket(server, [clientType])
+    if (params.clientType === 'cli' && params.keyId && params.roomId) {
+      server.serializeAttachment({ keyId: params.keyId, roomId: params.roomId })
+      await this.updatePresenceKV(params.keyId, params.roomId, true)
+    }
 
-      if (clientType === 'cli' && keyId && roomId) {
-        server.serializeAttachment({ keyId, roomId })
-        await this.updatePresenceKV(keyId, roomId, true)
-      }
-
-      // Edge-level auto-response: pings are answered without waking the DO
-      this.ctx.setWebSocketAutoResponse(
-        new WebSocketRequestResponsePair(
-          JSON.stringify({ type: 'ping' }),
-          JSON.stringify({ type: 'pong' })
-        )
+    // Edge-level auto-response: pings are answered without waking the DO
+    this.ctx.setWebSocketAutoResponse(
+      new WebSocketRequestResponsePair(
+        JSON.stringify({ type: 'ping' }),
+        JSON.stringify({ type: 'pong' })
       )
+    )
 
-      // Send cached team info to the new client (load from storage if cache is empty)
-      if (!this.teamInfo) {
-        this.teamInfo = (await this.ctx.storage.get<string>('teamInfo')) ?? null
-      }
-      if (this.teamInfo) {
-        server.send(this.teamInfo)
-      }
-
-      // Send cached tasks info to the new client (load from storage if cache is empty)
-      if (!this.tasksInfo) {
-        this.tasksInfo = (await this.ctx.storage.get<string>('tasksInfo')) ?? null
-      }
-      if (this.tasksInfo) {
-        server.send(this.tasksInfo)
-      }
-
-      // Send cached commands info to the new client (load from storage if cache is empty)
-      if (!this.commandsInfo) {
-        this.commandsInfo = (await this.ctx.storage.get<string>('commandsInfo')) ?? null
-      }
-      if (this.commandsInfo) {
-        server.send(this.commandsInfo)
-      }
-
-      // Schedule alarm to clean up stale connections
-      const alarm = await this.ctx.storage.getAlarm()
-      if (!alarm) {
-        await this.ctx.storage.setAlarm(Date.now() + ALARM_INTERVAL_MS)
-      }
-
-      return new Response(null, { status: 101, webSocket: client })
+    // Send cached team info to the new client (load from storage if cache is empty)
+    if (!this.teamInfo) {
+      this.teamInfo = (await this.ctx.storage.get<string>('teamInfo')) ?? null
+    }
+    if (this.teamInfo) {
+      server.send(this.teamInfo)
     }
 
-    // DELETE /destroy — tear down the chat room (notify clients, close connections, wipe storage)
-    if (url.pathname === '/destroy' && request.method === 'DELETE') {
-      const message = JSON.stringify({ type: 'room_deleted' })
-      for (const ws of this.ctx.getWebSockets()) {
-        try {
-          ws.send(message)
-          ws.close(4040, 'room deleted')
-        } catch {
-          /* already closed */
-        }
-      }
-      this.teamInfo = null
-      this.tasksInfo = null
-      this.commandsInfo = null
-      await this.ctx.storage.deleteAll()
-      return new Response(JSON.stringify({ ok: true }), {
-        headers: { 'Content-Type': 'application/json' },
-      })
+    // Send cached tasks info to the new client (load from storage if cache is empty)
+    if (!this.tasksInfo) {
+      this.tasksInfo = (await this.ctx.storage.get<string>('tasksInfo')) ?? null
+    }
+    if (this.tasksInfo) {
+      server.send(this.tasksInfo)
     }
 
+    // Send cached commands info to the new client (load from storage if cache is empty)
+    if (!this.commandsInfo) {
+      this.commandsInfo = (await this.ctx.storage.get<string>('commandsInfo')) ?? null
+    }
+    if (this.commandsInfo) {
+      server.send(this.commandsInfo)
+    }
+
+    // Schedule alarm to clean up stale connections
+    const alarm = await this.ctx.storage.getAlarm()
+    if (!alarm) {
+      await this.ctx.storage.setAlarm(Date.now() + ALARM_INTERVAL_MS)
+    }
+
+    return client
+  }
+
+  /** Tear down the chat room: notify clients, close connections, wipe storage. */
+  async destroy(): Promise<void> {
+    const message = JSON.stringify({ type: 'room_deleted' })
+    for (const ws of this.ctx.getWebSockets()) {
+      try {
+        ws.send(message)
+        ws.close(4040, 'room deleted')
+      } catch {
+        /* already closed */
+      }
+    }
+    this.teamInfo = null
+    this.tasksInfo = null
+    this.commandsInfo = null
+    await this.ctx.storage.deleteAll()
+  }
+
+  async fetch(request: Request): Promise<Response> {
     return this.app.fetch(request)
   }
 
@@ -447,25 +453,30 @@ export class ChatRoom extends DurableObject<Bindings> {
     }
   }
 
-  async webSocketMessage(_ws: WebSocket, message: string | ArrayBuffer) {
+  async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer) {
     // Ping/pong handled by setWebSocketAutoResponse (edge-level, no DO wake).
     if (typeof message !== 'string') return
 
-    let parsed: { type?: string; paneId?: string }
+    let parsed: unknown
     try {
       parsed = JSON.parse(message)
     } catch {
+      ws.send(JSON.stringify({ type: 'error', error: 'invalid_json' }))
       return
     }
 
-    if (parsed.type === 'terminal_subscribe' || parsed.type === 'terminal_unsubscribe' || parsed.type === 'terminal_resize') {
-      // Broadcast subscription events to all connected clients
-      for (const ws of this.ctx.getWebSockets()) {
-        try {
-          ws.send(message)
-        } catch {
-          /* client gone */
-        }
+    const result = wsIncomingMessageSchema.safeParse(parsed)
+    if (!result.success) {
+      ws.send(JSON.stringify({ type: 'error', error: 'invalid_message' }))
+      return
+    }
+
+    // Broadcast validated subscription/resize events to all connected clients
+    for (const sock of this.ctx.getWebSockets()) {
+      try {
+        sock.send(message)
+      } catch {
+        /* client gone */
       }
     }
   }
