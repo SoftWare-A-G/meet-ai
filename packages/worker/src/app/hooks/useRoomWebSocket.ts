@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { fetchMessagesSinceSeq } from '../lib/fetchers'
+import { fetchMessages, fetchMessagesSinceSeq, fetchLogs } from '../lib/fetchers'
 import { queryKeys } from '../lib/query-keys'
 import { useRoomStore } from '../stores/useRoomStore'
 import { mergeIntoTimeline, reconcileOptimistic } from './useRoomTimeline'
@@ -98,32 +98,63 @@ export function useRoomWebSocket(
       useRoomStore.getState()
 
     async function catchUp() {
-      if (!roomId || lastSeqRef.current === 0) return
-      try {
-        const missed = await fetchMessagesSinceSeq(roomId, lastSeqRef.current)
-        if (missed.length === 0) return
+      if (!roomId) return
 
-        // Update lastSeqRef
-        for (const msg of missed) {
+      // Re-compute lastSeq from the current cache — the ref may be stale
+      // (e.g. timeline loaded after the effect created the WS connection)
+      const cached = queryClient.getQueryData<TimelineItem[]>(queryKeys.rooms.timeline(roomId))
+      const cachedSeq = getLastTimelineSeq(cached)
+      const seqBaseline = Math.max(lastSeqRef.current, cachedSeq)
+      lastSeqRef.current = seqBaseline
+
+      // Track whether this is a bootstrap (seq=0) or incremental catch-up
+      const isBootstrap = seqBaseline === 0
+
+      try {
+        // Fetch missed messages: incremental when we have a baseline,
+        // full fetch as one-time bootstrap fallback when seq is unknown.
+        const missedMessages = seqBaseline > 0
+          ? await fetchMessagesSinceSeq(roomId, seqBaseline)
+          : await fetchMessages(roomId)
+
+        // Always re-fetch logs — they have no seq column so we can't do
+        // incremental fetch. The API caps at 100 and mergeIntoTimeline
+        // deduplicates by ID, so this is cheap and idempotent.
+        const freshLogs = await fetchLogs(roomId)
+
+        // Update lastSeqRef from new messages
+        for (const msg of missedMessages) {
           if (msg.seq != null && msg.seq > lastSeqRef.current) {
             lastSeqRef.current = msg.seq
           }
         }
+
+        const taggedMessages = missedMessages.map(m => ({ ...m, status: 'sent' as const }))
+        const taggedLogs = freshLogs.map(l => ({
+          ...l,
+          type: 'log' as const,
+          status: 'sent' as const,
+        }))
+        const incoming = [...taggedMessages, ...taggedLogs]
+
+        if (incoming.length === 0) return
 
         // Merge into timeline cache
         void queryClient.cancelQueries({ queryKey: queryKeys.rooms.timeline(roomId) })
         queryClient.setQueryData<TimelineItem[]>(
           queryKeys.rooms.timeline(roomId),
           old => {
-            const tagged = missed.map(m => ({ ...m, status: 'sent' as const }))
-            if (!old) return tagged
-            return mergeIntoTimeline(old, tagged)
+            if (!old) return incoming
+            return mergeIntoTimeline(old, incoming)
           },
         )
 
-        // Side effects for missed messages
-        for (const msg of missed) {
-          onMessageRef.current?.(msg)
+        // Side effects for incremental catch-up only — bootstrap (seq=0)
+        // repairs state without replaying notifications/haptics for old messages
+        if (!isBootstrap) {
+          for (const msg of missedMessages) {
+            onMessageRef.current?.(msg)
+          }
         }
       } catch {
         /* ignore catch-up errors */
