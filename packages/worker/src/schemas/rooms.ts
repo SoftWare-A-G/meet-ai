@@ -43,6 +43,7 @@ export const teamInfoSchema = z.object({
 })
 
 export type TeamInfoPayload = z.infer<typeof teamInfoSchema>
+export type TeamInfoUpsertPayload = z.infer<typeof teamInfoUpsertSchema>
 
 export const teamInfoUpsertSchema = z.object({
   team_name: z.string(),

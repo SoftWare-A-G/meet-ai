@@ -1,7 +1,8 @@
 import { DurableObject } from 'cloudflare:workers'
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
-import { chatRoomBroadcastSchema, terminalSchema, commandsSchema } from '../schemas/chat-room'
+import { chatRoomBroadcastSchema, terminalSchema, commandsSchema, teamInfoSchema, teamInfoUpsertSchema } from '../schemas/chat-room'
+import type { TeamInfoPayload, TeamInfoUpsertPayload } from '../schemas/rooms'
 import type { Bindings } from '../lib/types'
 
 const STALE_TIMEOUT_MS = 120_000 // 2 minutes
@@ -18,6 +19,22 @@ type StoredTask = {
   source_id: string | null
   updated_by: string | null
   updated_at: number
+}
+
+type StoredTeamInfoMember = {
+  teammate_id: string
+  name: string
+  color: string
+  role: string
+  model: string
+  status: string
+  joinedAt: number
+}
+
+type StoredTeamInfo = {
+  type: 'team_info'
+  team_name: string
+  members: StoredTeamInfoMember[]
 }
 
 function createApp(getChatRoom: () => ChatRoom) {
@@ -44,6 +61,23 @@ function createApp(getChatRoom: () => ChatRoom) {
       room.broadcastAll(payload)
       return c.json({ ok: true })
     })
+    .get('/team-info', async (c) => {
+      const room = getChatRoom()
+      const data = await room.getTeamInfo()
+      return c.json(JSON.parse(data))
+    })
+    .post('/team-info', zValidator('json', teamInfoSchema), async (c) => {
+      const room = getChatRoom()
+      const body = c.req.valid('json')
+      await room.storeTeamInfo(body)
+      return c.json({ ok: true })
+    })
+    .post('/team-info/upsert', zValidator('json', teamInfoUpsertSchema), async (c) => {
+      const room = getChatRoom()
+      const body = c.req.valid('json')
+      await room.upsertTeamMember(body.team_name, body.member)
+      return c.json({ ok: true })
+    })
 }
 
 export type ChatRoomApp = ReturnType<typeof createApp>
@@ -68,6 +102,59 @@ export class ChatRoom extends DurableObject<Bindings> {
   async storeCommandsInfo(payload: string): Promise<void> {
     this.commandsInfo = payload
     await this.ctx.storage.put('commandsInfo', payload)
+  }
+
+  /** Return cached or stored team info as a JSON string. */
+  async getTeamInfo(): Promise<string> {
+    if (!this.teamInfo) {
+      this.teamInfo = (await this.ctx.storage.get<string>('teamInfo')) ?? null
+    }
+    return this.teamInfo ?? JSON.stringify({ type: 'team_info', members: [] })
+  }
+
+  /** Assign teammate_id to members without one, store and broadcast team info. */
+  async storeTeamInfo(parsed: TeamInfoPayload): Promise<void> {
+    const members = parsed.members.map(member => ({
+      ...member,
+      teammate_id: member.teammate_id ?? crypto.randomUUID(),
+    }))
+    const payload = JSON.stringify({ type: 'team_info', team_name: parsed.team_name, members })
+    this.teamInfo = payload
+    await this.ctx.storage.put('teamInfo', payload)
+    this.broadcastAll(payload)
+  }
+
+  /** Merge a single member into team info by teammate_id, store and broadcast. */
+  async upsertTeamMember(teamName: string, member: TeamInfoUpsertPayload['member']): Promise<void> {
+    if (!this.teamInfo) {
+      this.teamInfo = (await this.ctx.storage.get<string>('teamInfo')) ?? null
+    }
+    const current: StoredTeamInfo = this.teamInfo
+      ? JSON.parse(this.teamInfo)
+      : { type: 'team_info', team_name: teamName, members: [] }
+
+    if (teamName) current.team_name = teamName
+
+    const members = current.members
+    const idx = members.findIndex(m => m.teammate_id === member.teammate_id)
+    if (idx !== -1) {
+      const updated = { ...members[idx] }
+      if (member.name) updated.name = member.name
+      if (member.status) updated.status = member.status
+      if (member.color && member.color !== '#555') updated.color = member.color
+      if (member.model && member.model !== 'unknown') updated.model = member.model
+      if (member.role) updated.role = member.role
+      if (member.joinedAt > 0) updated.joinedAt = member.joinedAt
+      members[idx] = updated
+    } else {
+      members.push(member)
+    }
+    current.members = members
+
+    const payload = JSON.stringify(current)
+    this.teamInfo = payload
+    await this.ctx.storage.put('teamInfo', payload)
+    this.broadcastAll(payload)
   }
 
   private async updatePresenceKV(keyId: string, roomId: string, connected: boolean) {
@@ -164,92 +251,6 @@ export class ChatRoom extends DurableObject<Bindings> {
       }
 
       return new Response(null, { status: 101, webSocket: client })
-    }
-
-    // GET /team-info — return current team info
-    if (url.pathname === '/team-info' && request.method === 'GET') {
-      if (!this.teamInfo) {
-        this.teamInfo = (await this.ctx.storage.get<string>('teamInfo')) ?? null
-      }
-      return new Response(this.teamInfo ?? JSON.stringify({ type: 'team_info', members: [] }), {
-        headers: { 'Content-Type': 'application/json' },
-      })
-    }
-
-    // /team-info — store and broadcast team info
-    if (url.pathname === '/team-info') {
-      const body = await request.text()
-      const parsed = JSON.parse(body)
-      if (Array.isArray(parsed.members)) {
-        for (const member of parsed.members) {
-          if (!member.teammate_id) {
-            member.teammate_id = crypto.randomUUID()
-          }
-        }
-      }
-      const payload = JSON.stringify({ type: 'team_info', ...parsed })
-      this.teamInfo = payload
-      await this.ctx.storage.put('teamInfo', payload)
-
-      for (const ws of this.ctx.getWebSockets()) {
-        try {
-          ws.send(payload)
-        } catch {
-          /* client gone */
-        }
-      }
-
-      return new Response('ok')
-    }
-
-    // /team-info/upsert — merge a single member into team info
-    if (url.pathname === '/team-info/upsert') {
-      const body = JSON.parse(await request.text())
-      const { team_name, member } = body
-
-      // Load existing team info
-      if (!this.teamInfo) {
-        this.teamInfo = (await this.ctx.storage.get<string>('teamInfo')) ?? null
-      }
-
-      const current = this.teamInfo
-        ? JSON.parse(this.teamInfo)
-        : { type: 'team_info', team_name, members: [] }
-
-      // Update team_name if provided
-      if (team_name) current.team_name = team_name
-
-      // Upsert: find by teammate_id, replace or append
-      const members: { teammate_id: string; name: string; color: string; role: string; model: string; status: string; joinedAt: number }[] = current.members ?? []
-      const idx = members.findIndex(m => m.teammate_id === member.teammate_id)
-      if (idx !== -1) {
-        // Selective merge: preserve existing values when new values are placeholders
-        const updated = { ...members[idx] }
-        if (member.name) updated.name = member.name
-        if (member.status) updated.status = member.status
-        if (member.color && member.color !== '#555') updated.color = member.color
-        if (member.model && member.model !== 'unknown') updated.model = member.model
-        if (member.role) updated.role = member.role
-        if (member.joinedAt > 0) updated.joinedAt = member.joinedAt
-        members[idx] = updated
-      } else {
-        members.push(member)
-      }
-      current.members = members
-
-      const payload = JSON.stringify(current)
-      this.teamInfo = payload
-      await this.ctx.storage.put('teamInfo', payload)
-
-      for (const ws of this.ctx.getWebSockets()) {
-        try {
-          ws.send(payload)
-        } catch {
-          /* client gone */
-        }
-      }
-
-      return new Response('ok')
     }
 
     // GET /tasks — return current task list
