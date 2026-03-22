@@ -73,7 +73,7 @@ export default function QRShareModal({ onClose, onToast: _onToast }: QRShareModa
         </DialogDescription>
         <div
           ref={qrRef}
-          className="mx-auto mb-5 flex max-w-50 items-center justify-center overflow-hidden [&_img]:block [&_img]:!h-auto [&_img]:w-full">
+          className="mx-auto mb-5 flex max-w-50 items-center justify-center overflow-hidden [&_img]:block [&_img]:h-auto! [&_img]:w-full">
           {qrDataUrl ? (
             <img src={qrDataUrl} alt="QR code" />
           ) : shareError ? (
@@ -86,14 +86,14 @@ export default function QRShareModal({ onClose, onToast: _onToast }: QRShareModa
         </div>
         {shareUrl && (
           <div
-            className="border-border relative mb-2 cursor-pointer rounded-md border bg-white/10 px-2.5 py-2 font-mono text-xs break-all hover:bg-white/[0.15]"
+            className="border-border relative mb-2 cursor-pointer rounded-md border bg-white/10 px-2.5 py-2 font-mono text-xs break-all hover:bg-white/15"
             id="qr-url"
             onClick={handleCopy}
             title="Click to copy">
             {shareUrl}
           </div>
         )}
-        <div className="relative mb-1 h-[18px] text-xs text-[#3FB950]">
+        <div className="relative mb-1 h-4.5 text-xs text-[#3FB950]">
           {copied && <span className="absolute inset-x-0">Copied to clipboard!</span>}
         </div>
         <div className="mb-3 text-xs opacity-50">Expires in 5 minutes</div>
