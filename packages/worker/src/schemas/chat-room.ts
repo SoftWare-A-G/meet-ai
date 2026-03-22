@@ -20,12 +20,75 @@ export {
   upsertTaskSchema,
 }
 
-// --- Broadcast ---
+// --- Broadcast event types (discriminated union) ---
 
-export const broadcastSchema = z.object({
-  data: z.string(),
+export const chatRoomMessageEventSchema = z.object({
+  type: z.literal('message'),
+  id: z.string(),
+  room_id: z.string(),
+  sender: z.string(),
+  sender_type: z.enum(['agent', 'human']),
+  content: z.string(),
+  color: z.string().nullable(),
+  seq: z.number(),
+  created_at: z.string(),
+  attachment_count: z.number(),
+  question_review_id: z.string().optional(),
+  question_review_status: z.string().optional(),
+  permission_review_id: z.string().optional(),
+  permission_review_status: z.string().optional(),
+  plan_review_id: z.string().optional(),
 })
-export type Broadcast = z.infer<typeof broadcastSchema>
+export type ChatRoomMessageEvent = z.infer<typeof chatRoomMessageEventSchema>
+
+export const chatRoomLogEventSchema = z.object({
+  type: z.literal('log'),
+  id: z.string(),
+  room_id: z.string(),
+  message_id: z.string().nullable(),
+  sender: z.string(),
+  content: z.string(),
+  color: z.string().nullable(),
+  created_at: z.string(),
+})
+export type ChatRoomLogEvent = z.infer<typeof chatRoomLogEventSchema>
+
+export const chatRoomQuestionAnswerEventSchema = z.object({
+  type: z.literal('question_answer'),
+  question_review_id: z.string(),
+  status: z.enum(['answered', 'expired']),
+  answers: z.record(z.string(), z.string()).optional(),
+  answered_by: z.string().optional(),
+})
+export type ChatRoomQuestionAnswerEvent = z.infer<typeof chatRoomQuestionAnswerEventSchema>
+
+export const chatRoomPermissionDecisionEventSchema = z.object({
+  type: z.literal('permission_decision'),
+  permission_review_id: z.string(),
+  status: z.enum(['approved', 'denied', 'expired']),
+  feedback: z.string().nullable().optional(),
+  decided_by: z.string().optional(),
+})
+export type ChatRoomPermissionDecisionEvent = z.infer<typeof chatRoomPermissionDecisionEventSchema>
+
+export const chatRoomPlanDecisionEventSchema = z.object({
+  type: z.literal('plan_decision'),
+  plan_review_id: z.string(),
+  status: z.enum(['approved', 'denied', 'expired']),
+  feedback: z.string().nullable().optional(),
+  decided_by: z.string().optional(),
+  permission_mode: z.string().optional(),
+})
+export type ChatRoomPlanDecisionEvent = z.infer<typeof chatRoomPlanDecisionEventSchema>
+
+export const chatRoomBroadcastSchema = z.discriminatedUnion('type', [
+  chatRoomMessageEventSchema,
+  chatRoomLogEventSchema,
+  chatRoomQuestionAnswerEventSchema,
+  chatRoomPermissionDecisionEventSchema,
+  chatRoomPlanDecisionEventSchema,
+])
+export type ChatRoomBroadcast = z.infer<typeof chatRoomBroadcastSchema>
 
 // --- Terminal ---
 

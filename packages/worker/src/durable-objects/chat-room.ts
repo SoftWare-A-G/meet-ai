@@ -1,4 +1,7 @@
 import { DurableObject } from 'cloudflare:workers'
+import { Hono } from 'hono'
+import { zValidator } from '@hono/zod-validator'
+import { chatRoomBroadcastSchema, terminalSchema, commandsSchema } from '../schemas/chat-room'
 import type { Bindings } from '../lib/types'
 
 const STALE_TIMEOUT_MS = 120_000 // 2 minutes
@@ -17,10 +20,51 @@ type StoredTask = {
   updated_at: number
 }
 
+function createApp(getChatRoom: () => ChatRoom) {
+  return new Hono()
+    .post('/broadcast', zValidator('json', chatRoomBroadcastSchema), (c) => {
+      const room = getChatRoom()
+      const event = c.req.valid('json')
+      const data = JSON.stringify(event)
+      let sent = 0
+      let failed = 0
+      for (const ws of room.doCtx.getWebSockets()) {
+        try { ws.send(data); sent++ } catch { failed++ }
+      }
+      if (failed > 0) console.warn(`broadcast: ${sent} sent, ${failed} failed`)
+      return c.json({ ok: true })
+    })
+    .post('/terminal', zValidator('json', terminalSchema), (c) => {
+      const room = getChatRoom()
+      const body = c.req.valid('json')
+      const data = JSON.stringify(body)
+      for (const ws of room.doCtx.getWebSockets()) {
+        try { ws.send(data) } catch { /* client gone */ }
+      }
+      return c.json({ ok: true })
+    })
+    .post('/commands', zValidator('json', commandsSchema), async (c) => {
+      const room = getChatRoom()
+      const body = c.req.valid('json')
+      const payload = JSON.stringify({ type: 'commands_info', ...body })
+      room.commandsInfo = payload
+      await room.doCtx.storage.put('commandsInfo', payload)
+      room.broadcastAll(payload)
+      return c.json({ ok: true })
+    })
+}
+
+export type ChatRoomApp = ReturnType<typeof createApp>
+
 export class ChatRoom extends DurableObject<Bindings> {
+  private app = createApp(() => this)
   private teamInfo: string | null = null
   private tasksInfo: string | null = null
-  private commandsInfo: string | null = null
+  commandsInfo: string | null = null
+
+  get doCtx() {
+    return this.ctx
+  }
 
   private async updatePresenceKV(keyId: string, roomId: string, connected: boolean) {
     const kvKey = `presence:${keyId}`
@@ -34,7 +78,7 @@ export class ChatRoom extends DurableObject<Bindings> {
     await this.env.PRESENCE.put(kvKey, JSON.stringify([...connectedRooms]), { expirationTtl: 600 })
   }
 
-  private broadcastAll(data: string) {
+  broadcastAll(data: string) {
     for (const ws of this.ctx.getWebSockets()) {
       try {
         ws.send(data)
@@ -116,26 +160,6 @@ export class ChatRoom extends DurableObject<Bindings> {
       }
 
       return new Response(null, { status: 101, webSocket: client })
-    }
-
-    // /broadcast — internal broadcast from Worker
-    if (url.pathname === '/broadcast') {
-      const data = await request.text()
-      let sent = 0
-      let failed = 0
-      for (const ws of this.ctx.getWebSockets()) {
-        try {
-          ws.send(data)
-          sent++
-        } catch {
-          failed++
-        }
-      }
-      // 3.3 — Log broadcast failures
-      if (failed > 0) {
-        console.warn(`broadcast: ${sent} sent, ${failed} failed`)
-      }
-      return new Response('ok')
     }
 
     // GET /team-info — return current team info
@@ -451,38 +475,6 @@ export class ChatRoom extends DurableObject<Bindings> {
       })
     }
 
-    // /commands — store and broadcast commands info
-    if (url.pathname === '/commands') {
-      const body = await request.text()
-      const parsed = JSON.parse(body)
-      const payload = JSON.stringify({ type: 'commands_info', ...parsed })
-      this.commandsInfo = payload
-      await this.ctx.storage.put('commandsInfo', payload)
-
-      for (const ws of this.ctx.getWebSockets()) {
-        try {
-          ws.send(payload)
-        } catch {
-          /* client gone */
-        }
-      }
-
-      return new Response('ok')
-    }
-
-    // /terminal — broadcast terminal data to all WebSocket clients
-    if (url.pathname === '/terminal') {
-      const body = await request.text()
-      for (const ws of this.ctx.getWebSockets()) {
-        try {
-          ws.send(body)
-        } catch {
-          /* client gone */
-        }
-      }
-      return new Response('ok')
-    }
-
     // DELETE /destroy — tear down the chat room (notify clients, close connections, wipe storage)
     if (url.pathname === '/destroy' && request.method === 'DELETE') {
       const message = JSON.stringify({ type: 'room_deleted' })
@@ -503,7 +495,7 @@ export class ChatRoom extends DurableObject<Bindings> {
       })
     }
 
-    return new Response('not found', { status: 404 })
+    return this.app.fetch(request)
   }
 
   // 3.2 — Alarm-based stale connection cleanup
