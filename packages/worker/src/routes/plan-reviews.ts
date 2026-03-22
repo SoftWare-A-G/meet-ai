@@ -4,6 +4,8 @@ import { queries } from '../db/queries'
 import { requireAuth } from '../middleware/auth'
 import { createPlanReviewSchema, decidePlanReviewSchema } from '../schemas/plan-reviews'
 import type { AppEnv } from '../lib/types'
+import { createDOClient } from '../lib/do-client'
+import type { ChatRoomApp } from '../durable-objects/chat-room'
 
 export const planReviewsRoute = new Hono<AppEnv>()
 
@@ -52,14 +54,8 @@ export const planReviewsRoute = new Hono<AppEnv>()
     // Broadcast via Durable Object
     const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
     const stub = c.env.CHAT_ROOM.get(doId)
-    c.executionCtx.waitUntil(
-      stub.fetch(
-        new Request('http://internal/broadcast', {
-          method: 'POST',
-          body: JSON.stringify(message),
-        })
-      )
-    )
+    const client = createDOClient<ChatRoomApp>(stub)
+    c.executionCtx.waitUntil(client.broadcast.$post({ json: message }))
 
     return c.json({ id: decisionId, message_id: messageId }, 201)
   })
@@ -123,20 +119,18 @@ export const planReviewsRoute = new Hono<AppEnv>()
     // Broadcast the decision via Durable Object
     const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
     const stub = c.env.CHAT_ROOM.get(doId)
+    const client = createDOClient<ChatRoomApp>(stub)
     c.executionCtx.waitUntil(
-      stub.fetch(
-        new Request('http://internal/broadcast', {
-          method: 'POST',
-          body: JSON.stringify({
-            type: 'plan_decision',
-            plan_review_id: reviewId,
-            status: body.approved ? 'approved' : 'denied',
-            feedback: body.feedback ?? null,
-            decided_by: body.decided_by,
-            permission_mode: body.permission_mode ?? 'default',
-          }),
-        })
-      )
+      client.broadcast.$post({
+        json: {
+          type: 'plan_decision',
+          plan_review_id: reviewId,
+          status: body.approved ? 'approved' : 'denied',
+          feedback: body.feedback ?? null,
+          decided_by: body.decided_by,
+          permission_mode: body.permission_mode ?? 'default',
+        },
+      })
     )
 
     return c.json({ ok: true })
@@ -162,17 +156,15 @@ export const planReviewsRoute = new Hono<AppEnv>()
     // Broadcast the expiry via Durable Object
     const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
     const stub = c.env.CHAT_ROOM.get(doId)
+    const client = createDOClient<ChatRoomApp>(stub)
     c.executionCtx.waitUntil(
-      stub.fetch(
-        new Request('http://internal/broadcast', {
-          method: 'POST',
-          body: JSON.stringify({
-            type: 'plan_decision',
-            plan_review_id: reviewId,
-            status: 'expired',
-          }),
-        })
-      )
+      client.broadcast.$post({
+        json: {
+          type: 'plan_decision',
+          plan_review_id: reviewId,
+          status: 'expired',
+        },
+      })
     )
 
     return c.json({ ok: true })
