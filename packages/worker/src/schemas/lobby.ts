@@ -24,5 +24,9 @@ export const lobbyBroadcastSchema = z.discriminatedUnion('type', [
 ])
 export type LobbyBroadcast = z.infer<typeof lobbyBroadcastSchema>
 
-export const spawnRequestSchema = z.object({ type: z.literal('spawn_request'), room_name: z.string() })
+export const spawnRequestSchema = z.object({
+  type: z.literal('spawn_request'),
+  room_name: z.string(),
+  coding_agent: z.string().optional(),
+})
 export type SpawnRequest = z.infer<typeof spawnRequestSchema>

@@ -10,6 +10,8 @@ import SpawnRequestCard from '../SpawnRequestCard'
 import NewMessagesPill from '../NewMessagesPill'
 import type { Message as MessageType } from '../../lib/types'
 import { getDiffFilename, shouldReplaceMergedDiff } from './diff-logs'
+import { jsonString } from '@meet-ai/worker/schemas/helpers'
+import { spawnRequestSchema } from '@meet-ai/worker/schemas/lobby'
 
 type DisplayMessage = MessageType & {
   tempId?: string
@@ -82,15 +84,11 @@ function groupMessages(messages: DisplayMessage[]): RenderItem[] {
       // Detect spawn_request messages by content
       let spawnRoomName: string | null = null
       let spawnCodingAgent: string | undefined
-      try {
-        const parsed = JSON.parse(msg.content)
-        if (parsed?.type === 'spawn_request' && parsed?.room_name) {
-          spawnRoomName = parsed.room_name
-          if (typeof parsed?.coding_agent === 'string') {
-            spawnCodingAgent = parsed.coding_agent
-          }
-        }
-      } catch { /* not JSON */ }
+      const spawnResult = jsonString.pipe(spawnRequestSchema).safeParse(msg.content)
+      if (spawnResult.success) {
+        spawnRoomName = spawnResult.data.room_name
+        spawnCodingAgent = spawnResult.data.coding_agent
+      }
 
       // Hook anchor messages never render as bubbles — they only exist as log group anchors
       if (spawnRoomName) {

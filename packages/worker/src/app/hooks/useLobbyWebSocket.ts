@@ -3,27 +3,9 @@ import { useRouter } from '@tanstack/react-router'
 import { useEffect, useRef, useCallback } from 'react'
 import { queryKeys } from '../lib/query-keys'
 import type { RoomsResponse, ProjectsResponse } from '../lib/fetchers'
-
-type LobbyEvent =
-  | {
-      type: 'room_created'
-      id: string
-      name: string
-      created_at: string
-      project_id?: string | null
-      project_name?: string | null
-      project_created_at?: string | null
-      project_updated_at?: string | null
-    }
-  | { type: 'room_deleted'; id: string }
-
-function parseLobbyEvent(raw: string): LobbyEvent | null {
-  try {
-    return JSON.parse(raw)
-  } catch {
-    return null
-  }
-}
+import { jsonString } from '@meet-ai/worker/schemas/helpers'
+import { lobbyBroadcastSchema } from '@meet-ai/worker/schemas/lobby'
+import type { SpawnRequest } from '@meet-ai/worker/schemas/lobby'
 
 export function useLobbyWebSocket(apiKey: string | null) {
   const wsRef = useRef<WebSocket | null>(null)
@@ -41,8 +23,9 @@ export function useLobbyWebSocket(apiKey: string | null) {
       const ws = new WebSocket(`${protocol}//${location.host}/api/lobby/ws${tokenParam}`)
 
       ws.onmessage = e => {
-        const evt = parseLobbyEvent(e.data)
-        if (!evt) return
+        const result = jsonString.pipe(lobbyBroadcastSchema).safeParse(e.data)
+        if (!result.success) return
+        const evt = result.data
         if (evt.type === 'room_deleted') {
           void queryClient.cancelQueries({ queryKey: queryKeys.rooms.all })
           queryClient.setQueryData<RoomsResponse>(queryKeys.rooms.all, old =>
@@ -112,10 +95,8 @@ export function useLobbyWebSocket(apiKey: string | null) {
     }
   }, [apiKey, queryClient, router])
 
-  const send = useCallback((data: object) => {
-    if ('type' in data && data.type === 'spawn_request') {
-      pendingSpawnRef.current = true
-    }
+  const send = useCallback((data: SpawnRequest) => {
+    pendingSpawnRef.current = true
     const ws = wsRef.current
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(data))

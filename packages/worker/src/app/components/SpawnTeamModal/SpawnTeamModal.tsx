@@ -3,10 +3,11 @@ import { Dialog, DialogContent, DialogTitle } from '../ui/dialog'
 import { Button } from '../ui/button'
 import { IconLoader } from '../../icons'
 import { CODING_AGENT_OPTIONS, type CodingAgentId } from '../../lib/coding-agents'
+import type { SpawnRequest } from '@meet-ai/worker/schemas/lobby'
 
 type SpawnTeamModalProps = {
   onClose: () => void
-  onSend: (data: object) => void
+  onSend: (data: SpawnRequest) => void
 }
 
 export default function SpawnTeamModal({ onClose, onSend }: SpawnTeamModalProps) {
