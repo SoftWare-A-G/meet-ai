@@ -153,16 +153,15 @@ export function useRoomWebSocket(
           if (roomId) {
             void queryClient.cancelQueries({ queryKey: queryKeys.rooms.teamInfo(roomId) })
             const prev = queryClient.getQueryData<TeamInfoResponse>(queryKeys.rooms.teamInfo(roomId))
-            const { type: _, ...teamInfo } = event
-            queryClient.setQueryData<TeamInfoResponse>(queryKeys.rooms.teamInfo(roomId), teamInfo)
+            queryClient.setQueryData<TeamInfoResponse>(queryKeys.rooms.teamInfo(roomId), event)
             if (prev) {
               const prevNames = new Set(prev.members.map(m => m.name))
-              for (const m of teamInfo.members) {
+              for (const m of event.members) {
                 if (!prevNames.has(m.name) && m.status === 'active') {
                   toast.success(m.name, { description: 'Ready to work', duration: 5000 })
                 }
               }
-              for (const m of teamInfo.members) {
+              for (const m of event.members) {
                 const old = prev.members.find(p => p.name === m.name)
                 if (old && old.status === 'active' && m.status === 'inactive') {
                   toast(m.name, { description: 'Signed off', icon: '\uD83D\uDC4B', duration: 5000 })

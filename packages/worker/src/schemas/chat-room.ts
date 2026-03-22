@@ -136,7 +136,7 @@ export const storedTaskSchema = z.object({
   id: z.string(),
   subject: z.string(),
   description: z.string().optional(),
-  status: z.string(),
+  status: z.enum(['pending', 'in_progress', 'completed']),
   assignee: z.string().nullable(),
   owner: z.string().nullable(),
   source: z.string(),

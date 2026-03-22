@@ -38,7 +38,7 @@ function createApp(getChatRoom: () => ChatRoom) {
     .get('/team-info', async (c) => {
       const room = getChatRoom()
       const data = await room.getTeamInfo()
-      return c.json(JSON.parse(data))
+      return c.json(data)
     })
     .post('/team-info', zValidator('json', teamInfoSchema), async (c) => {
       const room = getChatRoom()
@@ -134,12 +134,15 @@ export class ChatRoom extends DurableObject<Bindings> {
     await this.ctx.storage.put('commandsInfo', payload)
   }
 
-  /** Return cached or stored team info as a JSON string. */
-  async getTeamInfo(): Promise<string> {
+  /** Return cached or stored team info as a parsed object. */
+  async getTeamInfo(): Promise<StoredTeamInfo> {
     if (!this.teamInfo) {
       this.teamInfo = (await this.ctx.storage.get<string>('teamInfo')) ?? null
     }
-    return this.teamInfo ?? JSON.stringify({ type: 'team_info', members: [] })
+    if (!this.teamInfo) {
+      return { type: 'team_info', team_name: '', members: [] }
+    }
+    return storedTeamInfoSchema.parse(JSON.parse(this.teamInfo))
   }
 
   /** Assign teammate_id to members without one, store and broadcast team info. */
