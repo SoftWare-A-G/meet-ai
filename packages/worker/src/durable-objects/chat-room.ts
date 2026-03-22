@@ -3,6 +3,7 @@ import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod/v4'
 import { chatRoomBroadcastSchema, terminalSchema, commandsSchema, teamInfoSchema, teamInfoUpsertSchema, tasksFullReplaceSchema, createTaskSchema, updateTaskSchema, upsertTaskSchema, storedTeamInfoSchema, wsQuerySchema, wsIncomingMessageSchema } from '../schemas/chat-room'
+import { jsonString } from '../schemas/helpers'
 import type { StoredTask, StoredTeamInfo } from '../schemas/chat-room'
 import type { TeamInfoPayload, TeamInfoUpsertPayload } from '../schemas/rooms'
 import type { Bindings } from '../lib/types'
@@ -457,17 +458,15 @@ export class ChatRoom extends DurableObject<Bindings> {
     // Ping/pong handled by setWebSocketAutoResponse (edge-level, no DO wake).
     if (typeof message !== 'string') return
 
-    let parsed: unknown
-    try {
-      parsed = JSON.parse(message)
-    } catch {
-      ws.send(JSON.stringify({ type: 'error', error: 'invalid_json' }))
-      return
-    }
-
-    const result = wsIncomingMessageSchema.safeParse(parsed)
+    const result = jsonString.pipe(wsIncomingMessageSchema).safeParse(message)
     if (!result.success) {
-      ws.send(JSON.stringify({ type: 'error', error: 'invalid_message' }))
+      const isInvalidJson = result.error.issues.some(
+        issue => issue.code === 'custom' && issue.message === 'Invalid JSON'
+      )
+      ws.send(JSON.stringify({
+        type: 'error',
+        error: isInvalidJson ? 'invalid_json' : 'invalid_message',
+      }))
       return
     }
 

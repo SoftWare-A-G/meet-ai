@@ -2,6 +2,7 @@ import { DurableObject } from 'cloudflare:workers'
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { lobbyBroadcastSchema, spawnRequestSchema } from '../schemas/lobby'
+import { jsonString } from '../schemas/helpers'
 
 function createApp(getLobby: () => Lobby) {
   return new Hono()
@@ -50,16 +51,16 @@ export class Lobby extends DurableObject {
 
   async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer) {
     const text = typeof message === 'string' ? message : new TextDecoder().decode(message)
-    let parsed: unknown
-    try {
-      parsed = JSON.parse(text)
-    } catch {
-      ws.send(JSON.stringify({ type: 'error', error: 'invalid_json' }))
-      return
-    }
-    const result = spawnRequestSchema.safeParse(parsed)
+
+    const result = jsonString.pipe(spawnRequestSchema).safeParse(text)
     if (!result.success) {
-      ws.send(JSON.stringify({ type: 'error', error: 'invalid_message' }))
+      const isInvalidJson = result.error.issues.some(
+        issue => issue.code === 'custom' && issue.message === 'Invalid JSON'
+      )
+      ws.send(JSON.stringify({
+        type: 'error',
+        error: isInvalidJson ? 'invalid_json' : 'invalid_message',
+      }))
       return
     }
     // Relay known control messages to all OTHER lobby clients
