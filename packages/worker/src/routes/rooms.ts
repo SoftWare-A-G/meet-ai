@@ -20,6 +20,7 @@ import {
 import type { AppEnv } from '../lib/types'
 import { createDOClient } from '../lib/do-client'
 import type { LobbyApp } from '../durable-objects/lobby'
+import type { CanvasRoomApp } from '../durable-objects/canvas-room'
 import type { TeamInfoPayload } from '../schemas/rooms'
 
 type TaskPayload = {
@@ -701,12 +702,8 @@ export const roomsRoute = new Hono<AppEnv>()
       // Destroy CanvasRoom DO (closes sessions, wipes SQLite storage)
       const canvasDoId = c.env.CANVAS_ROOM.idFromName(`${keyId}:${canvas.id}`)
       const canvasStub = c.env.CANVAS_ROOM.get(canvasDoId)
-      await canvasStub.fetch(
-        new Request('http://internal/destroy', {
-          method: 'DELETE',
-          headers: { 'X-Room-Id': roomId },
-        })
-      )
+      const canvasClient = createDOClient<CanvasRoomApp>(canvasStub)
+      await canvasClient.destroy.$delete({}, { headers: { 'X-Room-Id': roomId } })
     }
 
     // Destroy ChatRoom DO (notifies clients, closes WebSockets, wipes storage)

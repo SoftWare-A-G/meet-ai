@@ -1,20 +1,73 @@
+import { zValidator } from '@hono/zod-validator'
+import { TLSocketRoom, DurableObjectSqliteSyncWrapper, SQLiteSyncStorage } from '@tldraw/sync-core'
 import { DurableObject } from 'cloudflare:workers'
-import {
-  TLSocketRoom,
-  DurableObjectSqliteSyncWrapper,
-  SQLiteSyncStorage,
-} from '@tldraw/sync-core'
+import { Hono } from 'hono'
+import { canvasMutationsSchema } from '../schemas/canvas'
 import type { TLRecord } from '@tldraw/tlschema'
-import { repairLegacyCanvasShapeRecords } from '../lib/canvas-records'
+
+function createApp(getCanvasRoom: () => CanvasRoom) {
+  return new Hono()
+    .use('*', async (c, next) => {
+      await getCanvasRoom().ensureRoomId(c.req.raw)
+      await next()
+    })
+    .get('/ws', c => {
+      const room = getCanvasRoom()
+      const sessionId = c.req.query('sessionId') ?? crypto.randomUUID()
+      const pair = new WebSocketPair()
+      const [client, server] = Object.values(pair)
+      // Accept without hibernation — TLSocketRoom needs to own the socket lifecycle
+      server.accept()
+      const socketRoom = room.getSocketRoom()
+      socketRoom.handleSocketConnect({ sessionId, socket: server })
+      return new Response(null, { status: 101, webSocket: client })
+    })
+    .get('/snapshot', c => {
+      const room = getCanvasRoom()
+      const socketRoom = room.getSocketRoom()
+      try {
+        const snapshot = socketRoom.getCurrentSnapshot()
+        return c.json(snapshot)
+      } catch {
+        return c.json({ documents: [], clock: 0 })
+      }
+    })
+    .post('/mutations', zValidator('json', canvasMutationsSchema), c => {
+      const room = getCanvasRoom()
+      const body = c.req.valid('json')
+      const socketRoom = room.getSocketRoom()
+      // storage.transaction() triggers TLSyncRoom's onChange → broadcastExternalStorageChanges(),
+      // so changes are automatically broadcast to all connected WebSocket clients.
+      socketRoom.storage.transaction(txn => {
+        if (body.puts) {
+          for (const record of body.puts) {
+            txn.set(record.id, record)
+          }
+        }
+        if (body.deletes) {
+          for (const id of body.deletes) {
+            txn.delete(id)
+          }
+        }
+      })
+      return c.json({ ok: true as const })
+    })
+    .delete('/destroy', async c => {
+      await getCanvasRoom().teardown()
+      return c.json({ ok: true as const })
+    })
+}
+
+export type CanvasRoomApp = ReturnType<typeof createApp>
 
 export class CanvasRoom extends DurableObject {
   private socketRoom: TLSocketRoom<TLRecord> | null = null
   private storage: SQLiteSyncStorage<TLRecord> | null = null
   private roomId: string | null = null
-  private didRepairLegacyShapes = false
+  private app = createApp(() => this)
 
   /** Store the parent chat room_id so the DO knows which room it belongs to. */
-  private async ensureRoomId(request: Request): Promise<void> {
+  async ensureRoomId(request: Request): Promise<void> {
     const header = request.headers.get('X-Room-Id')
     if (header) {
       this.roomId = header
@@ -36,17 +89,7 @@ export class CanvasRoom extends DurableObject {
     return this.storage
   }
 
-  private repairLegacyShapes(): void {
-    if (this.didRepairLegacyShapes) return
-
-    const storage = this.getStorage()
-    storage.transaction(txn => {
-      repairLegacyCanvasShapeRecords(txn)
-    })
-    this.didRepairLegacyShapes = true
-  }
-
-  private getSocketRoom(): TLSocketRoom<TLRecord> {
+  getSocketRoom(): TLSocketRoom<TLRecord> {
     if (!this.socketRoom || this.socketRoom.isClosed()) {
       const storage = this.getStorage()
       this.socketRoom = new TLSocketRoom({
@@ -63,88 +106,17 @@ export class CanvasRoom extends DurableObject {
     return this.socketRoom
   }
 
+  /** Close sessions, clear in-memory state, and wipe all durable storage. */
+  async teardown(): Promise<void> {
+    if (this.socketRoom && !this.socketRoom.isClosed()) {
+      this.socketRoom.close()
+      this.socketRoom = null
+    }
+    this.storage = null
+    await this.ctx.storage.deleteAll()
+  }
+
   async fetch(request: Request): Promise<Response> {
-    await this.ensureRoomId(request)
-    const url = new URL(request.url)
-
-    // GET /ws — WebSocket upgrade for tldraw sync
-    // TLSocketRoom manages session lifecycle and event listeners directly.
-    // We do NOT use ctx.acceptWebSocket (hibernation API) because
-    // TLSocketRoom needs to attach its own event listeners to the socket.
-    if (url.pathname === '/ws') {
-      this.repairLegacyShapes()
-      const sessionId = url.searchParams.get('sessionId') ?? crypto.randomUUID()
-      const pair = new WebSocketPair()
-      const [client, server] = Object.values(pair)
-
-      // Accept without hibernation — let TLSocketRoom own the socket
-      server.accept()
-
-      const room = this.getSocketRoom()
-      room.handleSocketConnect({ sessionId, socket: server })
-
-      return new Response(null, { status: 101, webSocket: client })
-    }
-
-    // GET /snapshot — readonly canvas snapshot for REST consumers
-    if (url.pathname === '/snapshot' && request.method === 'GET') {
-      this.repairLegacyShapes()
-      const room = this.getSocketRoom()
-      try {
-        const snapshot = room.getCurrentSnapshot()
-        return new Response(JSON.stringify(snapshot), {
-          headers: { 'Content-Type': 'application/json' },
-        })
-      } catch {
-        return new Response(JSON.stringify({ documents: [], clock: 0 }), {
-          headers: { 'Content-Type': 'application/json' },
-        })
-      }
-    }
-
-    // POST /mutations — apply server-side mutations from trusted routes
-    // storage.transaction() triggers TLSyncRoom's onChange → broadcastExternalStorageChanges(),
-    // so changes are automatically broadcast to all connected WebSocket clients.
-    if (url.pathname === '/mutations' && request.method === 'POST') {
-      this.repairLegacyShapes()
-      const body = await request.json() as {
-        puts?: { id: string; [key: string]: unknown }[]
-        deletes?: string[]
-      }
-      const room = this.getSocketRoom()
-
-      room.storage.transaction(txn => {
-        if (body.puts) {
-          for (const record of body.puts) {
-            txn.set(record.id, record as any)
-          }
-        }
-        if (body.deletes) {
-          for (const id of body.deletes) {
-            txn.delete(id)
-          }
-        }
-      })
-
-      return new Response(JSON.stringify({ ok: true }), {
-        headers: { 'Content-Type': 'application/json' },
-      })
-    }
-
-    // DELETE /destroy — tear down the canvas room (close sessions, wipe storage)
-    if (url.pathname === '/destroy' && request.method === 'DELETE') {
-      if (this.socketRoom && !this.socketRoom.isClosed()) {
-        this.socketRoom.close()
-        this.socketRoom = null
-      }
-      this.storage = null
-      this.didRepairLegacyShapes = false
-      await this.ctx.storage.deleteAll()
-      return new Response(JSON.stringify({ ok: true }), {
-        headers: { 'Content-Type': 'application/json' },
-      })
-    }
-
-    return new Response('not found', { status: 404 })
+    return this.app.fetch(request)
   }
 }

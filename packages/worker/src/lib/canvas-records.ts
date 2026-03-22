@@ -1,42 +1,43 @@
 import { createTLSchema, toRichText, type TLRecord } from '@tldraw/tlschema'
-// @ts-expect-error tldraw does not ship declarations for this compiled subpath
-import { defaultShapeUtils } from '../../node_modules/tldraw/dist-esm/lib/defaultShapeUtils.mjs'
-import type { TLSyncStorageTransaction } from '@tldraw/sync-core'
+import {
+  TextShapeUtil,
+  BookmarkShapeUtil,
+  DrawShapeUtil,
+  GeoShapeUtil,
+  NoteShapeUtil,
+  LineShapeUtil,
+  FrameShapeUtil,
+  ArrowShapeUtil,
+  HighlightShapeUtil,
+  EmbedShapeUtil,
+  ImageShapeUtil,
+  VideoShapeUtil,
+} from 'tldraw'
+
+const DEFAULT_SHAPE_PROPS_BY_TYPE = {
+  [TextShapeUtil.type]: TextShapeUtil,
+  [BookmarkShapeUtil.type]: BookmarkShapeUtil,
+  [DrawShapeUtil.type]: DrawShapeUtil,
+  [GeoShapeUtil.type]: GeoShapeUtil,
+  [NoteShapeUtil.type]: NoteShapeUtil,
+  [LineShapeUtil.type]: LineShapeUtil,
+  [FrameShapeUtil.type]: FrameShapeUtil,
+  [ArrowShapeUtil.type]: ArrowShapeUtil,
+  [HighlightShapeUtil.type]: HighlightShapeUtil,
+  [EmbedShapeUtil.type]: EmbedShapeUtil,
+  [ImageShapeUtil.type]: ImageShapeUtil,
+  [VideoShapeUtil.type]: VideoShapeUtil,
+} as const
 
 type CanvasRecord = Record<string, unknown> & { id: string }
 type CanvasMutationInputPut = Record<string, unknown> & { id: string; typeName: string }
 type CanvasMutationPut = TLRecord
-type ShapeUtilConstructor = {
-  type: string
-  new (editor: unknown): { getDefaultProps(): unknown }
-}
 
 const CANVAS_SCHEMA = createTLSchema()
-const SHAPE_RECORD_TYPE = CANVAS_SCHEMA.types.shape
-const RECORD_TYPES = CANVAS_SCHEMA.types as Record<
-  string,
-  {
-    validate(record: unknown): TLRecord
-  }
->
-const SHAPE_UTILS = defaultShapeUtils as ShapeUtilConstructor[]
-const DEFAULT_SHAPE_PROPS_BY_TYPE = new Map<string, () => Record<string, unknown>>(
-  SHAPE_UTILS.map(ShapeUtilCtor => [
-    ShapeUtilCtor.type,
-    () => new ShapeUtilCtor(undefined).getDefaultProps() as Record<string, unknown>,
-  ])
-)
+const RECORD_TYPES = CANVAS_SCHEMA.types as Record<string, { validate(record: unknown): TLRecord }>
 
 function isRecordObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-function isCanvasRecord(value: unknown): value is CanvasRecord {
-  return isRecordObject(value) && typeof value.id === 'string'
-}
-
-function hasCanvasTypeName(value: unknown): value is CanvasMutationInputPut {
-  return isCanvasRecord(value) && typeof value.typeName === 'string'
 }
 
 function withRichText(
@@ -56,17 +57,14 @@ function withRichText(
 }
 
 function getDefaultShapeProps(
-  type: string,
+  type: keyof typeof DEFAULT_SHAPE_PROPS_BY_TYPE,
   props: Record<string, unknown>
 ): Record<string, unknown> {
-  const getDefaultProps = DEFAULT_SHAPE_PROPS_BY_TYPE.get(type)
-  if (!getDefaultProps) return props
+  const shape = DEFAULT_SHAPE_PROPS_BY_TYPE[type]
+  if (!shape) return props
 
-  const defaultProps = getDefaultProps()
-  const mergedProps = {
-    ...defaultProps,
-    ...props,
-  }
+  const defaultProps = shape.props
+  const mergedProps = { ...defaultProps, ...props }
 
   if (!('richText' in defaultProps) && !isRecordObject(props.richText)) {
     return mergedProps
@@ -88,45 +86,8 @@ function validateCanvasRecord(record: CanvasMutationInputPut): CanvasMutationPut
   return recordType.validate(record)
 }
 
-function repairLegacyShapeRecord(record: CanvasRecord): CanvasMutationPut | null {
-  if (record.typeName !== 'shape' || typeof record.type !== 'string') return null
-
-  const repaired = SHAPE_RECORD_TYPE.create({
-    ...record,
-    id: record.id,
-    type: record.type,
-    props: getDefaultShapeProps(record.type, isRecordObject(record.props) ? record.props : {}),
-    meta: isRecordObject(record.meta) ? record.meta : {},
-  } as Parameters<typeof SHAPE_RECORD_TYPE.create>[0])
-
-  return SHAPE_RECORD_TYPE.validate(repaired) as CanvasMutationPut
-}
-
 export function validateCanvasMutationPuts(
   puts: CanvasMutationInputPut[] | undefined
 ): CanvasMutationPut[] | undefined {
   return puts?.map(put => validateCanvasRecord(put))
-}
-
-export function repairLegacyCanvasShapeRecords(
-  txn: Pick<TLSyncStorageTransaction<TLRecord>, 'entries' | 'set'>
-): boolean {
-  let didRepair = false
-
-  for (const [id, record] of txn.entries()) {
-    if (!hasCanvasTypeName(record)) continue
-
-    try {
-      validateCanvasRecord(record)
-      continue
-    } catch {
-      const repaired = repairLegacyShapeRecord(record)
-      if (!repaired) continue
-
-      txn.set(id, repaired)
-      didRepair = true
-    }
-  }
-
-  return didRepair
 }

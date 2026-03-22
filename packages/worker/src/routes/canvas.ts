@@ -1,9 +1,10 @@
 import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 import { queries } from '../db/queries'
-import { validateCanvasMutationPuts } from '../lib/canvas-records'
 import { requireAuth } from '../middleware/auth'
 import { canvasMutationsSchema } from '../schemas/canvas'
+import { createDOClient } from '../lib/do-client'
+import type { CanvasRoomApp } from '../durable-objects/canvas-room'
 import type { AppEnv } from '../lib/types'
 
 export const canvasRoute = new Hono<AppEnv>()
@@ -109,12 +110,11 @@ export const canvasRoute = new Hono<AppEnv>()
       return c.json({ error: 'canvas not found' }, 404)
     }
 
-    // Forward to CanvasRoom DO
+    // Forward to CanvasRoom DO via typed client
     const doId = c.env.CANVAS_ROOM.idFromName(`${keyId}:${canvas.id}`)
     const stub = c.env.CANVAS_ROOM.get(doId)
-    const res = await stub.fetch(new Request('http://internal/snapshot', {
-      headers: { 'X-Room-Id': roomId },
-    }))
+    const client = createDOClient<CanvasRoomApp>(stub)
+    const res = await client.snapshot.$get({}, { headers: { 'X-Room-Id': roomId } })
     const snapshot = await res.json()
 
     return c.json({ canvas_id: canvas.id, room_id: roomId, snapshot })
@@ -136,26 +136,14 @@ export const canvasRoute = new Hono<AppEnv>()
       return c.json({ error: 'canvas not found' }, 404)
     }
 
+    // schema transform already ran validateCanvasMutationPuts — body.puts is TLRecord[] | undefined
     const body = c.req.valid('json')
-    let validatedPuts
-    try {
-      validatedPuts = validateCanvasMutationPuts(body.puts)
-    } catch (error) {
-      return c.json({
-        error: error instanceof Error ? `invalid canvas record: ${error.message}` : 'invalid canvas record',
-      }, 400)
-    }
 
-    // Forward to CanvasRoom DO
+    // Forward to CanvasRoom DO via typed client
     const doId = c.env.CANVAS_ROOM.idFromName(`${keyId}:${canvas.id}`)
     const stub = c.env.CANVAS_ROOM.get(doId)
-    const res = await stub.fetch(
-      new Request('http://internal/mutations', {
-        method: 'POST',
-        body: JSON.stringify({ ...body, puts: validatedPuts }),
-        headers: { 'Content-Type': 'application/json', 'X-Room-Id': roomId },
-      })
-    )
+    const client = createDOClient<CanvasRoomApp>(stub)
+    const res = await client.mutations.$post({ json: body }, { headers: { 'X-Room-Id': roomId } })
 
     if (!res.ok) {
       return c.json({ error: 'mutation failed' }, 500)
