@@ -26,29 +26,21 @@ function createApp(getChatRoom: () => ChatRoom) {
       const room = getChatRoom()
       const event = c.req.valid('json')
       const data = JSON.stringify(event)
-      let sent = 0
-      let failed = 0
-      for (const ws of room.doCtx.getWebSockets()) {
-        try { ws.send(data); sent++ } catch { failed++ }
-      }
+      const { sent, failed } = room.broadcastEvent(data)
       if (failed > 0) console.warn(`broadcast: ${sent} sent, ${failed} failed`)
       return c.json({ ok: true })
     })
     .post('/terminal', zValidator('json', terminalSchema), (c) => {
       const room = getChatRoom()
       const body = c.req.valid('json')
-      const data = JSON.stringify(body)
-      for (const ws of room.doCtx.getWebSockets()) {
-        try { ws.send(data) } catch { /* client gone */ }
-      }
+      room.broadcastAll(JSON.stringify(body))
       return c.json({ ok: true })
     })
     .post('/commands', zValidator('json', commandsSchema), async (c) => {
       const room = getChatRoom()
       const body = c.req.valid('json')
       const payload = JSON.stringify({ type: 'commands_info', ...body })
-      room.commandsInfo = payload
-      await room.doCtx.storage.put('commandsInfo', payload)
+      await room.storeCommandsInfo(payload)
       room.broadcastAll(payload)
       return c.json({ ok: true })
     })
@@ -60,10 +52,22 @@ export class ChatRoom extends DurableObject<Bindings> {
   private app = createApp(() => this)
   private teamInfo: string | null = null
   private tasksInfo: string | null = null
-  commandsInfo: string | null = null
+  private commandsInfo: string | null = null
 
-  get doCtx() {
-    return this.ctx
+  /** Broadcast a serialized event to all connected WebSocket clients. Returns { sent, failed } counts. */
+  broadcastEvent(data: string): { sent: number; failed: number } {
+    let sent = 0
+    let failed = 0
+    for (const ws of this.ctx.getWebSockets()) {
+      try { ws.send(data); sent++ } catch { failed++ }
+    }
+    return { sent, failed }
+  }
+
+  /** Store commands info in durable storage and update the in-memory cache. */
+  async storeCommandsInfo(payload: string): Promise<void> {
+    this.commandsInfo = payload
+    await this.ctx.storage.put('commandsInfo', payload)
   }
 
   private async updatePresenceKV(keyId: string, roomId: string, connected: boolean) {
