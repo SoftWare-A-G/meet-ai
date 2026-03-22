@@ -1,25 +1,14 @@
 import { DurableObject } from 'cloudflare:workers'
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
-import { chatRoomBroadcastSchema, terminalSchema, commandsSchema, teamInfoSchema, teamInfoUpsertSchema } from '../schemas/chat-room'
+import { z } from 'zod/v4'
+import { chatRoomBroadcastSchema, terminalSchema, commandsSchema, teamInfoSchema, teamInfoUpsertSchema, tasksFullReplaceSchema, createTaskSchema } from '../schemas/chat-room'
+import type { StoredTask } from '../schemas/chat-room'
 import type { TeamInfoPayload, TeamInfoUpsertPayload } from '../schemas/rooms'
 import type { Bindings } from '../lib/types'
 
 const STALE_TIMEOUT_MS = 120_000 // 2 minutes
 const ALARM_INTERVAL_MS = 60_000 // check every 60s
-
-type StoredTask = {
-  id: string
-  subject: string
-  description?: string
-  status: string
-  assignee: string | null
-  owner: string | null
-  source: string
-  source_id: string | null
-  updated_by: string | null
-  updated_at: number
-}
 
 type StoredTeamInfoMember = {
   teammate_id: string
@@ -77,6 +66,23 @@ function createApp(getChatRoom: () => ChatRoom) {
       const body = c.req.valid('json')
       await room.upsertTeamMember(body.team_name, body.member)
       return c.json({ ok: true })
+    })
+    .get('/tasks', async (c) => {
+      const room = getChatRoom()
+      const tasks = await room.getTasks()
+      return c.json({ tasks })
+    })
+    .post('/tasks', zValidator('json', tasksFullReplaceSchema), async (c) => {
+      const room = getChatRoom()
+      const body = c.req.valid('json')
+      await room.replaceTasks(body)
+      return c.json({ ok: true })
+    })
+    .post('/tasks/create', zValidator('json', createTaskSchema), async (c) => {
+      const room = getChatRoom()
+      const body = c.req.valid('json')
+      const result = await room.createTask(body)
+      return c.json(result.task)
     })
 }
 
@@ -195,6 +201,52 @@ export class ChatRoom extends DurableObject<Bindings> {
     this.broadcastAll(payload)
   }
 
+  /** Return the current task list from cache or storage. */
+  async getTasks(): Promise<StoredTask[]> {
+    return this.loadTasks()
+  }
+
+  /** Full-replace the task list, store and broadcast. */
+  async replaceTasks(parsed: { tasks: StoredTask[] }): Promise<void> {
+    const payload = JSON.stringify({ type: 'tasks_info', ...parsed })
+    this.tasksInfo = payload
+    await this.ctx.storage.put('tasksInfo', payload)
+    this.broadcastAll(payload)
+  }
+
+  /** Create a new task with dedup by source + source_id. */
+  async createTask(input: z.infer<typeof createTaskSchema>): Promise<{ task: StoredTask; created: boolean }> {
+    const tasks = await this.loadTasks()
+    const assignee = input.assignee ?? null
+    const source = input.source ?? 'meet_ai'
+    const sourceId = input.source_id ?? null
+
+    // Dedup: if source_id is provided, return existing task
+    if (sourceId) {
+      const existing = tasks.find(t => t.source === source && t.source_id === sourceId)
+      if (existing) {
+        return { task: existing, created: false }
+      }
+    }
+
+    const newTask: StoredTask = {
+      id: crypto.randomUUID().slice(0, 8),
+      subject: input.subject,
+      description: input.description,
+      status: 'pending',
+      assignee,
+      owner: assignee,
+      source,
+      source_id: sourceId,
+      updated_by: input.updated_by ?? null,
+      updated_at: Date.now(),
+    }
+    tasks.push(newTask)
+    await this.saveTasks(tasks)
+
+    return { task: newTask, created: true }
+  }
+
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url)
 
@@ -251,86 +303,6 @@ export class ChatRoom extends DurableObject<Bindings> {
       }
 
       return new Response(null, { status: 101, webSocket: client })
-    }
-
-    // GET /tasks — return current task list
-    if (url.pathname === '/tasks' && request.method === 'GET') {
-      const tasks = await this.loadTasks()
-      return new Response(JSON.stringify({ tasks }), {
-        headers: { 'Content-Type': 'application/json' },
-      })
-    }
-
-    // POST /tasks — store and broadcast tasks info (full replace)
-    if (url.pathname === '/tasks' && request.method === 'POST') {
-      const body = await request.text()
-      const parsed = JSON.parse(body)
-      const payload = JSON.stringify({ type: 'tasks_info', ...parsed })
-      this.tasksInfo = payload
-      await this.ctx.storage.put('tasksInfo', payload)
-      this.broadcastAll(payload)
-
-      return new Response('ok')
-    }
-
-    // /tasks/create — create a new task, append to list, broadcast
-    if (url.pathname === '/tasks/create') {
-      let body: Record<string, unknown>
-      try {
-        body = JSON.parse(await request.text())
-      } catch {
-        return new Response(JSON.stringify({ error: 'invalid JSON' }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        })
-      }
-
-      if (typeof body.subject !== 'string' || body.subject.trim() === '') {
-        return new Response(
-          JSON.stringify({ error: 'subject is required and must be a non-empty string' }),
-          { status: 400, headers: { 'Content-Type': 'application/json' } }
-        )
-      }
-      if (body.description !== undefined && typeof body.description !== 'string') {
-        return new Response(JSON.stringify({ error: 'description must be a string' }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        })
-      }
-
-      const tasks = await this.loadTasks()
-      const assignee = (typeof body.assignee === 'string' ? body.assignee : null)
-      const source = (typeof body.source === 'string' ? body.source : 'meet_ai')
-      const sourceId = (typeof body.source_id === 'string' ? body.source_id : null)
-
-      // Dedup: if both source and source_id are provided, return existing task
-      if (sourceId) {
-        const existing = tasks.find(t => t.source === source && t.source_id === sourceId)
-        if (existing) {
-          return new Response(JSON.stringify(existing), {
-            headers: { 'Content-Type': 'application/json' },
-          })
-        }
-      }
-
-      const newTask: StoredTask = {
-        id: crypto.randomUUID().slice(0, 8),
-        subject: body.subject as string,
-        description: typeof body.description === 'string' ? body.description : undefined,
-        status: 'pending',
-        assignee,
-        owner: assignee,
-        source,
-        source_id: sourceId,
-        updated_by: typeof body.updated_by === 'string' ? body.updated_by : null,
-        updated_at: Date.now(),
-      }
-      tasks.push(newTask)
-      await this.saveTasks(tasks)
-
-      return new Response(JSON.stringify(newTask), {
-        headers: { 'Content-Type': 'application/json' },
-      })
     }
 
     // GET /tasks/:taskId — get a single task by id
