@@ -1,5 +1,5 @@
 import { createTLSchema, toRichText, type TLRecord } from '@tldraw/tlschema'
-import { createShapeId, defaultShapeUtils, getIndexAbove } from 'tldraw'
+import { b64Vecs, createShapeId, defaultShapeUtils, getIndexAbove } from 'tldraw'
 import { z } from 'zod'
 import { makeToolResponse, makeToolError } from './codex-task-tools'
 import type { DynamicToolCallHandler } from './codex-app-server'
@@ -308,6 +308,108 @@ function withRichText(
   return nextProps
 }
 
+function isLinePoint(value: unknown): value is {
+  id: string
+  index: string
+  x: number
+  y: number
+} {
+  return (
+    isRecordObject(value)
+    && typeof value.id === 'string'
+    && typeof value.index === 'string'
+    && typeof value.x === 'number'
+    && typeof value.y === 'number'
+  )
+}
+
+function createInitialDrawSegments(): { type: 'free'; path: string }[] {
+  return [{
+    type: 'free',
+    path: b64Vecs.encodePoints([{ x: 0, y: 0, z: 0.5 }]),
+  }]
+}
+
+function normalizeLinePoints(
+  points: unknown,
+  fallbackPoints: unknown
+): Record<string, unknown> | undefined {
+  const basePoints = isRecordObject(fallbackPoints) ? fallbackPoints : undefined
+  const nextPoints = isRecordObject(points)
+    ? {
+        ...(basePoints ?? {}),
+        ...points,
+      }
+    : basePoints
+
+  if (!nextPoints) return undefined
+
+  const pointKeys = Object.keys(nextPoints)
+  if (pointKeys.length < 2) {
+    return nextPoints
+  }
+
+  const firstPoint = nextPoints[pointKeys[0]]
+  if (!isLinePoint(firstPoint)) {
+    return nextPoints
+  }
+
+  const allSame = pointKeys.every(key => {
+    const point = nextPoints[key]
+    return isLinePoint(point) && point.x === firstPoint.x && point.y === firstPoint.y
+  })
+
+  if (!allSame) {
+    return nextPoints
+  }
+
+  const lastKey = pointKeys[pointKeys.length - 1]
+  const lastPoint = nextPoints[lastKey]
+  if (!isLinePoint(lastPoint)) {
+    return nextPoints
+  }
+
+  return {
+    ...nextPoints,
+    [lastKey]: {
+      ...lastPoint,
+      x: lastPoint.x + 0.1,
+      y: lastPoint.y + 0.1,
+    },
+  }
+}
+
+function normalizeShapePropsForCreation(
+  type: string,
+  props: Record<string, unknown>,
+  defaultProps: Record<string, unknown>
+): Record<string, unknown> {
+  if ((type === 'draw' || type === 'highlight')) {
+    const segments = Array.isArray(props.segments) && props.segments.length > 0
+      ? props.segments
+      : createInitialDrawSegments()
+
+    return {
+      ...defaultProps,
+      ...props,
+      segments,
+    }
+  }
+
+  if (type === 'line') {
+    return {
+      ...defaultProps,
+      ...props,
+      points: normalizeLinePoints(props.points, defaultProps.points),
+    }
+  }
+
+  return {
+    ...defaultProps,
+    ...props,
+  }
+}
+
 function getDefaultShapeProps(
   type: string,
   props: Record<string, unknown>
@@ -316,10 +418,7 @@ function getDefaultShapeProps(
   if (!getDefaultProps) return props
 
   const defaultProps = getDefaultProps()
-  const mergedProps = {
-    ...defaultProps,
-    ...props,
-  }
+  const mergedProps = normalizeShapePropsForCreation(type, props, defaultProps)
 
   if (!('richText' in defaultProps) && !isRecordObject(props.richText)) {
     return mergedProps
