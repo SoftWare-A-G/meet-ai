@@ -118,7 +118,9 @@ function parseContent(
     return renderMentionMarkup(rendered, mentionLookup, currentUser)
   }
 
-  const rawHtml = parse(content, { breaks: true, renderer }).toString()
+  const rawHtml = parse(content, { breaks: true, renderer })
+    .toString()
+    .replace(/<table[\s\S]*?<\/table>/g, match => `<div class="msg-table-wrap">${match}</div>`)
 
   // Allow the data attribute through DOMPurify
   const html = DOMPurify.sanitize(rawHtml, {

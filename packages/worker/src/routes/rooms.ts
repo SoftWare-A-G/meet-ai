@@ -21,25 +21,8 @@ import type { AppEnv } from '../lib/types'
 import { createDOClient } from '../lib/do-client'
 import type { LobbyApp } from '../durable-objects/lobby'
 import type { CanvasRoomApp } from '../durable-objects/canvas-room'
-import type { TeamInfoPayload } from '../schemas/rooms'
-
-type TaskPayload = {
-  id: string
-  subject: string
-  description?: string
-  status: 'pending' | 'in_progress' | 'completed'
-  assignee: string | null
-  owner: string | null
-  source: 'claude' | 'codex' | 'pi' | 'meet_ai'
-  source_id: string | null
-  updated_by: string | null
-  updated_at: number
-}
-
-type TasksPayload = {
-  type: 'tasks_info'
-  tasks: TaskPayload[]
-}
+import type { ChatRoomApp } from '../durable-objects/chat-room'
+import { tasksFullReplaceSchema } from '../schemas/chat-room'
 
 export const roomsRoute = new Hono<AppEnv>()
 
@@ -153,7 +136,7 @@ export const roomsRoute = new Hono<AppEnv>()
 
       const body = c.req.valid('json')
 
-      const senderType = body.sender_type === 'agent' ? 'agent' : 'human'
+      const senderType: 'human' | 'agent' = body.sender_type === 'agent' ? 'agent' : 'human'
       const color = body.color || null
       const id = crypto.randomUUID()
       const seq = await db.insertMessage(
@@ -189,14 +172,8 @@ export const roomsRoute = new Hono<AppEnv>()
       // Broadcast via Durable Object
       const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
       const stub = c.env.CHAT_ROOM.get(doId)
-      c.executionCtx.waitUntil(
-        stub.fetch(
-          new Request('http://internal/broadcast', {
-            method: 'POST',
-            body: JSON.stringify(message),
-          })
-        )
-      )
+      const client = createDOClient<ChatRoomApp>(stub)
+      c.executionCtx.waitUntil(client.broadcast.$post({ json: message }))
 
       return c.json(message, 201)
     }
@@ -262,14 +239,8 @@ export const roomsRoute = new Hono<AppEnv>()
       // Broadcast via Durable Object
       const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
       const stub = c.env.CHAT_ROOM.get(doId)
-      c.executionCtx.waitUntil(
-        stub.fetch(
-          new Request('http://internal/broadcast', {
-            method: 'POST',
-            body: JSON.stringify(log),
-          })
-        )
-      )
+      const client = createDOClient<ChatRoomApp>(stub)
+      c.executionCtx.waitUntil(client.broadcast.$post({ json: log }))
 
       return c.json(log, 201)
     }
@@ -307,9 +278,10 @@ export const roomsRoute = new Hono<AppEnv>()
 
     const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
     const stub = c.env.CHAT_ROOM.get(doId)
-    const res = await stub.fetch(new Request('http://internal/team-info', { method: 'GET' }))
-    const data = (await res.json()) as TeamInfoPayload
-    return c.json<TeamInfoPayload>(data)
+    const client = createDOClient<ChatRoomApp>(stub)
+    const res = await client['team-info'].$get()
+    const data = await res.json()
+    return c.json(data)
   })
 
   // POST /api/rooms/:id/team-info — push team info to ChatRoom DO
@@ -327,12 +299,8 @@ export const roomsRoute = new Hono<AppEnv>()
 
     const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
     const stub = c.env.CHAT_ROOM.get(doId)
-    await stub.fetch(
-      new Request('http://internal/team-info', {
-        method: 'POST',
-        body: JSON.stringify(body),
-      })
-    )
+    const client = createDOClient<ChatRoomApp>(stub)
+    await client['team-info'].$post({ json: body })
 
     return c.json({ ok: true })
   })
@@ -356,12 +324,8 @@ export const roomsRoute = new Hono<AppEnv>()
 
       const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
       const stub = c.env.CHAT_ROOM.get(doId)
-      await stub.fetch(
-        new Request('http://internal/team-info/upsert', {
-          method: 'POST',
-          body: JSON.stringify(body),
-        })
-      )
+      const client = createDOClient<ChatRoomApp>(stub)
+      await client['team-info'].upsert.$post({ json: body })
 
       return c.json({ ok: true })
     }
@@ -382,18 +346,14 @@ export const roomsRoute = new Hono<AppEnv>()
 
     const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
     const stub = c.env.CHAT_ROOM.get(doId)
-    await stub.fetch(
-      new Request('http://internal/commands', {
-        method: 'POST',
-        body: JSON.stringify(body),
-      })
-    )
+    const client = createDOClient<ChatRoomApp>(stub)
+    await client.commands.$post({ json: body })
 
     return c.json({ ok: true })
   })
 
   // POST /api/rooms/:id/tasks — push tasks info to ChatRoom DO
-  .post('/:id/tasks', requireAuth, async c => {
+  .post('/:id/tasks', requireAuth, zValidator('json', tasksFullReplaceSchema), async c => {
     const keyId = c.get('keyId')
     const roomId = c.req.param('id')
     const db = queries(c.env.DB)
@@ -403,16 +363,12 @@ export const roomsRoute = new Hono<AppEnv>()
       return c.json({ error: 'room not found' }, 404)
     }
 
-    const body = await c.req.json()
+    const body = c.req.valid('json')
 
     const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
     const stub = c.env.CHAT_ROOM.get(doId)
-    await stub.fetch(
-      new Request('http://internal/tasks', {
-        method: 'POST',
-        body: JSON.stringify(body),
-      })
-    )
+    const client = createDOClient<ChatRoomApp>(stub)
+    await client.tasks.$post({ json: body })
 
     return c.json({ ok: true })
   })
@@ -432,14 +388,10 @@ export const roomsRoute = new Hono<AppEnv>()
 
     const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
     const stub = c.env.CHAT_ROOM.get(doId)
+    const client = createDOClient<ChatRoomApp>(stub)
 
     // Create task in DO
-    const taskRes = await stub.fetch(
-      new Request('http://internal/tasks/create', {
-        method: 'POST',
-        body: JSON.stringify(body),
-      })
-    )
+    const taskRes = await client.tasks.create.$post({ json: body })
     const task = await taskRes.json()
 
     // Send a chat message announcing the new task
@@ -465,14 +417,7 @@ export const roomsRoute = new Hono<AppEnv>()
       attachment_count: 0,
     }
 
-    c.executionCtx.waitUntil(
-      stub.fetch(
-        new Request('http://internal/broadcast', {
-          method: 'POST',
-          body: JSON.stringify(message),
-        })
-      )
-    )
+    c.executionCtx.waitUntil(client.broadcast.$post({ json: message }))
 
     return c.json({ ok: true, task }, 201)
   })
@@ -490,8 +435,9 @@ export const roomsRoute = new Hono<AppEnv>()
 
     const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
     const stub = c.env.CHAT_ROOM.get(doId)
-    const res = await stub.fetch(new Request('http://internal/tasks', { method: 'GET' }))
-    return c.json<TasksPayload>(await res.json())
+    const client = createDOClient<ChatRoomApp>(stub)
+    const res = await client.tasks.$get()
+    return c.json(await res.json())
   })
 
   // GET /api/rooms/:id/tasks/:taskId — get a single task
@@ -508,15 +454,14 @@ export const roomsRoute = new Hono<AppEnv>()
 
     const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
     const stub = c.env.CHAT_ROOM.get(doId)
-    const taskRes = await stub.fetch(
-      new Request(`http://internal/tasks/${taskId}`, { method: 'GET' })
-    )
+    const client = createDOClient<ChatRoomApp>(stub)
+    const taskRes = await client.tasks[':taskId'].$get({ param: { taskId } })
 
     if (taskRes.status === 404) {
       return c.json({ error: 'task not found' }, 404)
     }
 
-    return c.json<TaskPayload>(await taskRes.json())
+    return c.json(await taskRes.json())
   })
 
   // PATCH /api/rooms/:id/tasks/:taskId — update a task
@@ -535,18 +480,17 @@ export const roomsRoute = new Hono<AppEnv>()
 
     const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
     const stub = c.env.CHAT_ROOM.get(doId)
-    const taskRes = await stub.fetch(
-      new Request(`http://internal/tasks/${taskId}`, {
-        method: 'PATCH',
-        body: JSON.stringify(body),
-      })
-    )
+    const client = createDOClient<ChatRoomApp>(stub)
+    const taskRes = await client.tasks[':taskId'].$patch({
+      param: { taskId },
+      json: body,
+    })
 
     if (taskRes.status === 404) {
       return c.json({ error: 'task not found' }, 404)
     }
 
-    return c.json<TaskPayload>(await taskRes.json())
+    return c.json(await taskRes.json())
   })
 
   // DELETE /api/rooms/:id/tasks/:taskId — delete a task
@@ -563,11 +507,8 @@ export const roomsRoute = new Hono<AppEnv>()
 
     const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
     const stub = c.env.CHAT_ROOM.get(doId)
-    const taskRes = await stub.fetch(
-      new Request(`http://internal/tasks/${taskId}`, {
-        method: 'DELETE',
-      })
-    )
+    const client = createDOClient<ChatRoomApp>(stub)
+    const taskRes = await client.tasks[':taskId'].$delete({ param: { taskId } })
 
     if (taskRes.status === 404) {
       return c.json({ error: 'task not found' }, 404)
@@ -591,12 +532,8 @@ export const roomsRoute = new Hono<AppEnv>()
 
     const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
     const stub = c.env.CHAT_ROOM.get(doId)
-    const taskRes = await stub.fetch(
-      new Request('http://internal/tasks/upsert', {
-        method: 'POST',
-        body: JSON.stringify(body),
-      })
-    )
+    const client = createDOClient<ChatRoomApp>(stub)
+    const taskRes = await client.tasks.upsert.$post({ json: body })
 
     const task = await taskRes.json()
     return c.json(task, taskRes.status === 201 ? 201 : 200)
@@ -646,13 +583,9 @@ export const roomsRoute = new Hono<AppEnv>()
 
     const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
     const stub = c.env.CHAT_ROOM.get(doId)
+    const client = createDOClient<ChatRoomApp>(stub)
     c.executionCtx.waitUntil(
-      stub.fetch(
-        new Request('http://internal/terminal', {
-          method: 'POST',
-          body: JSON.stringify({ type: 'terminal_data', data: body.data }),
-        })
-      )
+      client.terminal.$post({ json: { type: 'terminal_data', data: body.data } })
     )
 
     return c.json({ ok: true })
@@ -709,9 +642,8 @@ export const roomsRoute = new Hono<AppEnv>()
     // Destroy ChatRoom DO (notifies clients, closes WebSockets, wipes storage)
     const chatDoId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
     const chatStub = c.env.CHAT_ROOM.get(chatDoId)
-    await chatStub.fetch(
-      new Request('http://internal/destroy', { method: 'DELETE' })
-    )
+    const chatClient = createDOClient<ChatRoomApp>(chatStub)
+    await chatClient.destroy.$delete()
 
     await db.deleteRoom(keyId, roomId)
 

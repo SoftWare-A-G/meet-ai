@@ -51,7 +51,9 @@ function parsePlanMarkdown(md: string): Segment[] {
     return `<pre ${MARKER_ATTR}="${idx}"></pre>`
   }
 
-  const rawHtml = parse(md, { breaks: true, renderer }).toString()
+  const rawHtml = parse(md, { breaks: true, renderer })
+    .toString()
+    .replace(/<table[\s\S]*?<\/table>/g, match => `<div class="plan-table-wrap">${match}</div>`)
 
   // Post-process: add data-block-id and plan CSS classes to block elements.
   // This preserves marked's inline rendering while enabling annotation targeting.
@@ -594,12 +596,14 @@ export default function PlanReviewCard({
         .plan-markdown .plan-h2 { font-size: 1.1rem; font-weight: 700; margin: 0.625rem 0 0.375rem; }
         .plan-markdown .plan-h3 { font-size: 1rem; font-weight: 600; margin: 0.5rem 0 0.25rem; }
         .plan-markdown .plan-h4 { font-size: 0.9rem; font-weight: 600; margin: 0.375rem 0 0.25rem; }
-        .plan-markdown .plan-p { margin: 0.25rem 0; line-height: 1.5; }
+        .plan-markdown { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
+        .plan-markdown .plan-p { margin: 0.25rem 0; line-height: 1.5; overflow-wrap: anywhere; word-break: break-word; }
         .plan-markdown ul { margin-left: 1.25rem; list-style-type: disc; }
         .plan-markdown ol { margin-left: 1.25rem; list-style-type: decimal; }
-        .plan-markdown li { line-height: 1.5; }
+        .plan-markdown li { line-height: 1.5; overflow-wrap: anywhere; word-break: break-word; }
         .plan-markdown .plan-hr { border: none; border-top: 1px solid rgba(139, 143, 163, 0.2); margin: 0.5rem 0; }
-        .plan-markdown table { width: 100%; border-collapse: collapse; margin: 0.5rem 0; font-size: 0.85em; }
+        .plan-markdown .plan-table-wrap { max-width: 100%; overflow-x: auto; margin: 0.5rem 0; }
+        .plan-markdown table { width: max-content; min-width: 100%; border-collapse: collapse; margin: 0; font-size: 0.85em; }
         .plan-markdown th { text-align: left; font-weight: 600; padding: 0.375rem 0.75rem; border-bottom: 1px solid rgba(139, 143, 163, 0.3); }
         .plan-markdown td { padding: 0.375rem 0.75rem; border-bottom: 1px solid rgba(139, 143, 163, 0.1); }
         .plan-markdown tr:last-child td { border-bottom: none; }
@@ -629,6 +633,14 @@ export default function PlanReviewCard({
           border-radius: 3px;
           padding: 0.125rem 0.375rem;
           font-size: 0.85em;
+          overflow-wrap: anywhere;
+          word-break: break-word;
+        }
+        .plan-markdown a,
+        .plan-markdown th,
+        .plan-markdown td {
+          overflow-wrap: anywhere;
+          word-break: break-word;
         }
         ::highlight(plan-highlight-deletion) {
           background-color: rgba(239, 68, 68, 0.2);

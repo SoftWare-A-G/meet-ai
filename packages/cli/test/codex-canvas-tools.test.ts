@@ -1,4 +1,5 @@
 import { describe, expect, it, mock } from 'bun:test'
+import { b64Vecs } from 'tldraw'
 import type { DynamicToolCallResponse } from '../src/generated/codex-app-server/v2/DynamicToolCallResponse'
 import {
   BUILTIN_TLDRAW_SHAPE_TYPES,
@@ -373,6 +374,65 @@ describe('createCanvasToolCallHandler', () => {
       expect(puts[0].props.url).toBe('https://example.com/video.mp4')
       expect(puts[0].props.assetId).toBeNull()
       expect(puts[0].props.playing).toBe(true)
+    })
+
+    it('creates draw shapes with an initial encoded point instead of empty segments', async () => {
+      const ops = makeOps()
+      const handler = createCanvasToolCallHandler(ops)
+      const result = await handler('create_canvas_shapes', {
+        shapes: [{ id: 'shape:draw1', type: 'draw' }],
+      })
+
+      expect(result.success).toBe(true)
+      const callArgs = (ops.applyMutations as ReturnType<typeof mock>).mock.calls[0]
+      const puts = callArgs[0].puts
+      expect(puts).toHaveLength(1)
+      expect(puts[0].type).toBe('draw')
+      expect(puts[0].props.segments).toHaveLength(1)
+      expect(puts[0].props.segments[0].type).toBe('free')
+      expect(b64Vecs.decodePoints(puts[0].props.segments[0].path)).toEqual([{ x: 0, y: 0, z: 0.5 }])
+    })
+
+    it('creates highlight shapes with an initial encoded point instead of empty segments', async () => {
+      const ops = makeOps()
+      const handler = createCanvasToolCallHandler(ops)
+      const result = await handler('create_canvas_shapes', {
+        shapes: [{ id: 'shape:highlight1', type: 'highlight' }],
+      })
+
+      expect(result.success).toBe(true)
+      const callArgs = (ops.applyMutations as ReturnType<typeof mock>).mock.calls[0]
+      const puts = callArgs[0].puts
+      expect(puts).toHaveLength(1)
+      expect(puts[0].type).toBe('highlight')
+      expect(puts[0].props.segments).toHaveLength(1)
+      expect(puts[0].props.segments[0].type).toBe('free')
+      expect(b64Vecs.decodePoints(puts[0].props.segments[0].path)).toEqual([{ x: 0, y: 0, z: 0.5 }])
+    })
+
+    it('repairs degenerate line points the same way tldraw onBeforeCreate does', async () => {
+      const ops = makeOps()
+      const handler = createCanvasToolCallHandler(ops)
+      const result = await handler('create_canvas_shapes', {
+        shapes: [{
+          id: 'shape:line1',
+          type: 'line',
+          props: {
+            points: {
+              a1: { id: 'a1', index: 'a1', x: 10, y: 10 },
+              a2: { id: 'a2', index: 'a2', x: 10, y: 10 },
+            },
+          },
+        }],
+      })
+
+      expect(result.success).toBe(true)
+      const callArgs = (ops.applyMutations as ReturnType<typeof mock>).mock.calls[0]
+      const puts = callArgs[0].puts
+      expect(puts).toHaveLength(1)
+      expect(puts[0].type).toBe('line')
+      expect(puts[0].props.points.a1).toMatchObject({ x: 10, y: 10 })
+      expect(puts[0].props.points.a2).toMatchObject({ x: 10.1, y: 10.1 })
     })
   })
 

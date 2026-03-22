@@ -525,6 +525,18 @@ html {
 .msg-content p:last-child {
   margin-bottom: 0;
 }
+.msg-content,
+.msg-content > div,
+.msg-content p,
+.msg-content li,
+.msg-content blockquote,
+.msg-content a,
+.msg-content th,
+.msg-content td {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
 .msg-content strong {
   font-weight: 700;
 }
@@ -537,6 +549,8 @@ html {
   border-radius: 3px;
   font-size: calc(13px * var(--font-scale));
   font-family: 'SF Mono', Monaco, Consolas, monospace;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .msg-content pre {
   background: #1f2937;
@@ -701,9 +715,16 @@ html {
 }
 .msg-content table {
   border-collapse: collapse;
-  margin: 6px 0;
+  margin: 0;
+  width: max-content;
   min-width: 100%;
   font-size: calc(13px * var(--font-scale));
+}
+.msg-content .msg-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 6px 0;
+  -webkit-overflow-scrolling: touch;
 }
 .msg-content th,
 .msg-content td {
