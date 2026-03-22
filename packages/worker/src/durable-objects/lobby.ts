@@ -3,28 +3,17 @@ import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { lobbyBroadcastSchema, spawnRequestSchema } from '../schemas/lobby'
 
-function createApp(getCtx: () => DurableObjectState) {
+function createApp(getLobby: () => Lobby) {
   return new Hono()
     .get('/ws', () => {
-      const ctx = getCtx()
-      const pair = new WebSocketPair()
-      const [client, server] = Object.values(pair)
-      ctx.acceptWebSocket(server)
-      ctx.setWebSocketAutoResponse(
-        new WebSocketRequestResponsePair(
-          JSON.stringify({ type: 'ping' }),
-          JSON.stringify({ type: 'pong' })
-        )
-      )
+      const lobby = getLobby()
+      const { client } = lobby.acceptWebSocket()
       return new Response(null, { status: 101, webSocket: client })
     })
     .post('/broadcast', zValidator('json', lobbyBroadcastSchema), (c) => {
-      const ctx = getCtx()
+      const lobby = getLobby()
       const payload = c.req.valid('json')
-      const data = JSON.stringify(payload)
-      for (const ws of ctx.getWebSockets()) {
-        try { ws.send(data) } catch { /* closed */ }
-      }
+      lobby.broadcastEvent(JSON.stringify(payload))
       return c.json({ ok: true })
     })
 }
@@ -32,7 +21,28 @@ function createApp(getCtx: () => DurableObjectState) {
 export type LobbyApp = ReturnType<typeof createApp>
 
 export class Lobby extends DurableObject {
-  private app = createApp(() => this.ctx)
+  private app = createApp(() => this)
+
+  /** Accept a WebSocket, configure auto-response, and return the client end. */
+  acceptWebSocket(): { client: WebSocket } {
+    const pair = new WebSocketPair()
+    const [client, server] = Object.values(pair)
+    this.ctx.acceptWebSocket(server)
+    this.ctx.setWebSocketAutoResponse(
+      new WebSocketRequestResponsePair(
+        JSON.stringify({ type: 'ping' }),
+        JSON.stringify({ type: 'pong' })
+      )
+    )
+    return { client }
+  }
+
+  /** Broadcast a serialized event to all connected WebSocket clients. */
+  broadcastEvent(data: string): void {
+    for (const ws of this.ctx.getWebSockets()) {
+      try { ws.send(data) } catch { /* closed */ }
+    }
+  }
 
   async fetch(request: Request): Promise<Response> {
     return this.app.fetch(request)
