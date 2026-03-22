@@ -18,6 +18,8 @@ import {
   terminalDataSchema,
 } from '../schemas/rooms'
 import type { AppEnv } from '../lib/types'
+import { createDOClient } from '../lib/do-client'
+import type { LobbyApp } from '../durable-objects/lobby'
 import type { TeamInfoPayload } from '../schemas/rooms'
 
 type TaskPayload = {
@@ -78,24 +80,22 @@ export const roomsRoute = new Hono<AppEnv>()
     const room = await db.insertRoom(id, keyId, body.name, body.project_id)
 
     // Notify lobby subscribers
-    const doId = c.env.LOBBY.idFromName(keyId)
-    const stub = c.env.LOBBY.get(doId)
+    const lobbyDoId = c.env.LOBBY.idFromName(keyId)
+    const lobbyStub = c.env.LOBBY.get(lobbyDoId)
+    const lobbyClient = createDOClient<LobbyApp>(lobbyStub)
     c.executionCtx.waitUntil(
-      stub.fetch(
-        new Request('http://internal/broadcast', {
-          method: 'POST',
-          body: JSON.stringify({
-            type: 'room_created',
-            id,
-            name: body.name,
-            created_at: room.created_at,
-            project_id: body.project_id ?? null,
-            project_name: projectName,
-            project_created_at: projectCreatedAt,
-            project_updated_at: projectUpdatedAt,
-          }),
-        })
-      )
+      lobbyClient.broadcast.$post({
+        json: {
+          type: 'room_created',
+          id,
+          name: body.name,
+          created_at: room.created_at,
+          project_id: body.project_id ?? null,
+          project_name: projectName,
+          project_created_at: projectCreatedAt,
+          project_updated_at: projectUpdatedAt,
+        },
+      })
     )
 
     return c.json(room, 201)
@@ -719,15 +719,13 @@ export const roomsRoute = new Hono<AppEnv>()
     await db.deleteRoom(keyId, roomId)
 
     // Notify lobby subscribers
-    const doId = c.env.LOBBY.idFromName(keyId)
-    const stub = c.env.LOBBY.get(doId)
+    const lobbyDoId = c.env.LOBBY.idFromName(keyId)
+    const lobbyStub = c.env.LOBBY.get(lobbyDoId)
+    const lobbyClient = createDOClient<LobbyApp>(lobbyStub)
     c.executionCtx.waitUntil(
-      stub.fetch(
-        new Request('http://internal/broadcast', {
-          method: 'POST',
-          body: JSON.stringify({ type: 'room_deleted', id: roomId }),
-        })
-      )
+      lobbyClient.broadcast.$post({
+        json: { type: 'room_deleted', id: roomId },
+      })
     )
 
     return c.body(null, 204)

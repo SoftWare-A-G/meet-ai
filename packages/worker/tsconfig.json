@@ -4,16 +4,16 @@
     "module": "ES2022",
     "moduleResolution": "bundler",
     "lib": ["ES2022", "DOM", "DOM.Iterable", "DOM.AsyncIterable"],
-    "types": ["@cloudflare/workers-types/2023-07-01"],
+    "types": ["@cloudflare/workers-types/latest"],
     "strict": true,
     "skipLibCheck": true,
     "noEmit": true,
     "jsx": "react-jsx",
     "jsxImportSource": "react",
     "paths": {
-      "@meet-ai/worker/*": ["./src/*"]
-    }
+      "@meet-ai/worker/*": ["./src/*"],
+    },
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],
-  "exclude": ["node_modules", "test"]
+  "exclude": ["node_modules", "test"],
 }

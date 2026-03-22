@@ -1,47 +1,62 @@
 import { DurableObject } from 'cloudflare:workers'
+import { Hono } from 'hono'
+import { zValidator } from '@hono/zod-validator'
+import { lobbyBroadcastSchema, spawnRequestSchema } from '../schemas/lobby'
 
-export class Lobby extends DurableObject {
-  async fetch(request: Request): Promise<Response> {
-    const url = new URL(request.url)
-
-    if (url.pathname === '/ws') {
+function createApp(getCtx: () => DurableObjectState) {
+  return new Hono()
+    .get('/ws', () => {
+      const ctx = getCtx()
       const pair = new WebSocketPair()
       const [client, server] = Object.values(pair)
-      this.ctx.acceptWebSocket(server)
-
-      this.ctx.setWebSocketAutoResponse(
+      ctx.acceptWebSocket(server)
+      ctx.setWebSocketAutoResponse(
         new WebSocketRequestResponsePair(
           JSON.stringify({ type: 'ping' }),
           JSON.stringify({ type: 'pong' })
         )
       )
-
       return new Response(null, { status: 101, webSocket: client })
-    }
-
-    if (url.pathname === '/broadcast') {
-      const data = await request.text()
-      for (const ws of this.ctx.getWebSockets()) {
+    })
+    .post('/broadcast', zValidator('json', lobbyBroadcastSchema), (c) => {
+      const ctx = getCtx()
+      const payload = c.req.valid('json')
+      const data = JSON.stringify(payload)
+      for (const ws of ctx.getWebSockets()) {
         try { ws.send(data) } catch { /* closed */ }
       }
-      return new Response('ok')
-    }
+      return c.json({ ok: true })
+    })
+}
 
-    return new Response('not found', { status: 404 })
+export type LobbyApp = ReturnType<typeof createApp>
+
+export class Lobby extends DurableObject {
+  private app = createApp(() => this.ctx)
+
+  async fetch(request: Request): Promise<Response> {
+    return this.app.fetch(request)
   }
 
   async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer) {
+    const text = typeof message === 'string' ? message : new TextDecoder().decode(message)
+    let parsed: unknown
     try {
-      const text = typeof message === 'string' ? message : new TextDecoder().decode(message)
-      const data = JSON.parse(text)
-      // Relay known control messages to all OTHER lobby clients
-      if (data.type === 'spawn_request' && data.room_name) {
-        for (const client of this.ctx.getWebSockets()) {
-          if (client === ws) continue
-          try { client.send(text) } catch { /* closed */ }
-        }
-      }
-    } catch { /* ignore malformed messages */ }
+      parsed = JSON.parse(text)
+    } catch {
+      ws.send(JSON.stringify({ type: 'error', error: 'invalid_json' }))
+      return
+    }
+    const result = spawnRequestSchema.safeParse(parsed)
+    if (!result.success) {
+      ws.send(JSON.stringify({ type: 'error', error: 'invalid_message' }))
+      return
+    }
+    // Relay known control messages to all OTHER lobby clients
+    for (const client of this.ctx.getWebSockets()) {
+      if (client === ws) continue
+      try { client.send(text) } catch { /* closed */ }
+    }
   }
   async webSocketClose() {}
   async webSocketError(ws: WebSocket) {
