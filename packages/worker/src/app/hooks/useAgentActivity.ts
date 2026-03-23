@@ -7,7 +7,7 @@ import type { AgentActivity } from '../lib/activity'
 const IDLE_TIMEOUT = 20_000 // 20 seconds
 const THROTTLE_MS = 500 // max 2Hz updates
 
-export function useAgentActivity(roomId: string | null): Map<string, AgentActivity> {
+export function useAgentActivity(roomId: string): Map<string, AgentActivity> {
   const { data: teamInfo } = useTeamInfoQuery(roomId)
   const { data: messages = [] } = useRoomTimeline(roomId)
   const [activity, setActivity] = useState<Map<string, AgentActivity>>(() => new Map())

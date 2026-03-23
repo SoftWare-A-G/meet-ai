@@ -12,13 +12,13 @@ import { useHaptics } from '../../hooks/useHaptics'
 const TIMESTAMP_INTERVAL = 15_000
 
 type TeamSidebarProps = {
-  roomId: string | null
+  roomId: string
   isOpen: boolean
   onClose: () => void
   onOpenTaskBoard?: () => void
 }
 
-function MemberRow({ member, inactive, roomId }: { member: TeamMember; inactive?: boolean; roomId: string | null }) {
+function MemberRow({ member, inactive, roomId }: { member: TeamMember; inactive?: boolean; roomId: string }) {
   const agentActivity = useAgentActivity(roomId)
   const activity = !inactive ? agentActivity.get(member.name) : undefined
   const hasActivity = activity && activity.latestAction
@@ -68,7 +68,7 @@ function TaskRow({ task }: { task: TaskItem }) {
   )
 }
 
-function TeamSidebarContent({ teamInfo, roomId, onOpenTaskBoard }: { teamInfo: NonNullable<ReturnType<typeof useTeamInfoQuery>['data']>; roomId: string | null; onOpenTaskBoard?: () => void }) {
+function TeamSidebarContent({ teamInfo, roomId, onOpenTaskBoard }: { teamInfo: NonNullable<ReturnType<typeof useTeamInfoQuery>['data']>; roomId: string; onOpenTaskBoard?: () => void }) {
   const { trigger } = useHaptics()
   const { data: tasksData } = useTasksQuery(roomId)
   // Tick counter forces re-render every 15s so relative timestamps stay fresh

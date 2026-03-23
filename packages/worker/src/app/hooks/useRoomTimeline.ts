@@ -61,22 +61,22 @@ export function reconcileOptimistic(
   return sortTimeline(deduplicateTimeline([...existing, { ...confirmed, status: 'sent' }]))
 }
 
-export function useRoomTimeline(roomId: string | null) {
+export function useRoomTimeline(roomId: string) {
   const queryClient = useQueryClient()
 
   return useQuery({
-    ...timelineQueryOptions(roomId!),
+    ...timelineQueryOptions(roomId),
     queryFn: async () => {
       const [messages, logs] = await Promise.all([
-        fetchMessages(roomId!),
-        fetchLogs(roomId!),
+        fetchMessages(roomId),
+        fetchLogs(roomId),
       ])
       const taggedMessages = messages.map(m => ({ ...m, status: 'sent' as const }))
       const taggedLogs = logs.map(l => ({ ...l, type: 'log' as const, status: 'sent' as const }))
       const serverItems = sortTimeline(deduplicateTimeline([...taggedMessages, ...taggedLogs]))
 
       // Preserve any pending/failed items already in the cache (e.g., restored offline queue)
-      const cached = queryClient.getQueryData<TimelineItem[]>(queryKeys.rooms.timeline(roomId!))
+      const cached = queryClient.getQueryData<TimelineItem[]>(queryKeys.rooms.timeline(roomId))
       if (cached) {
         const pendingItems = cached.filter(item => item.status === 'pending' || item.status === 'failed')
         if (pendingItems.length > 0) {
@@ -86,7 +86,6 @@ export function useRoomTimeline(roomId: string | null) {
 
       return serverItems
     },
-    enabled: !!roomId,
   })
 }
 
