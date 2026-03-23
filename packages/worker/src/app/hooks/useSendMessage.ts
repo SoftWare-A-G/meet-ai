@@ -37,7 +37,7 @@ export function useSendMessage(roomId: string, userName: string, apiKey: string)
               created_at: new Date().toISOString(),
               tempId: vars.tempId,
               status: 'pending',
-              ...(attachmentCount > 0 && { attachment_count: attachmentCount }),
+              ...(attachmentCount > 0 && { attachment_count: attachmentCount, attachmentIds: vars.attachmentIds }),
             }]
           }
           // Bug 2 fix: if tempId already exists (retry case), update status instead of appending
@@ -51,7 +51,7 @@ export function useSendMessage(roomId: string, userName: string, apiKey: string)
             created_at: new Date().toISOString(),
             tempId: vars.tempId,
             status: 'pending',
-            ...(attachmentCount > 0 && { attachment_count: attachmentCount }),
+            ...(attachmentCount > 0 && { attachment_count: attachmentCount, attachmentIds: vars.attachmentIds }),
           }]
         },
       )
@@ -70,6 +70,7 @@ export function useSendMessage(roomId: string, userName: string, apiKey: string)
         content: vars.content,
         apiKey,
         timestamp: Date.now(),
+        ...(vars.attachmentIds?.length ? { attachmentIds: vars.attachmentIds } : {}),
       })
     },
     // On success: WS echo will reconcile via reconcileOptimistic — no cache update needed here
@@ -90,7 +91,7 @@ export function useSendMessage(roomId: string, userName: string, apiKey: string)
       if (!msg) return
       // onMutate will update existing item to 'pending' (Bug 2 fix)
       mutation.mutate(
-        { content: msg.content, tempId },
+        { content: msg.content, attachmentIds: msg.attachmentIds, tempId },
         {
           onSuccess: async () => {
             await remove(tempId)

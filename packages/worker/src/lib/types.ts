@@ -1,8 +1,12 @@
+import type { CanvasRoom } from '../durable-objects/canvas-room'
+import type { ChatRoom } from '../durable-objects/chat-room'
+import type { Lobby } from '../durable-objects/lobby'
+
 export type Bindings = {
   DB: D1Database
-  CHAT_ROOM: DurableObjectNamespace
-  LOBBY: DurableObjectNamespace
-  CANVAS_ROOM: DurableObjectNamespace
+  CHAT_ROOM: DurableObjectNamespace<ChatRoom>
+  LOBBY: DurableObjectNamespace<Lobby>
+  CANVAS_ROOM: DurableObjectNamespace<CanvasRoom>
   ASSETS: Fetcher
   UPLOADS: KVNamespace
   PRESENCE: KVNamespace

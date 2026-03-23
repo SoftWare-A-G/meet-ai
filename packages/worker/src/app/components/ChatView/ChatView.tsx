@@ -65,6 +65,7 @@ export default function ChatView({
             created_at: new Date(q.timestamp).toISOString(),
             tempId: q.tempId,
             status: 'failed' as const,
+            ...(q.attachmentIds?.length ? { attachmentIds: q.attachmentIds, attachment_count: q.attachmentIds.length } : {}),
           })),
         )
         // Auto-flush if online — use retry() which handles IndexedDB removal on success

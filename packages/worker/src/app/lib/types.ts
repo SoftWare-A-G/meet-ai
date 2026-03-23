@@ -35,6 +35,7 @@ export type PendingMessage = {
   content: string
   apiKey: string
   timestamp: number
+  attachmentIds?: string[]
 }
 
 export type TeamMember = {

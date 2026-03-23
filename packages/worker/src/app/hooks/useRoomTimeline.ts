@@ -7,6 +7,7 @@ import type { Message } from '../lib/types'
 export type TimelineItem = Message & {
   tempId?: string
   status?: 'sent' | 'pending' | 'failed'
+  attachmentIds?: string[]
 }
 
 function deduplicateTimeline(items: TimelineItem[]) {
