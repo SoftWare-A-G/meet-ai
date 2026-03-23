@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAttachmentCountsQuery } from '../../hooks/useAttachmentCountsQuery'
 import { useHaptics } from '../../hooks/useHaptics'
-import { useOfflineQueue } from '../../hooks/useOfflineQueue'
+import { offlineQueue } from '../../lib/offline-queue'
 import { useRoomTimeline, useTimelineUpdater } from '../../hooks/useRoomTimeline'
 import { useRoomWebSocket } from '../../hooks/useRoomWebSocket'
 import { useSendMessage } from '../../hooks/useSendMessage'
@@ -43,7 +43,7 @@ export default function ChatView({
   const [forceScrollCounter, setForceScrollCounter] = useState(0)
   const { data: ttsStatus } = useTtsStatus()
   const [terminalData, setTerminalData] = useState<string | null>(null)
-  const { getForRoom } = useOfflineQueue()
+  const { getForRoom } = offlineQueue
   const { triggerForMessage } = useHaptics()
 
   // Request notification permission once on mount

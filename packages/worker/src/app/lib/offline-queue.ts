@@ -1,4 +1,4 @@
-import type { PendingMessage } from '../lib/types'
+import type { PendingMessage } from './types'
 
 function openMessageQueue(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -54,6 +54,10 @@ async function getAllQueued(): Promise<PendingMessage[]> {
   })
 }
 
-export function useOfflineQueue() {
-  return { queue: queueMessage, remove: removeFromQueue, getForRoom: getQueuedMessages, getAll: getAllQueued }
+/** Plain utility module for IndexedDB offline message queue. */
+export const offlineQueue = {
+  queue: queueMessage,
+  remove: removeFromQueue,
+  getForRoom: getQueuedMessages,
+  getAll: getAllQueued,
 }

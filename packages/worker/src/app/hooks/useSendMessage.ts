@@ -2,7 +2,7 @@ import { useCallback } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { sendMessage } from '../lib/fetchers'
 import { queryKeys } from '../lib/query-keys'
-import { useOfflineQueue } from './useOfflineQueue'
+import { offlineQueue } from '../lib/offline-queue'
 import type { TimelineItem } from './useRoomTimeline'
 
 function generateTempId() {
@@ -11,7 +11,7 @@ function generateTempId() {
 
 export function useSendMessage(roomId: string, userName: string, apiKey: string) {
   const queryClient = useQueryClient()
-  const { queue, remove } = useOfflineQueue()
+  const { queue, remove } = offlineQueue
   const timelineKey = queryKeys.rooms.timeline(roomId)
 
   const mutation = useMutation({
