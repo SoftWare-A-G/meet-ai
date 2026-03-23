@@ -1,5 +1,6 @@
 import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
+import { z } from 'zod/v4'
 import { queries } from '../db/queries'
 import { requireAuth } from '../middleware/auth'
 import { rateLimitByKey } from '../middleware/rate-limit'
@@ -11,53 +12,54 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 export const uploadsRoute = new Hono<AppEnv>()
 
   // POST /api/rooms/:id/upload — upload a file
-  .post('/:id/upload', requireAuth, rateLimitByKey(10, 60_000), async c => {
-    const keyId = c.get('keyId')
-    const roomId = c.req.param('id')
-    const db = queries(c.env.DB)
+  .post(
+    '/:id/upload',
+    requireAuth,
+    rateLimitByKey(10, 60_000),
+    zValidator('form', z.object({ file: z.instanceof(File) })),
+    async c => {
+      const keyId = c.get('keyId')
+      const roomId = c.req.param('id')
+      const db = queries(c.env.DB)
 
-    const room = await db.findRoom(roomId, keyId)
-    if (!room) {
-      return c.json({ error: 'room not found' }, 404)
-    }
+      const room = await db.findRoom(roomId, keyId)
+      if (!room) {
+        return c.json({ error: 'room not found' }, 404)
+      }
 
-    const formData = await c.req.formData()
-    const file = formData.get('file')
+      const { file } = c.req.valid('form')
 
-    if (!file || !(file instanceof File)) {
-      return c.json({ error: 'file field is required' }, 400)
-    }
+      if (file.size > MAX_FILE_SIZE) {
+        return c.json({ error: 'file exceeds 5MB limit' }, 413)
+      }
 
-    if (file.size > MAX_FILE_SIZE) {
-      return c.json({ error: 'file exceeds 5MB limit' }, 413)
-    }
+      const id = crypto.randomUUID()
+      const storageKey = `${keyId}/${roomId}/${id}/${file.name}`
 
-    const id = crypto.randomUUID()
-    const r2Key = `${keyId}/${roomId}/${id}/${file.name}`
+      const fileBytes = await file.arrayBuffer()
+      await c.env.UPLOADS.put(storageKey, fileBytes, { expirationTtl: 300 })
 
-    const fileBytes = await file.arrayBuffer()
-    await c.env.UPLOADS.put(r2Key, fileBytes, { expirationTtl: 300 })
-
-    await db.insertAttachment(
-      id,
-      keyId,
-      roomId,
-      r2Key,
-      file.name,
-      file.size,
-      file.type || 'application/octet-stream'
-    )
-
-    return c.json(
-      {
+      await db.insertAttachment(
         id,
-        filename: file.name,
-        size: file.size,
-        content_type: file.type || 'application/octet-stream',
-      },
-      201
-    )
-  })
+        keyId,
+        roomId,
+        storageKey,
+        file.name,
+        file.size,
+        file.type || 'application/octet-stream'
+      )
+
+      return c.json(
+        {
+          id,
+          filename: file.name,
+          size: file.size,
+          content_type: file.type || 'application/octet-stream',
+        },
+        201
+      )
+    }
+  )
 
   // GET /api/attachments/:id — download a file
   .get('/attachments/:id', requireAuth, async c => {

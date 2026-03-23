@@ -107,34 +107,17 @@ export type TeamInfoResponse = InferResponseType<
   200
 >
 
-// Upload — hc() can't handle FormData (route uses raw formData(), no zValidator),
-// so we use a thin fetch wrapper with the response type inferred from the route.
 export type UploadFileResponse = InferResponseType<
   ApiClient['api']['rooms'][':id']['upload']['$post'],
   201
 >
 
-export async function uploadFile(roomId: string, file: File): Promise<UploadFileResponse> {
-  const key = getApiKey()
-
-  const headers = new Headers()
-  if (key) {
-    headers.append('Authorization', `Bearer ${key}`)
-  }
-
-  const formData = new FormData()
-  formData.append('file', file)
-
-  const res = await fetch(`/api/rooms/${roomId}/upload`, {
-    method: 'POST',
-    headers,
-    body: formData,
+export async function uploadFile(roomId: string, file: File) {
+  const res = await getApiClient().api.rooms[':id'].upload.$post({
+    param: { id: roomId },
+    form: { file },
   })
-
-  if (!res.ok) {
-    throw new ApiError(res.status, await res.text())
-  }
-
+  if (!res.ok) throw new ApiError(res.status, await res.text())
   return res.json()
 }
 

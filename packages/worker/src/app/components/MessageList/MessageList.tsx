@@ -290,7 +290,7 @@ export default function MessageList({ messages, attachmentCounts, roomId, userNa
             return null
           }
           const msg = item.msg
-          const attCount = msg.id && attachmentCounts ? attachmentCounts[msg.id] : undefined
+          const attCount = msg.attachment_count ?? (msg.id && attachmentCounts ? attachmentCounts[msg.id] : undefined)
           return (
             <Message
               key={msg.tempId || `${msg.sender}-${msg.created_at}-${item.index}`}

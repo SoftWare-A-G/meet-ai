@@ -26,6 +26,7 @@ export function useSendMessage(roomId: string, userName: string, apiKey: string)
       }),
     onMutate: async (vars) => {
       await queryClient.cancelQueries({ queryKey: timelineKey })
+      const attachmentCount = vars.attachmentIds?.length ?? 0
       queryClient.setQueryData<TimelineItem[]>(
         timelineKey,
         old => {
@@ -36,6 +37,7 @@ export function useSendMessage(roomId: string, userName: string, apiKey: string)
               created_at: new Date().toISOString(),
               tempId: vars.tempId,
               status: 'pending',
+              ...(attachmentCount > 0 && { attachment_count: attachmentCount }),
             }]
           }
           // Bug 2 fix: if tempId already exists (retry case), update status instead of appending
@@ -49,6 +51,7 @@ export function useSendMessage(roomId: string, userName: string, apiKey: string)
             created_at: new Date().toISOString(),
             tempId: vars.tempId,
             status: 'pending',
+            ...(attachmentCount > 0 && { attachment_count: attachmentCount }),
           }]
         },
       )

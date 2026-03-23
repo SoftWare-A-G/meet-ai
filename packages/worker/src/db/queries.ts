@@ -116,10 +116,10 @@ export function queries(db: D1Database) {
       ).bind(olderThan).run()
     },
 
-    async insertAttachment(id: string, keyId: string, roomId: string, r2Key: string, filename: string, size: number, contentType: string) {
+    async insertAttachment(id: string, keyId: string, roomId: string, storageKey: string, filename: string, size: number, contentType: string) {
       await db.prepare(
         'INSERT INTO attachments (id, key_id, room_id, r2_key, filename, size, content_type) VALUES (?, ?, ?, ?, ?, ?, ?)'
-      ).bind(id, keyId, roomId, r2Key, filename, size, contentType).run()
+      ).bind(id, keyId, roomId, storageKey, filename, size, contentType).run()
     },
 
     async findAttachment(id: string, keyId: string) {
