@@ -1,6 +1,6 @@
 import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
-import { z } from 'zod'
+import { z } from 'zod/v4'
 import { requireAuth, extractToken } from '../middleware/auth'
 import type { AppEnv } from '../lib/types'
 import type { Context } from 'hono'

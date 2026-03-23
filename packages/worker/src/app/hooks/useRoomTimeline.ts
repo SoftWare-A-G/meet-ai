@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchMessages, fetchLogs, fetchMessagesSinceSeq } from '../lib/fetchers'
 import { queryKeys } from '../lib/query-keys'
+import { timelineQueryOptions } from '../lib/query-options'
 import type { Message } from '../lib/types'
 
 export type TimelineItem = Message & {
@@ -64,7 +65,7 @@ export function useRoomTimeline(roomId: string | null) {
   const queryClient = useQueryClient()
 
   return useQuery({
-    queryKey: queryKeys.rooms.timeline(roomId!),
+    ...timelineQueryOptions(roomId!),
     queryFn: async () => {
       const [messages, logs] = await Promise.all([
         fetchMessages(roomId!),
@@ -86,7 +87,6 @@ export function useRoomTimeline(roomId: string | null) {
       return serverItems
     },
     enabled: !!roomId,
-    staleTime: Infinity,
   })
 }
 

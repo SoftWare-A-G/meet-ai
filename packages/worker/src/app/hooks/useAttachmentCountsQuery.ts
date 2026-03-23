@@ -1,12 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
-import { fetchAttachmentCounts } from '../lib/fetchers'
-import { queryKeys } from '../lib/query-keys'
+import { attachmentCountsQueryOptions } from '../lib/query-options'
 
 export function useAttachmentCountsQuery(roomId: string | null) {
   return useQuery({
-    queryKey: queryKeys.rooms.attachmentCounts(roomId!),
-    queryFn: () => fetchAttachmentCounts(roomId!),
+    ...attachmentCountsQueryOptions(roomId!),
     enabled: !!roomId,
-    staleTime: Infinity,
   })
 }

@@ -1,12 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
-import { fetchTasks } from '../lib/fetchers'
-import { queryKeys } from '../lib/query-keys'
+import { tasksQueryOptions } from '../lib/query-options'
 
 export function useTasksQuery(roomId: string | null) {
   return useQuery({
-    queryKey: queryKeys.rooms.tasks(roomId!),
-    queryFn: () => fetchTasks(roomId!),
+    ...tasksQueryOptions(roomId!),
     enabled: !!roomId,
-    staleTime: Infinity,
   })
 }

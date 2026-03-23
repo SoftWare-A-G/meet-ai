@@ -1,11 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { fetchRooms } from '../lib/fetchers'
-import { queryKeys } from '../lib/query-keys'
+import { roomsQueryOptions } from '../lib/query-options'
 
 export function useRoomsQuery() {
-  return useQuery({
-    queryKey: queryKeys.rooms.all,
-    queryFn: fetchRooms,
-    refetchInterval: 60_000,
-  })
+  return useQuery(roomsQueryOptions)
 }
