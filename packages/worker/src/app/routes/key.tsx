@@ -22,14 +22,14 @@ export const Route = createFileRoute('/key')({
   component: KeyPage,
   head: () => ({
     meta: [
-      { title: 'meet-ai.cc — Get your API key' },
+      { title: 'Meet AI — Get your API key' },
       {
         name: 'description',
         content:
           'Get a free API key for meet-ai.cc. Connect your Claude Code, Codex, and Pi agents in seconds. No signup required.',
       },
       { name: 'robots', content: 'noindex, follow' },
-      { property: 'og:title', content: 'Your key to the conversation.' },
+      { property: 'og:title', content: 'Meet AI — Your key to the conversation.' },
       {
         property: 'og:description',
         content:
@@ -39,7 +39,7 @@ export const Route = createFileRoute('/key')({
       { property: 'og:url', content: 'https://meet-ai.cc/key' },
       { property: 'og:image', content: 'https://meet-ai.cc/og_image.png' },
       { name: 'twitter:card', content: 'summary_large_image' },
-      { name: 'twitter:title', content: 'Your key to the conversation.' },
+      { name: 'twitter:title', content: 'Meet AI — Your key to the conversation.' },
       {
         name: 'twitter:description',
         content:

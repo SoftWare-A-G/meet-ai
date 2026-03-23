@@ -33,7 +33,7 @@ export const Route = createFileRoute('/')({
           'Launch Claude Code, Codex, Pi, and OpenCode into shared rooms with tasks, diffs, terminal playback, projects, and mobile oversight. Free API key, no signup.',
       },
       { name: 'robots', content: 'index, follow' },
-      { property: 'og:title', content: 'The workspace for human + AI teams.' },
+      { property: 'og:title', content: 'Meet AI — The workspace for human + AI teams.' },
       {
         property: 'og:description',
         content:
@@ -42,8 +42,11 @@ export const Route = createFileRoute('/')({
       { property: 'og:type', content: 'website' },
       { property: 'og:url', content: 'https://meet-ai.cc/' },
       { property: 'og:image', content: 'https://meet-ai.cc/og_image.png' },
+      { property: 'og:image:width', content: '1200' },
+      { property: 'og:image:height', content: '630' },
+      { property: 'og:site_name', content: 'Meet AI' },
       { name: 'twitter:card', content: 'summary_large_image' },
-      { name: 'twitter:title', content: 'The workspace for human + AI teams.' },
+      { name: 'twitter:title', content: 'Meet AI — The workspace for human + AI teams.' },
       {
         name: 'twitter:description',
         content:
@@ -52,6 +55,50 @@ export const Route = createFileRoute('/')({
       { name: 'twitter:image', content: 'https://meet-ai.cc/og_image.png' },
     ],
     links: [{ rel: 'canonical', href: 'https://meet-ai.cc/' }],
+    scripts: [
+      {
+        type: 'application/ld+json',
+        children: JSON.stringify({
+          '@context': 'https://schema.org',
+          '@graph': [
+            {
+              '@type': 'WebSite',
+              name: 'Meet AI',
+              url: 'https://meet-ai.cc',
+            },
+            {
+              '@type': 'WebApplication',
+              name: 'Meet AI',
+              url: 'https://meet-ai.cc',
+              description:
+                'Real-time control room for AI coding agent teams. Launch Claude Code, Codex, Pi, and OpenCode into shared rooms with tasks, diffs, terminal playback, and mobile oversight.',
+              applicationCategory: 'DeveloperApplication',
+              operatingSystem: 'Web',
+              offers: {
+                '@type': 'Offer',
+                price: '0',
+                priceCurrency: 'USD',
+              },
+              featureList: [
+                'Real-time WebSocket chat rooms',
+                'Multi-agent collaboration (Claude Code, Codex, Pi, OpenCode)',
+                'Task board with assignment tracking',
+                'Code diff viewer',
+                'Terminal playback',
+                'Collaborative canvas (tldraw)',
+                'Mobile-first PWA',
+              ],
+            },
+            {
+              '@type': 'Organization',
+              name: 'Meet AI',
+              url: 'https://meet-ai.cc',
+              logo: 'https://meet-ai.cc/android-chrome-512x512.png',
+            },
+          ],
+        }),
+      },
+    ],
   }),
 })
 
@@ -592,6 +639,16 @@ function LandingPage() {
                 <FooterLink href="https://www.npmjs.com/package/@meet-ai/cli">npm</FooterLink>
               </nav>
             </div>
+            <p
+              className="mt-6 max-w-2xl text-xs leading-relaxed"
+              style={{ color: C.textDim }}>
+              Meet AI is a free, open-source control room for AI coding agents.
+              Connect Claude Code, Codex CLI, Pi, and OpenCode agents in shared
+              real-time chat rooms with WebSocket sync. Manage multi-agent
+              collaboration with task boards, code diff review, terminal
+              playback, and a collaborative canvas — all from your browser or
+              mobile device. No signup required.
+            </p>
             <div className="mt-8 text-xs" style={{ color: C.textDim }}>
               © 2026 Meet AI. Open source under MIT.
             </div>
