@@ -1,7 +1,6 @@
 import { hc } from 'hono/client'
 import type { AppType } from '../../index'
 import { clearApiKey, getApiKey } from './api'
-import { getQueryClient } from './query-client'
 
 export type ApiClient = ReturnType<typeof hc<AppType>>
 
@@ -19,7 +18,6 @@ export function getApiClient(): ApiClient {
         const res = await fetch(input, init)
         if (res.status === 401) {
           clearApiKey()
-          getQueryClient().clear()
           resetApiClient()
           if (typeof window !== 'undefined') {
             window.location.href = '/key'

@@ -1,6 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { toast } from 'sonner'
 import CanvasView from '../../components/CanvasView'
 import ChatView from '../../components/ChatView'
@@ -11,15 +10,28 @@ import { useRoomsQuery } from '../../hooks/useRoomsQuery'
 import { useTeamInfoQuery } from '../../hooks/useTeamInfoQuery'
 import { useChatContext } from '../../lib/chat-context'
 import { queryKeys } from '../../lib/query-keys'
+import { roomsQueryOptions, teamInfoQueryOptions } from '../../lib/query-options'
 
 export const Route = createFileRoute('/chat/$id')({
   component: ChatRoom,
+  loader: async ({ params, context: { queryClient, apiKey } }) => {
+    if (!apiKey) return { roomName: null }
+    const rooms = await queryClient.ensureQueryData(roomsQueryOptions)
+    const room = rooms.find(r => r.id === params.id)
+
+    void queryClient.invalidateQueries({ queryKey: queryKeys.rooms.timeline(params.id) })
+    if (room) void queryClient.ensureQueryData(teamInfoQueryOptions(params.id))
+
+    return { roomName: room?.name ?? null }
+  },
+  head: ({ loaderData }) => ({
+    meta: [{ title: loaderData?.roomName ? `Meet AI: ${loaderData.roomName}` : 'Meet AI' }],
+  }),
 })
 
 function ChatRoom() {
   const { id } = Route.useParams()
   const navigate = Route.useNavigate()
-  const queryClient = useQueryClient()
   const {
     apiKey,
     userName,
@@ -39,17 +51,6 @@ function ChatRoom() {
 
   const room = rooms.find(r => r.id === id)
   const roomName = room?.name ?? (roomsLoading ? 'Loading...' : 'Room not found')
-
-  useEffect(() => {
-    document.title = room ? `Meet AI: ${room.name}` : 'Meet AI'
-    return () => {
-      document.title = 'Meet AI'
-    }
-  }, [room])
-
-  useEffect(() => {
-    void queryClient.invalidateQueries({ queryKey: queryKeys.rooms.timeline(id) })
-  }, [id, queryClient])
 
   const handleDeleteConfirm = useCallback(() => {
     if (!room) return

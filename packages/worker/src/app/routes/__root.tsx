@@ -1,15 +1,15 @@
 import { Toast } from '@base-ui/react/toast'
 import { QueryClientProvider } from '@tanstack/react-query'
-import { createRootRoute, HeadContent, Outlet, Scripts } from '@tanstack/react-router'
+import { createRootRouteWithContext, HeadContent, Outlet, Scripts } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { Toaster } from 'sonner'
 import { ThemeProvider } from '../components/ThemeProvider'
 import { ToastList } from '../components/Toast'
 import { TooltipProvider } from '../components/ui/tooltip'
-import { getQueryClient } from '../lib/query-client'
+import type { RouterContext } from '../router'
 import appCss from '../main.css?url'
 
-export const Route = createRootRoute({
+export const Route = createRootRouteWithContext<RouterContext>()({
   component: RootLayout,
   head: () => ({
     meta: [
@@ -29,6 +29,8 @@ export const Route = createRootRoute({
 })
 
 function RootLayout() {
+  const { queryClient } = Route.useRouteContext()
+
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       caches.keys().then(names => {
@@ -44,7 +46,7 @@ function RootLayout() {
         <HeadContent />
       </head>
       <body>
-        <QueryClientProvider client={getQueryClient()}>
+        <QueryClientProvider client={queryClient}>
           <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
             <TooltipProvider>
               <Toast.Provider timeout={2100}>

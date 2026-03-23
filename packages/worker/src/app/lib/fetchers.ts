@@ -1,6 +1,5 @@
 import { getApiKey, clearApiKey } from './api'
 import { getApiClient, resetApiClient } from './api-client'
-import { getQueryClient } from './query-client'
 import type { ApiClient } from './api-client'
 import type { InferRequestType, InferResponseType } from 'hono/client'
 
@@ -308,7 +307,6 @@ export async function textToSpeech(text: string) {
   if (res.status === 401) {
     clearApiKey()
     resetApiClient()
-    getQueryClient().clear()
     window.location.href = '/key'
     throw new ApiError(401, 'Unauthorized')
   }

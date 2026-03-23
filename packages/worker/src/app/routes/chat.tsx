@@ -20,6 +20,7 @@ import { getApiKey, setApiKey } from '../lib/api'
 import { ChatContext } from '../lib/chat-context'
 import { STORAGE_KEYS, DEFAULT_SCHEMA, DEFAULT_FONT_SCALE } from '../lib/constants'
 import { getOrCreateHandle } from '../lib/handle'
+import { roomsQueryOptions, projectsQueryOptions } from '../lib/query-options'
 import { applySchema, applyFontScale } from '../lib/theme'
 
 // Apply persisted settings before first paint to avoid flash of unstyled content
@@ -30,6 +31,17 @@ if (typeof window !== 'undefined') {
 
 export const Route = createFileRoute('/chat')({
   component: ChatPage,
+  beforeLoad: () => {
+    if (typeof window === 'undefined') return { apiKey: null }
+    return { apiKey: getApiKey() }
+  },
+  loader: ({ context: { queryClient, apiKey } }) => {
+    if (!apiKey) return
+    return Promise.all([
+      queryClient.ensureQueryData(roomsQueryOptions),
+      queryClient.ensureQueryData(projectsQueryOptions),
+    ])
+  },
   head: () => ({
     meta: [{ name: 'robots', content: 'noindex, follow' }],
   }),
