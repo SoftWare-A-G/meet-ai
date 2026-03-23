@@ -662,13 +662,20 @@ export function listenPi(
       })
   }
 
-  function shutdown() {
+  async function shutdown() {
     if (shutdownStarted) return
     shutdownStarted = true
     emitPiLog('info', 'listen-pi', 'session.shutdown', {
       roomId,
       piSender,
     })
+    // Flush any buffered message and wait for it to send before tearing down
+    publishBufferedMessage()
+    try {
+      await publishQueue
+    } catch {
+      /* best-effort — don't block shutdown on send failure */
+    }
     terminal.shutdown()
     piBridge.setEventHandler(null)
     piBridge.setUiRequestHandler(null)
