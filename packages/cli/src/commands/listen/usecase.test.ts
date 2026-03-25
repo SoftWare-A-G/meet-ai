@@ -1054,7 +1054,15 @@ describe('listen', () => {
 
     await new Promise(resolve => setTimeout(resolve, 0))
 
-    expect(client.sendMessage).toHaveBeenCalledWith(
+    expect(client.sendMessage).toHaveBeenCalledTimes(2)
+    expect(client.sendMessage).toHaveBeenNthCalledWith(
+      1,
+      'df75b1db-f583-4d9f-8e34-9b3d614f152c',
+      'codex',
+      'Started working on that.'
+    )
+    expect(client.sendMessage).toHaveBeenNthCalledWith(
+      2,
       'df75b1db-f583-4d9f-8e34-9b3d614f152c',
       'codex',
       'Hello world'
@@ -1105,7 +1113,15 @@ describe('listen', () => {
 
     await new Promise(resolve => setTimeout(resolve, 0))
 
-    expect(client.sendMessage).toHaveBeenCalledWith(
+    expect(client.sendMessage).toHaveBeenCalledTimes(2)
+    expect(client.sendMessage).toHaveBeenNthCalledWith(
+      1,
+      'df75b1db-f583-4d9f-8e34-9b3d614f152c',
+      'codex',
+      'Started working on that.'
+    )
+    expect(client.sendMessage).toHaveBeenNthCalledWith(
+      2,
       'df75b1db-f583-4d9f-8e34-9b3d614f152c',
       'codex',
       'Hello world'
@@ -1150,18 +1166,30 @@ describe('listen', () => {
 
     await new Promise(resolve => setTimeout(resolve, 0))
 
-    expect(client.sendMessage).toHaveBeenCalledTimes(1)
-    expect(client.sendMessage).toHaveBeenCalledWith(
+    expect(client.sendMessage).toHaveBeenCalledTimes(2)
+    expect(client.sendMessage).toHaveBeenNthCalledWith(
+      1,
+      'df75b1db-f583-4d9f-8e34-9b3d614f152c',
+      'codex',
+      'Started working on that.'
+    )
+    expect(client.sendMessage).toHaveBeenNthCalledWith(
+      2,
       'df75b1db-f583-4d9f-8e34-9b3d614f152c',
       'codex',
       'Hello world'
     )
   })
 
-  it('publishes a single combined Codex reply when one turn emits multiple completed items', async () => {
+  it('publishes intermediate completed Codex items as foldable logs and the last item as the final response', async () => {
     process.env.MEET_AI_RUNTIME = 'codex'
     process.env.CODEX_HOME = codexHome
     process.env.MEET_AI_CODEX_SESSION_ID = 'codex-sess-9'
+    setMeetAiDirOverride(tempMeetAiDir)
+    writeHomeConfig({
+      defaultEnv: 'default',
+      envs: { default: { url: 'http://localhost:8787', key: 'mai_test123' } },
+    })
 
     const client = mockClient({
       sendMessage: mock(() =>
@@ -1175,12 +1203,36 @@ describe('listen', () => {
       ),
     })
     const codexBridge = makeCodexBridgeMock()
+    const postMessageMock = mock(async () => ({
+      ok: true,
+      json: async () => ({ id: 'msg-thinking-parent-1' }),
+    }))
+    const postLogMock = mock(async () => ({ ok: true }))
 
     listen(
       client,
       { roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c', senderType: 'human' },
       undefined,
-      codexBridge
+      codexBridge,
+      undefined,
+      {
+        createHookClient: mock(
+          () =>
+            ({
+              api: {
+                rooms: {
+                  ':id': {
+                    messages: { $post: postMessageMock },
+                    logs: { $post: postLogMock },
+                  },
+                },
+              },
+            }) as unknown as HookClient
+        ),
+        createPlanReview: mock(async () => ({ ok: false as const, status: 500, text: 'unused' })) as any,
+        pollForPlanDecision: mock(async () => null) as any,
+        expirePlanReview: mock(async () => {}),
+      }
     )
 
     codexBridge.emitEvent({
@@ -1201,13 +1253,30 @@ describe('listen', () => {
     })
 
     await new Promise(resolve => setTimeout(resolve, 0))
+    await new Promise(resolve => setTimeout(resolve, 0))
 
-    expect(client.sendMessage).toHaveBeenCalledTimes(1)
-    expect(client.sendMessage).toHaveBeenCalledWith(
+    expect(client.sendMessage).toHaveBeenCalledTimes(2)
+    expect(client.sendMessage).toHaveBeenNthCalledWith(
+      1,
       'df75b1db-f583-4d9f-8e34-9b3d614f152c',
       'codex',
-      'First answer\n\nSecond answer'
+      'Started working on that.'
     )
+    expect(client.sendMessage).toHaveBeenNthCalledWith(
+      2,
+      'df75b1db-f583-4d9f-8e34-9b3d614f152c',
+      'codex',
+      'Second answer'
+    )
+    expect(postMessageMock).toHaveBeenCalledTimes(1)
+    expect(postLogMock).toHaveBeenCalledWith({
+      param: { id: 'df75b1db-f583-4d9f-8e34-9b3d614f152c' },
+      json: expect.objectContaining({
+        sender: 'codex',
+        content: 'First answer',
+        message_id: 'msg-thinking-parent-1',
+      }),
+    })
   })
 
   describe('tasks_info handling', () => {

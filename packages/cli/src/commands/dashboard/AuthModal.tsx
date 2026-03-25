@@ -117,7 +117,7 @@ export function AuthModal({ onSuccess, onCancel }: AuthModalProps) {
 
       <Box>
         <Text dimColor>Get your key at </Text>
-        <Link url={linkUrl}>{linkUrl}</Link>
+        <Link url={linkUrl} fallback={false}>{linkUrl}</Link>
       </Box>
 
       <Box marginTop={1}>

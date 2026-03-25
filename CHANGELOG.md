@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.3.1](https://github.com/SoftWare-A-G/meet-ai/compare/2.3.0...2.3.1) (2026-03-25)
+
+### Features
+
+- add the Codex started/thinking/final room-output contract: listeners now publish an initial "Started working on that." reply, route intermediate completed items into activity logs, and keep only the last completed item as the final room response
+- improve worker web-app SEO metadata with homepage JSON-LD structured data plus branded Open Graph and Twitter titles for the homepage and `/key`
+
+### Bug Fixes
+
+- fix attachment upload reliability by preserving attachment metadata through optimistic retries, switching the upload flow onto typed fetchers and route validation, and aligning `storageKey` naming across the worker upload path
+- flush Pi's buffered final message before listener shutdown so the last reply is delivered before teardown
+- disable Ink link fallback rendering in the dashboard auth and env-manager key modals to prevent broken terminal link behavior
+- align the CLI, worker, desktop, and app package manifests at `2.3.1` for the release
+
+### Tests
+
+- extend Codex listen-flow coverage for the started message contract and intermediate thinking-log publishing
+
 ## [2.3.0](https://github.com/SoftWare-A-G/meet-ai/compare/2.2.2...2.3.0) (2026-03-22)
 
 ### Features

@@ -173,8 +173,11 @@ function makeTurnKey(event: { turnId: string | null; itemId: string | null }): s
 type TurnMessageState = {
   itemOrder: string[]
   itemTexts: Map<string, string>
-  sent: boolean
-  sending: boolean
+  startedSent: boolean
+  pendingFinalItemId: string | null
+  finalSent: boolean
+  finalSending: boolean
+  thinkingLoggedItemIds: Set<string>
 }
 
 type TurnPlanReviewState = {
@@ -183,13 +186,11 @@ type TurnPlanReviewState = {
   reviewId: string | null
 }
 
-function buildPublishedText(state: TurnMessageState): string {
-  return normalizeFinalText(
-    state.itemOrder
-      .map(itemId => normalizeFinalText(state.itemTexts.get(itemId) ?? ''))
-      .filter(Boolean)
-      .join('\n\n')
-  )
+const STARTED_MESSAGE = 'Started working on that.'
+
+function buildItemText(state: TurnMessageState, itemId: string | null | undefined): string {
+  if (!itemId) return ''
+  return normalizeFinalText(state.itemTexts.get(itemId) ?? '')
 }
 
 async function resolveCodexTeamName(roomId: string): Promise<string | undefined> {
@@ -558,46 +559,94 @@ export function listenCodex(
     })()
   }
 
-  const publishBufferedMessage = (key: string) => {
+  const ensureStartedMessage = (key: string) => {
     const state = messageState.get(key)
-    const text = state ? buildPublishedText(state) : ''
-    if (!state || state.sent || state.sending || !text) return
+    if (!state || state.startedSent) return
+    state.startedSent = true
 
-    emitCodexAppServerLog('info', 'listen-codex', 'room_publish.queued', {
+    emitCodexAppServerLog('info', 'listen-codex', 'started_publish.queued', {
       turnKey: key,
-      itemCount: state.itemOrder.length,
+      preview: STARTED_MESSAGE,
+    })
+
+    enqueuePublish(async () => {
+      try {
+        emitCodexAppServerLog('info', 'listen-codex', 'started_publish.started', {
+          turnKey: key,
+          preview: STARTED_MESSAGE,
+        })
+        await client.sendMessage(roomId, codexSender, STARTED_MESSAGE)
+        emitCodexAppServerLog('info', 'listen-codex', 'started_publish.completed', {
+          turnKey: key,
+          preview: STARTED_MESSAGE,
+        })
+      } catch (error) {
+        emitCodexAppServerLog('error', 'listen-codex', 'started_publish.failed', {
+          turnKey: key,
+          preview: STARTED_MESSAGE,
+          error: error instanceof Error ? error.message : String(error),
+        })
+      }
+    })
+  }
+
+  const publishThinkingItem = (key: string, itemId: string) => {
+    const state = messageState.get(key)
+    const text = state ? buildItemText(state, itemId) : ''
+    if (!state || state.thinkingLoggedItemIds.has(itemId) || !text) return
+    state.thinkingLoggedItemIds.add(itemId)
+
+    emitCodexAppServerLog('info', 'listen-codex', 'thinking_publish.queued', {
+      turnKey: key,
+      itemId,
       textLength: text.length,
       preview: previewText(text),
     })
 
-    state.sending = true
+    enqueueActivityLog(text)
+  }
+
+  const publishFinalMessage = (key: string, itemId?: string | null) => {
+    const state = messageState.get(key)
+    const resolvedItemId = itemId ?? state?.pendingFinalItemId ?? state?.itemOrder.at(-1) ?? null
+    const text = state ? buildItemText(state, resolvedItemId) : ''
+    if (!state || state.finalSent || state.finalSending || !text) return
+
+    emitCodexAppServerLog('info', 'listen-codex', 'room_publish.queued', {
+      turnKey: key,
+      itemId: resolvedItemId,
+      textLength: text.length,
+      preview: previewText(text),
+    })
+
+    state.finalSending = true
     enqueuePublish(async () => {
       try {
         emitCodexAppServerLog('info', 'listen-codex', 'room_publish.started', {
           turnKey: key,
-          itemCount: state.itemOrder.length,
+          itemId: resolvedItemId,
           textLength: text.length,
           preview: previewText(text),
         })
         await client.sendMessage(roomId, codexSender, text)
-        state.sent = true
+        state.finalSent = true
         emitCodexAppServerLog('info', 'listen-codex', 'room_publish.completed', {
           turnKey: key,
-          itemCount: state.itemOrder.length,
+          itemId: resolvedItemId,
           textLength: text.length,
           preview: previewText(text),
         })
       } catch (error) {
         emitCodexAppServerLog('error', 'listen-codex', 'room_publish.failed', {
           turnKey: key,
-          itemCount: state.itemOrder.length,
+          itemId: resolvedItemId,
           textLength: text.length,
           preview: previewText(text),
           error: error instanceof Error ? error.message : String(error),
         })
         throw error
       } finally {
-        state.sending = false
+        state.finalSending = false
       }
     })
   }
@@ -610,14 +659,21 @@ export function listenCodex(
     const nextText = event.text.replace(/\r\n/g, '\n')
     if (!nextText) return
 
-    const existing = messageState.get(key)
-    if (!existing) {
-      messageState.set(key, {
+    let state = messageState.get(key)
+    let created = false
+    if (!state) {
+      created = true
+      state = {
         itemOrder: [itemKey],
         itemTexts: new Map([[itemKey, nextText]]),
-        sent: false,
-        sending: false,
-      })
+        startedSent: false,
+        pendingFinalItemId: null,
+        finalSent: false,
+        finalSending: false,
+        thinkingLoggedItemIds: new Set<string>(),
+      }
+      messageState.set(key, state)
+      ensureStartedMessage(key)
       emitCodexAppServerLog('debug', 'listen-codex', 'message_buffer.created', {
         turnKey: key,
         itemKey,
@@ -627,35 +683,40 @@ export function listenCodex(
         itemCount: 1,
         preview: previewText(nextText),
       })
-      return
     }
 
-    if (!existing.itemTexts.has(itemKey)) existing.itemOrder.push(itemKey)
+    if (created && event.type !== 'agent_message_completed') return
+
+    if (!state.itemTexts.has(itemKey)) state.itemOrder.push(itemKey)
+    ensureStartedMessage(key)
 
     if (event.type === 'agent_message_completed') {
-      existing.itemTexts.set(itemKey, nextText)
-      const publishedText = buildPublishedText(existing)
+      state.itemTexts.set(itemKey, nextText)
+      if (state.pendingFinalItemId && state.pendingFinalItemId !== itemKey) {
+        publishThinkingItem(key, state.pendingFinalItemId)
+      }
+      state.pendingFinalItemId = itemKey
       emitCodexAppServerLog('debug', 'listen-codex', 'message_buffer.updated', {
         turnKey: key,
         itemKey,
         eventType: event.type,
         chunkLength: nextText.length,
-        totalLength: publishedText.length,
-        itemCount: existing.itemOrder.length,
-        preview: previewText(publishedText),
+        totalLength: nextText.length,
+        itemCount: state.itemOrder.length,
+        preview: previewText(nextText),
       })
       return
     }
 
-    existing.itemTexts.set(itemKey, `${existing.itemTexts.get(itemKey) ?? ''}${nextText}`)
-    const publishedText = buildPublishedText(existing)
+    state.itemTexts.set(itemKey, `${state.itemTexts.get(itemKey) ?? ''}${nextText}`)
+    const publishedText = buildItemText(state, itemKey)
     emitCodexAppServerLog('debug', 'listen-codex', 'message_buffer.updated', {
       turnKey: key,
       itemKey,
       eventType: event.type,
       chunkLength: nextText.length,
       totalLength: publishedText.length,
-      itemCount: existing.itemOrder.length,
+      itemCount: state.itemOrder.length,
       preview: previewText(publishedText),
     })
   }
@@ -685,12 +746,12 @@ export function listenCodex(
       emitCodexAppServerLog('info', 'listen-codex', 'turn_completed.received', {
         turnId: event.turnId,
         pendingTurnKeys: Array.from(messageState.entries())
-          .filter(([, state]) => !state.sent)
+          .filter(([, state]) => !state.finalSent)
           .map(([key]) => key),
       })
       for (const [key, state] of messageState.entries()) {
-        if (key === event.turnId || (!event.turnId && !state.sent)) {
-          publishBufferedMessage(key)
+        if (key === event.turnId || (!event.turnId && !state.finalSent)) {
+          publishFinalMessage(key)
         }
       }
     }

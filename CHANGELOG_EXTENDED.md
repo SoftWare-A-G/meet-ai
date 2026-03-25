@@ -1,5 +1,32 @@
 # Changelog
 
+## [2.3.1](https://github.com/SoftWare-A-G/meet-ai/compare/2.3.0...2.3.1) (2026-03-25)
+
+### Features
+
+- tighten the Codex listener room-output contract:
+  - send a short "Started working on that." message before substantial work begins so Codex matches the room policy used by the other listener runtimes
+  - treat earlier completed items in a multi-item turn as foldable thinking logs instead of concatenating them into the final room reply
+  - keep only the last completed item as the non-commentary room response while preserving the intermediate context in activity logs
+- improve the worker web app's metadata surface for discovery and previews:
+  - add homepage JSON-LD `@graph` structured data covering `WebSite`, `WebApplication`, and `Organization`
+  - brand the homepage and `/key` Open Graph and Twitter metadata as "Meet AI" and include the explicit OG image metadata needed for richer unfurls
+
+### Bug Fixes
+
+- harden worker attachment delivery and upload typing:
+  - preserve `attachmentIds` and attachment counts through optimistic send retries so queued uploads survive retry/error paths and page reloads
+  - replace the manual upload fetch path with the typed Hono client plus route-side form validation
+  - rename upload persistence fields from `r2Key` to `storageKey` consistently across route handlers, queries, and fetch helpers
+  - add typed Durable Object namespace bindings in the worker type layer so route and env access stays schema-aligned
+- ensure Pi listeners flush the buffered final room message before shutdown by awaiting the pending publish queue before tearing down the terminal and bridge handlers
+- disable Ink `Link` fallback rendering in the dashboard auth and env-manager key modals so terminal key URLs render without the broken fallback behavior
+- align the CLI, worker, desktop, and app package manifests at `2.3.1` for the release
+
+### Tests
+
+- expand `packages/cli/src/commands/listen/usecase.test.ts` to assert that Codex sends the started message before the final reply and publishes intermediate completed items through the room log hook path
+
 ## [2.3.0](https://github.com/SoftWare-A-G/meet-ai/compare/2.2.2...2.3.0) (2026-03-22)
 
 ### Features

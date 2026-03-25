@@ -32,5 +32,14 @@ export function buildOpencodeStartingPrompt(roomId: string): string[] {
     '- Do not acknowledge instructions with empty confirmations',
     '- Only respond when you have substantive information or actions to report',
     '- Be silent when waiting for user decisions',
+    '',
+    '## Addressing You',
+    '- Only respond when directly addressed (e.g., @opencode prefix)',
+    '- Do NOT respond to messages not related to you or not mentioning you',
+    '- Ignore general chat messages, greetings, or messages intended for other participants',
+    '- Remain silent unless explicitly tagged or your name is mentioned',
+    '',
+    '## Response Format',
+    '- When you choose not to respond, keep silence',
   ]
 }
