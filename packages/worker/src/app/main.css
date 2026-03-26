@@ -180,6 +180,7 @@ body {
   position: relative;
   background: #030712;
   -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
 }
 
 .root {
