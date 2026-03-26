@@ -15,8 +15,8 @@
   },
   "devDependencies": {
     "@types/bun": "catalog:",
-    "oxfmt": "0.41.0",
-    "oxlint": "1.56.0",
+    "oxfmt": "0.42.0",
+    "oxlint": "1.57.0",
     "typescript": "catalog:"
   },
   "catalog": {
@@ -37,8 +37,8 @@
     "react-dom": "19.2.4",
     "tailwindcss": "4.2.2",
     "typescript": "6.0.2",
-    "vite": "8.0.2",
-    "vitest": "4.1.1",
+    "vite": "8.0.3",
+    "vitest": "4.1.2",
     "zod": "4.3.6",
     "zustand": "5.0.12"
   }
