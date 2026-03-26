@@ -180,7 +180,6 @@ body {
   position: relative;
   background: #030712;
   -webkit-font-smoothing: antialiased;
-  overscroll-behavior: none;
 }
 
 .root {
@@ -341,6 +340,7 @@ body {
 /* --- Landing page: smooth scroll --- */
 html {
   scroll-behavior: smooth;
+  overscroll-behavior: none;
 }
 
 /* --- Landing page: hero tagline (clamp can't be expressed in Tailwind) --- */
