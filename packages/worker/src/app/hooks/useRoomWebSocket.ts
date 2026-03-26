@@ -1,13 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { fetchMessages, fetchMessagesSinceSeq, fetchLogs } from '../lib/fetchers'
 import { queryKeys } from '../lib/query-keys'
 import { useRoomStore } from '../stores/useRoomStore'
 import { mergeIntoTimeline, reconcileOptimistic } from './useRoomTimeline'
-import type { TimelineItem } from './useRoomTimeline'
 import type { CommandsInfo, TaskItem, TeamInfoResponse } from '../lib/fetchers'
 import type { Message, TerminalDataEvent } from '../lib/types'
+import type { TimelineItem } from './useRoomTimeline'
 
 type PlanDecisionEvent = {
   type: 'plan_decision'
@@ -113,9 +113,10 @@ export function useRoomWebSocket(
       try {
         // Fetch missed messages: incremental when we have a baseline,
         // full fetch as one-time bootstrap fallback when seq is unknown.
-        const missedMessages = seqBaseline > 0
-          ? await fetchMessagesSinceSeq(roomId, seqBaseline)
-          : await fetchMessages(roomId)
+        const missedMessages =
+          seqBaseline > 0
+            ? await fetchMessagesSinceSeq(roomId, seqBaseline)
+            : await fetchMessages(roomId)
 
         // Always re-fetch logs — they have no seq column so we can't do
         // incremental fetch. The API caps at 100 and mergeIntoTimeline
@@ -141,13 +142,10 @@ export function useRoomWebSocket(
 
         // Merge into timeline cache
         void queryClient.cancelQueries({ queryKey: queryKeys.rooms.timeline(roomId) })
-        queryClient.setQueryData<TimelineItem[]>(
-          queryKeys.rooms.timeline(roomId),
-          old => {
-            if (!old) return incoming
-            return mergeIntoTimeline(old, incoming)
-          },
-        )
+        queryClient.setQueryData<TimelineItem[]>(queryKeys.rooms.timeline(roomId), old => {
+          if (!old) return incoming
+          return mergeIntoTimeline(old, incoming)
+        })
 
         // Side effects for incremental catch-up only — bootstrap (seq=0)
         // repairs state without replaying notifications/haptics for old messages
@@ -183,7 +181,9 @@ export function useRoomWebSocket(
         if (event.type === 'team_info') {
           if (roomId) {
             void queryClient.cancelQueries({ queryKey: queryKeys.rooms.teamInfo(roomId) })
-            const prev = queryClient.getQueryData<TeamInfoResponse>(queryKeys.rooms.teamInfo(roomId))
+            const prev = queryClient.getQueryData<TeamInfoResponse>(
+              queryKeys.rooms.teamInfo(roomId)
+            )
             queryClient.setQueryData<TeamInfoResponse>(queryKeys.rooms.teamInfo(roomId), event)
             if (prev) {
               const prevNames = new Set(prev.members.map(m => m.name))
@@ -258,14 +258,11 @@ export function useRoomWebSocket(
         // Write to timeline cache
         if (roomId) {
           void queryClient.cancelQueries({ queryKey: queryKeys.rooms.timeline(roomId) })
-          queryClient.setQueryData<TimelineItem[]>(
-            queryKeys.rooms.timeline(roomId),
-            old => {
-              const item = { ...event, status: 'sent' as const }
-              if (!old) return [item]
-              return reconcileOptimistic(old, item)
-            },
-          )
+          queryClient.setQueryData<TimelineItem[]>(queryKeys.rooms.timeline(roomId), old => {
+            const item = { ...event, status: 'sent' as const }
+            if (!old) return [item]
+            return reconcileOptimistic(old, item)
+          })
         }
 
         // Side effects (notifications, haptics, unread count)
@@ -309,7 +306,7 @@ export function useRoomWebSocket(
         ws.close()
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- refs are stable, .current should not be deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refs are stable, .current should not be deps
   }, [roomId, apiKey])
 
   function sendTerminalSubscribe(paneId: string) {

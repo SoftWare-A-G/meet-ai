@@ -1,5 +1,35 @@
 # Changelog
 
+## [2.3.2](https://github.com/SoftWare-A-G/meet-ai/compare/2.3.1...2.3.2) (2026-03-26)
+
+### Features
+
+- tighten the Codex bootstrap and listener behavior around started messages:
+  - update the Codex bootstrap prompt so it only sends a started message when it is actually beginning research or task work and expects a delay before a meaningful update
+  - require started messages to describe the concrete task being started instead of reusing the generic "Started working on that." line
+  - remove the listener-side automatic started-message publish path so Codex can follow the room policy directly from the prompt contract
+- continue the worker web app shell migration onto TanStack Start patterns:
+  - add a dedicated `client.tsx` entry with `StartClient` hydration and configure Vite to use it explicitly
+  - move `/chat` and `/key` onto loader-driven flows with route validation, redirect handling, `noindex` metadata, and root-level pending/error presentation
+  - inject theme and font-scale CSS before hydration to reduce first-paint flashing and centralize shell state for the QR modal and mobile team sidebar in a shared Zustand store
+
+### Bug Fixes
+
+- fix worker mention insertion and chat-shell coupling:
+  - track the textarea cursor when composing messages so selecting an `@mention` replaces the active mention query instead of appending at the wrong location
+  - remove the legacy chat context, pass `userName` explicitly through message rendering, and move mention insertion onto a shared browser event helper so markdown mention pills keep working after the route-shell refactor
+  - simplify `ChatView` to depend on `roomId` directly so timeline, upload, retry, and terminal-subscribe flows survive the new route structure without stale room object coupling
+- harden worker auth and room-management flows:
+  - validate stored API keys in `/key`, clear invalid keys on `401`, and redirect `/chat` to `/key` when there is no saved key and no URL token available
+  - connect room rename, attach-project, and delete actions directly to the worker mutations with toast feedback and navigation back to `/chat` after successful deletion
+  - keep sidebar, header, lobby, and standalone helpers aligned with the new shell state so QR sharing and team-panel toggles no longer depend on route-local props
+- align the CLI, worker, desktop, and app package manifests at `2.3.2` for the release
+
+### Tests
+
+- update `packages/cli/src/commands/listen/usecase.test.ts` to assert the listener no longer auto-sends the generic started message before the final Codex reply
+- update `packages/cli/test/prompts/codex-bootstrap-prompt.test.ts` to cover the new started-message wording rules and direct-response guidance
+
 ## [2.3.1](https://github.com/SoftWare-A-G/meet-ai/compare/2.3.0...2.3.1) (2026-03-25)
 
 ### Features

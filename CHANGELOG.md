@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.3.2](https://github.com/SoftWare-A-G/meet-ai/compare/2.3.1...2.3.2) (2026-03-26)
+
+### Features
+
+- refine the Codex room bootstrap contract so the prompt tells Codex to send a specific started message only when real work has begun, instead of auto-prepending a generic "Started working on that." on every turn
+- continue the worker TanStack Start shell migration with a dedicated client entry, route-level pending and error states, pre-hydration theme initialization, loader-backed `/chat` and `/key` flows, and a shared chat-shell store for QR and team-sidebar UI state
+
+### Bug Fixes
+
+- fix worker chat mention insertion by tracking the cursor position, replacing the active `@mention` query correctly, and moving mention dispatch out of the removed chat context so message content and markdown mentions stay interactive
+- validate stored API keys before keeping users on `/key`, redirect `/chat` to `/key` when neither a saved key nor URL token is present, and wire room settings directly to rename/project/delete mutations with toast feedback and post-delete navigation
+- align the CLI, worker, desktop, and app package manifests at `2.3.2` for the release
+
+### Tests
+
+- update the Codex listener and bootstrap-prompt tests to cover the more specific started-message policy and the removal of the automatic generic started reply
+
 ## [2.3.1](https://github.com/SoftWare-A-G/meet-ai/compare/2.3.0...2.3.1) (2026-03-25)
 
 ### Features

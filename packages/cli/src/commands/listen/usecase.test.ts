@@ -1054,15 +1054,8 @@ describe('listen', () => {
 
     await new Promise(resolve => setTimeout(resolve, 0))
 
-    expect(client.sendMessage).toHaveBeenCalledTimes(2)
-    expect(client.sendMessage).toHaveBeenNthCalledWith(
-      1,
-      'df75b1db-f583-4d9f-8e34-9b3d614f152c',
-      'codex',
-      'Started working on that.'
-    )
-    expect(client.sendMessage).toHaveBeenNthCalledWith(
-      2,
+    expect(client.sendMessage).toHaveBeenCalledTimes(1)
+    expect(client.sendMessage).toHaveBeenCalledWith(
       'df75b1db-f583-4d9f-8e34-9b3d614f152c',
       'codex',
       'Hello world'
@@ -1113,15 +1106,8 @@ describe('listen', () => {
 
     await new Promise(resolve => setTimeout(resolve, 0))
 
-    expect(client.sendMessage).toHaveBeenCalledTimes(2)
-    expect(client.sendMessage).toHaveBeenNthCalledWith(
-      1,
-      'df75b1db-f583-4d9f-8e34-9b3d614f152c',
-      'codex',
-      'Started working on that.'
-    )
-    expect(client.sendMessage).toHaveBeenNthCalledWith(
-      2,
+    expect(client.sendMessage).toHaveBeenCalledTimes(1)
+    expect(client.sendMessage).toHaveBeenCalledWith(
       'df75b1db-f583-4d9f-8e34-9b3d614f152c',
       'codex',
       'Hello world'
@@ -1166,15 +1152,8 @@ describe('listen', () => {
 
     await new Promise(resolve => setTimeout(resolve, 0))
 
-    expect(client.sendMessage).toHaveBeenCalledTimes(2)
-    expect(client.sendMessage).toHaveBeenNthCalledWith(
-      1,
-      'df75b1db-f583-4d9f-8e34-9b3d614f152c',
-      'codex',
-      'Started working on that.'
-    )
-    expect(client.sendMessage).toHaveBeenNthCalledWith(
-      2,
+    expect(client.sendMessage).toHaveBeenCalledTimes(1)
+    expect(client.sendMessage).toHaveBeenCalledWith(
       'df75b1db-f583-4d9f-8e34-9b3d614f152c',
       'codex',
       'Hello world'
@@ -1255,15 +1234,8 @@ describe('listen', () => {
     await new Promise(resolve => setTimeout(resolve, 0))
     await new Promise(resolve => setTimeout(resolve, 0))
 
-    expect(client.sendMessage).toHaveBeenCalledTimes(2)
-    expect(client.sendMessage).toHaveBeenNthCalledWith(
-      1,
-      'df75b1db-f583-4d9f-8e34-9b3d614f152c',
-      'codex',
-      'Started working on that.'
-    )
-    expect(client.sendMessage).toHaveBeenNthCalledWith(
-      2,
+    expect(client.sendMessage).toHaveBeenCalledTimes(1)
+    expect(client.sendMessage).toHaveBeenCalledWith(
       'df75b1db-f583-4d9f-8e34-9b3d614f152c',
       'codex',
       'Second answer'

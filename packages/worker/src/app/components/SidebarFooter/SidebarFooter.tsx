@@ -55,13 +55,13 @@ export default function SidebarFooter({
         <SidebarMenuButton
           render={<div />}
           size="lg"
-          className="h-[52px] cursor-default px-4 py-2.5 hover:bg-transparent active:bg-transparent">
+          className="h-13 cursor-default px-4 py-2.5 hover:bg-transparent active:bg-transparent">
           {editing ? (
             <input
               type="text"
               value={editValue}
               maxLength={30}
-              className="bg-sidebar-accent border-sidebar-border w-[130px] rounded border px-1.5 py-0.5 text-[16px] font-semibold text-inherit outline-none"
+              className="bg-sidebar-accent border-sidebar-border w-32.5 rounded border px-1.5 py-0.5 text-[16px] font-semibold text-inherit outline-none"
               onInput={e => setEditValue((e.target as HTMLInputElement).value)}
               onKeyDown={handleKeyDown}
               onBlur={save}

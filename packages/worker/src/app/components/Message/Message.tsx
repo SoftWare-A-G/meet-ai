@@ -9,7 +9,7 @@ import MarkdownContent from '../MarkdownContent'
 import SlashCommandBadge from '../SlashCommandBadge'
 import { useCommands } from '../../stores/useRoomStore'
 import { useTeamInfoQuery } from '../../hooks/useTeamInfoQuery'
-import { useChatContext } from '../../lib/chat-context'
+import { insertMention } from '../../lib/mentions'
 import { useHaptics } from '../../hooks/useHaptics'
 import type { CommandItem } from '../../lib/fetchers'
 
@@ -34,6 +34,7 @@ function parseSlashCommand(content: string, commands: CommandItem[] | null): { c
 type MessageProps = {
   sender: string
   content: string
+  userName: string
   color?: string | null
   timestamp?: string
   tempId?: string
@@ -43,12 +44,11 @@ type MessageProps = {
   voiceAvailable?: boolean
 }
 
-export default function Message({ sender, content, color, timestamp, tempId, status = 'sent', onRetry, attachmentCount, voiceAvailable }: MessageProps) {
+export default function Message({ sender, content, userName, color, timestamp, tempId, status = 'sent', onRetry, attachmentCount, voiceAvailable }: MessageProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const { id: roomId } = chatRoute.useParams()
   const { data: teamInfo } = useTeamInfoQuery(roomId)
   const commandsInfo = useCommands(roomId)
-  const { insertMention } = useChatContext()
   const { trigger } = useHaptics()
   const senderTeamColor = teamInfo?.members.find(member => member.name === sender)?.color
   const senderColor = senderTeamColor
@@ -194,7 +194,7 @@ export default function Message({ sender, content, color, timestamp, tempId, sta
             />
           </div>
         ) : (
-          <MarkdownContent content={content} className="msg-content" />
+          <MarkdownContent content={content} className="msg-content" userName={userName} />
         )}
         {attachmentCount && attachmentCount > 0 ? (
           <div className="text-xs opacity-60 mt-1">

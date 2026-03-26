@@ -4,7 +4,7 @@ import { getRouteApi } from '@tanstack/react-router'
 import { Renderer, parse, type Token } from 'marked'
 import ShikiCode from '../ShikiCode'
 import { useTeamInfoQuery } from '../../hooks/useTeamInfoQuery'
-import { useChatContext } from '../../lib/chat-context'
+import { insertMention } from '../../lib/mentions'
 import { ensureSenderContrast } from '../../lib/colors'
 
 const chatRoute = getRouteApi('/chat/$id')
@@ -12,6 +12,7 @@ const chatRoute = getRouteApi('/chat/$id')
 type MarkdownContentProps = {
   content: string
   className?: string
+  userName: string
 }
 
 type Segment =
@@ -159,10 +160,9 @@ function parseContent(
   return segments
 }
 
-export default function MarkdownContent({ content, className }: MarkdownContentProps) {
+export default function MarkdownContent({ content, className, userName }: MarkdownContentProps) {
   const { id: roomId } = chatRoute.useParams()
   const { data: teamInfo } = useTeamInfoQuery(roomId)
-  const { userName, insertMention } = useChatContext()
   const mentionLookup = useMemo(
     () =>
       new Map(

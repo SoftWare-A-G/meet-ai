@@ -20,6 +20,10 @@ describe('buildCodexBootstrapPrompt', () => {
     test('mention routing rule', () => {
       expect(prompt).toContain('If a user input starts with a username mention and that username is not yours, do not answer it.')
       expect(prompt).toContain('Do not reply with "standing by" or any other acknowledgment to messages addressed to someone else.')
+      expect(prompt).toContain('Do not automatically prepend "Started working on that." to every turn or after every pause.')
+      expect(prompt).toContain('If you send a started message, say what you started working on instead of using a generic line.')
+      expect(prompt).toContain('Use wording like "Started working on <specific task or research topic>."')
+      expect(prompt).toContain('If you already have a meaningful response or progress update, send that directly instead of a separate started message.')
     })
 
     test('Planning section', () => {

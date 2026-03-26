@@ -1,14 +1,14 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { useGenerateKey } from '../hooks/useAuthMutations'
-import { Button } from '../components/ui/button'
 import KeyErrorState from '../components/KeyErrorState'
 import KeyExistingState from '../components/KeyExistingState'
 import KeyGenerateState from '../components/KeyGenerateState'
 import KeyPasteState from '../components/KeyPasteState'
 import KeyResultState from '../components/KeyResultState'
-
-const STORAGE_KEY = 'meet-ai-key'
+import { Button } from '../components/ui/button'
+import { useGenerateKey } from '../hooks/useAuthMutations'
+import { getApiKey, setApiKey, clearApiKey } from '../lib/api'
+import { validateApiKey } from '../lib/fetchers'
 
 type KeyState =
   | { view: 'generate' }
@@ -19,6 +19,23 @@ type KeyState =
   | { view: 'error'; message: string }
 
 export const Route = createFileRoute('/key')({
+  beforeLoad: () => {
+    if (typeof window === 'undefined') return { storedKey: null }
+    return { storedKey: getApiKey() }
+  },
+  loader: async ({ context: { storedKey } }) => {
+    if (!storedKey) return { storedKey: null }
+    try {
+      const valid = await validateApiKey(storedKey)
+      if (!valid) {
+        clearApiKey()
+        return { storedKey: null }
+      }
+      return { storedKey }
+    } catch {
+      return { storedKey }
+    }
+  },
   component: KeyPage,
   head: () => ({
     meta: [
@@ -51,7 +68,10 @@ export const Route = createFileRoute('/key')({
 })
 
 function KeyPage() {
-  const [state, setState] = useState<KeyState>({ view: 'generate' })
+  const { storedKey } = Route.useLoaderData()
+  const [state, setState] = useState<KeyState>(
+    storedKey ? { view: 'existing', key: storedKey } : { view: 'generate' }
+  )
   const [transitioning, setTransitioning] = useState(false)
   const [reducedMotion, setReducedMotion] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -98,35 +118,14 @@ function KeyPage() {
     [reducedMotion]
   )
 
-  // On mount: check for existing key
-  useEffect(() => {
-    const existingKey = localStorage.getItem(STORAGE_KEY)
-    if (!existingKey) return
-
-    fetch('/api/rooms', {
-      headers: { Authorization: `Bearer ${existingKey}` },
-    })
-      .then(res => {
-        if (res.status === 401) {
-          localStorage.removeItem(STORAGE_KEY)
-          transitionTo({ view: 'generate' })
-        } else {
-          transitionTo({ view: 'existing', key: existingKey })
-        }
-      })
-      .catch(() => {
-        transitionTo({ view: 'existing', key: existingKey })
-      })
-  }, [transitionTo])
-
   const handleGenerate = useCallback(() => {
     transitionTo({ view: 'loading' })
     generate.mutate(undefined, {
-      onSuccess: (data) => {
-        localStorage.setItem(STORAGE_KEY, data.key)
+      onSuccess: data => {
+        setApiKey(data.key)
         transitionTo({ view: 'result', key: data.key })
       },
-      onError: (err) => {
+      onError: err => {
         transitionTo({ view: 'error', message: `Failed to generate key: ${err.message}` })
       },
     })
@@ -142,7 +141,7 @@ function KeyPage() {
 
   const handleConnect = useCallback(
     (key: string) => {
-      localStorage.setItem(STORAGE_KEY, key)
+      setApiKey(key)
       transitionTo({ view: 'existing', key })
     },
     [transitionTo]

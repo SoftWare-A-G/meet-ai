@@ -7,7 +7,11 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   plugins: [
     cloudflare({ viteEnvironment: { name: 'ssr' } }),
-    tanstackStart({ srcDirectory: 'src/app' }),
+    tanstackStart({
+      srcDirectory: 'src/app',
+      // To avoid weird websocket interruption logs in devmode
+      client: { entry: 'client.tsx' },
+    }),
     tailwindcss(),
     react(),
   ],

@@ -173,7 +173,6 @@ function makeTurnKey(event: { turnId: string | null; itemId: string | null }): s
 type TurnMessageState = {
   itemOrder: string[]
   itemTexts: Map<string, string>
-  startedSent: boolean
   pendingFinalItemId: string | null
   finalSent: boolean
   finalSending: boolean
@@ -185,8 +184,6 @@ type TurnPlanReviewState = {
   content: string
   reviewId: string | null
 }
-
-const STARTED_MESSAGE = 'Started working on that.'
 
 function buildItemText(state: TurnMessageState, itemId: string | null | undefined): string {
   if (!itemId) return ''
@@ -559,37 +556,6 @@ export function listenCodex(
     })()
   }
 
-  const ensureStartedMessage = (key: string) => {
-    const state = messageState.get(key)
-    if (!state || state.startedSent) return
-    state.startedSent = true
-
-    emitCodexAppServerLog('info', 'listen-codex', 'started_publish.queued', {
-      turnKey: key,
-      preview: STARTED_MESSAGE,
-    })
-
-    enqueuePublish(async () => {
-      try {
-        emitCodexAppServerLog('info', 'listen-codex', 'started_publish.started', {
-          turnKey: key,
-          preview: STARTED_MESSAGE,
-        })
-        await client.sendMessage(roomId, codexSender, STARTED_MESSAGE)
-        emitCodexAppServerLog('info', 'listen-codex', 'started_publish.completed', {
-          turnKey: key,
-          preview: STARTED_MESSAGE,
-        })
-      } catch (error) {
-        emitCodexAppServerLog('error', 'listen-codex', 'started_publish.failed', {
-          turnKey: key,
-          preview: STARTED_MESSAGE,
-          error: error instanceof Error ? error.message : String(error),
-        })
-      }
-    })
-  }
-
   const publishThinkingItem = (key: string, itemId: string) => {
     const state = messageState.get(key)
     const text = state ? buildItemText(state, itemId) : ''
@@ -666,14 +632,12 @@ export function listenCodex(
       state = {
         itemOrder: [itemKey],
         itemTexts: new Map([[itemKey, nextText]]),
-        startedSent: false,
         pendingFinalItemId: null,
         finalSent: false,
         finalSending: false,
         thinkingLoggedItemIds: new Set<string>(),
       }
       messageState.set(key, state)
-      ensureStartedMessage(key)
       emitCodexAppServerLog('debug', 'listen-codex', 'message_buffer.created', {
         turnKey: key,
         itemKey,
@@ -688,7 +652,6 @@ export function listenCodex(
     if (created && event.type !== 'agent_message_completed') return
 
     if (!state.itemTexts.has(itemKey)) state.itemOrder.push(itemKey)
-    ensureStartedMessage(key)
 
     if (event.type === 'agent_message_completed') {
       state.itemTexts.set(itemKey, nextText)

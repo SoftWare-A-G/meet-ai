@@ -46,6 +46,13 @@ export type DeleteTaskInput = InferRequestType<
   ApiClient['api']['rooms'][':id']['tasks'][':taskId']['$delete']
 >
 
+export async function validateApiKey(key: string): Promise<boolean> {
+  const res = await fetch('/api/rooms', {
+    headers: { Authorization: `Bearer ${key}` },
+  })
+  return res.status !== 401
+}
+
 export async function fetchRooms() {
   const res = await getApiClient().api.rooms.$get()
   if (!res.ok) throw new ApiError(res.status, await res.text())

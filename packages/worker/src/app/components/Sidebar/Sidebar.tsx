@@ -278,12 +278,14 @@ export default function Sidebar({
 
   return (
     <ShadcnSidebar className="pb-[env(safe-area-inset-bottom,0px)]">
-      <ShadcnSidebarHeader className="border-sidebar-border/30 gap-3 border-b">
-        <div className="flex h-8 items-center justify-between">
+      <ShadcnSidebarHeader className="border-sidebar-border/30 border-b">
+        <div className="border-border flex h-12 items-center justify-between border-b p-2">
           <span className="text-base font-bold">Meet AI</span>
           <SidebarHeaderContent onSettingsClick={onSettingsClick} onSpawnClick={onSpawnClick} />
         </div>
-        <SearchForm value={search} onValueChange={setSearch} />
+        <div className="border-border flex h-14 items-center justify-between border-b px-2">
+          <SearchForm value={search} onValueChange={setSearch} />
+        </div>
       </ShadcnSidebarHeader>
       <SidebarContent className="overflow-y-auto">
         <SidebarGroup>
@@ -341,7 +343,7 @@ export default function Sidebar({
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
-      <ShadcnSidebarFooter className="border-sidebar-border/30 border-t p-0">
+      <ShadcnSidebarFooter className="border-border border-t border-b p-0">
         <SidebarFooterContent
           userName={userName}
           onNameChange={onNameChange}

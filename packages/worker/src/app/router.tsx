@@ -1,10 +1,11 @@
-import type { QueryClient } from '@tanstack/react-query'
 import { createRouter as createTanStackRouter } from '@tanstack/react-router'
 import { createQueryClient } from './lib/query-client'
 import { routeTree } from './routeTree.gen'
+import type { QueryClient } from '@tanstack/react-query'
 
 export interface RouterContext {
   queryClient: QueryClient
+  apiKey: string | null
 }
 
 export function getRouter() {
@@ -12,7 +13,8 @@ export function getRouter() {
   const router = createTanStackRouter({
     routeTree,
     scrollRestoration: true,
-    context: { queryClient },
+    defaultPreloadStaleTime: 0,
+    context: { queryClient, apiKey: null },
   })
 
   return router

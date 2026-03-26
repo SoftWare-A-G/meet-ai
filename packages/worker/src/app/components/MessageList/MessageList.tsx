@@ -296,6 +296,7 @@ export default function MessageList({ messages, attachmentCounts, roomId, userNa
               key={msg.tempId || `${msg.sender}-${msg.created_at}-${item.index}`}
               sender={msg.sender}
               content={msg.content}
+              userName={userName}
               color={msg.color}
               timestamp={msg.created_at}
               tempId={msg.tempId}

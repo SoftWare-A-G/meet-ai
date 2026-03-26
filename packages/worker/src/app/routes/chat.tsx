@@ -1,10 +1,10 @@
 import { Toast } from '@base-ui/react/toast'
-import { ClientOnly, createFileRoute, Outlet, useParams } from '@tanstack/react-router'
-import { useState, useCallback, useMemo } from 'react'
+import { createFileRoute, Outlet, redirect, useParams } from '@tanstack/react-router'
+import { useState, useCallback } from 'react'
+import { z } from 'zod/v4'
 import IOSInstallModal from '../components/IOSInstallModal'
 import LoginPrompt from '../components/LoginPrompt'
 import QRShareModal from '../components/QRShareModal'
-import QueryErrorBoundary from '../components/QueryErrorBoundary'
 import SettingsModal from '../components/SettingsModal'
 import Sidebar from '../components/Sidebar'
 import SpawnTeamModal from '../components/SpawnTeamModal'
@@ -17,51 +17,58 @@ import { useLocalStorage } from '../hooks/useLocalStorage'
 import { useProjectsQuery } from '../hooks/useProjectsQuery'
 import { useRoomsQuery } from '../hooks/useRoomsQuery'
 import { getApiKey, setApiKey } from '../lib/api'
-import { ChatContext } from '../lib/chat-context'
 import { STORAGE_KEYS, DEFAULT_SCHEMA, DEFAULT_FONT_SCALE } from '../lib/constants'
 import { getOrCreateHandle } from '../lib/handle'
 import { roomsQueryOptions, projectsQueryOptions } from '../lib/query-options'
 import { applySchema, applyFontScale } from '../lib/theme'
+import { useChatShellStore } from '../stores/useChatShellStore'
 
-// Apply persisted settings before first paint to avoid flash of unstyled content
-if (typeof window !== 'undefined') {
-  applySchema(localStorage.getItem(STORAGE_KEYS.colorSchema) ?? DEFAULT_SCHEMA)
-  applyFontScale(localStorage.getItem(STORAGE_KEYS.fontScale) ?? DEFAULT_FONT_SCALE)
-}
+const chatSearchSchema = z.object({
+  token: z.string().optional().catch(undefined),
+})
 
 export const Route = createFileRoute('/chat')({
+  head: () => ({ meta: [{ name: 'robots', content: 'noindex, follow' }] }),
   component: ChatPage,
-  beforeLoad: () => {
+  validateSearch: chatSearchSchema,
+  ssr: false, // Since our token lives in localStorage only
+  beforeLoad: ({ search }) => {
+    // Just a guardrail against localStorage on server
     if (typeof window === 'undefined') return { apiKey: null }
-    return { apiKey: getApiKey() }
+
+    const apiKey = getApiKey()
+    if (!apiKey && !search.token) {
+      throw redirect({ to: '/key' })
+    }
+
+    return { apiKey }
   },
-  loader: ({ context: { queryClient, apiKey } }) => {
-    if (!apiKey) return
-    return Promise.all([
+  loader: async ({ context: { queryClient, apiKey } }) => {
+    if (!apiKey) {
+      return
+    }
+
+    const [rooms, projects] = await Promise.all([
       queryClient.ensureQueryData(roomsQueryOptions),
       queryClient.ensureQueryData(projectsQueryOptions),
     ])
+
+    return { rooms, projects }
   },
-  head: () => ({
-    meta: [{ name: 'robots', content: 'noindex, follow' }],
-  }),
+  pendingComponent: () => (
+    <div className="bg-chat-bg text-msg-text flex h-dvh min-w-0 flex-1 flex-col items-center justify-center">
+      <div className="text-[#888]">Loading chats...</div>
+    </div>
+  ),
 })
 
 function ChatPage() {
-  return (
-    <ClientOnly fallback={<ChatLoadingFallback />}>
-      <ChatApp />
-    </ClientOnly>
-  )
-}
-
-function ChatApp() {
-  const [apiKey, setApiKeyState] = useState<string | null>(() => getApiKey())
+  const { apiKey: initialApiKey } = Route.useRouteContext()
+  const { token: urlToken } = Route.useSearch()
+  const [apiKey, setApiKeyState] = useState<string | null>(initialApiKey)
   const [userName, setUserName] = useLocalStorage(STORAGE_KEYS.handle, getOrCreateHandle())
   const [colorSchema, setColorSchema] = useLocalStorage(STORAGE_KEYS.colorSchema, DEFAULT_SCHEMA)
   const [fontScale, setFontScale] = useLocalStorage(STORAGE_KEYS.fontScale, DEFAULT_FONT_SCALE)
-
-  const urlToken = new URLSearchParams(location.search).get('token')
 
   const handleLogin = useCallback((key: string) => {
     setApiKey(key)
@@ -91,17 +98,15 @@ function ChatApp() {
   }
 
   return (
-    <QueryErrorBoundary>
-      <ChatLayout
-        apiKey={apiKey}
-        userName={userName}
-        colorSchema={colorSchema}
-        fontScale={fontScale}
-        onNameChange={setUserName}
-        onSchemaChange={handleSchemaChange}
-        onFontScaleChange={setFontScale}
-      />
-    </QueryErrorBoundary>
+    <ChatLayout
+      apiKey={apiKey}
+      userName={userName}
+      colorSchema={colorSchema}
+      fontScale={fontScale}
+      onNameChange={setUserName}
+      onSchemaChange={handleSchemaChange}
+      onFontScaleChange={setFontScale}
+    />
   )
 }
 
@@ -125,20 +130,21 @@ function ChatLayout({
   onFontScaleChange,
 }: ChatLayoutProps) {
   const { data: rooms = [], isLoading: roomsLoading, error: roomsError } = useRoomsQuery()
-  const { data: projects = [], isLoading: projectsLoading, error: projectsError } = useProjectsQuery()
+  const {
+    data: projects = [],
+    isLoading: projectsLoading,
+    error: projectsError,
+  } = useProjectsQuery()
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [showSpawnModal, setShowSpawnModal] = useState(false)
-  const [showQRModal, setShowQRModal] = useState(false)
   const [showIOSInstallModal, setShowIOSInstallModal] = useState(false)
   const toastManager = Toast.useToastManager()
-  const [teamSidebarOpen, setTeamSidebarOpen] = useState(false)
+  const teamSidebarOpen = useChatShellStore(s => s.teamSidebarOpen)
+  const setTeamSidebarOpen = useChatShellStore(s => s.setTeamSidebarOpen)
+  const qrModalOpen = useChatShellStore(s => s.qrModalOpen)
+  const hideQR = useChatShellStore(s => s.hideQR)
   const [showTaskBoard, setShowTaskBoard] = useState(false)
   const roomId = useParams({ from: '/chat/$id', shouldThrow: false })?.id
-
-  const isStandalone =
-    (window.navigator as any).standalone === true ||
-    window.matchMedia('(display-mode: standalone)').matches
-
   const { send: lobbySend } = useLobbyWebSocket(apiKey)
 
   const handleInstallClick = useCallback(() => {
@@ -155,36 +161,8 @@ function ChatLayout({
     [onSchemaChange, onFontScaleChange]
   )
 
-  const ctx = useMemo(
-    () => ({
-      apiKey,
-      userName,
-      colorSchema,
-      teamSidebarOpen,
-      setTeamSidebarOpen,
-      insertMention: (name: string) => {
-        window.dispatchEvent(new CustomEvent('meet-ai:insert-mention', { detail: { name } }))
-      },
-      onNameChange,
-      onSchemaChange,
-      showSettings: () => setShowSettingsModal(true),
-      showQR: () => setShowQRModal(true),
-      showIOSInstall: () => setShowIOSInstallModal(true),
-      isStandalone,
-    }),
-    [
-      apiKey,
-      userName,
-      colorSchema,
-      teamSidebarOpen,
-      onNameChange,
-      onSchemaChange,
-      isStandalone,
-    ]
-  )
-
   return (
-    <ChatContext.Provider value={ctx}>
+    <>
       <SidebarProvider defaultOpen className="h-dvh min-h-0">
         <Sidebar
           rooms={rooms}
@@ -218,12 +196,12 @@ function ChatLayout({
           onClose={() => setShowSettingsModal(false)}
         />
       )}
-      {showQRModal && (
+      {qrModalOpen && (
         <QRShareModal
-          onClose={() => setShowQRModal(false)}
+          onClose={hideQR}
           onToast={text => {
             toastManager.add({ description: text })
-            setShowQRModal(false)
+            hideQR()
           }}
         />
       )}
@@ -232,19 +210,8 @@ function ChatLayout({
       )}
       {showIOSInstallModal && <IOSInstallModal onClose={() => setShowIOSInstallModal(false)} />}
       {showTaskBoard && roomId && (
-        <TaskBoardModal
-          roomId={roomId}
-          onClose={() => setShowTaskBoard(false)}
-        />
+        <TaskBoardModal roomId={roomId} onClose={() => setShowTaskBoard(false)} />
       )}
-    </ChatContext.Provider>
-  )
-}
-
-function ChatLoadingFallback() {
-  return (
-    <div className="bg-chat-bg text-msg-text flex h-dvh min-w-0 flex-1 flex-col items-center justify-center">
-      <div className="text-[#888]">Loading chat...</div>
-    </div>
+    </>
   )
 }

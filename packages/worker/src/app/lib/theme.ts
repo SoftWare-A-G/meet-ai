@@ -54,44 +54,52 @@ function deriveBorder(sidebarBg: string, dividerColor: string): string {
   return dividerColor || '#3e4451'
 }
 
+function injectStyle(id: string, css: string): void {
+  let el = document.getElementById(id)
+  if (!el) {
+    el = document.createElement('style')
+    el.id = id
+    document.head.appendChild(el)
+  }
+  el.textContent = css
+}
+
 export function applyFontScale(scale: string): void {
   const s = parseFloat(scale) || 1
-  document.documentElement.style.setProperty('--font-scale', String(s))
-  document.documentElement.style.fontSize = `${s * 100}%`
+  injectStyle('meet-ai-font-scale', `:root{--font-scale:${s};font-size:${s * 100}%;}`)
 }
 
 export function applySchema(schemaStr: string): void {
   const c = parseSchema(schemaStr)
-  const root = document.documentElement
   const sidebarDark = luminance(c[0]) < 0.5
 
   const sidebarText = ensureContrast(c[5], c[0], 3)
   const activeItemText = ensureContrast(c[3], c[2], 3)
 
-  root.style.setProperty('--c-sidebar-bg', c[0])
-  root.style.setProperty('--c-sidebar-text', sidebarText)
-  root.style.setProperty('--c-active-item', c[2])
-  root.style.setProperty('--c-active-item-text', activeItemText)
-  root.style.setProperty('--c-hover-item', c[4] || c[1])
-  root.style.setProperty('--c-presence', c[6])
-  root.style.setProperty('--c-primary', c[6])
-  root.style.setProperty('--c-sidebar-border', c[8] || (sidebarDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'))
-
   const chatBg = deriveChatBg(c[0])
   const msgText = deriveMsgText(chatBg, sidebarText)
   const border = deriveBorder(c[0], c[8])
 
-  root.style.setProperty('--c-header-bg', chatBg)
-  root.style.setProperty('--c-header-text', msgText)
-  root.style.setProperty('--c-chat-bg', chatBg)
-  root.style.setProperty('--c-msg-text', msgText)
-  root.style.setProperty('--c-border', border)
-
-  document.body.style.background = chatBg
-
-  root.style.setProperty('--c-input-bg', sidebarDark ? c[0] : chatBg)
-
   const primaryTextWhite = contrastRatio('#FFFFFF', c[6])
   const primaryTextBlack = contrastRatio('#000000', c[6])
-  root.style.setProperty('--c-primary-text', primaryTextWhite >= primaryTextBlack ? '#FFFFFF' : '#000000')
+
+  let css = ':root{'
+  css += `--c-sidebar-bg:${c[0]};`
+  css += `--c-sidebar-text:${sidebarText};`
+  css += `--c-active-item:${c[2]};`
+  css += `--c-active-item-text:${activeItemText};`
+  css += `--c-hover-item:${c[4] || c[1]};`
+  css += `--c-presence:${c[6]};`
+  css += `--c-primary:${c[6]};`
+  css += `--c-sidebar-border:${c[8] || (sidebarDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')};`
+  css += `--c-header-bg:${chatBg};`
+  css += `--c-header-text:${msgText};`
+  css += `--c-chat-bg:${chatBg};`
+  css += `--c-msg-text:${msgText};`
+  css += `--c-border:${border};`
+  css += `--c-input-bg:${sidebarDark ? c[0] : chatBg};`
+  css += `--c-primary-text:${primaryTextWhite >= primaryTextBlack ? '#FFFFFF' : '#000000'};`
+  css += '}'
+  css += `body{background:${chatBg}}`
+  injectStyle('meet-ai-theme', css)
 }

@@ -1,25 +1,22 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAttachmentCountsQuery } from '../../hooks/useAttachmentCountsQuery'
 import { useHaptics } from '../../hooks/useHaptics'
-import { offlineQueue } from '../../lib/offline-queue'
 import { useRoomTimeline, useTimelineUpdater } from '../../hooks/useRoomTimeline'
 import { useRoomWebSocket } from '../../hooks/useRoomWebSocket'
 import { useSendMessage } from '../../hooks/useSendMessage'
 import { useTtsStatus } from '../../hooks/useTtsQuery'
 import { useUploadFile } from '../../hooks/useUploadFile'
 import { requestPermission, notifyIfHidden } from '../../lib/notifications'
+import { offlineQueue } from '../../lib/offline-queue'
 import ActivityBar from '../ActivityBar'
 import ActivityLogDrawer from '../ActivityLogDrawer'
 import ChatInput from '../ChatInput'
 import MessageList from '../MessageList'
 import TerminalViewerModal from '../TerminalViewerModal'
-import type {
-  Message as MessageType,
-  Room,
-} from '../../lib/types'
+import type { Message as MessageType } from '../../lib/types'
 
 type ChatViewProps = {
-  room: Room
+  roomId: string
   apiKey: string
   userName: string
   terminalOpen?: boolean
@@ -27,16 +24,20 @@ type ChatViewProps = {
 }
 
 export default function ChatView({
-  room,
+  roomId,
   apiKey,
   userName,
   terminalOpen = false,
   onTerminalClose,
 }: ChatViewProps) {
-  const { data: attachmentCounts } = useAttachmentCountsQuery(room.id)
-  const { data: timeline = [], isLoading: timelineLoading, error: timelineError } = useRoomTimeline(room.id)
-  const { appendItems } = useTimelineUpdater(room.id)
-  const { send: handleSend, retry: handleRetry } = useSendMessage(room.id, userName, apiKey)
+  const { data: attachmentCounts } = useAttachmentCountsQuery(roomId)
+  const {
+    data: timeline = [],
+    isLoading: timelineLoading,
+    error: timelineError,
+  } = useRoomTimeline(roomId)
+  const { appendItems } = useTimelineUpdater(roomId)
+  const { send: handleSend, retry: handleRetry } = useSendMessage(roomId, userName, apiKey)
   const uploadFileMutation = useUploadFile()
   const [activityDrawerOpen, setActivityDrawerOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
@@ -54,9 +55,10 @@ export default function ChatView({
   // Restore offline queue and auto-flush
   useEffect(() => {
     let cancelled = false
+
     async function restore() {
       try {
-        const queued = await getForRoom(room.id)
+        const queued = await getForRoom(roomId)
         if (cancelled || queued.length === 0) return
         appendItems(
           queued.map(q => ({
@@ -65,8 +67,10 @@ export default function ChatView({
             created_at: new Date(q.timestamp).toISOString(),
             tempId: q.tempId,
             status: 'failed' as const,
-            ...(q.attachmentIds?.length ? { attachmentIds: q.attachmentIds, attachment_count: q.attachmentIds.length } : {}),
-          })),
+            ...(q.attachmentIds?.length
+              ? { attachmentIds: q.attachmentIds, attachment_count: q.attachmentIds.length }
+              : {}),
+          }))
         )
         // Auto-flush if online — use retry() which handles IndexedDB removal on success
         if (navigator.onLine) {
@@ -79,12 +83,14 @@ export default function ChatView({
         /* ignore */
       }
     }
+
     restore()
+
     return () => {
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- getForRoom/remove/appendItems/updateItemStatus/handleSend are stable
-  }, [room.id])
+  }, [roomId])
 
   // WebSocket — simplified callback for side effects only
   // (cache updates are handled in useRoomWebSocket)
@@ -96,21 +102,13 @@ export default function ChatView({
         triggerForMessage(msg)
       }
     },
-    [userName, triggerForMessage],
+    [userName, triggerForMessage]
   )
 
-  const onTerminalDataWs = useCallback((data: string) => {
-    setTerminalData(data)
-  }, [])
-
-  const {
-    connected,
-    sendTerminalSubscribe,
-    sendTerminalUnsubscribe,
-    sendTerminalResize,
-  } = useRoomWebSocket(room.id, apiKey, onWsMessage, {
-    onTerminalData: onTerminalDataWs,
-  })
+  const { connected, sendTerminalSubscribe, sendTerminalUnsubscribe, sendTerminalResize } =
+    useRoomWebSocket(roomId, apiKey, onWsMessage, {
+      onTerminalData: setTerminalData,
+    })
 
   useEffect(() => {
     if (terminalOpen && connected) {
@@ -126,7 +124,7 @@ export default function ChatView({
   useEffect(() => {
     const handler = async () => {
       try {
-        const queued = await getForRoom(room.id)
+        const queued = await getForRoom(roomId)
         for (const msg of queued) {
           handleRetry(msg.tempId)
         }
@@ -137,11 +135,11 @@ export default function ChatView({
     window.addEventListener('online', handler)
     return () => window.removeEventListener('online', handler)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- getForRoom/handleRetry are stable
-  }, [room.id])
+  }, [roomId])
 
   const handleUploadFile = useCallback(
-    (file: File) => uploadFileMutation.mutateAsync({ roomId: room.id, file }),
-    [room.id, uploadFileMutation],
+    (file: File) => uploadFileMutation.mutateAsync({ roomId: roomId, file }),
+    [roomId, uploadFileMutation]
   )
 
   const handleSendWithScroll = useCallback(
@@ -149,7 +147,7 @@ export default function ChatView({
       handleSend(content, attachmentIds)
       setForceScrollCounter(c => c + 1)
     },
-    [handleSend],
+    [handleSend]
   )
 
   return (
@@ -161,11 +159,11 @@ export default function ChatView({
         onResize={sendTerminalResize}
       />
       {timelineLoading && timeline.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center min-h-0">
+        <div className="flex min-h-0 flex-1 items-center justify-center">
           <div className="text-sm text-[#888]">Loading messages...</div>
         </div>
       ) : timelineError && timeline.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-2 min-h-0">
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2">
           <div className="text-sm text-[#e74c3c]">Failed to load messages</div>
           <div className="text-xs text-[#888]">{timelineError.message}</div>
         </div>
@@ -173,7 +171,7 @@ export default function ChatView({
         <MessageList
           messages={timeline}
           attachmentCounts={attachmentCounts}
-          roomId={room.id}
+          roomId={roomId}
           userName={userName}
           unreadCount={unreadCount}
           forceScrollCounter={forceScrollCounter}
@@ -190,7 +188,7 @@ export default function ChatView({
         onOpenChange={setActivityDrawerOpen}
         messages={timeline}
       />
-      <ChatInput roomName={room.name} onSend={handleSendWithScroll} onUploadFile={handleUploadFile} />
+      <ChatInput onSend={handleSendWithScroll} onUploadFile={handleUploadFile} />
     </>
   )
 }

@@ -1,105 +1,62 @@
+import CanvasView from '@meet-ai/worker/app/components/CanvasView'
+import ChatView from '@meet-ai/worker/app/components/ChatView'
+import MainHeader from '@meet-ai/worker/app/components/MainHeader'
+import { useIsStandalone } from '@meet-ai/worker/app/hooks/useIsStandalone'
+import { useLocalStorage } from '@meet-ai/worker/app/hooks/useLocalStorage'
+import { useProjectsQuery } from '@meet-ai/worker/app/hooks/useProjectsQuery'
+import { useRoomsQuery } from '@meet-ai/worker/app/hooks/useRoomsQuery'
+import { useTeamInfoQuery } from '@meet-ai/worker/app/hooks/useTeamInfoQuery'
+import { STORAGE_KEYS } from '@meet-ai/worker/app/lib/constants'
+import { getOrCreateHandle } from '@meet-ai/worker/app/lib/handle'
+import {
+  projectsQueryOptions,
+  roomsQueryOptions,
+  teamInfoQueryOptions,
+  timelineQueryOptions,
+} from '@meet-ai/worker/app/lib/query-options'
 import { createFileRoute } from '@tanstack/react-router'
-import { useCallback, useState } from 'react'
-import { toast } from 'sonner'
-import CanvasView from '../../components/CanvasView'
-import ChatView from '../../components/ChatView'
-import MainHeader from '../../components/MainHeader'
-import { useProjectsQuery } from '../../hooks/useProjectsQuery'
-import { useDeleteRoom, useRenameRoom, useUpdateRoomProject } from '../../hooks/useRoomMutations'
-import { useRoomsQuery } from '../../hooks/useRoomsQuery'
-import { useTeamInfoQuery } from '../../hooks/useTeamInfoQuery'
-import { useChatContext } from '../../lib/chat-context'
-import { queryKeys } from '../../lib/query-keys'
-import { roomsQueryOptions, teamInfoQueryOptions } from '../../lib/query-options'
+import { useState } from 'react'
 
 export const Route = createFileRoute('/chat/$id')({
-  component: ChatRoom,
-  loader: async ({ params, context: { queryClient, apiKey } }) => {
-    if (!apiKey) return { roomName: null }
-    const rooms = await queryClient.ensureQueryData(roomsQueryOptions)
-    const room = rooms.find(r => r.id === params.id)
+  loader: async ({ params, context: { queryClient } }) => {
+    const [rooms, projects] = await Promise.all([
+      queryClient.ensureQueryData(roomsQueryOptions),
+      queryClient.ensureQueryData(projectsQueryOptions),
+    ])
+    const room = rooms.find(r => r.id === params.id) ?? null
 
-    void queryClient.invalidateQueries({ queryKey: queryKeys.rooms.timeline(params.id) })
+    await queryClient.ensureQueryData(timelineQueryOptions(params.id))
     if (room) void queryClient.ensureQueryData(teamInfoQueryOptions(params.id))
 
-    return { roomName: room?.name ?? null }
+    return { room, rooms, projects, roomName: room?.name ?? null }
   },
   head: ({ loaderData }) => ({
     meta: [{ title: loaderData?.roomName ? `Meet AI: ${loaderData.roomName}` : 'Meet AI' }],
   }),
+  component: ChatRoom,
+  pendingComponent: () => (
+    <div className="bg-chat-bg text-msg-text flex h-dvh min-w-0 flex-1 flex-col items-center justify-center">
+      <div className="text-[#888]">Loading chat...</div>
+    </div>
+  ),
 })
 
 function ChatRoom() {
   const { id } = Route.useParams()
-  const navigate = Route.useNavigate()
-  const {
-    apiKey,
-    userName,
-    isStandalone,
-    setTeamSidebarOpen,
-    showQR,
-  } = useChatContext()
+  const { apiKey } = Route.useRouteContext()
+  const [userName] = useLocalStorage(STORAGE_KEYS.handle, getOrCreateHandle())
+  const isStandalone = useIsStandalone()
   const { data: rooms = [], isLoading: roomsLoading } = useRoomsQuery()
   const { data: projects = [] } = useProjectsQuery()
   const { data: teamInfo } = useTeamInfoQuery(id)
   const [terminalOpen, setTerminalOpen] = useState(false)
   const [canvasOpen, setCanvasOpen] = useState(false)
 
-  const deleteRoomMutation = useDeleteRoom()
-  const renameRoomMutation = useRenameRoom()
-  const updateRoomProjectMutation = useUpdateRoomProject()
-
   const room = rooms.find(r => r.id === id)
   const roomName = room?.name ?? (roomsLoading ? 'Loading...' : 'Room not found')
 
-  const handleDeleteConfirm = useCallback(() => {
-    if (!room) return
-    deleteRoomMutation.mutate({ param: { id: room.id } }, {
-      onSuccess: () => {
-        toast.success(`"${room.name}" deleted`)
-        navigate({ to: '/chat' })
-      },
-      onError: () => {
-        toast.error('Failed to delete room. Please try again.')
-      },
-    })
-  }, [room, deleteRoomMutation, navigate])
-
-  const handleRename = useCallback(
-    (name: string) => {
-      if (!room) return
-      renameRoomMutation.mutate(
-        { param: { id: room.id }, json: { name } },
-        {
-          onSuccess: () => {
-            toast.success('Room renamed')
-          },
-          onError: () => {
-            toast.error('Failed to rename room.')
-          },
-        }
-      )
-    },
-    [room, renameRoomMutation]
-  )
-
-  const handleAttachProject = useCallback(
-    (projectId: string | null) => {
-      if (!room) return
-      updateRoomProjectMutation.mutate(
-        { param: { id: room.id }, json: { project_id: projectId } },
-        {
-          onSuccess: () => {
-            toast.success(projectId ? 'Room attached to project' : 'Room detached from project')
-          },
-          onError: () => {
-            toast.error('Failed to update project.')
-          },
-        }
-      )
-    },
-    [room, updateRoomProjectMutation]
-  )
+  // Parent /chat route guarantees apiKey is non-null before rendering children
+  if (!apiKey) return null
 
   return (
     <div className="bg-chat-bg text-msg-text flex h-dvh min-w-0 flex-1 flex-col">
@@ -109,26 +66,21 @@ function ChatRoom() {
         roomName={roomName}
         showInvite={!isStandalone && !!room}
         showTeamToggle={!!teamInfo}
-        onTeamToggle={() => setTeamSidebarOpen(prev => !prev)}
-        onInviteClick={() => showQR()}
-        onRename={handleRename}
-        onAttachProject={handleAttachProject}
-        onDelete={handleDeleteConfirm}
         onTerminalClick={() => setTerminalOpen(true)}
         onCanvasClick={() => setCanvasOpen(true)}
       />
       {room ? (
         <>
           <ChatView
-            key={room.id}
-            room={room}
+            key={id}
+            roomId={id}
             apiKey={apiKey}
             userName={userName}
             terminalOpen={terminalOpen}
             onTerminalClose={() => setTerminalOpen(false)}
           />
           <CanvasView
-            roomId={room.id}
+            roomId={id}
             open={canvasOpen}
             onClose={() => setCanvasOpen(false)}
             userName={userName}
@@ -136,7 +88,9 @@ function ChatRoom() {
         </>
       ) : !roomsLoading ? (
         <div className="flex flex-1 items-center justify-center">
-          <div className="text-sm text-[#888]">This room doesn&apos;t exist or has been deleted.</div>
+          <div className="text-sm text-[#888]">
+            This room doesn&apos;t exist or has been deleted.
+          </div>
         </div>
       ) : null}
     </div>
