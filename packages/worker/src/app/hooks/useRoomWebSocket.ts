@@ -84,6 +84,9 @@ export function useRoomWebSocket(
   const queryClient = useQueryClient()
   const lastSeqRef = useRef(0)
   const backoffRef = useRef(MIN_BACKOFF)
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const lastPongRef = useRef(Date.now())
+  const zombieCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [connected, setConnected] = useState(true)
 
   useEffect(() => {
@@ -154,8 +157,8 @@ export function useRoomWebSocket(
             onMessageRef.current?.(msg)
           }
         }
-      } catch {
-        /* ignore catch-up errors */
+      } catch (error) {
+        console.warn('[ws] catchUp failed, heartbeat will retry', error)
       }
     }
 
@@ -170,11 +173,39 @@ export function useRoomWebSocket(
       ws.onopen = () => {
         setConnected(true)
         backoffRef.current = MIN_BACKOFF
+        lastPongRef.current = Date.now()
+
+        // Start heartbeat — edge auto-responds without waking the DO
+        if (heartbeatRef.current) clearInterval(heartbeatRef.current)
+        heartbeatRef.current = setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            if (Date.now() - lastPongRef.current > 45_000) {
+              // Zombie connection — force reconnect
+              if (roomId) {
+                queryClient.invalidateQueries({ queryKey: queryKeys.rooms.timeline(roomId) })
+              }
+              ws.close()
+              return
+            }
+            ws.send(JSON.stringify({ type: 'ping' }))
+          }
+        }, 30_000)
+
         // Catch up missed messages on reconnect
         catchUp()
       }
 
       ws.onmessage = e => {
+        // Heartbeat pong — update timestamp, skip event processing
+        if (e.data === '{"type":"pong"}') {
+          lastPongRef.current = Date.now()
+          if (zombieCheckRef.current) {
+            clearTimeout(zombieCheckRef.current)
+            zombieCheckRef.current = null
+          }
+          return
+        }
+
         const event = parseWsEvent(e.data)
         if (!event) return
 
@@ -271,6 +302,10 @@ export function useRoomWebSocket(
 
       ws.onerror = error => console.error('WebSocket error', error)
       ws.onclose = () => {
+        if (heartbeatRef.current) {
+          clearInterval(heartbeatRef.current)
+          heartbeatRef.current = null
+        }
         setConnected(false)
         const delay = backoffRef.current
         backoffRef.current = Math.min(delay * 2, MAX_BACKOFF)
@@ -284,22 +319,61 @@ export function useRoomWebSocket(
 
     connect()
 
-    const onVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-          // WS is closed — reconnect immediately
-          backoffRef.current = MIN_BACKOFF
-          connect()
-        } else {
-          // WS is open but may have missed frames while backgrounded
-          catchUp()
+    const onResume = () => {
+      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+        // WS is closed — reconnect immediately
+        backoffRef.current = MIN_BACKOFF
+        connect()
+        if (roomId) {
+          queryClient.invalidateQueries({ queryKey: queryKeys.rooms.timeline(roomId) })
         }
+      } else {
+        // WS looks open — send ping + catchUp, but verify it's not zombie
+        wsRef.current.send(JSON.stringify({ type: 'ping' }))
+        catchUp()
+
+        if (zombieCheckRef.current) clearTimeout(zombieCheckRef.current)
+        const beforePing = Date.now()
+        zombieCheckRef.current = setTimeout(() => {
+          if (lastPongRef.current < beforePing) {
+            // No pong received since our ping — zombie connection
+            if (wsRef.current) wsRef.current.close()
+            backoffRef.current = MIN_BACKOFF
+            connect()
+            if (roomId) {
+              queryClient.invalidateQueries({ queryKey: queryKeys.rooms.timeline(roomId) })
+            }
+          }
+        }, 3000)
       }
     }
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') onResume()
+    }
+
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) onResume()
+    }
+
     document.addEventListener('visibilitychange', onVisibilityChange)
+    window.addEventListener('online', onResume)
+    window.addEventListener('focus', onResume)
+    window.addEventListener('pageshow', onPageShow)
 
     return () => {
       document.removeEventListener('visibilitychange', onVisibilityChange)
+      window.removeEventListener('online', onResume)
+      window.removeEventListener('focus', onResume)
+      window.removeEventListener('pageshow', onPageShow)
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current)
+        heartbeatRef.current = null
+      }
+      if (zombieCheckRef.current) {
+        clearTimeout(zombieCheckRef.current)
+        zombieCheckRef.current = null
+      }
       if (wsRef.current) {
         const ws = wsRef.current
         wsRef.current = null
