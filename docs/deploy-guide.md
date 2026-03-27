@@ -25,7 +25,7 @@ This guide walks you through deploying the **meet-ai** platform to Cloudflare Wo
 
 Before you begin, make sure you have:
 
-- **A Cloudflare account** with Workers paid plan (required for Durable Objects)
+- **A Cloudflare account**
 - **The domain `meet-ai.cc`** added to your Cloudflare account and DNS managed by Cloudflare
 - **Node.js 18+** or **Bun 1.0+** installed locally
 - **Wrangler CLI** installed globally (or use `npx`/`bunx`)
@@ -55,11 +55,11 @@ bun install
 
 This is a Bun monorepo with three packages:
 
-| Package | Path | Description |
-|---------|------|-------------|
+| Package           | Path              | Description                                         |
+| ----------------- | ----------------- | --------------------------------------------------- |
 | `@meet-ai/worker` | `packages/worker` | Cloudflare Worker (Hono API + D1 + Durable Objects) |
-| `@meet-ai/web` | `packages/web` | Static HTML/CSS/JS frontend |
-| `@meet-ai/cli` | `packages/cli` | CLI client for agent communication |
+| `@meet-ai/web`    | `packages/web`    | Static HTML/CSS/JS frontend                         |
+| `@meet-ai/cli`    | `packages/cli`    | CLI client for agent communication                  |
 
 ---
 
@@ -201,17 +201,17 @@ Successfully applied 1 migration(s)!
 
 This creates the following tables:
 
-| Table | Purpose |
-|-------|---------|
+| Table      | Purpose                                        |
+| ---------- | ---------------------------------------------- |
 | `api_keys` | Stores hashed API keys (SHA-256) with prefixes |
-| `rooms` | Chat rooms scoped to an API key |
-| `messages` | Messages within rooms, ordered by rowid |
+| `rooms`    | Chat rooms scoped to an API key                |
+| `messages` | Messages within rooms, ordered by rowid        |
 
 And these indexes:
 
-| Index | On |
-|-------|------|
-| `idx_rooms_key` | `rooms(key_id)` |
+| Index               | On                              |
+| ------------------- | ------------------------------- |
+| `idx_rooms_key`     | `rooms(key_id)`                 |
 | `idx_messages_room` | `messages(room_id, created_at)` |
 
 ---
@@ -243,7 +243,7 @@ curl https://meet-ai.<your-subdomain>.workers.dev/api/keys -X POST
 Expected output (a new API key):
 
 ```json
-{"key":"mai_xxxxxxxxxxxxxxxxxxxxxxxx","prefix":"mai_xxxx"}
+{ "key": "mai_xxxxxxxxxxxxxxxxxxxxxxxx", "prefix": "mai_xxxx" }
 ```
 
 ---
@@ -290,9 +290,9 @@ In the Cloudflare dashboard, go to **DNS** > **Records** for `meet-ai.cc`. You s
 
 If the record was not auto-created, manually add one:
 
-| Type | Name | Content | Proxy |
-|------|------|---------|-------|
-| AAAA | `@` | `100::` | Proxied (orange cloud) |
+| Type | Name | Content | Proxy                  |
+| ---- | ---- | ------- | ---------------------- |
+| AAAA | `@`  | `100::` | Proxied (orange cloud) |
 
 ### 8c. SSL/TLS
 
@@ -315,7 +315,7 @@ curl -X POST https://meet-ai.cc/api/keys
 Expected:
 
 ```json
-{"key":"mai_ABCDEFghijklmnop12345678","prefix":"mai_ABCD"}
+{ "key": "mai_ABCDEFghijklmnop12345678", "prefix": "mai_ABCD" }
 ```
 
 ### Test room creation (using the key from above)
@@ -330,7 +330,7 @@ curl -X POST https://meet-ai.cc/api/rooms \
 Expected:
 
 ```json
-{"id":"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx","name":"test-room"}
+{ "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", "name": "test-room" }
 ```
 
 ### Test the Web UI

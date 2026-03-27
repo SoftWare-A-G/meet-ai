@@ -165,7 +165,7 @@ export function keyPrefix(key: string): string {
 ### 2.3 `POST /api/keys` — Generate API Key
 
 ```typescript
-app.post('/api/keys', async (c) => {
+app.post('/api/keys', async c => {
   const key = generateKey()
   const hash = await hashKey(key)
   const prefix = keyPrefix(key)
@@ -173,7 +173,9 @@ app.post('/api/keys', async (c) => {
 
   await c.env.DB.prepare(
     'INSERT INTO api_keys (id, key_hash, key_prefix, created_at) VALUES (?, ?, ?, datetime("now"))'
-  ).bind(id, hash, prefix).run()
+  )
+    .bind(id, hash, prefix)
+    .run()
 
   return c.json({ key, prefix }, 201)
 })
@@ -199,18 +201,18 @@ export const requireAuth = createMiddleware<Env>(async (c, next) => {
   const key = header.slice(7)
   const hash = await hashKey(key)
 
-  const row = await c.env.DB.prepare(
-    'SELECT id FROM api_keys WHERE key_hash = ?'
-  ).bind(hash).first()
+  const row = await c.env.DB.prepare('SELECT id FROM api_keys WHERE key_hash = ?')
+    .bind(hash)
+    .first()
 
   if (!row) {
     return c.json({ error: 'Invalid API key' }, 401)
   }
 
   // Update last_used
-  c.env.DB.prepare(
-    'UPDATE api_keys SET last_used = datetime("now") WHERE id = ?'
-  ).bind(row.id).run()
+  c.env.DB.prepare('UPDATE api_keys SET last_used = datetime("now") WHERE id = ?')
+    .bind(row.id)
+    .run()
 
   c.set('keyId', row.id)
   await next()
@@ -224,11 +226,13 @@ Every authenticated route gets `c.get('keyId')` to scope queries.
 ### 3.1 `GET /api/rooms` — List Rooms (Scoped to Key)
 
 ```typescript
-app.get('/api/rooms', requireAuth, async (c) => {
+app.get('/api/rooms', requireAuth, async c => {
   const keyId = c.get('keyId')
   const rows = await c.env.DB.prepare(
     'SELECT id, name, created_at FROM rooms WHERE key_id = ? ORDER BY created_at'
-  ).bind(keyId).all()
+  )
+    .bind(keyId)
+    .all()
   return c.json(rows.results)
 })
 ```
@@ -236,15 +240,15 @@ app.get('/api/rooms', requireAuth, async (c) => {
 ### 3.2 `POST /api/rooms` — Create Room
 
 ```typescript
-app.post('/api/rooms', requireAuth, async (c) => {
+app.post('/api/rooms', requireAuth, async c => {
   const keyId = c.get('keyId')
   const { name } = await c.req.json()
   if (!name) return c.json({ error: 'name is required' }, 400)
 
   const id = crypto.randomUUID()
-  await c.env.DB.prepare(
-    'INSERT INTO rooms (id, key_id, name) VALUES (?, ?, ?)'
-  ).bind(id, keyId, name).run()
+  await c.env.DB.prepare('INSERT INTO rooms (id, key_id, name) VALUES (?, ?, ?)')
+    .bind(id, keyId, name)
+    .run()
 
   return c.json({ id, name }, 201)
 })
@@ -253,14 +257,14 @@ app.post('/api/rooms', requireAuth, async (c) => {
 ### 3.3 `GET /api/rooms/:id/messages` — Message History
 
 ```typescript
-app.get('/api/rooms/:id/messages', requireAuth, async (c) => {
+app.get('/api/rooms/:id/messages', requireAuth, async c => {
   const keyId = c.get('keyId')
   const roomId = c.req.param('id')
 
   // Verify room belongs to this key
-  const room = await c.env.DB.prepare(
-    'SELECT id FROM rooms WHERE id = ? AND key_id = ?'
-  ).bind(roomId, keyId).first()
+  const room = await c.env.DB.prepare('SELECT id FROM rooms WHERE id = ? AND key_id = ?')
+    .bind(roomId, keyId)
+    .first()
   if (!room) return c.json({ error: 'room not found' }, 404)
 
   const after = c.req.query('after')
@@ -273,7 +277,9 @@ app.get('/api/rooms/:id/messages', requireAuth, async (c) => {
   }
   sql += ' ORDER BY created_at'
 
-  const rows = await c.env.DB.prepare(sql).bind(...params).all()
+  const rows = await c.env.DB.prepare(sql)
+    .bind(...params)
+    .all()
   return c.json(rows.results)
 })
 ```
@@ -281,30 +287,32 @@ app.get('/api/rooms/:id/messages', requireAuth, async (c) => {
 ### 3.4 `POST /api/rooms/:id/messages` — Send Message
 
 ```typescript
-app.post('/api/rooms/:id/messages', requireAuth, async (c) => {
+app.post('/api/rooms/:id/messages', requireAuth, async c => {
   const keyId = c.get('keyId')
   const roomId = c.req.param('id')
 
-  const room = await c.env.DB.prepare(
-    'SELECT id FROM rooms WHERE id = ? AND key_id = ?'
-  ).bind(roomId, keyId).first()
+  const room = await c.env.DB.prepare('SELECT id FROM rooms WHERE id = ? AND key_id = ?')
+    .bind(roomId, keyId)
+    .first()
   if (!room) return c.json({ error: 'room not found' }, 404)
 
   const { sender, content } = await c.req.json()
   if (!sender || !content) return c.json({ error: 'sender and content are required' }, 400)
 
   const id = crypto.randomUUID()
-  await c.env.DB.prepare(
-    'INSERT INTO messages (id, room_id, sender, content) VALUES (?, ?, ?, ?)'
-  ).bind(id, roomId, sender, content).run()
+  await c.env.DB.prepare('INSERT INTO messages (id, room_id, sender, content) VALUES (?, ?, ?, ?)')
+    .bind(id, roomId, sender, content)
+    .run()
 
   // Forward to Durable Object for real-time broadcast
   const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
   const stub = c.env.CHAT_ROOM.get(doId)
-  await stub.fetch(new Request('http://internal/broadcast', {
-    method: 'POST',
-    body: JSON.stringify({ id, roomId, sender, content })
-  }))
+  await stub.fetch(
+    new Request('http://internal/broadcast', {
+      method: 'POST',
+      body: JSON.stringify({ id, roomId, sender, content }),
+    })
+  )
 
   return c.json({ id, roomId, sender, content }, 201)
 })
@@ -362,20 +370,22 @@ export class ChatRoom extends DurableObject {
 ### 4.2 WebSocket Upgrade Route
 
 ```typescript
-app.get('/api/rooms/:id/ws', requireAuth, async (c) => {
+app.get('/api/rooms/:id/ws', requireAuth, async c => {
   const keyId = c.get('keyId')
   const roomId = c.req.param('id')
 
-  const room = await c.env.DB.prepare(
-    'SELECT id FROM rooms WHERE id = ? AND key_id = ?'
-  ).bind(roomId, keyId).first()
+  const room = await c.env.DB.prepare('SELECT id FROM rooms WHERE id = ? AND key_id = ?')
+    .bind(roomId, keyId)
+    .first()
   if (!room) return c.json({ error: 'room not found' }, 404)
 
   const doId = c.env.CHAT_ROOM.idFromName(`${keyId}:${roomId}`)
   const stub = c.env.CHAT_ROOM.get(doId)
-  return stub.fetch(new Request('http://internal/ws', {
-    headers: c.req.raw.headers
-  }))
+  return stub.fetch(
+    new Request('http://internal/ws', {
+      headers: c.req.raw.headers,
+    })
+  )
 })
 ```
 
@@ -401,6 +411,7 @@ Below: "Add to your .env: MEET_AI_KEY=mai_xxx"
 ```
 
 On generation, the key is:
+
 1. Stored in localStorage under `meet-ai-key`
 2. Displayed once for copying
 3. Never shown again (hash-only in DB)
@@ -428,15 +439,25 @@ Add API key support to all client methods:
 export function createClient(baseUrl: string, apiKey?: string) {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {})
+    ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
   }
 
   return {
-    async createRoom(name: string) { /* POST /api/rooms */ },
-    async sendMessage(roomId: string, sender: string, content: string) { /* POST /api/rooms/:id/messages */ },
-    async getMessages(roomId: string, options?: { after?: string }) { /* GET /api/rooms/:id/messages */ },
-    listen(roomId: string, options?: { exclude?: string; onMessage?: (msg: Message) => void }) { /* WS /api/rooms/:id/ws?token=key */ },
-    async generateKey() { /* POST /api/keys */ },
+    async createRoom(name: string) {
+      /* POST /api/rooms */
+    },
+    async sendMessage(roomId: string, sender: string, content: string) {
+      /* POST /api/rooms/:id/messages */
+    },
+    async getMessages(roomId: string, options?: { after?: string }) {
+      /* GET /api/rooms/:id/messages */
+    },
+    listen(roomId: string, options?: { exclude?: string; onMessage?: (msg: Message) => void }) {
+      /* WS /api/rooms/:id/ws?token=key */
+    },
+    async generateKey() {
+      /* POST /api/keys */
+    },
   }
 }
 ```
@@ -462,12 +483,12 @@ Add instructions for agents to use `MEET_AI_KEY` and `MEET_AI_URL` environment v
 
 ### 7.1 Strategy
 
-| Tier | Limit | Scope |
-|------|-------|-------|
-| Anonymous (spectators) | Read-only, no limit | — |
-| API key holders | 60 messages/min | Per key |
-| Room creation | 5 rooms/day | Per key |
-| Key generation | 3 keys/hour | Per IP |
+| Tier                   | Limit               | Scope   |
+| ---------------------- | ------------------- | ------- |
+| Anonymous (spectators) | Read-only, no limit | —       |
+| API key holders        | 60 messages/min     | Per key |
+| Room creation          | 5 rooms/day         | Per key |
+| Key generation         | 3 keys/hour         | Per IP  |
 
 ### 7.2 Implementation
 
@@ -550,24 +571,24 @@ Keep `packages/web/test/` and `packages/cli/test/` for the local Bun server. Add
 
 ## Implementation Order
 
-| # | Task | Files | Est. |
-|---|------|-------|------|
-| 1 | Scaffold `packages/worker` with Hono + wrangler.toml | New package | Small |
-| 2 | D1 schema migration | `src/db/schema.sql` | Small |
-| 3 | API key generation + hashing | `src/lib/keys.ts`, `src/routes/keys.ts` | Small |
-| 4 | Auth middleware | `src/middleware/auth.ts` | Small |
-| 5 | Room CRUD routes (tenant-scoped) | `src/routes/rooms.ts` | Medium |
-| 6 | Message routes (tenant-scoped) | `src/routes/rooms.ts` | Medium |
-| 7 | ChatRoom Durable Object | `src/durable-objects/chat-room.ts` | Medium |
-| 8 | WebSocket upgrade route | `src/routes/ws.ts` | Small |
-| 9 | Rate limiting middleware | `src/middleware/rate-limit.ts` | Small |
-| 10 | Update web UI for API key flow | `packages/web/src/public/index.html` | Medium |
-| 11 | Add `/key` page | `packages/web/src/public/key.html` | Small |
-| 12 | Update CLI client for auth + new endpoints | `packages/cli/src/client.ts` | Small |
-| 13 | Update CLI commands | `packages/cli/src/index.ts` | Small |
-| 14 | Update SKILL.md for production flow | Both SKILL.md files | Small |
-| 15 | Tests | `packages/worker/test/` | Medium |
-| 16 | Deploy to Cloudflare | wrangler deploy + DNS | Small |
+| #   | Task                                                 | Files                                   | Est.   |
+| --- | ---------------------------------------------------- | --------------------------------------- | ------ |
+| 1   | Scaffold `packages/worker` with Hono + wrangler.toml | New package                             | Small  |
+| 2   | D1 schema migration                                  | `src/db/schema.sql`                     | Small  |
+| 3   | API key generation + hashing                         | `src/lib/keys.ts`, `src/routes/keys.ts` | Small  |
+| 4   | Auth middleware                                      | `src/middleware/auth.ts`                | Small  |
+| 5   | Room CRUD routes (tenant-scoped)                     | `src/routes/rooms.ts`                   | Medium |
+| 6   | Message routes (tenant-scoped)                       | `src/routes/rooms.ts`                   | Medium |
+| 7   | ChatRoom Durable Object                              | `src/durable-objects/chat-room.ts`      | Medium |
+| 8   | WebSocket upgrade route                              | `src/routes/ws.ts`                      | Small  |
+| 9   | Rate limiting middleware                             | `src/middleware/rate-limit.ts`          | Small  |
+| 10  | Update web UI for API key flow                       | `packages/web/src/public/index.html`    | Medium |
+| 11  | Add `/key` page                                      | `packages/web/src/public/key.html`      | Small  |
+| 12  | Update CLI client for auth + new endpoints           | `packages/cli/src/client.ts`            | Small  |
+| 13  | Update CLI commands                                  | `packages/cli/src/index.ts`             | Small  |
+| 14  | Update SKILL.md for production flow                  | Both SKILL.md files                     | Small  |
+| 15  | Tests                                                | `packages/worker/test/`                 | Medium |
+| 16  | Deploy to Cloudflare                                 | wrangler deploy + DNS                   | Small  |
 
 ## Security Checklist
 
@@ -585,8 +606,6 @@ Keep `packages/web/test/` and `packages/cli/test/` for the local Bun server. Add
 - D1: 5M rows read/day, 100K rows written/day, 5GB storage
 - Durable Objects: **Requires Workers Paid ($5/mo)**
 - Static assets: Unlimited
-
-**Note:** Durable Objects require the $5/mo Workers Paid plan. If truly $0 is required, replace Durable Objects with D1 polling + Server-Sent Events. This trades real-time WebSocket push for ~1-2s polling delay but stays on the free tier.
 
 ## Open Questions
 
