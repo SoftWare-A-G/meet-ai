@@ -54,6 +54,7 @@
     "@cloudflare/vitest-pool-workers": "0.13.4",
     "@cloudflare/workers-types": "catalog:",
     "@tailwindcss/vite": "catalog:",
+    "@tanstack/devtools-vite": "0.6.0",
     "@types/dompurify": "3.2.0",
     "@types/js-cookie": "3.0.6",
     "@types/react": "catalog:",

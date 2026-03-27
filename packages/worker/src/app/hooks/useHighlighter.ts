@@ -130,11 +130,6 @@ export function useHighlighter({ containerRef, onSelect, enabled = true }: UseHi
       const text = selection.toString().trim()
       if (!text) return
 
-      // Reject selections inside code blocks
-      const ancestor = range.commonAncestorContainer
-      const el = ancestor instanceof Element ? ancestor : ancestor.parentElement
-      if (el?.closest('.plan-code-block, pre, code')) return
-
       const block = findBlock(range.startContainer)
       if (!block) return
 
