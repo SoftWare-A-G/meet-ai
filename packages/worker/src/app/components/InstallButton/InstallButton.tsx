@@ -24,12 +24,12 @@ export default function InstallButton({ onIOSInstall }: InstallButtonProps) {
 
   useEffect(() => {
     // Already running as PWA — hide entirely
-    const isStandalone = (window.navigator as any).standalone === true
+    const isStandalone = navigator.standalone === true
       || window.matchMedia('(display-mode: standalone)').matches
     if (isStandalone) return
 
     // iOS detection
-    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
+    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream
     if (ios) {
       setIsIOS(true)
       setVisible(true)

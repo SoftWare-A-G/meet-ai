@@ -24,8 +24,6 @@ interface ChatInputProps {
   onUploadFile: (file: File) => Promise<{ id: string }>
 }
 
-type InsertMentionEvent = CustomEvent<{ name: string }>
-
 const mentionsClassNames: MentionsInputClassNames = {
   control: 'relative border-none',
   highlighter:
@@ -216,15 +214,15 @@ export default function ChatInput({ onSend, onUploadFile }: ChatInputProps) {
   }, [])
 
   useEffect(() => {
-    const handleInsertMention = (event: Event) => {
-      const name = (event as InsertMentionEvent).detail?.name?.trim()
+    const handleInsertMention = (event: CustomEvent<{ name: string }>) => {
+      const name = event.detail?.name?.trim()
       if (!name) return
       insertMentionAtCursor(name)
     }
 
-    window.addEventListener('meet-ai:insert-mention', handleInsertMention as EventListener)
+    window.addEventListener('meet-ai:insert-mention', handleInsertMention)
     return () => {
-      window.removeEventListener('meet-ai:insert-mention', handleInsertMention as EventListener)
+      window.removeEventListener('meet-ai:insert-mention', handleInsertMention)
     }
   }, [insertMentionAtCursor])
 
@@ -435,6 +433,7 @@ export default function ChatInput({ onSend, onUploadFile }: ChatInputProps) {
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
           placeholder="Type your message"
+          // react-mentions-ts inputRef prop doesn't accept RefObject<T | null> (React 19 useRef return type)
           inputRef={inputRef as unknown as RefObject<HTMLTextAreaElement>}
           autoResize
           classNames={mentionsClassNames}>

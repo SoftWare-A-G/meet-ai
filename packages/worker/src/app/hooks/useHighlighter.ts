@@ -105,13 +105,13 @@ export function useHighlighter({ containerRef, onSelect, enabled = true }: UseHi
       byType.set(h.type, arr)
     }
 
-    const highlights = (CSS as any).highlights
-    for (const [type, name] of Object.entries(HIGHLIGHT_NAMES)) {
-      const ranges = byType.get(type as AnnotationType) || []
+    const highlights = CSS.highlights
+    for (const name of Object.values(HIGHLIGHT_NAMES)) {
+      highlights.delete(name)
+    }
+    for (const [type, ranges] of byType) {
       if (ranges.length) {
-        highlights.set(name, new (window as any).Highlight(...ranges))
-      } else {
-        highlights.delete(name)
+        highlights.set(HIGHLIGHT_NAMES[type], new Highlight(...ranges))
       }
     }
   }, [containerRef])
@@ -158,7 +158,7 @@ export function useHighlighter({ containerRef, onSelect, enabled = true }: UseHi
   useEffect(() => () => {
     if (typeof CSS === 'undefined' || !('highlights' in CSS)) return
     for (const name of Object.values(HIGHLIGHT_NAMES)) {
-      ;(CSS as any).highlights.delete(name)
+      CSS.highlights.delete(name)
     }
   }, [])
 

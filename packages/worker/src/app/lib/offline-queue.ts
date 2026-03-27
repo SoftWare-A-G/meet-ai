@@ -21,7 +21,7 @@ async function queueMessage(msg: PendingMessage): Promise<void> {
   await new Promise<void>((resolve, reject) => { tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error) })
   if ('serviceWorker' in navigator && 'SyncManager' in window) {
     const reg = await navigator.serviceWorker.ready
-    await (reg as any).sync.register('send-messages')
+    await reg.sync?.register('send-messages')
   }
 }
 

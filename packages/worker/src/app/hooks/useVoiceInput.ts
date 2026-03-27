@@ -1,39 +1,17 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 
-interface SpeechRecognitionEvent {
-  resultIndex: number
-  results: SpeechRecognitionResultList
-}
-
-interface SpeechRecognitionInstance extends EventTarget {
-  continuous: boolean
-  interimResults: boolean
-  lang: string
-  start(): void
-  stop(): void
-  abort(): void
-  onresult: ((event: SpeechRecognitionEvent) => void) | null
-  onend: (() => void) | null
-  onerror: ((event: { error: string }) => void) | null
-}
-
-interface SpeechRecognitionConstructor {
-  new (): SpeechRecognitionInstance
-}
-
 function isIOSStandalone(): boolean {
   if (typeof window === 'undefined') return false
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
   const isStandalone =
-    (navigator as unknown as { standalone?: boolean }).standalone === true ||
+    navigator.standalone === true ||
     window.matchMedia('(display-mode: standalone)').matches
   return isIOS && isStandalone
 }
 
 function getSpeechRecognition(): SpeechRecognitionConstructor | null {
   if (typeof window === 'undefined') return null
-  const w = window as unknown as Record<string, unknown>
-  return (w.SpeechRecognition ?? w.webkitSpeechRecognition) as SpeechRecognitionConstructor | null
+  return window.SpeechRecognition ?? window.webkitSpeechRecognition ?? null
 }
 
 type UseVoiceInputOptions = {
@@ -94,7 +72,7 @@ export function useVoiceInput({ onTranscript }: UseVoiceInputOptions) {
       setIsListening(false)
     }
 
-    recognition.onerror = (event: { error: string }) => {
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       if (event.error === 'aborted' || event.error === 'no-speech') return
       stoppingRef.current = true
       setIsListening(false)
