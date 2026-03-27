@@ -173,7 +173,16 @@ export async function fetchMessages(roomId: string) {
 }
 
 export async function fetchLogs(roomId: string) {
-  const res = await getApiClient().api.rooms[':id'].logs.$get({ param: { id: roomId } })
+  const res = await getApiClient().api.rooms[':id'].logs.$get({ param: { id: roomId }, query: {} })
+  if (!res.ok) throw new ApiError(res.status, await res.text())
+  return res.json()
+}
+
+export async function fetchLogsSinceSeq(roomId: string, seq: number) {
+  const res = await getApiClient().api.rooms[':id'].logs.$get({
+    param: { id: roomId },
+    query: { since_seq: String(seq) },
+  })
   if (!res.ok) throw new ApiError(res.status, await res.text())
   return res.json()
 }

@@ -67,6 +67,7 @@ export type Log = {
   sender: string
   content: string
   color: string | null
+  seq: number | null
   created_at: string
 }
 

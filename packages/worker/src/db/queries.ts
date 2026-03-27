@@ -99,15 +99,29 @@ export function queries(db: D1Database) {
 
     async insertLog(id: string, keyId: string, roomId: string, sender: string, content: string, color?: string, messageId?: string) {
       await db.prepare(
-        'INSERT INTO logs (id, key_id, room_id, message_id, sender, content, color) VALUES (?, ?, ?, ?, ?, ?, ?)'
-      ).bind(id, keyId, roomId, messageId ?? null, sender, content, color ?? null).run()
+        `INSERT INTO logs (id, key_id, room_id, message_id, sender, content, color, seq)
+         VALUES (?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT MAX(seq) FROM logs WHERE room_id = ?), 0) + 1)`
+      ).bind(id, keyId, roomId, messageId ?? null, sender, content, color ?? null, roomId).run()
+
+      const row = await db.prepare(
+        'SELECT seq FROM logs WHERE id = ?'
+      ).bind(id).first<{ seq: number }>()
+
+      return row!.seq
     },
 
     async getLogsByRoom(keyId: string, roomId: string, limit = 100) {
       const result = await db.prepare(
-        'SELECT id, room_id, key_id, message_id, sender, content, color, created_at FROM logs WHERE key_id = ? AND room_id = ? ORDER BY created_at DESC LIMIT ?'
+        'SELECT id, room_id, key_id, message_id, sender, content, color, seq, created_at FROM logs WHERE key_id = ? AND room_id = ? ORDER BY created_at DESC LIMIT ?'
       ).bind(keyId, roomId, limit).all<Log>()
       return result.results.reverse()
+    },
+
+    async getLogsByRoomSinceSeq(keyId: string, roomId: string, sinceSeq: number) {
+      const result = await db.prepare(
+        'SELECT id, room_id, key_id, message_id, sender, content, color, seq, created_at FROM logs WHERE key_id = ? AND room_id = ? AND seq > ? ORDER BY seq'
+      ).bind(keyId, roomId, sinceSeq).all<Log>()
+      return result.results
     },
 
     async deleteOldLogs(olderThan: string) {

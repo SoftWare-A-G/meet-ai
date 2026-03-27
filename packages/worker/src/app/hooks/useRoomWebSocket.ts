@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { fetchMessages, fetchMessagesSinceSeq, fetchLogs } from '../lib/fetchers'
+import { fetchMessages, fetchMessagesSinceSeq, fetchLogs, fetchLogsSinceSeq } from '../lib/fetchers'
 import { queryKeys } from '../lib/query-keys'
 import { useRoomStore } from '../stores/useRoomStore'
 import { mergeIntoTimeline, reconcileOptimistic } from './useRoomTimeline'
@@ -63,7 +63,17 @@ const MAX_BACKOFF = 30000
 export function getLastTimelineSeq(items: TimelineItem[] | undefined): number {
   let maxSeq = 0
   for (const item of items ?? []) {
-    if (item.seq != null && item.seq > maxSeq) {
+    if (item.type !== 'log' && item.seq != null && item.seq > maxSeq) {
+      maxSeq = item.seq
+    }
+  }
+  return maxSeq
+}
+
+function getLastLogSeq(items: TimelineItem[] | undefined): number {
+  let maxSeq = 0
+  for (const item of items ?? []) {
+    if (item.type === 'log' && item.seq != null && item.seq > maxSeq) {
       maxSeq = item.seq
     }
   }
@@ -83,6 +93,7 @@ export function useRoomWebSocket(
   onTerminalDataRef.current = options?.onTerminalData
   const queryClient = useQueryClient()
   const lastSeqRef = useRef(0)
+  const lastLogSeqRef = useRef(0)
   const backoffRef = useRef(MIN_BACKOFF)
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const lastPongRef = useRef(Date.now())
@@ -92,9 +103,9 @@ export function useRoomWebSocket(
   useEffect(() => {
     if (!roomId || !apiKey) return
     const key = apiKey
-    lastSeqRef.current = getLastTimelineSeq(
-      queryClient.getQueryData<TimelineItem[]>(queryKeys.rooms.timeline(roomId))
-    )
+    const cachedTimeline = queryClient.getQueryData<TimelineItem[]>(queryKeys.rooms.timeline(roomId))
+    lastSeqRef.current = getLastTimelineSeq(cachedTimeline)
+    lastLogSeqRef.current = getLastLogSeq(cachedTimeline)
 
     // Grab Zustand actions once (stable references, no re-render deps)
     const { setCommands, setPlanDecision, setQuestionAnswer, setPermissionDecision } =
@@ -110,8 +121,12 @@ export function useRoomWebSocket(
       const seqBaseline = Math.max(lastSeqRef.current, cachedSeq)
       lastSeqRef.current = seqBaseline
 
+      const cachedLogSeq = getLastLogSeq(cached)
+      const logSeqBaseline = Math.max(lastLogSeqRef.current, cachedLogSeq)
+      lastLogSeqRef.current = logSeqBaseline
+
       // Track whether this is a bootstrap (seq=0) or incremental catch-up
-      const isBootstrap = seqBaseline === 0
+      const isBootstrap = seqBaseline === 0 && logSeqBaseline === 0
 
       try {
         // Fetch missed messages: incremental when we have a baseline,
@@ -121,15 +136,23 @@ export function useRoomWebSocket(
             ? await fetchMessagesSinceSeq(roomId, seqBaseline)
             : await fetchMessages(roomId)
 
-        // Always re-fetch logs — they have no seq column so we can't do
-        // incremental fetch. The API caps at 100 and mergeIntoTimeline
-        // deduplicates by ID, so this is cheap and idempotent.
-        const freshLogs = await fetchLogs(roomId)
+        // Fetch missed logs: incremental when we have a baseline
+        const freshLogs =
+          logSeqBaseline > 0
+            ? await fetchLogsSinceSeq(roomId, logSeqBaseline)
+            : await fetchLogs(roomId)
 
         // Update lastSeqRef from new messages
         for (const msg of missedMessages) {
           if (msg.seq != null && msg.seq > lastSeqRef.current) {
             lastSeqRef.current = msg.seq
+          }
+        }
+
+        // Update lastLogSeqRef from new logs
+        for (const log of freshLogs) {
+          if (log.seq != null && log.seq > lastLogSeqRef.current) {
+            lastLogSeqRef.current = log.seq
           }
         }
 
@@ -282,8 +305,14 @@ export function useRoomWebSocket(
         }
         // Fallback: chat message or log
         if (!event.sender || !event.content) return
-        if (event.seq && event.seq > lastSeqRef.current) {
-          lastSeqRef.current = event.seq
+        if (event.seq != null) {
+          if (event.type === 'log') {
+            if (event.seq > lastLogSeqRef.current) {
+              lastLogSeqRef.current = event.seq
+            }
+          } else if (event.seq > lastSeqRef.current) {
+            lastSeqRef.current = event.seq
+          }
         }
 
         // Write to timeline cache

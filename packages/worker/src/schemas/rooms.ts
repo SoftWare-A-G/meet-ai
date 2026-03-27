@@ -27,6 +27,10 @@ export const messagesQuerySchema = z.object({
   sender_type: z.enum(['agent', 'human']).optional(),
 })
 
+export const logsQuerySchema = z.object({
+  since_seq: z.coerce.number().int().optional(),
+})
+
 export const teamInfoMemberSchema = z.object({
   teammate_id: z.string().optional(),
   name: z.string(),

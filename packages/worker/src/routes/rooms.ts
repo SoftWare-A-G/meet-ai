@@ -11,6 +11,7 @@ import {
   teamInfoSchema,
   teamInfoUpsertSchema,
   messagesQuerySchema,
+  logsQuerySchema,
   commandsSchema,
   createTaskSchema,
   updateTaskSchema,
@@ -180,7 +181,7 @@ export const roomsRoute = new Hono<AppEnv>()
   )
 
   // GET /api/rooms/:id/logs — get recent logs
-  .get('/:id/logs', requireAuth, async c => {
+  .get('/:id/logs', requireAuth, zValidator('query', logsQuerySchema), async c => {
     const keyId = c.get('keyId')
     const roomId = c.req.param('id')
     const db = queries(c.env.DB)
@@ -188,6 +189,12 @@ export const roomsRoute = new Hono<AppEnv>()
     const room = await db.findRoom(roomId, keyId)
     if (!room) {
       return c.json({ error: 'room not found' }, 404)
+    }
+
+    const { since_seq: sinceSeq } = c.req.valid('query')
+    if (sinceSeq != null) {
+      const logs = await db.getLogsByRoomSinceSeq(keyId, roomId, sinceSeq)
+      return c.json(logs)
     }
 
     const logs = await db.getLogsByRoom(keyId, roomId)
@@ -215,7 +222,7 @@ export const roomsRoute = new Hono<AppEnv>()
       const color = body.color || null
       const messageId = body.message_id || null
       const id = crypto.randomUUID()
-      await db.insertLog(
+      const seq = await db.insertLog(
         id,
         keyId,
         roomId,
@@ -233,6 +240,7 @@ export const roomsRoute = new Hono<AppEnv>()
         content: body.content,
         color,
         type: 'log' as const,
+        seq,
         created_at: new Date().toISOString(),
       }
 
