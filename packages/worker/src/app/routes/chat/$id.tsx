@@ -6,6 +6,7 @@ import { useLocalStorage } from '@meet-ai/worker/app/hooks/useLocalStorage'
 import { useProjectsQuery } from '@meet-ai/worker/app/hooks/useProjectsQuery'
 import { useRoomsQuery } from '@meet-ai/worker/app/hooks/useRoomsQuery'
 import { useTeamInfoQuery } from '@meet-ai/worker/app/hooks/useTeamInfoQuery'
+import { ApiError } from '@meet-ai/worker/app/lib/fetchers'
 import { STORAGE_KEYS } from '@meet-ai/worker/app/lib/constants'
 import { getOrCreateHandle } from '@meet-ai/worker/app/lib/handle'
 import {
@@ -14,7 +15,7 @@ import {
   teamInfoQueryOptions,
   timelineQueryOptions,
 } from '@meet-ai/worker/app/lib/query-options'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link, notFound } from '@tanstack/react-router'
 import { useState } from 'react'
 
 export const Route = createFileRoute('/chat/$id')({
@@ -25,11 +26,29 @@ export const Route = createFileRoute('/chat/$id')({
     ])
     const room = rooms.find(r => r.id === params.id) ?? null
 
-    await queryClient.ensureQueryData(timelineQueryOptions(params.id))
+    try {
+      await queryClient.ensureQueryData(timelineQueryOptions(params.id))
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
+        throw notFound()
+      }
+      throw error
+    }
     if (room) void queryClient.ensureQueryData(teamInfoQueryOptions(params.id))
 
     return { room, rooms, projects, roomName: room?.name ?? null }
   },
+  notFoundComponent: () => (
+    <div className="bg-chat-bg text-msg-text flex h-dvh min-w-0 flex-1 flex-col items-center justify-center gap-3">
+      <div className="text-4xl font-bold text-[#888]">404</div>
+      <div className="text-sm text-[#888]">This room doesn&apos;t exist or has been deleted.</div>
+      <Link
+        to="/chat"
+        className="mt-2 inline-block rounded border-none bg-[#333] px-4 py-1.5 text-sm text-white no-underline hover:bg-[#444]">
+        Back to rooms
+      </Link>
+    </div>
+  ),
   head: ({ loaderData }) => ({
     meta: [{ title: loaderData?.roomName ? `Meet AI: ${loaderData.roomName}` : 'Meet AI' }],
   }),

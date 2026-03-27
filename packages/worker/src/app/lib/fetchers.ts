@@ -13,6 +13,18 @@ export class ApiError extends Error {
   }
 }
 
+/** Extract a human-readable message from an error response body. */
+async function readErrorMessage(res: { text(): Promise<string> }): Promise<string> {
+  const text = await res.text()
+  try {
+    const json = JSON.parse(text)
+    if (typeof json.error === 'string') return json.error
+  } catch {
+    // not JSON — use raw text
+  }
+  return text
+}
+
 // Inferred response types from hono/client
 export type RoomsResponse = InferResponseType<ApiClient['api']['rooms']['$get'], 200>
 export type ProjectsResponse = InferResponseType<ApiClient['api']['projects']['$get'], 200>
@@ -55,54 +67,54 @@ export async function validateApiKey(key: string): Promise<boolean> {
 
 export async function fetchRooms() {
   const res = await getApiClient().api.rooms.$get()
-  if (!res.ok) throw new ApiError(res.status, await res.text())
+  if (!res.ok) throw new ApiError(res.status, await readErrorMessage(res))
   return res.json()
 }
 
 export async function fetchProjects() {
   const res = await getApiClient().api.projects.$get()
-  if (!res.ok) throw new ApiError(res.status, await res.text())
+  if (!res.ok) throw new ApiError(res.status, await readErrorMessage(res))
   return res.json()
 }
 
 export async function patchRoom(input: PatchRoomInput) {
   const res = await getApiClient().api.rooms[':id'].$patch(input)
-  if (!res.ok) throw new ApiError(res.status, await res.text())
+  if (!res.ok) throw new ApiError(res.status, await readErrorMessage(res))
   return res.json()
 }
 
 export async function deleteRoom(input: DeleteRoomInput) {
   const res = await getApiClient().api.rooms[':id'].$delete(input)
-  if (!res.ok) throw new ApiError(res.status, await res.text())
+  if (!res.ok) throw new ApiError(res.status, await readErrorMessage(res))
 }
 
 export async function patchProject(input: PatchProjectInput) {
   const res = await getApiClient().api.projects[':id'].$patch(input)
-  if (!res.ok) throw new ApiError(res.status, await res.text())
+  if (!res.ok) throw new ApiError(res.status, await readErrorMessage(res))
   return res.json()
 }
 
 export async function fetchTasks(roomId: string) {
   const res = await getApiClient().api.rooms[':id'].tasks.$get({ param: { id: roomId } })
-  if (!res.ok) throw new ApiError(res.status, await res.text())
+  if (!res.ok) throw new ApiError(res.status, await readErrorMessage(res))
   return res.json()
 }
 
 export async function createTask(input: CreateTaskInput) {
   const res = await getApiClient().api.rooms[':id'].tasks.create.$post(input)
-  if (!res.ok) throw new ApiError(res.status, await res.text())
+  if (!res.ok) throw new ApiError(res.status, await readErrorMessage(res))
   return res.json()
 }
 
 export async function updateTask(input: UpdateTaskInput) {
   const res = await getApiClient().api.rooms[':id'].tasks[':taskId'].$patch(input)
-  if (!res.ok) throw new ApiError(res.status, await res.text())
+  if (!res.ok) throw new ApiError(res.status, await readErrorMessage(res))
   return res.json()
 }
 
 export async function deleteTask(input: DeleteTaskInput) {
   const res = await getApiClient().api.rooms[':id'].tasks[':taskId'].$delete(input)
-  if (!res.ok) throw new ApiError(res.status, await res.text())
+  if (!res.ok) throw new ApiError(res.status, await readErrorMessage(res))
 }
 
 export type AttachmentCountsResponse = InferResponseType<
@@ -124,7 +136,7 @@ export async function uploadFile(roomId: string, file: File) {
     param: { id: roomId },
     form: { file },
   })
-  if (!res.ok) throw new ApiError(res.status, await res.text())
+  if (!res.ok) throw new ApiError(res.status, await readErrorMessage(res))
   return res.json()
 }
 
@@ -133,7 +145,7 @@ export type LinkAttachmentInput = InferRequestType<ApiClient['api']['attachments
 
 export async function linkAttachment(input: LinkAttachmentInput) {
   const res = await getApiClient().api.attachments[':id'].$patch(input)
-  if (!res.ok) throw new ApiError(res.status, await res.text())
+  if (!res.ok) throw new ApiError(res.status, await readErrorMessage(res))
   return res.json()
 }
 
@@ -146,13 +158,13 @@ export async function fetchAttachmentCounts(roomId: string) {
   const res = await getApiClient().api.rooms[':id']['attachment-counts'].$get({
     param: { id: roomId },
   })
-  if (!res.ok) throw new ApiError(res.status, await res.text())
+  if (!res.ok) throw new ApiError(res.status, await readErrorMessage(res))
   return res.json()
 }
 
 export async function fetchTeamInfo(roomId: string) {
   const res = await getApiClient().api.rooms[':id']['team-info'].$get({ param: { id: roomId } })
-  if (!res.ok) throw new ApiError(res.status, await res.text())
+  if (!res.ok) throw new ApiError(res.status, await readErrorMessage(res))
   return res.json()
 }
 
@@ -168,13 +180,13 @@ export async function fetchMessages(roomId: string) {
     param: { id: roomId },
     query: {},
   })
-  if (!res.ok) throw new ApiError(res.status, await res.text())
+  if (!res.ok) throw new ApiError(res.status, await readErrorMessage(res))
   return res.json()
 }
 
 export async function fetchLogs(roomId: string) {
   const res = await getApiClient().api.rooms[':id'].logs.$get({ param: { id: roomId }, query: {} })
-  if (!res.ok) throw new ApiError(res.status, await res.text())
+  if (!res.ok) throw new ApiError(res.status, await readErrorMessage(res))
   return res.json()
 }
 
@@ -183,7 +195,7 @@ export async function fetchLogsSinceSeq(roomId: string, seq: number) {
     param: { id: roomId },
     query: { since_seq: String(seq) },
   })
-  if (!res.ok) throw new ApiError(res.status, await res.text())
+  if (!res.ok) throw new ApiError(res.status, await readErrorMessage(res))
   return res.json()
 }
 
@@ -192,7 +204,7 @@ export async function fetchMessagesSinceSeq(roomId: string, seq: number) {
     param: { id: roomId },
     query: { since_seq: String(seq) },
   })
-  if (!res.ok) throw new ApiError(res.status, await res.text())
+  if (!res.ok) throw new ApiError(res.status, await readErrorMessage(res))
   return res.json()
 }
 
@@ -207,7 +219,7 @@ export type SendMessageResponse = InferResponseType<
 
 export async function sendMessage(input: SendMessageInput) {
   const res = await getApiClient().api.rooms[':id'].messages.$post(input)
-  if (!res.ok) throw new ApiError(res.status, await res.text())
+  if (!res.ok) throw new ApiError(res.status, await readErrorMessage(res))
   return res.json()
 }
 
@@ -233,41 +245,41 @@ export type ExpirePermissionInput = InferRequestType<
 
 export async function decidePlanReview(input: DecidePlanReviewInput) {
   const res = await getApiClient().api.rooms[':id']['plan-reviews'][':reviewId'].decide.$post(input)
-  if (!res.ok) throw new ApiError(res.status, await res.text())
+  if (!res.ok) throw new ApiError(res.status, await readErrorMessage(res))
   return res.json()
 }
 
 export async function expirePlanReview(input: ExpirePlanReviewInput) {
   const res = await getApiClient().api.rooms[':id']['plan-reviews'][':reviewId'].expire.$post(input)
-  if (!res.ok) throw new ApiError(res.status, await res.text())
+  if (!res.ok) throw new ApiError(res.status, await readErrorMessage(res))
   return res.json()
 }
 
 export async function answerQuestion(input: AnswerQuestionInput) {
   const res =
     await getApiClient().api.rooms[':id']['question-reviews'][':reviewId'].answer.$post(input)
-  if (!res.ok) throw new ApiError(res.status, await res.text())
+  if (!res.ok) throw new ApiError(res.status, await readErrorMessage(res))
   return res.json()
 }
 
 export async function expireQuestion(input: ExpireQuestionInput) {
   const res =
     await getApiClient().api.rooms[':id']['question-reviews'][':reviewId'].expire.$post(input)
-  if (!res.ok) throw new ApiError(res.status, await res.text())
+  if (!res.ok) throw new ApiError(res.status, await readErrorMessage(res))
   return res.json()
 }
 
 export async function decidePermission(input: DecidePermissionInput) {
   const res =
     await getApiClient().api.rooms[':id']['permission-reviews'][':reviewId'].decide.$post(input)
-  if (!res.ok) throw new ApiError(res.status, await res.text())
+  if (!res.ok) throw new ApiError(res.status, await readErrorMessage(res))
   return res.json()
 }
 
 export async function expirePermission(input: ExpirePermissionInput) {
   const res =
     await getApiClient().api.rooms[':id']['permission-reviews'][':reviewId'].expire.$post(input)
-  if (!res.ok) throw new ApiError(res.status, await res.text())
+  if (!res.ok) throw new ApiError(res.status, await readErrorMessage(res))
   return res.json()
 }
 
@@ -276,14 +288,14 @@ export type TtsStatusResponse = InferResponseType<ApiClient['api']['tts']['statu
 
 export async function fetchTtsStatus() {
   const res = await getApiClient().api.tts.status.$get()
-  if (!res.ok) throw new ApiError(res.status, await res.text())
+  if (!res.ok) throw new ApiError(res.status, await readErrorMessage(res))
   return res.json()
 }
 
 // Canvas — ensure a canvas exists for a room
 export async function ensureCanvas(roomId: string) {
   const res = await getApiClient().api.rooms[':id'].canvas.$post({ param: { id: roomId } })
-  if (!res.ok) throw new ApiError(res.status, await res.text())
+  if (!res.ok) throw new ApiError(res.status, await readErrorMessage(res))
   return res.json()
 }
 
@@ -311,7 +323,7 @@ export async function textToSpeech(text: string) {
   }
 
   if (!res.ok) {
-    throw new ApiError(res.status, await res.text())
+    throw new ApiError(res.status, await readErrorMessage(res))
   }
 
   return res.arrayBuffer()
@@ -336,7 +348,7 @@ export async function claimToken(token: string): Promise<ClaimTokenResponse> {
 
 export async function shareAuth() {
   const res = await getApiClient().api.auth.share.$post()
-  if (!res.ok) throw new ApiError(res.status, 'Failed to create share link')
+  if (!res.ok) throw new ApiError(res.status, await readErrorMessage(res))
   return res.json()
 }
 
@@ -344,6 +356,6 @@ export async function shareAuth() {
 // Uses raw fetch to bypass the hc client's 401 interceptor.
 export async function generateKey(): Promise<GenerateKeyResponse> {
   const res = await fetch('/api/keys', { method: 'POST' })
-  if (!res.ok) throw new ApiError(res.status, await res.text())
+  if (!res.ok) throw new ApiError(res.status, await readErrorMessage(res))
   return res.json()
 }

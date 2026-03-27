@@ -26,7 +26,7 @@ function ChatLobby() {
 
   return (
     <div className="bg-chat-bg text-msg-text flex h-dvh min-w-0 flex-1 flex-col">
-      <div className="border-border bg-header-bg text-header-text flex h-14 shrink-0 items-center justify-between border-b px-4">
+      <div className="border-border bg-header-bg text-header-text flex h-12 shrink-0 items-center justify-between border-b px-4">
         <div className="flex items-center gap-2">
           <span className="text-base font-bold">Select a chat</span>
         </div>

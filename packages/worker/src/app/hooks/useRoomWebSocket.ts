@@ -1,7 +1,13 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { fetchMessages, fetchMessagesSinceSeq, fetchLogs, fetchLogsSinceSeq } from '../lib/fetchers'
+import {
+  ApiError,
+  fetchMessages,
+  fetchMessagesSinceSeq,
+  fetchLogs,
+  fetchLogsSinceSeq,
+} from '../lib/fetchers'
 import { queryKeys } from '../lib/query-keys'
 import { useRoomStore } from '../stores/useRoomStore'
 import { mergeIntoTimeline, reconcileOptimistic } from './useRoomTimeline'
@@ -181,6 +187,17 @@ export function useRoomWebSocket(
           }
         }
       } catch (error) {
+        if (error instanceof ApiError && error.status === 404) {
+          console.warn('[ws] room not found (404), stopping reconnection')
+          // Close the WebSocket — the onclose handler won't reconnect
+          // because we null out wsRef before closing
+          if (wsRef.current) {
+            const ws = wsRef.current
+            wsRef.current = null
+            ws.close()
+          }
+          return
+        }
         console.warn('[ws] catchUp failed, heartbeat will retry', error)
       }
     }

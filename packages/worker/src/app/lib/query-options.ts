@@ -1,5 +1,6 @@
 import { queryOptions } from '@tanstack/react-query'
 import {
+  ApiError,
   fetchRooms,
   fetchProjects,
   fetchMessages,
@@ -11,6 +12,12 @@ import {
 } from './fetchers'
 import { queryKeys } from './query-keys'
 import type { TimelineItem } from '../hooks/useRoomTimeline'
+
+/** Don't retry on 404 — the resource doesn't exist, retrying won't help. */
+function retryUnless404(failureCount: number, error: Error) {
+  if (error instanceof ApiError && error.status === 404) return false
+  return failureCount < 3
+}
 
 // ── Room-level queries ────────────────────────────────────────────────
 
@@ -53,6 +60,7 @@ export function timelineQueryOptions(roomId: string) {
       })
     },
     staleTime: Infinity,
+    retry: retryUnless404,
   })
 }
 
@@ -61,6 +69,7 @@ export function tasksQueryOptions(roomId: string) {
     queryKey: queryKeys.rooms.tasks(roomId),
     queryFn: () => fetchTasks(roomId),
     staleTime: Infinity,
+    retry: retryUnless404,
   })
 }
 
@@ -69,6 +78,7 @@ export function teamInfoQueryOptions(roomId: string) {
     queryKey: queryKeys.rooms.teamInfo(roomId),
     queryFn: () => fetchTeamInfo(roomId),
     staleTime: Infinity,
+    retry: retryUnless404,
   })
 }
 
@@ -77,6 +87,7 @@ export function attachmentCountsQueryOptions(roomId: string) {
     queryKey: queryKeys.rooms.attachmentCounts(roomId),
     queryFn: () => fetchAttachmentCounts(roomId),
     staleTime: Infinity,
+    retry: retryUnless404,
   })
 }
 

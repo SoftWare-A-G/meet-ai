@@ -3,6 +3,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import {
   createRootRouteWithContext,
   HeadContent,
+  Link,
   Outlet,
   ScriptOnce,
   Scripts,
@@ -138,6 +139,17 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     ],
   }),
   wrapInSuspense: true,
+  notFoundComponent: () => (
+    <div className="flex h-full flex-col items-center justify-center gap-3 p-4 text-center">
+      <div className="text-4xl font-bold text-[#888]">404</div>
+      <div className="text-sm text-[#888]">Page not found</div>
+      <Link
+        to="/"
+        className="mt-2 inline-block rounded border-none bg-[#333] px-4 py-1.5 text-sm text-white no-underline hover:bg-[#444]">
+        Go home
+      </Link>
+    </div>
+  ),
   errorComponent: ({ error, reset }) => (
     <div className="flex h-full flex-col items-center justify-center gap-3 p-4 text-center">
       <div className="text-sm text-[#e74c3c]">Something went wrong</div>
