@@ -120,7 +120,7 @@ export function useHighlighter({ containerRef, onSelect, enabled = true }: UseHi
     const container = containerRef.current
     if (!container || !enabled) return
 
-    const handleMouseUp = () => {
+    const processSelection = () => {
       const selection = window.getSelection()
       if (!selection || selection.isCollapsed || !selection.rangeCount) return
 
@@ -141,12 +141,17 @@ export function useHighlighter({ containerRef, onSelect, enabled = true }: UseHi
       onSelectRef.current?.({ text, rect, blockId, startOffset, endOffset })
     }
 
-    // Listen on document so mouseup is captured even when the cursor
-    // ends outside the container (common during text drag-selection).
-    document.addEventListener('mouseup', handleMouseUp)
-    return () => {
-      document.removeEventListener('mouseup', handleMouseUp)
-    }
+    const controller = new AbortController()
+    const { signal } = controller
+
+    // Desktop: mouseup fires once when drag-selection ends.
+    document.addEventListener('mouseup', processSelection, { signal })
+
+    // Mobile: touchend may fire before the browser finalizes the selection
+    // on iOS Safari, so defer one tick to let it settle.
+    document.addEventListener('touchend', () => setTimeout(processSelection, 0), { signal })
+
+    return () => controller.abort()
   }, [containerRef, enabled])
 
   // Clean up CSS highlights on unmount

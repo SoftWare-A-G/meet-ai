@@ -65,13 +65,13 @@ export default function AnnotationToolbar({
 
   // Close on click outside
   useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
+    const handleClick = (e: PointerEvent) => {
       if (toolbarRef.current && !toolbarRef.current.contains(e.target as Node)) {
         onClose()
       }
     }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
+    document.addEventListener('pointerdown', handleClick)
+    return () => document.removeEventListener('pointerdown', handleClick)
   }, [onClose])
 
   // Keyboard: typing in menu mode auto-opens comment input
