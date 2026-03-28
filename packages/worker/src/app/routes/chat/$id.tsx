@@ -13,7 +13,7 @@ import {
   projectsQueryOptions,
   roomsQueryOptions,
   teamInfoQueryOptions,
-  timelineQueryOptions,
+  timelineInfiniteQueryOptions,
 } from '@meet-ai/worker/app/lib/query-options'
 import { createFileRoute, Link, notFound } from '@tanstack/react-router'
 import { useState } from 'react'
@@ -27,7 +27,7 @@ export const Route = createFileRoute('/chat/$id')({
     const room = rooms.find(r => r.id === params.id) ?? null
 
     try {
-      await queryClient.ensureQueryData(timelineQueryOptions(params.id))
+      await queryClient.fetchInfiniteQuery(timelineInfiniteQueryOptions(params.id))
     } catch (error) {
       if (error instanceof ApiError && error.status === 404) {
         throw notFound()

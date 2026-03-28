@@ -283,7 +283,7 @@ export default function Sidebar({
           <span className="text-base font-bold">Meet AI</span>
           <SidebarHeaderContent onSettingsClick={onSettingsClick} onSpawnClick={onSpawnClick} />
         </div>
-        <div className="border-border flex h-14 items-center justify-between border-b px-2">
+        <div className="border-border flex h-14 items-center justify-between border-b px-2 *:w-full">
           <SearchForm value={search} onValueChange={setSearch} />
         </div>
       </ShadcnSidebarHeader>

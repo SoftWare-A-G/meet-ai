@@ -66,6 +66,18 @@ export function queries(db: D1Database) {
       return result.results
     },
 
+    async listLatestMessages(roomId: string, limit = 50) {
+      const sql = 'SELECT m.id, m.room_id, m.sender, m.sender_type, m.content, m.color, m.type, m.seq, m.created_at, pd.id AS plan_review_id, pd.status AS plan_review_status, pd.feedback AS plan_review_feedback, qr.id AS question_review_id, qr.status AS question_review_status, qr.answers_json AS question_review_answers, pr.id AS permission_review_id, pr.status AS permission_review_status, pr.tool_name AS permission_review_tool_name, pr.feedback AS permission_review_feedback FROM messages m LEFT JOIN plan_decisions pd ON pd.message_id = m.id LEFT JOIN question_reviews qr ON qr.message_id = m.id LEFT JOIN permission_reviews pr ON pr.message_id = m.id WHERE m.room_id = ? ORDER BY m.seq DESC LIMIT ?'
+      const result = await db.prepare(sql).bind(roomId, limit).all<Message>()
+      return { messages: result.results.reverse(), hasMore: result.results.length === limit }
+    },
+
+    async listMessagesBefore(roomId: string, beforeSeq: number, limit = 50) {
+      const sql = 'SELECT m.id, m.room_id, m.sender, m.sender_type, m.content, m.color, m.type, m.seq, m.created_at, pd.id AS plan_review_id, pd.status AS plan_review_status, pd.feedback AS plan_review_feedback, qr.id AS question_review_id, qr.status AS question_review_status, qr.answers_json AS question_review_answers, pr.id AS permission_review_id, pr.status AS permission_review_status, pr.tool_name AS permission_review_tool_name, pr.feedback AS permission_review_feedback FROM messages m LEFT JOIN plan_decisions pd ON pd.message_id = m.id LEFT JOIN question_reviews qr ON qr.message_id = m.id LEFT JOIN permission_reviews pr ON pr.message_id = m.id WHERE m.room_id = ? AND m.seq < ? ORDER BY m.seq DESC LIMIT ?'
+      const result = await db.prepare(sql).bind(roomId, beforeSeq, limit).all<Message>()
+      return { messages: result.results.reverse(), hasMore: result.results.length === limit }
+    },
+
     async insertMessage(id: string, roomId: string, sender: string, content: string, senderType = 'human', color?: string, type = 'message') {
       await db.prepare(
         `INSERT INTO messages (id, room_id, sender, sender_type, content, color, type, seq)

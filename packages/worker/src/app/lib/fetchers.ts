@@ -174,6 +174,10 @@ export type MessagesResponse = InferResponseType<
   200
 >
 export type LogsResponse = InferResponseType<ApiClient['api']['rooms'][':id']['logs']['$get'], 200>
+export type PaginatedMessagesResponse = InferResponseType<
+  ApiClient['api']['rooms'][':id']['messages']['pages']['$get'],
+  200
+>
 
 export async function fetchMessages(roomId: string) {
   const res = await getApiClient().api.rooms[':id'].messages.$get({
@@ -194,6 +198,24 @@ export async function fetchLogsSinceSeq(roomId: string, seq: number) {
   const res = await getApiClient().api.rooms[':id'].logs.$get({
     param: { id: roomId },
     query: { since_seq: String(seq) },
+  })
+  if (!res.ok) throw new ApiError(res.status, await readErrorMessage(res))
+  return res.json()
+}
+
+export async function fetchLatestMessages(roomId: string, limit = 50) {
+  const res = await getApiClient().api.rooms[':id'].messages.pages.$get({
+    param: { id: roomId },
+    query: { limit: String(limit) },
+  })
+  if (!res.ok) throw new ApiError(res.status, await readErrorMessage(res))
+  return res.json()
+}
+
+export async function fetchMessagesBefore(roomId: string, beforeSeq: number, limit = 50) {
+  const res = await getApiClient().api.rooms[':id'].messages.pages.$get({
+    param: { id: roomId },
+    query: { before_seq: String(beforeSeq), limit: String(limit) },
   })
   if (!res.ok) throw new ApiError(res.status, await readErrorMessage(res))
   return res.json()

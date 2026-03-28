@@ -1,7 +1,9 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { fetchMessages, fetchLogs, fetchMessagesSinceSeq } from '../lib/fetchers'
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
+import type { InfiniteData } from '@tanstack/react-query'
+import { fetchMessagesSinceSeq } from '../lib/fetchers'
 import { queryKeys } from '../lib/query-keys'
-import { timelineQueryOptions } from '../lib/query-options'
+import { timelineInfiniteQueryOptions } from '../lib/query-options'
+import type { TimelinePage } from '../lib/query-options'
 import type { Message } from '../lib/types'
 
 export type TimelineItem = Message & {
@@ -62,32 +64,28 @@ export function reconcileOptimistic(
   return sortTimeline(deduplicateTimeline([...existing, { ...confirmed, status: 'sent' }]))
 }
 
+/** Flatten all pages into a single sorted, deduplicated TimelineItem array. */
+function flattenPages(data: InfiniteData<TimelinePage>): TimelineItem[] {
+  const all: TimelineItem[] = []
+  for (const page of data.pages) {
+    all.push(...page.messages)
+  }
+  return sortTimeline(deduplicateTimeline(all))
+}
+
 export function useRoomTimeline(roomId: string) {
-  const queryClient = useQueryClient()
+  const result = useInfiniteQuery(timelineInfiniteQueryOptions(roomId))
 
-  return useQuery({
-    ...timelineQueryOptions(roomId),
-    queryFn: async () => {
-      const [messages, logs] = await Promise.all([
-        fetchMessages(roomId),
-        fetchLogs(roomId),
-      ])
-      const taggedMessages = messages.map(m => ({ ...m, status: 'sent' as const }))
-      const taggedLogs = logs.map(l => ({ ...l, type: 'log' as const, status: 'sent' as const }))
-      const serverItems = sortTimeline(deduplicateTimeline([...taggedMessages, ...taggedLogs]))
+  const timeline = result.data ? flattenPages(result.data) : []
 
-      // Preserve any pending/failed items already in the cache (e.g., restored offline queue)
-      const cached = queryClient.getQueryData<TimelineItem[]>(queryKeys.rooms.timeline(roomId))
-      if (cached) {
-        const pendingItems = cached.filter(item => item.status === 'pending' || item.status === 'failed')
-        if (pendingItems.length > 0) {
-          return mergeIntoTimeline(serverItems, pendingItems)
-        }
-      }
-
-      return serverItems
-    },
-  })
+  return {
+    data: timeline,
+    isLoading: result.isLoading,
+    error: result.error,
+    hasPreviousPage: result.hasPreviousPage,
+    isFetchingPreviousPage: result.isFetchingPreviousPage,
+    fetchPreviousPage: result.fetchPreviousPage,
+  }
 }
 
 /**
@@ -98,25 +96,48 @@ export function useTimelineUpdater(roomId: string | null) {
   const queryClient = useQueryClient()
 
   function appendOptimistic(item: TimelineItem) {
-    queryClient.setQueryData<TimelineItem[]>(
+    queryClient.setQueryData<InfiniteData<TimelinePage>>(
       queryKeys.rooms.timeline(roomId!),
-      old => (old ? [...old, item] : [item]),
+      old => {
+        if (!old || old.pages.length === 0) {
+          return { pages: [{ messages: [item], hasMore: false }], pageParams: [undefined] }
+        }
+        const lastPage = old.pages[old.pages.length - 1]
+        const updatedLast = { ...lastPage, messages: [...lastPage.messages, item] }
+        return { ...old, pages: [...old.pages.slice(0, -1), updatedLast] }
+      },
     )
   }
 
   function updateItemStatus(tempId: string, status: 'sent' | 'pending' | 'failed') {
-    queryClient.setQueryData<TimelineItem[]>(
+    queryClient.setQueryData<InfiniteData<TimelinePage>>(
       queryKeys.rooms.timeline(roomId!),
-      old => old?.map(m => (m.tempId === tempId ? { ...m, status } : m)) ?? [],
+      old => {
+        if (!old) return old
+        return {
+          ...old,
+          pages: old.pages.map(page => ({
+            ...page,
+            messages: page.messages.map(m =>
+              m.tempId === tempId ? { ...m, status } : m,
+            ),
+          })),
+        }
+      },
     )
   }
 
   function appendItems(items: TimelineItem[]) {
-    queryClient.setQueryData<TimelineItem[]>(
+    queryClient.setQueryData<InfiniteData<TimelinePage>>(
       queryKeys.rooms.timeline(roomId!),
       old => {
-        if (!old) return items
-        return mergeIntoTimeline(old, items)
+        if (!old || old.pages.length === 0) {
+          return { pages: [{ messages: items, hasMore: false }], pageParams: [undefined] }
+        }
+        const lastPage = old.pages[old.pages.length - 1]
+        const merged = mergeIntoTimeline(lastPage.messages, items)
+        const updatedLast = { ...lastPage, messages: merged }
+        return { ...old, pages: [...old.pages.slice(0, -1), updatedLast] }
       },
     )
   }
@@ -144,14 +165,17 @@ export function useTimelineCatchUp(roomId: string | null) {
     }
 
     await queryClient.cancelQueries({ queryKey: queryKeys.rooms.timeline(roomId) })
-    queryClient.setQueryData<TimelineItem[]>(
+    queryClient.setQueryData<InfiniteData<TimelinePage>>(
       queryKeys.rooms.timeline(roomId),
       old => {
-        if (!old) return missed.map(m => ({ ...m, status: 'sent' as const }))
-        return mergeIntoTimeline(
-          old,
-          missed.map(m => ({ ...m, status: 'sent' as const })),
-        )
+        const tagged = missed.map(m => ({ ...m, status: 'sent' as const }))
+        if (!old || old.pages.length === 0) {
+          return { pages: [{ messages: tagged, hasMore: false }], pageParams: [undefined] }
+        }
+        const lastPage = old.pages[old.pages.length - 1]
+        const merged = mergeIntoTimeline(lastPage.messages, tagged)
+        const updatedLast = { ...lastPage, messages: merged }
+        return { ...old, pages: [...old.pages.slice(0, -1), updatedLast] }
       },
     )
 

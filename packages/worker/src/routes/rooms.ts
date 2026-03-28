@@ -11,6 +11,7 @@ import {
   teamInfoSchema,
   teamInfoUpsertSchema,
   messagesQuerySchema,
+  paginatedMessagesQuerySchema,
   logsQuerySchema,
   commandsSchema,
   createTaskSchema,
@@ -117,6 +118,24 @@ export const roomsRoute = new Hono<AppEnv>()
       senderType || undefined
     )
     return c.json(messages)
+  })
+
+  // GET /api/rooms/:id/messages/pages — paginated message access
+  .get('/:id/messages/pages', requireAuth, zValidator('query', paginatedMessagesQuerySchema), async c => {
+    const keyId = c.get('keyId')
+    const roomId = c.req.param('id')
+    const db = queries(c.env.DB)
+
+    const room = await db.findRoom(roomId, keyId)
+    if (!room) {
+      return c.json({ error: 'room not found' }, 404)
+    }
+
+    const { before_seq, limit } = c.req.valid('query')
+    if (before_seq != null) {
+      return c.json(await db.listMessagesBefore(roomId, before_seq, limit))
+    }
+    return c.json(await db.listLatestMessages(roomId, limit))
   })
 
   // POST /api/rooms/:id/messages — send a message (60/min per key)

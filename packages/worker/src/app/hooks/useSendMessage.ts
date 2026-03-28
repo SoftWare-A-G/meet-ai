@@ -1,9 +1,11 @@
 import { useCallback } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import type { InfiniteData } from '@tanstack/react-query'
 import { sendMessage } from '../lib/fetchers'
 import { queryKeys } from '../lib/query-keys'
 import { offlineQueue } from '../lib/offline-queue'
 import type { TimelineItem } from './useRoomTimeline'
+import type { TimelinePage } from '../lib/query-options'
 
 function generateTempId() {
   return `pending-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
@@ -27,40 +29,56 @@ export function useSendMessage(roomId: string, userName: string, apiKey: string)
     onMutate: async (vars) => {
       await queryClient.cancelQueries({ queryKey: timelineKey })
       const attachmentCount = vars.attachmentIds?.length ?? 0
-      queryClient.setQueryData<TimelineItem[]>(
+      const newItem: TimelineItem = {
+        sender: userName,
+        content: vars.content,
+        created_at: new Date().toISOString(),
+        tempId: vars.tempId,
+        status: 'pending',
+        ...(attachmentCount > 0 && { attachment_count: attachmentCount, attachmentIds: vars.attachmentIds }),
+      }
+
+      queryClient.setQueryData<InfiniteData<TimelinePage>>(
         timelineKey,
         old => {
-          if (!old) {
-            return [{
-              sender: userName,
-              content: vars.content,
-              created_at: new Date().toISOString(),
-              tempId: vars.tempId,
-              status: 'pending',
-              ...(attachmentCount > 0 && { attachment_count: attachmentCount, attachmentIds: vars.attachmentIds }),
-            }]
+          if (!old || old.pages.length === 0) {
+            return { pages: [{ messages: [newItem], hasMore: false }], pageParams: [undefined] }
           }
-          // Bug 2 fix: if tempId already exists (retry case), update status instead of appending
-          const existing = old.find(m => m.tempId === vars.tempId)
-          if (existing) {
-            return old.map(m => (m.tempId === vars.tempId ? { ...m, status: 'pending' as const } : m))
+          const lastPage = old.pages[old.pages.length - 1]
+          // Bug 2 fix: if tempId already exists (retry case), update status across all pages
+          const existsInAnyPage = old.pages.some(p => p.messages.some(m => m.tempId === vars.tempId))
+          if (existsInAnyPage) {
+            return {
+              ...old,
+              pages: old.pages.map(p => ({
+                ...p,
+                messages: p.messages.map(m =>
+                  m.tempId === vars.tempId ? { ...m, status: 'pending' as const } : m,
+                ),
+              })),
+            }
           }
-          return [...old, {
-            sender: userName,
-            content: vars.content,
-            created_at: new Date().toISOString(),
-            tempId: vars.tempId,
-            status: 'pending',
-            ...(attachmentCount > 0 && { attachment_count: attachmentCount, attachmentIds: vars.attachmentIds }),
-          }]
+          const updatedLast = { ...lastPage, messages: [...lastPage.messages, newItem] }
+          return { ...old, pages: [...old.pages.slice(0, -1), updatedLast] }
         },
       )
     },
     onError: async (_error, vars) => {
       // Mark as failed in timeline cache
-      queryClient.setQueryData<TimelineItem[]>(
+      queryClient.setQueryData<InfiniteData<TimelinePage>>(
         timelineKey,
-        old => old?.map(m => (m.tempId === vars.tempId ? { ...m, status: 'failed' as const } : m)) ?? [],
+        old => {
+          if (!old) return old
+          return {
+            ...old,
+            pages: old.pages.map(p => ({
+              ...p,
+              messages: p.messages.map(m =>
+                m.tempId === vars.tempId ? { ...m, status: 'failed' as const } : m,
+              ),
+            })),
+          }
+        },
       )
       // Queue to IndexedDB for offline retry
       await queue({
@@ -86,8 +104,14 @@ export function useSendMessage(roomId: string, userName: string, apiKey: string)
 
   const retry = useCallback(
     (tempId: string) => {
-      const timeline = queryClient.getQueryData<TimelineItem[]>(timelineKey)
-      const msg = timeline?.find(m => m.tempId === tempId)
+      const data = queryClient.getQueryData<InfiniteData<TimelinePage>>(timelineKey)
+      let msg: TimelineItem | undefined
+      if (data) {
+        for (const page of data.pages) {
+          msg = page.messages.find(m => m.tempId === tempId)
+          if (msg) break
+        }
+      }
       if (!msg) return
       // onMutate will update existing item to 'pending' (Bug 2 fix)
       mutation.mutate(

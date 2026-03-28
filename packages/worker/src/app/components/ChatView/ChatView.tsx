@@ -35,6 +35,9 @@ export default function ChatView({
     data: timeline = [],
     isLoading: timelineLoading,
     error: timelineError,
+    hasPreviousPage,
+    isFetchingPreviousPage,
+    fetchPreviousPage,
   } = useRoomTimeline(roomId)
   const { appendItems } = useTimelineUpdater(roomId)
   const { send: handleSend, retry: handleRetry } = useSendMessage(roomId, userName, apiKey)
@@ -52,8 +55,10 @@ export default function ChatView({
     requestPermission()
   }, [])
 
-  // Restore offline queue and auto-flush
+  // Restore offline queue and auto-flush (wait for timeline to load to avoid stub cache being overwritten)
   useEffect(() => {
+    if (timelineLoading) return
+
     let cancelled = false
 
     async function restore() {
@@ -90,7 +95,7 @@ export default function ChatView({
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- getForRoom/remove/appendItems/updateItemStatus/handleSend are stable
-  }, [roomId])
+  }, [roomId, timelineLoading])
 
   // WebSocket — simplified callback for side effects only
   // (cache updates are handled in useRoomWebSocket)
@@ -180,6 +185,9 @@ export default function ChatView({
           onSend={handleSendWithScroll}
           connected={connected}
           voiceAvailable={ttsStatus?.available}
+          hasPreviousPage={hasPreviousPage}
+          isFetchingPreviousPage={isFetchingPreviousPage}
+          onLoadMore={fetchPreviousPage}
         />
       )}
       <ActivityBar onClick={() => setActivityDrawerOpen(true)} />

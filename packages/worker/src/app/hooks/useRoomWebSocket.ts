@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
+import type { InfiniteData } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
@@ -13,7 +14,7 @@ import { useRoomStore } from '../stores/useRoomStore'
 import { mergeIntoTimeline, reconcileOptimistic } from './useRoomTimeline'
 import type { CommandsInfo, TaskItem, TeamInfoResponse } from '../lib/fetchers'
 import type { Message, TerminalDataEvent } from '../lib/types'
-import type { TimelineItem } from './useRoomTimeline'
+import type { TimelinePage } from '../lib/query-options'
 
 type PlanDecisionEvent = {
   type: 'plan_decision'
@@ -66,21 +67,27 @@ type UseRoomWebSocketOptions = {
 const MIN_BACKOFF = 1000
 const MAX_BACKOFF = 30000
 
-export function getLastTimelineSeq(items: TimelineItem[] | undefined): number {
+export function getLastTimelineSeq(data: InfiniteData<TimelinePage> | undefined): number {
   let maxSeq = 0
-  for (const item of items ?? []) {
-    if (item.type !== 'log' && item.seq != null && item.seq > maxSeq) {
-      maxSeq = item.seq
+  if (!data) return maxSeq
+  for (const page of data.pages) {
+    for (const item of page.messages) {
+      if (item.type !== 'log' && item.seq != null && item.seq > maxSeq) {
+        maxSeq = item.seq
+      }
     }
   }
   return maxSeq
 }
 
-function getLastLogSeq(items: TimelineItem[] | undefined): number {
+function getLastLogSeq(data: InfiniteData<TimelinePage> | undefined): number {
   let maxSeq = 0
-  for (const item of items ?? []) {
-    if (item.type === 'log' && item.seq != null && item.seq > maxSeq) {
-      maxSeq = item.seq
+  if (!data) return maxSeq
+  for (const page of data.pages) {
+    for (const item of page.messages) {
+      if (item.type === 'log' && item.seq != null && item.seq > maxSeq) {
+        maxSeq = item.seq
+      }
     }
   }
   return maxSeq
@@ -109,7 +116,7 @@ export function useRoomWebSocket(
   useEffect(() => {
     if (!roomId || !apiKey) return
     const key = apiKey
-    const cachedTimeline = queryClient.getQueryData<TimelineItem[]>(queryKeys.rooms.timeline(roomId))
+    const cachedTimeline = queryClient.getQueryData<InfiniteData<TimelinePage>>(queryKeys.rooms.timeline(roomId))
     lastSeqRef.current = getLastTimelineSeq(cachedTimeline)
     lastLogSeqRef.current = getLastLogSeq(cachedTimeline)
 
@@ -122,7 +129,7 @@ export function useRoomWebSocket(
 
       // Re-compute lastSeq from the current cache — the ref may be stale
       // (e.g. timeline loaded after the effect created the WS connection)
-      const cached = queryClient.getQueryData<TimelineItem[]>(queryKeys.rooms.timeline(roomId))
+      const cached = queryClient.getQueryData<InfiniteData<TimelinePage>>(queryKeys.rooms.timeline(roomId))
       const cachedSeq = getLastTimelineSeq(cached)
       const seqBaseline = Math.max(lastSeqRef.current, cachedSeq)
       lastSeqRef.current = seqBaseline
@@ -174,9 +181,14 @@ export function useRoomWebSocket(
 
         // Merge into timeline cache
         void queryClient.cancelQueries({ queryKey: queryKeys.rooms.timeline(roomId) })
-        queryClient.setQueryData<TimelineItem[]>(queryKeys.rooms.timeline(roomId), old => {
-          if (!old) return incoming
-          return mergeIntoTimeline(old, incoming)
+        queryClient.setQueryData<InfiniteData<TimelinePage>>(queryKeys.rooms.timeline(roomId), old => {
+          if (!old || old.pages.length === 0) {
+            return { pages: [{ messages: incoming, hasMore: false }], pageParams: [undefined] }
+          }
+          const lastPage = old.pages[old.pages.length - 1]
+          const merged = mergeIntoTimeline(lastPage.messages, incoming)
+          const updatedLast = { ...lastPage, messages: merged }
+          return { ...old, pages: [...old.pages.slice(0, -1), updatedLast] }
         })
 
         // Side effects for incremental catch-up only — bootstrap (seq=0)
@@ -335,10 +347,15 @@ export function useRoomWebSocket(
         // Write to timeline cache
         if (roomId) {
           void queryClient.cancelQueries({ queryKey: queryKeys.rooms.timeline(roomId) })
-          queryClient.setQueryData<TimelineItem[]>(queryKeys.rooms.timeline(roomId), old => {
+          queryClient.setQueryData<InfiniteData<TimelinePage>>(queryKeys.rooms.timeline(roomId), old => {
             const item = { ...event, status: 'sent' as const }
-            if (!old) return [item]
-            return reconcileOptimistic(old, item)
+            if (!old || old.pages.length === 0) {
+              return { pages: [{ messages: [item], hasMore: false }], pageParams: [undefined] }
+            }
+            const lastPage = old.pages[old.pages.length - 1]
+            const updatedMessages = reconcileOptimistic(lastPage.messages, item)
+            const updatedLast = { ...lastPage, messages: updatedMessages }
+            return { ...old, pages: [...old.pages.slice(0, -1), updatedLast] }
           })
         }
 

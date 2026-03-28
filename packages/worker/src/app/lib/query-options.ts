@@ -1,10 +1,12 @@
-import { queryOptions } from '@tanstack/react-query'
+import { queryOptions, infiniteQueryOptions } from '@tanstack/react-query'
 import {
   ApiError,
   fetchRooms,
   fetchProjects,
   fetchMessages,
   fetchLogs,
+  fetchLatestMessages,
+  fetchMessagesBefore,
   fetchTasks,
   fetchTeamInfo,
   fetchAttachmentCounts,
@@ -59,6 +61,62 @@ export function timelineQueryOptions(roomId: string) {
         return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
       })
     },
+    staleTime: Infinity,
+    retry: retryUnless404,
+  })
+}
+
+export type TimelinePage = {
+  messages: TimelineItem[]
+  hasMore: boolean
+}
+
+export function timelineInfiniteQueryOptions(roomId: string) {
+  return infiniteQueryOptions({
+    queryKey: queryKeys.rooms.timeline(roomId),
+    queryFn: async ({ pageParam }): Promise<TimelinePage> => {
+      if (pageParam) {
+        // Subsequent pages — fetch older messages only
+        const data = await fetchMessagesBefore(roomId, pageParam.beforeSeq)
+        return {
+          messages: data.messages.map(m => ({ ...m, status: 'sent' as const })),
+          hasMore: data.hasMore,
+        }
+      }
+      // Initial page — fetch latest messages + all logs
+      const [paginated, logs] = await Promise.all([
+        fetchLatestMessages(roomId),
+        fetchLogs(roomId),
+      ])
+      const taggedMessages = paginated.messages.map(m => ({ ...m, status: 'sent' as const }))
+      const taggedLogs = logs.map(l => ({ ...l, type: 'log' as const, status: 'sent' as const }))
+
+      const seen = new Set<string>()
+      const deduped: TimelineItem[] = []
+      for (const item of [...taggedMessages, ...taggedLogs]) {
+        const key = item.id ?? ''
+        if (key && seen.has(key)) continue
+        if (key) seen.add(key)
+        deduped.push(item)
+      }
+
+      const sorted = deduped.sort((a, b) => {
+        if (a.seq != null && b.seq != null) return a.seq - b.seq
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      })
+
+      return { messages: sorted, hasMore: paginated.hasMore }
+    },
+    initialPageParam: undefined as { beforeSeq: number } | undefined,
+    getPreviousPageParam: (firstPage) => {
+      if (!firstPage.hasMore) return undefined
+      const seqs = firstPage.messages
+        .map(m => m.seq)
+        .filter((s): s is number => s != null)
+      if (seqs.length === 0) return undefined
+      return { beforeSeq: Math.min(...seqs) }
+    },
+    getNextPageParam: () => undefined,
     staleTime: Infinity,
     retry: retryUnless404,
   })

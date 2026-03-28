@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { useStickToBottom } from 'use-stick-to-bottom'
 import Message from '../Message'
 import LogGroup from '../LogGroup'
@@ -30,6 +30,9 @@ type MessageListProps = {
   onSend?: (content: string) => void
   connected?: boolean
   voiceAvailable?: boolean
+  hasPreviousPage?: boolean
+  isFetchingPreviousPage?: boolean
+  onLoadMore?: () => void
 }
 
 type RenderItem =
@@ -149,7 +152,7 @@ function groupMessages(messages: DisplayMessage[]): RenderItem[] {
   return merged
 }
 
-export default function MessageList({ messages, attachmentCounts, roomId, userName, unreadCount, forceScrollCounter, onScrollToBottom, onRetry, onSend, connected = true, voiceAvailable }: MessageListProps) {
+export default function MessageList({ messages, attachmentCounts, roomId, userName, unreadCount, forceScrollCounter, onScrollToBottom, onRetry, onSend, connected = true, voiceAvailable, hasPreviousPage, isFetchingPreviousPage, onLoadMore }: MessageListProps) {
   const { scrollRef, contentRef, isAtBottom, scrollToBottom } = useStickToBottom({ resize: 'smooth', initial: 'smooth' })
 
   // Auto-dismiss new messages pill when user scrolls to the bottom
@@ -188,6 +191,54 @@ export default function MessageList({ messages, attachmentCounts, roomId, userNa
   // eslint-disable-next-line react-hooks/exhaustive-deps -- scrollToBottom is stable, isAtBottomRef is a ref
   }, [])
 
+  // Scroll-height preservation: only compensate when loading older messages
+  const isLoadingOlderRef = useRef(false)
+  const prevScrollHeightRef = useRef(0)
+  useLayoutEffect(() => {
+    if (!isLoadingOlderRef.current) return
+    const el = scrollRef.current
+    if (!el || prevScrollHeightRef.current === 0) return
+    const delta = el.scrollHeight - prevScrollHeightRef.current
+    if (delta > 0) {
+      el.scrollTop += delta
+      prevScrollHeightRef.current = el.scrollHeight
+    }
+    if (!isFetchingPreviousPage) {
+      isLoadingOlderRef.current = false
+    }
+  })
+
+  // IntersectionObserver sentinel ref callback for load-more
+  const observerRef = useRef<IntersectionObserver | null>(null)
+  const onLoadMoreRef = useRef(onLoadMore)
+  onLoadMoreRef.current = onLoadMore
+  const hasPreviousPageRef = useRef(hasPreviousPage)
+  hasPreviousPageRef.current = hasPreviousPage
+  const isFetchingRef = useRef(isFetchingPreviousPage)
+  isFetchingRef.current = isFetchingPreviousPage
+
+  const sentinelRef = useCallback((node: HTMLDivElement | null) => {
+    if (observerRef.current) {
+      observerRef.current.disconnect()
+      observerRef.current = null
+    }
+    if (!node) return
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasPreviousPageRef.current && !isFetchingRef.current) {
+          const el = scrollRef.current
+          if (el) {
+            prevScrollHeightRef.current = el.scrollHeight
+          }
+          isLoadingOlderRef.current = true
+          onLoadMoreRef.current?.()
+        }
+      },
+      { root: scrollRef.current, rootMargin: '200px 0px 0px 0px' },
+    )
+    observerRef.current.observe(node)
+  }, [scrollRef])
+
   const items = groupMessages(messages)
 
   return (
@@ -197,6 +248,11 @@ export default function MessageList({ messages, attachmentCounts, roomId, userNa
       )}
       <div className="flex-1" />
       <div className="flex flex-col gap-0.5" ref={contentRef}>
+        {/* Sentinel for loading older messages */}
+        <div ref={sentinelRef} className="h-1 shrink-0" />
+        {isFetchingPreviousPage && (
+          <div className="py-2 text-center text-xs text-[#888]">Loading older messages...</div>
+        )}
         {items.map((item, i) => {
           if (item.kind === 'log-group') {
             const first = item.logs[0]

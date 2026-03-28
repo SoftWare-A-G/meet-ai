@@ -31,6 +31,11 @@ export const logsQuerySchema = z.object({
   since_seq: z.coerce.number().int().optional(),
 })
 
+export const paginatedMessagesQuerySchema = z.object({
+  before_seq: z.coerce.number().int().optional(),
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+})
+
 export const teamInfoMemberSchema = z.object({
   teammate_id: z.string().optional(),
   name: z.string(),
