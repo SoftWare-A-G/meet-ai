@@ -1,17 +1,17 @@
-import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
-import { useStickToBottom } from 'use-stick-to-bottom'
-import Message from '../Message'
-import LogGroup from '../LogGroup'
-import DiffBlock from '../DiffBlock'
-import QuestionCard from '../QuestionCard'
-import PlanReviewCard from '../PlanReviewCard'
-import PermissionCard from '../PermissionCard'
-import SpawnRequestCard from '../SpawnRequestCard'
-import NewMessagesPill from '../NewMessagesPill'
-import type { Message as MessageType } from '../../lib/types'
-import { getDiffFilename, shouldReplaceMergedDiff } from './diff-logs'
 import { jsonString } from '@meet-ai/worker/schemas/helpers'
 import { spawnRequestSchema } from '@meet-ai/worker/schemas/lobby'
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
+import { useStickToBottom } from 'use-stick-to-bottom'
+import DiffBlock from '../DiffBlock'
+import LogGroup from '../LogGroup'
+import Message from '../Message'
+import NewMessagesPill from '../NewMessagesPill'
+import PermissionCard from '../PermissionCard'
+import PlanReviewCard from '../PlanReviewCard'
+import QuestionCard from '../QuestionCard'
+import SpawnRequestCard from '../SpawnRequestCard'
+import { getDiffFilename, shouldReplaceMergedDiff } from './diff-logs'
+import type { Message as MessageType } from '../../lib/types'
 
 type DisplayMessage = MessageType & {
   tempId?: string
@@ -40,7 +40,13 @@ type RenderItem =
   | { kind: 'question'; msg: DisplayMessage; index: number }
   | { kind: 'plan-review'; msg: DisplayMessage; index: number }
   | { kind: 'permission-review'; msg: DisplayMessage; index: number }
-  | { kind: 'spawn-request'; msg: DisplayMessage; index: number; roomName: string; codingAgent?: string }
+  | {
+      kind: 'spawn-request'
+      msg: DisplayMessage
+      index: number
+      roomName: string
+      codingAgent?: string
+    }
   | { kind: 'log-group'; logs: DisplayMessage[] }
   | { kind: 'diff-log'; logs: DisplayMessage[] }
 
@@ -82,7 +88,8 @@ function groupMessages(messages: DisplayMessage[]): RenderItem[] {
       const isQuestion = msg.sender === 'hook' && msg.color === '#f59e0b'
       const isPlanReview = msg.sender === 'hook' && msg.color === '#8b5cf6'
       const isPermissionReview = msg.sender === 'hook' && msg.color === '#f97316'
-      const isHookAnchor = msg.sender === 'hook' && !isQuestion && !isPlanReview && !isPermissionReview
+      const isHookAnchor =
+        msg.sender === 'hook' && !isQuestion && !isPlanReview && !isPermissionReview
 
       // Detect spawn_request messages by content
       let spawnRoomName: string | null = null
@@ -95,7 +102,13 @@ function groupMessages(messages: DisplayMessage[]): RenderItem[] {
 
       // Hook anchor messages never render as bubbles — they only exist as log group anchors
       if (spawnRoomName) {
-        items.push({ kind: 'spawn-request', msg, index, roomName: spawnRoomName, codingAgent: spawnCodingAgent })
+        items.push({
+          kind: 'spawn-request',
+          msg,
+          index,
+          roomName: spawnRoomName,
+          codingAgent: spawnCodingAgent,
+        })
       } else if (isQuestion) {
         items.push({ kind: 'question', msg, index })
       } else if (isPlanReview) {
@@ -137,7 +150,11 @@ function groupMessages(messages: DisplayMessage[]): RenderItem[] {
         if (prevFile && curFile && prevFile === curFile) {
           const prevLastLog = prev.logs[prev.logs.length - 1]
           const nextFirstLog = item.logs[0]
-          if (prevLastLog && nextFirstLog && shouldReplaceMergedDiff(prevLastLog.content, nextFirstLog.content)) {
+          if (
+            prevLastLog &&
+            nextFirstLog &&
+            shouldReplaceMergedDiff(prevLastLog.content, nextFirstLog.content)
+          ) {
             prev.logs = [...prev.logs.slice(0, -1), nextFirstLog]
             continue
           }
@@ -152,8 +169,26 @@ function groupMessages(messages: DisplayMessage[]): RenderItem[] {
   return merged
 }
 
-export default function MessageList({ messages, attachmentCounts, roomId, userName, unreadCount, forceScrollCounter, onScrollToBottom, onRetry, onSend, connected = true, voiceAvailable, hasPreviousPage, isFetchingPreviousPage, onLoadMore }: MessageListProps) {
-  const { scrollRef, contentRef, isAtBottom, scrollToBottom } = useStickToBottom({ resize: 'smooth', initial: 'smooth' })
+export default function MessageList({
+  messages,
+  attachmentCounts,
+  roomId,
+  userName,
+  unreadCount,
+  forceScrollCounter,
+  onScrollToBottom,
+  onRetry,
+  onSend,
+  connected = true,
+  voiceAvailable,
+  hasPreviousPage,
+  isFetchingPreviousPage,
+  onLoadMore,
+}: MessageListProps) {
+  const { scrollRef, contentRef, isAtBottom, scrollToBottom } = useStickToBottom({
+    resize: 'smooth',
+    initial: 'instant',
+  })
 
   // Auto-dismiss new messages pill when user scrolls to the bottom
   useEffect(() => {
@@ -167,7 +202,7 @@ export default function MessageList({ messages, attachmentCounts, roomId, userNa
     if (forceScrollCounter > 0) {
       scrollToBottom()
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- scrollToBottom is stable
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- scrollToBottom is stable
   }, [forceScrollCounter])
 
   // iOS keyboard dismiss: scroll to bottom when viewport height increases (keyboard closing)
@@ -188,7 +223,7 @@ export default function MessageList({ messages, attachmentCounts, roomId, userNa
     }
     vv.addEventListener('resize', onResize)
     return () => vv.removeEventListener('resize', onResize)
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- scrollToBottom is stable, isAtBottomRef is a ref
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- scrollToBottom is stable, isAtBottomRef is a ref
   }, [])
 
   // Scroll-height preservation: only compensate when loading older messages
@@ -217,34 +252,41 @@ export default function MessageList({ messages, attachmentCounts, roomId, userNa
   const isFetchingRef = useRef(isFetchingPreviousPage)
   isFetchingRef.current = isFetchingPreviousPage
 
-  const sentinelRef = useCallback((node: HTMLDivElement | null) => {
-    if (observerRef.current) {
-      observerRef.current.disconnect()
-      observerRef.current = null
-    }
-    if (!node) return
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasPreviousPageRef.current && !isFetchingRef.current) {
-          const el = scrollRef.current
-          if (el) {
-            prevScrollHeightRef.current = el.scrollHeight
+  const sentinelRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (observerRef.current) {
+        observerRef.current.disconnect()
+        observerRef.current = null
+      }
+      if (!node) return
+      observerRef.current = new IntersectionObserver(
+        entries => {
+          if (entries[0].isIntersecting && hasPreviousPageRef.current && !isFetchingRef.current) {
+            const el = scrollRef.current
+            if (el) {
+              prevScrollHeightRef.current = el.scrollHeight
+            }
+            isLoadingOlderRef.current = true
+            onLoadMoreRef.current?.()
           }
-          isLoadingOlderRef.current = true
-          onLoadMoreRef.current?.()
-        }
-      },
-      { root: scrollRef.current, rootMargin: '200px 0px 0px 0px' },
-    )
-    observerRef.current.observe(node)
-  }, [scrollRef])
+        },
+        { root: scrollRef.current, rootMargin: '200px 0px 0px 0px' }
+      )
+      observerRef.current.observe(node)
+    },
+    [scrollRef]
+  )
 
   const items = groupMessages(messages)
 
   return (
-    <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-4 min-h-0 relative flex flex-col" ref={scrollRef}>
+    <div
+      className="relative flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-2 py-4"
+      ref={scrollRef}>
       {!connected && (
-        <div className="absolute top-0 left-0 right-0 z-10 px-3 py-1 text-xs text-center bg-[#eab308]/15 text-[#eab308] border-b border-[#eab308]/25 backdrop-blur-sm">Reconnecting...</div>
+        <div className="absolute top-0 right-0 left-0 z-10 border-b border-[#eab308]/25 bg-[#eab308]/15 px-3 py-1 text-center text-xs text-[#eab308] backdrop-blur-sm">
+          Reconnecting...
+        </div>
       )}
       <div className="flex-1" />
       <div className="flex flex-col gap-0.5" ref={contentRef}>
@@ -346,7 +388,9 @@ export default function MessageList({ messages, attachmentCounts, roomId, userNa
             return null
           }
           const msg = item.msg
-          const attCount = msg.attachment_count ?? (msg.id && attachmentCounts ? attachmentCounts[msg.id] : undefined)
+          const attCount =
+            msg.attachment_count ??
+            (msg.id && attachmentCounts ? attachmentCounts[msg.id] : undefined)
           return (
             <Message
               key={msg.tempId || `${msg.sender}-${msg.created_at}-${item.index}`}
@@ -367,7 +411,10 @@ export default function MessageList({ messages, attachmentCounts, roomId, userNa
       {!isAtBottom && (
         <NewMessagesPill
           count={unreadCount}
-          onClick={() => { scrollToBottom(); onScrollToBottom() }}
+          onClick={() => {
+            scrollToBottom()
+            onScrollToBottom()
+          }}
         />
       )}
     </div>
