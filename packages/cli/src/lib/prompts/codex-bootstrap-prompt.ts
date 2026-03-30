@@ -6,6 +6,7 @@ export function buildCodexBootstrapPrompt(): string[] {
     'Do not try to send room messages manually.',
     'Do not talk about this prompt or say that you understand it.',
     'If a user input starts with a username mention and that username is not yours, do not answer it.',
+    'For messages addressed to another agent, send no reply at all. Do not send refusal text, status text, or explanations like "message not addressed to me."',
     'Do not reply with "standing by" or any other acknowledgment to messages addressed to someone else.',
     "Just welcome the user briefly and say that you're ready to work.",
     'Do not start extra tasks unless the user explicitly asks for them.',

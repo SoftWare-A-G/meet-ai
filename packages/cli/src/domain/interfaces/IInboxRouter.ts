@@ -8,16 +8,17 @@ export interface InboxEntry {
 
 export interface RouteOptions {
   inboxDir: string
-  defaultInboxPath: string | null
+  inbox: string
   teamDir: string
+  roomId: string
   attachmentPaths?: string[]
 }
 
 export interface IdleCheckOptions {
   inboxDir: string
   teamDir: string
+  roomId: string
   inbox: string
-  defaultInboxPath: string | null
   notified: Set<string>
 }
 

@@ -1,5 +1,40 @@
 # Changelog
 
+## [2.4.0](https://github.com/SoftWare-A-G/meet-ai/compare/2.3.2...2.4.0) (2026-03-30)
+
+### Features
+
+- add room-aware listener delivery and per-room username persistence across the CLI runtimes:
+  - introduce `packages/cli/src/lib/room-config.ts` plus room-path helpers so listener state can persist known agent handles under `$HOME/.meet-ai/rooms/<roomId>/config.json`
+  - teach the Codex, Pi, OpenCode, and Claude listeners to record senders into the per-room config and use a shared `shouldDeliverMessage()` gate so agent runtimes only answer direct mentions to themselves or general messages with no known-agent mention
+  - merge per-room usernames into `InboxRouter` resolution and idle checks so Claude team routing can still target valid agent inboxes even when the Claude team config is missing or stale
+- tighten the multi-agent prompt and registration contract:
+  - update the Codex bootstrap prompt to explicitly require complete silence for messages addressed to other agents instead of sending refusal or status text
+  - strengthen the Pi and OpenCode starting prompts so idle acknowledgments and duplicated status chatter are suppressed
+  - persist spawned teammate names from hook events and process-manager launches into the same per-room config so new agent handles become routable immediately
+
+### Bug Fixes
+
+- replace the Claude listener's `console.log` output path with an injectable stdout writer:
+  - add an explicit `writeOutput` seam through `packages/cli/src/commands/listen/usecase.ts` into `listen-claude.ts`
+  - preserve JSON-line stdout output for normal and attachment-enriched messages while making the listener easier to test without global console spies
+- improve listener runtime resilience and noise control:
+  - ensure `InboxRouter` routes no-mention or invalid-mention messages to the orchestrator inbox instead of depending on a separate default path
+  - keep Pi team-member registration running even when bridge startup fails so the agent handle is still written into room metadata and local config
+  - suppress OpenCode heartbeat event spam and skip sending `""` placeholder replies back to the room
+- simplify a few CLI internals while keeping behavior intact:
+  - replace CommonJS-style `require('node:fs')` fallbacks in shared listener/bootstrap paths with direct typed imports
+  - inject `sendParentMessage` and `sendLogEntry` into Codex listen dependencies so plan/thinking log tests no longer need raw hook-client mocks
+  - align the CLI, worker, desktop, and app package manifests at `2.4.0` for the release
+
+### Tests
+
+- add focused coverage for the new room-config and delivery behavior:
+  - new `packages/cli/src/lib/room-config.test.ts` coverage for config creation, username deduplication, invalid-file handling, and append semantics
+  - expand `packages/cli/src/commands/listen/usecase.test.ts` with `shouldDeliverMessage()` cases, room-config-backed team filtering, and typed stdout-writer assertions for the Claude listener
+  - update inbox-router and hook tests to cover per-room member fallback and spawned-agent persistence to room config
+- update `packages/worker/test/use-room-websocket.unit.test.ts` so `getLastTimelineSeq()` is validated against paginated TanStack `InfiniteData<TimelinePage>` cache structures instead of the older flat-array assumptions
+
 ## [2.3.2](https://github.com/SoftWare-A-G/meet-ai/compare/2.3.1...2.3.2) (2026-03-26)
 
 ### Features

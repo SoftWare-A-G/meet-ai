@@ -1,5 +1,6 @@
 import { downloadMessageAttachments } from '@meet-ai/cli/lib/attachments'
 import { getHomeCredentials } from '@meet-ai/cli/lib/meetai-home'
+import { appendRoomUsernames } from '@meet-ai/cli/lib/room-config'
 import { appendCodexInboxEntry, readCurrentCodexSessionId } from '@meet-ai/cli/lib/codex'
 import {
   type CodexAppServerEvent,
@@ -30,7 +31,7 @@ import {
   type TeamMemberRegistrar,
 } from '@meet-ai/cli/lib/team-member-registration'
 import { ListenInput } from './schema'
-import { createTerminalControlHandler, isHookAnchorMessage, type ListenMessage } from './shared'
+import { createTerminalControlHandler, isHookAnchorMessage, shouldDeliverMessage, type ListenMessage } from './shared'
 import type {
   ToolRequestUserInputParams,
   ToolRequestUserInputResponse,
@@ -39,6 +40,8 @@ import type { MeetAiClient, Message } from '@meet-ai/cli/types'
 
 type CodexListenDeps = {
   createHookClient: typeof createHookClient
+  sendParentMessage: typeof sendParentMessage
+  sendLogEntry: typeof sendLogEntry
   createPlanReview: typeof createPlanReview
   pollForPlanDecision: typeof pollForPlanDecision
   expirePlanReview: typeof expirePlanReview
@@ -46,6 +49,8 @@ type CodexListenDeps = {
 
 const DEFAULT_CODEX_LISTEN_DEPS: CodexListenDeps = {
   createHookClient,
+  sendParentMessage,
+  sendLogEntry,
   createPlanReview,
   pollForPlanDecision,
   expirePlanReview,
@@ -372,9 +377,9 @@ export function listenCodex(
     activityLogQueue = activityLogQueue
       .then(async () => {
         if (!activityParentId) {
-          activityParentId = await sendParentMessage(hookClient, roomId)
+          activityParentId = await deps.sendParentMessage(hookClient, roomId)
         }
-        await sendLogEntry(hookClient, roomId, summary, activityParentId ?? undefined, codexSender)
+        await deps.sendLogEntry(hookClient, roomId, summary, activityParentId ?? undefined, codexSender)
       })
       .catch(error => {
         console.error(
@@ -798,6 +803,9 @@ export function listenCodex(
     if (handleTasksInfo(msg)) return
     if (!isPlainChatMessage(msg)) return
     if (isHookAnchorMessage(msg)) return
+    appendRoomUsernames(roomId, [msg.sender])
+
+    if (!shouldDeliverMessage(roomId, msg.content)) return
 
     if (msg.id && msg.room_id && (msg.attachment_count ?? 0) > 0) {
       void downloadMessageAttachments(client, msg.room_id, msg.id).then(paths => {

@@ -1,7 +1,42 @@
 import { readFileSync } from 'node:fs'
 import { TmuxClient } from '@meet-ai/cli/lib/tmux-client'
+import { appendRoomUsernames, getRoomUsernames } from '@meet-ai/cli/lib/room-config'
 import type IInboxRouter from '@meet-ai/cli/domain/interfaces/IInboxRouter'
 import type { MeetAiClient, Message } from '@meet-ai/cli/types'
+
+/**
+ * Determine whether a message should be delivered to this listener.
+ *
+ * The listener's identity comes from `MEET_AI_AGENT_NAME` env var:
+ * - If set (Codex/Pi/OpenCode): filters messages to only deliver those
+ *   that @mention this agent or are general (no known-member mentions).
+ * - If not set (Claude team listener): always delivers — the InboxRouter
+ *   handles internal routing to specific agent inboxes.
+ *
+ * Known room members come from room config via `getRoomUsernames(roomId)`.
+ */
+export function shouldDeliverMessage(
+  roomId: string,
+  content: string | undefined,
+): boolean {
+  if (typeof content !== 'string') return true
+  const mentions = content.match(/@([\w-]+)/g)
+  if (!mentions) return true
+
+  const myName = process.env.MEET_AI_AGENT_NAME?.trim()
+  if (!myName) return true
+
+  const mentionedNames = [...new Set(mentions.map(m => m.slice(1)))]
+
+  // Deliver if directly mentioned
+  if (mentionedNames.includes(myName)) return true
+
+  // Check whether any mention targets a known room member.
+  // If it does → message is for another known agent → filter out.
+  // If it doesn't → unknown mention → treat as general message → deliver.
+  const knownMembers = getRoomUsernames(roomId)
+  return !mentionedNames.some(name => knownMembers.has(name))
+}
 
 export type ListenMessage = Message & {
   room_id?: string
@@ -47,10 +82,16 @@ const TEAM_CACHE_TTL_MS = 5_000
  * Re-reads the team config periodically so that members added after the
  * listener started are still filtered.  The `inbox` name (the listener's
  * own agent identity) is *always* excluded regardless of the config.
+ *
+ * Only team config members and the inbox agent are excluded — NOT all room
+ * usernames.  Including room usernames would also exclude human senders
+ * (who get added to room config via appendRoomUsernames), silently dropping
+ * their messages after the first cache refresh.
  */
 export function createTeamExcludeChecker(
+  roomId: string,
   teamName?: string,
-  inbox?: string
+  inbox?: string,
 ): (sender: string) => boolean {
   if (!teamName && !inbox) return () => false
 
@@ -64,7 +105,19 @@ export function createTeamExcludeChecker(
     if (now - lastRead < TEAM_CACHE_TTL_MS && cached.size > 0) return cached
     lastRead = now
 
-    const names: string[] = configPath ? readTeamMemberNames(configPath) : []
+    const teamNames = configPath ? readTeamMemberNames(configPath) : []
+
+    // Write back any team config members not yet persisted in per-room config.
+    // This closes the gap where Claude subagents appear in the team config
+    // after the listener started but the hook write-back failed or didn't fire.
+    const roomNames = getRoomUsernames(roomId)
+    const newFromTeam = teamNames.filter(name => !roomNames.has(name))
+    if (newFromTeam.length > 0) {
+      appendRoomUsernames(roomId, newFromTeam)
+    }
+
+    // Only exclude team config members and inbox — not room usernames
+    const names = [...teamNames]
     if (inbox && !names.includes(inbox)) names.push(inbox)
     cached = new Set(names)
     return cached
@@ -108,9 +161,8 @@ export function createTerminalControlHandler(input: {
       if (teamDir) {
         try {
           const configPath = `${teamDir}/config.json`
-          const fs = require('node:fs') as typeof import('node:fs')
-          const config = JSON.parse(fs.readFileSync(configPath, 'utf8'))
-          const members = (config.members || []) as { name: string; tmuxPaneId?: string }[]
+          const config: { members?: { name: string; tmuxPaneId?: string }[] } = JSON.parse(readFileSync(configPath, 'utf8'))
+          const members = config.members || []
           for (const m of members) {
             if (m.tmuxPaneId) {
               membersByPaneId[m.tmuxPaneId] = m.name

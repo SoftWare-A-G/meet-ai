@@ -1,6 +1,7 @@
 import { dirname } from 'node:path'
 import type IFileSystem from '@meet-ai/cli/domain/interfaces/IFileSystem'
 import type IInboxRouter from '@meet-ai/cli/domain/interfaces/IInboxRouter'
+import { getRoomUsernames } from '@meet-ai/cli/lib/room-config'
 import type {
   InboxEntry,
   RouteOptions,
@@ -25,31 +26,32 @@ export default class InboxRouter implements IInboxRouter {
       entry.attachments = opts.attachmentPaths
     }
 
-    const members = this.getTeamMembers(opts.teamDir)
+    const members = this.getTeamMembers(opts.teamDir, opts.roomId)
     const targets = this.resolveInboxTargets(msg.content, members)
 
     if (targets) {
+      // Valid @mentions → route to specific agent inboxes
       for (const target of targets) {
         this.appendToInbox(`${opts.inboxDir}/${target}.json`, entry)
       }
-    } else if (opts.defaultInboxPath) {
-      this.appendToInbox(opts.defaultInboxPath, entry)
+    } else {
+      // No @mentions (or all invalid) → route to the orchestrator's inbox
+      this.appendToInbox(`${opts.inboxDir}/${opts.inbox}.json`, entry)
     }
   }
 
   checkIdle(opts: IdleCheckOptions): void {
-    const members = this.getTeamMembers(opts.teamDir)
+    const members = this.getTeamMembers(opts.teamDir, opts.roomId)
     const newlyIdle = this.checkIdleAgents(opts.inboxDir, members, opts.inbox, opts.notified)
+    const inboxPath = `${opts.inboxDir}/${opts.inbox}.json`
     for (const agent of newlyIdle) {
       opts.notified.add(agent)
-      if (opts.defaultInboxPath) {
-        this.appendToInbox(opts.defaultInboxPath, {
-          from: 'meet-ai:idle-check',
-          text: `${agent} idle for 5+ minutes`,
-          timestamp: new Date().toISOString(),
-          read: false,
-        })
-      }
+      this.appendToInbox(inboxPath, {
+        from: 'meet-ai:idle-check',
+        text: `${agent} idle for 5+ minutes`,
+        timestamp: new Date().toISOString(),
+        read: false,
+      })
     }
   }
 
@@ -63,12 +65,20 @@ export default class InboxRouter implements IInboxRouter {
     this.fs.writeFileSync(path, JSON.stringify(messages, null, 2))
   }
 
-  private getTeamMembers(teamDir: string): Set<string> {
+  private getTeamMembers(
+    teamDir: string,
+    roomId: string,
+  ): Set<string> {
+    const roomMembers = getRoomUsernames(roomId, { fs: this.fs })
+
     try {
       const config = JSON.parse(this.fs.readFileSync(`${teamDir}/config.json`, 'utf-8'))
-      return new Set(config.members?.map((m: { name: string }) => m.name) || [])
+      return new Set([
+        ...roomMembers,
+        ...(config.members?.map((m: { name: string }) => m.name) || []),
+      ])
     } catch {
-      return new Set()
+      return roomMembers
     }
   }
 

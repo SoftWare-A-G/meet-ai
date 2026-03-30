@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test'
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { setMeetAiDirOverride, writeHomeConfig } from '@meet-ai/cli/lib/meetai-home'
 
 const TEMP_MEET_AI_DIR = '/tmp/meet-ai-team-member-registration-home'
@@ -7,10 +7,14 @@ const TEMP_MEET_AI_DIR = '/tmp/meet-ai-team-member-registration-home'
 const mockCreateHookClient = mock(() => ({ api: {} }))
 const mockGetTeamInfo = mock(() => Promise.resolve(null as any))
 const mockSendTeamMemberUpsert = mock(() => Promise.resolve())
+const mockSendParentMessage = mock(() => Promise.resolve(null))
+const mockSendLogEntry = mock(() => Promise.resolve())
 
 mock.module('./hooks/client', () => ({
   createHookClient: mockCreateHookClient,
   getTeamInfo: mockGetTeamInfo,
+  sendLogEntry: mockSendLogEntry,
+  sendParentMessage: mockSendParentMessage,
   sendTeamMemberUpsert: mockSendTeamMemberUpsert,
 }))
 
@@ -75,6 +79,17 @@ describe('registerActiveTeamMember', () => {
     })
 
     expect(mockCreateHookClient).toHaveBeenCalledWith('https://meet-ai.test', 'mai_test_key123')
+    expect(
+      JSON.parse(
+        readFileSync(
+          `${tempHome}/.meet-ai/rooms/30c9e52e-5f4d-4298-a995-efb5c27623d6/config.json`,
+          'utf-8'
+        )
+      )
+    ).toEqual({
+      roomId: '30c9e52e-5f4d-4298-a995-efb5c27623d6',
+      usernames: ['team-lead'],
+    })
     expect(mockSendTeamMemberUpsert).toHaveBeenCalledWith(
       { api: {} },
       '30c9e52e-5f4d-4298-a995-efb5c27623d6',

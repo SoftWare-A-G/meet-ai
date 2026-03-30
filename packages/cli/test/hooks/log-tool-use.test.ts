@@ -1,12 +1,15 @@
 import { describe, expect, it, beforeEach, afterEach, mock } from 'bun:test'
-import { mkdirSync, writeFileSync, rmSync } from 'node:fs'
+import { mkdirSync, writeFileSync, rmSync, readFileSync, existsSync } from 'node:fs'
+import { join } from 'node:path'
 import { processHookInput } from '@meet-ai/cli/commands/hook/log-tool-use/usecase'
 import { setMeetAiDirOverride, writeHomeConfig } from '@meet-ai/cli/lib/meetai-home'
 import { withMockFetch } from '../helpers/mock-fetch'
 
 const TEST_DIR = '/tmp/meet-ai-hook-test-teams-cli'
 const TEMP_MEET_AI_DIR = '/tmp/meet-ai-log-tool-use-test-home'
+const TEMP_HOME = '/tmp/meet-ai-log-tool-use-test-fakehome'
 const MSGID_DIR = '/tmp'
+const savedHome = process.env.HOME
 
 function writeTeamFile(data: { session_id: string; room_id: string }) {
   const dir = `${TEST_DIR}/test-team`
@@ -20,6 +23,9 @@ describe('processHookInput', () => {
   beforeEach(() => {
     mkdirSync(TEST_DIR, { recursive: true })
     rmSync(TEMP_MEET_AI_DIR, { recursive: true, force: true })
+    rmSync(TEMP_HOME, { recursive: true, force: true })
+    mkdirSync(TEMP_HOME, { recursive: true })
+    process.env.HOME = TEMP_HOME
     setMeetAiDirOverride(TEMP_MEET_AI_DIR)
     writeHomeConfig({
       defaultEnv: 'default',
@@ -31,8 +37,11 @@ describe('processHookInput', () => {
   })
 
   afterEach(() => {
+    if (savedHome === undefined) delete process.env.HOME
+    else process.env.HOME = savedHome
     rmSync(TEST_DIR, { recursive: true, force: true })
     rmSync(TEMP_MEET_AI_DIR, { recursive: true, force: true })
+    rmSync(TEMP_HOME, { recursive: true, force: true })
     setMeetAiDirOverride(undefined)
     // Clean up msgid files
     try {
@@ -208,6 +217,44 @@ describe('processHookInput', () => {
     expect(result).toBe('sent')
     expect(logCalls[0]).toBe('my-agent')
     rmSync(transcriptPath, { force: true })
+  })
+
+  it('persists spawned agent name to per-room config on teammate_spawned', async () => {
+    writeTeamFile({ session_id: 'sess-1', room_id: 'room-spawn-1' })
+
+    const mockFetch = mock(() =>
+      Promise.resolve(new Response('{}', { status: 201, headers: { 'Content-Type': 'application/json' } }))
+    ) as unknown as typeof fetch
+    globalThis.fetch = mockFetch
+
+    const input = JSON.stringify({
+      session_id: 'sess-1',
+      tool_name: 'Agent',
+      tool_input: {},
+      tool_response: {
+        status: 'teammate_spawned',
+        teammate_id: 'researcher@test-team',
+        name: 'researcher',
+        team_name: 'test-team',
+        color: '#22c55e',
+        agent_type: 'teammate',
+        model: 'opus',
+      },
+    })
+
+    const result = await processHookInput(input, TEST_DIR)
+    expect(result).toBe('sent')
+
+    // Verify the spawned agent name was persisted to per-room config in $HOME/.meet-ai/rooms/
+    const homeDir = process.env.HOME ?? '/tmp'
+    const configPath = join(homeDir, '.meet-ai', 'rooms', 'room-spawn-1', 'config.json')
+    expect(existsSync(configPath)).toBe(true)
+    const config = JSON.parse(readFileSync(configPath, 'utf-8'))
+    expect(config.roomId).toBe('room-spawn-1')
+    expect(config.usernames).toContain('researcher')
+
+    // Clean up the room config
+    rmSync(join(homeDir, '.meet-ai', 'rooms', 'room-spawn-1'), { recursive: true, force: true })
   })
 
   it('defaults sender to "hook" when agent name cannot be resolved', async () => {

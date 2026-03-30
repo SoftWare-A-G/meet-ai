@@ -12,6 +12,7 @@ import {
   type StructuredPatchHunk,
 } from '@meet-ai/cli/lib/hooks'
 import { getHomeCredentials } from '@meet-ai/cli/lib/meetai-home'
+import { appendRoomUsernames } from '@meet-ai/cli/lib/room-config'
 
 const PARENT_MSG_TTL_SEC = 120
 
@@ -79,15 +80,18 @@ export async function processHookInput(
   if (toolName === 'Agent' && toolResponse) {
     const status = toolResponse.status as string | undefined
     if (status === 'teammate_spawned') {
+      const spawnedName = toolResponse.name as string
       await sendTeamMemberUpsert(client, roomId, toolResponse.team_name as string, {
         teammate_id: toolResponse.teammate_id as string,
-        name: toolResponse.name as string,
+        name: spawnedName,
         color: toolResponse.color as string,
         role: (toolResponse.agent_type as string) || 'teammate',
         model: (toolResponse.model as string) || 'unknown',
         status: 'active',
         joinedAt: Date.now(),
       })
+      // Persist spawned agent handle to per-room config for message routing
+      appendRoomUsernames(roomId, [spawnedName])
     }
   }
 

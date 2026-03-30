@@ -59,8 +59,9 @@ describe('InboxRouter.route guard path', () => {
 
   const routeOpts = {
     inboxDir: '/inboxes',
-    defaultInboxPath: '/inboxes/team-lead.json',
+    inbox: 'team-lead',
     teamDir: '/teams/t',
+    roomId: 'test-room',
   }
 
   beforeEach(() => {
