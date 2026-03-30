@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { createHookClient, getTeamInfo, sendTeamMemberUpsert } from './hooks/client'
 import { getHomeCredentials } from './meetai-home'
 import { getMeetAiTeamsDir, getClaudeTeamsDir } from './paths'
+import { appendRoomUsernames } from './room-config'
 
 type TeamConfigMember = {
   agentId?: string
@@ -84,6 +85,22 @@ function findConfigMember(
   })
 }
 
+function configMemberNames(config: TeamConfig | null): string[] {
+  if (!config?.members) return []
+  return config.members
+    .map(member => member.name?.trim())
+    .filter((name): name is string => Boolean(name))
+}
+
+function roomMemberNames(
+  roomTeamInfo: { members?: { name?: string }[] } | null,
+): string[] {
+  if (!roomTeamInfo?.members) return []
+  return roomTeamInfo.members
+    .map(member => member.name?.trim())
+    .filter((name): name is string => Boolean(name))
+}
+
 function defaultColor(agentName: string, role: string): string {
   if (agentName === 'codex' || role === 'codex') return '#22c55e'
   if (role === 'team-lead') return '#3b82f6'
@@ -91,6 +108,20 @@ function defaultColor(agentName: string, role: string): string {
 }
 
 export const registerActiveTeamMember: TeamMemberRegistrar = async input => {
+  const initialTeamName =
+    input.teamName?.trim() ||
+    findTeamNameByRoomId(input.roomId) ||
+    undefined
+  const initialConfig = initialTeamName ? readTeamConfig(initialTeamName) : null
+  const initialAgentName =
+    input.agentName?.trim() ||
+    process.env.MEET_AI_AGENT_NAME?.trim() ||
+    resolveLeadAgentName(initialConfig)
+  appendRoomUsernames(
+    input.roomId,
+    [...configMemberNames(initialConfig), ...(initialAgentName ? [initialAgentName] : [])],
+  )
+
   const creds = getHomeCredentials()
   if (!creds) return
   const { url, key } = creds
@@ -109,6 +140,15 @@ export const registerActiveTeamMember: TeamMemberRegistrar = async input => {
     resolveLeadAgentName(config)
 
   if (!resolvedAgentName) return
+
+  appendRoomUsernames(
+    input.roomId,
+    [
+      ...configMemberNames(config),
+      ...roomMemberNames(roomTeamInfo),
+      resolvedAgentName,
+    ],
+  )
 
   const member = findConfigMember(config, resolvedAgentName)
   const teamName = resolvedTeamName || resolvedAgentName

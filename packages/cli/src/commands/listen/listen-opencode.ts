@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { downloadMessageAttachments } from '@meet-ai/cli/lib/attachments'
 import { emitOpencodeLog } from '@meet-ai/cli/lib/opencode-evlog'
 import { buildOpencodeStartingPrompt } from '@meet-ai/cli/lib/prompts/opencode-starting-prompt'
+import { appendRoomUsernames } from '@meet-ai/cli/lib/room-config'
 import {
   registerActiveTeamMember,
   type TeamMemberRegistrar,
@@ -10,6 +11,7 @@ import { ListenInput } from './schema'
 import {
   createTerminalControlHandler,
   isHookAnchorMessage,
+  shouldDeliverMessage,
   type ListenMessage,
 } from './shared'
 import type { MeetAiClient } from '@meet-ai/cli/types'
@@ -135,6 +137,9 @@ export async function listenOpencode(
       if (terminal.handle(msg)) return
       if (!isPlainChatMessage(msg)) return
       if (isHookAnchorMessage(msg)) return
+      appendRoomUsernames(roomId, [msg.sender])
+
+      if (!shouldDeliverMessage(roomId, msg.content)) return
 
       emitOpencodeLog('info', 'listen-opencode', 'message_received', {
         sender: msg.sender,
@@ -193,10 +198,7 @@ export async function listenOpencode(
         const parts: (
           | { type: 'text'; text: string }
           | { type: 'file'; mime: string; filename: string; url: string }
-        )[] = [
-          { type: 'text', text: `${msg.sender}: ${msg.content}` },
-          ...attachmentParts,
-        ]
+        )[] = [{ type: 'text', text: `${msg.sender}: ${msg.content}` }, ...attachmentParts]
 
         // Forward room message to OpenCode and wait for response
         const result = await opencode.client.session.prompt({
@@ -215,12 +217,13 @@ export async function listenOpencode(
           .map(p => (p as { text: string }).text)
           .join('\n')
 
-        if (responseText.trim()) {
+        if (responseText.trim() && responseText !== '""') {
           await client.sendMessage(roomId, senderName, responseText)
 
           emitOpencodeLog('info', 'listen-opencode', 'response_sent', {
             roomId,
             senderName,
+            responseText,
             length: responseText.length,
           })
         }
@@ -265,9 +268,11 @@ export async function listenOpencode(
     const processEvents = async () => {
       try {
         for await (const event of events.stream) {
-          emitOpencodeLog('debug', 'opencode-events', 'event_received', {
-            type: event.type,
-          })
+          if (!event.type.endsWith('heartbeat')) {
+            emitOpencodeLog('debug', 'opencode-events', 'event_received', {
+              type: event.type,
+            })
+          }
 
           // Log permission requests (for question reviews in Phase 2)
           if (event.type === 'permission.updated') {

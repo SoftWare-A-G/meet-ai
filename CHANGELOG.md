@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.4.0](https://github.com/SoftWare-A-G/meet-ai/compare/2.3.2...2.4.0) (2026-03-30)
+
+### Features
+
+- add room-aware listener routing and per-room username persistence so Codex, Pi, and OpenCode only react to messages meant for them while Claude team routing can fall back to room-known members when team config is missing
+- tighten the multi-agent prompt contract so Codex, Pi, and OpenCode stay silent for messages addressed to other agents and spawned teammates are persisted into local room config as soon as they start
+
+### Bug Fixes
+
+- replace the Claude listener's `console.log` transport with an explicit stdout writer so JSON-line output stays testable without relying on global console spies
+- improve multi-agent listener reliability by routing idle and unaddressed messages back to the orchestrator inbox, registering Pi teammates even after bridge start failures, and suppressing OpenCode empty-string replies and heartbeat log noise
+- align the CLI, worker, desktop, and app package manifests at `2.4.0` for the release
+
+### Tests
+
+- expand CLI coverage for room-config persistence, mention delivery filtering, inbox-router room-member fallback, spawned-agent registration, and typed stdout writer assertions; update the worker timeline-seq unit test for paginated cache data
+
 ## [2.3.2](https://github.com/SoftWare-A-G/meet-ai/compare/2.3.1...2.3.2) (2026-03-26)
 
 ### Features

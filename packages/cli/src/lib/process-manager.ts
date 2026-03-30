@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
 import { TmuxClient } from './tmux-client'
 import type { CodingAgentId } from '../coding-agents'
+import { appendRoomUsernames } from './room-config'
 import { buildClaudeSystemPrompt } from './prompts/claude-system-prompt'
 import { buildClaudeStartingPrompt } from './prompts/claude-starting-prompt'
 import { buildCodexBootstrapPrompt } from './prompts/codex-bootstrap-prompt'
@@ -239,6 +240,10 @@ export class ProcessManager {
     if (result.ok) {
       team.status = 'running'
       this.opts.onStatusChange?.(roomId, 'running')
+
+      // Persist agent handle to per-room config for message routing
+      const agentName = sessionEnv.MEET_AI_AGENT_NAME ?? (codingAgent === 'claude' ? 'team-lead' : codingAgent)
+      appendRoomUsernames(roomId, [agentName])
 
       // Save to registry for orphan reconnection
       addToRegistry({

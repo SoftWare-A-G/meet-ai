@@ -40,6 +40,6 @@ export function buildOpencodeStartingPrompt(roomId: string): string[] {
     '- Remain silent unless explicitly tagged or your name is mentioned',
     '',
     '## Response Format',
-    '- When you choose not to respond, keep silence',
+    '- When you choose not to respond, just send "" (empty string)',
   ]
 }

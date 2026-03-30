@@ -1,5 +1,6 @@
 import { IDLE_CHECK_INTERVAL_MS } from '@meet-ai/cli/inbox-router'
 import { downloadMessageAttachments } from '@meet-ai/cli/lib/attachments'
+import { appendRoomUsernames } from '@meet-ai/cli/lib/room-config'
 import {
   registerActiveTeamMember,
   type TeamMemberRegistrar,
@@ -9,6 +10,7 @@ import {
   createTeamExcludeChecker,
   createTerminalControlHandler,
   isHookAnchorMessage,
+  shouldDeliverMessage,
   type ListenMessage,
 } from './shared'
 import type IInboxRouter from '@meet-ai/cli/domain/interfaces/IInboxRouter'
@@ -28,15 +30,15 @@ export function listenClaude(
     inbox?: string
   },
   inboxRouter?: IInboxRouter,
-  teamMemberRegistrar: TeamMemberRegistrar = registerActiveTeamMember
+  teamMemberRegistrar: TeamMemberRegistrar = registerActiveTeamMember,
+  writeOutput: (data: string) => void = (data) => process.stdout.write(data + '\n')
 ): WebSocket {
   const parsed = ListenInput.parse(input)
   const { roomId, senderType, team, inbox } = parsed
   const exclude = parsed.exclude ?? inbox
-  const isTeamExcluded = createTeamExcludeChecker(team, inbox)
+  const isTeamExcluded = createTeamExcludeChecker(roomId, team, inbox)
 
   const inboxDir = team ? `${process.env.HOME}/.claude/teams/${team}/inboxes` : null
-  const defaultInboxPath = inboxDir && inbox ? `${inboxDir}/${inbox}.json` : null
   const teamDir = team ? `${process.env.HOME}/.claude/teams/${team}` : undefined
 
   const terminal = createTerminalControlHandler({ client, roomId, teamDir, inboxRouter })
@@ -50,28 +52,33 @@ export function listenClaude(
     if (terminal.handle(msg)) return
     if (!isPlainChatMessage(msg)) return
     if (isHookAnchorMessage(msg)) return
+    appendRoomUsernames(roomId, [msg.sender])
     if (isTeamExcluded(msg.sender)) return
+
+    if (!shouldDeliverMessage(roomId, msg.content)) return
 
     if (msg.id && msg.room_id && (msg.attachment_count ?? 0) > 0) {
       void downloadMessageAttachments(client, msg.room_id, msg.id).then(paths => {
         const output = paths.length ? { ...msg, attachments: paths } : msg
-        console.log(JSON.stringify(output))
+        writeOutput(JSON.stringify(output))
 
-        if (inboxDir && teamDir && inboxRouter) {
+        if (inboxDir && inbox && teamDir && inboxRouter) {
           inboxRouter.route(msg, {
             inboxDir,
-            defaultInboxPath,
+            inbox,
             teamDir,
+            roomId,
             attachmentPaths: paths,
           })
         }
       })
+
       return
     }
 
-    console.log(JSON.stringify(msg))
-    if (inboxDir && teamDir && inboxRouter) {
-      inboxRouter.route(msg, { inboxDir, defaultInboxPath, teamDir })
+    writeOutput(JSON.stringify(msg))
+    if (inboxDir && inbox && teamDir && inboxRouter) {
+      inboxRouter.route(msg, { inboxDir, inbox, teamDir, roomId })
     }
   }
 
@@ -87,8 +94,8 @@ export function listenClaude(
         inboxRouter!.checkIdle({
           inboxDir: inboxDir!,
           teamDir: teamDir!,
+          roomId,
           inbox: inbox!,
-          defaultInboxPath: defaultInboxPath ?? null,
           notified: idleNotified,
         })
         scheduleIdleCheck()

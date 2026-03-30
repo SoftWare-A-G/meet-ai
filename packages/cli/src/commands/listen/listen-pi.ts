@@ -5,6 +5,7 @@ import { downloadMessageAttachments } from '@meet-ai/cli/lib/attachments'
 import { createHookClient, sendLogEntry, sendParentMessage } from '@meet-ai/cli/lib/hooks/client'
 import { getHomeCredentials } from '@meet-ai/cli/lib/meetai-home'
 import { emitPiLog } from '@meet-ai/cli/lib/pi-evlog'
+import { appendRoomUsernames } from '@meet-ai/cli/lib/room-config'
 import {
   createPiBridge,
   type PiBridge,
@@ -21,7 +22,7 @@ import {
 } from '@meet-ai/cli/lib/team-member-registration'
 import { findPiCli } from '@meet-ai/cli/spawner'
 import { ListenInput } from './schema'
-import { createTerminalControlHandler, isHookAnchorMessage, type ListenMessage } from './shared'
+import { createTerminalControlHandler, isHookAnchorMessage, shouldDeliverMessage, type ListenMessage } from './shared'
 import type { MeetAiClient } from '@meet-ai/cli/types'
 
 function isPlainChatMessage(msg: ListenMessage): boolean {
@@ -558,6 +559,9 @@ export function listenPi(
     if (handleTasksInfo(msg)) return
     if (!isPlainChatMessage(msg)) return
     if (isHookAnchorMessage(msg)) return
+    appendRoomUsernames(roomId, [msg.sender])
+
+    if (!shouldDeliverMessage(roomId, msg.content)) return
 
     emitPiLog('info', 'listen-pi', 'room_message.received', {
       sender: msg.sender,
@@ -618,11 +622,21 @@ export function listenPi(
   void piBridge
     .start()
     .then(() => {
-      const piModel = piBridge.getCurrentModel() ?? undefined
       emitPiLog('info', 'listen-pi', 'bridge.started', {
-        model: piModel ?? null,
+        model: piBridge.getCurrentModel() ?? null,
         piSender,
       })
+    })
+    .catch(error => {
+      emitPiLog('error', 'listen-pi', 'bridge.start_failed', {
+        error: error instanceof Error ? error.message : String(error),
+      })
+    })
+    .then(() => {
+      // Register after start regardless of bridge success/failure,
+      // matching the Codex pattern (.catch → .then) so the agent handle
+      // is always persisted to per-room config.
+      const piModel = piBridge.getCurrentModel() ?? undefined
       return teamMemberRegistrar({
         roomId,
         agentName: piSender,
@@ -634,11 +648,6 @@ export function listenPi(
       emitPiLog('info', 'listen-pi', 'team_member.registered', {
         roomId,
         agentName: piSender,
-      })
-    })
-    .catch(error => {
-      emitPiLog('error', 'listen-pi', 'bridge.start_failed', {
-        error: error instanceof Error ? error.message : String(error),
       })
     })
 

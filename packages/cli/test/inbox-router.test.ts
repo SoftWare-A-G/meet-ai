@@ -4,13 +4,17 @@ import { join } from "node:path";
 import { appendToInbox, getTeamMembers, resolveInboxTargets, checkIdleAgents, IDLE_THRESHOLD_MS } from "@meet-ai/cli/inbox-router";
 
 const tmpDir = join(import.meta.dir, ".tmp-test");
+const savedHome = process.env.HOME;
 
 beforeEach(() => {
   mkdirSync(tmpDir, { recursive: true });
+  process.env.HOME = tmpDir;
 });
 
 afterEach(() => {
   rmSync(tmpDir, { recursive: true, force: true });
+  if (savedHome === undefined) delete process.env.HOME;
+  else process.env.HOME = savedHome;
 });
 
 // --- resolveInboxTargets ---
@@ -31,7 +35,7 @@ test("resolveInboxTargets returns multiple valid mentions", () => {
   expect(result).toEqual(["researcher", "formatter"]);
 });
 
-test("resolveInboxTargets returns null for invalid mentions (fallback)", () => {
+test("resolveInboxTargets returns null for invalid mentions (treated as no mentions)", () => {
   const members = new Set(["researcher", "formatter"]);
   expect(resolveInboxTargets("@nobody are you there?", members)).toBeNull();
 });
@@ -54,7 +58,7 @@ test("resolveInboxTargets handles hyphenated agent names", () => {
   expect(result).toEqual(["frontend-dev"]);
 });
 
-test("resolveInboxTargets returns null for empty members set", () => {
+test("resolveInboxTargets returns null for empty members set (no valid mentions)", () => {
   const members = new Set<string>();
   expect(resolveInboxTargets("@researcher hello", members)).toBeNull();
 });
@@ -105,12 +109,12 @@ test("getTeamMembers reads member names from config", () => {
     ]
   }));
 
-  const members = getTeamMembers(teamDir);
+  const members = getTeamMembers(teamDir, { roomId: "test-room" });
   expect(members).toEqual(new Set(["team-lead", "researcher", "formatter"]));
 });
 
 test("getTeamMembers returns empty set for missing config", () => {
-  const members = getTeamMembers(join(tmpDir, "nonexistent"));
+  const members = getTeamMembers(join(tmpDir, "nonexistent"), { roomId: "test-room" });
   expect(members).toEqual(new Set());
 });
 
@@ -119,8 +123,27 @@ test("getTeamMembers returns empty set for invalid JSON", () => {
   mkdirSync(teamDir, { recursive: true });
   writeFileSync(join(teamDir, "config.json"), "not json");
 
-  const members = getTeamMembers(teamDir);
+  const members = getTeamMembers(teamDir, { roomId: "test-room" });
   expect(members).toEqual(new Set());
+});
+
+test("getTeamMembers merges per-room usernames with team config members", () => {
+  const teamDir = join(tmpDir, "my-team");
+  mkdirSync(teamDir, { recursive: true });
+  writeFileSync(join(teamDir, "config.json"), JSON.stringify({
+    members: [{ name: "team-lead" }],
+  }));
+  mkdirSync(join(tmpDir, ".meet-ai", "rooms", "room-123"), { recursive: true });
+  writeFileSync(
+    join(tmpDir, ".meet-ai", "rooms", "room-123", "config.json"),
+    JSON.stringify({ roomId: "room-123", usernames: ["codex", "team-lead"] }),
+  );
+
+  const members = getTeamMembers(teamDir, {
+    roomId: "room-123",
+  });
+
+  expect(members).toEqual(new Set(["codex", "team-lead"]));
 });
 
 // --- checkIdleAgents ---

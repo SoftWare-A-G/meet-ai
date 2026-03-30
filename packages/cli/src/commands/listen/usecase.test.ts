@@ -1,9 +1,11 @@
-import { describe, it, expect, mock, beforeEach, afterEach, spyOn } from 'bun:test'
+import { describe, it, expect, mock, type Mock, beforeEach, afterEach, spyOn } from 'bun:test'
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { ZodError } from 'zod'
-import { listen } from './usecase'
 import { setMeetAiDirOverride, writeHomeConfig } from '@meet-ai/cli/lib/meetai-home'
+import { ZodError } from 'zod'
 import { withMockFetch } from '../../../test/helpers/mock-fetch'
+import { listen } from './usecase'
+import { appendRoomUsernames } from '@meet-ai/cli/lib/room-config'
+import { shouldDeliverMessage } from './shared'
 import type IInboxRouter from '@meet-ai/cli/domain/interfaces/IInboxRouter'
 import type { CodexAppServerEvent } from '@meet-ai/cli/lib/codex-app-server'
 import type { HookClient } from '@meet-ai/cli/lib/hooks/client'
@@ -145,6 +147,7 @@ describe('listen', () => {
   const savedHome = process.env.HOME
   const codexHome = '/tmp/meet-ai-listen-codex-home'
   const tempMeetAiDir = '/tmp/meet-ai-listen-test-home'
+  const tempFakeHome = '/tmp/meet-ai-listen-test-fakehome'
 
   function writeCodexSessionTranscript(sessionId: string, cwd: string) {
     mkdirSync(`${codexHome}/sessions/2026/03/08`, { recursive: true })
@@ -161,7 +164,10 @@ describe('listen', () => {
     process.exit = mock(() => {}) as any
     rmSync(codexHome, { recursive: true, force: true })
     rmSync(tempMeetAiDir, { recursive: true, force: true })
+    rmSync(tempFakeHome, { recursive: true, force: true })
     mkdirSync(codexHome, { recursive: true })
+    mkdirSync(tempFakeHome, { recursive: true })
+    process.env.HOME = tempFakeHome
     delete process.env.MEET_AI_RUNTIME
     delete process.env.CODEX_HOME
     delete process.env.MEET_AI_AGENT_NAME
@@ -174,6 +180,7 @@ describe('listen', () => {
     process.on = originalOn
     rmSync(codexHome, { recursive: true, force: true })
     rmSync(tempMeetAiDir, { recursive: true, force: true })
+    rmSync(tempFakeHome, { recursive: true, force: true })
     setMeetAiDirOverride(undefined)
     if (savedRuntime === undefined) delete process.env.MEET_AI_RUNTIME
     else process.env.MEET_AI_RUNTIME = savedRuntime
@@ -232,15 +239,16 @@ describe('listen', () => {
   it('prints received messages as JSON lines to stdout', () => {
     // GIVEN a client that captures the onMessage handler
     const { client, getHandler } = mockClientCapturingHandler()
+    const writeOutput = mock((data: string) => {})
 
     // WHEN we start listening and simulate a message
-    listen(client, { roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c' })
+    listen(client, { roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c' }, undefined, undefined, undefined, undefined, writeOutput)
     const handler = getHandler()
     const msg = makeMessage({ id: 'msg-100', content: 'hello world' })
     handler(msg)
 
     // THEN the message is printed as a JSON line to stdout
-    expect(logSpy).toHaveBeenCalledWith(JSON.stringify(msg))
+    expect(writeOutput).toHaveBeenCalledWith(JSON.stringify(msg))
   })
 
   it('prints received messages via evlog for codex runtime', async () => {
@@ -334,11 +342,8 @@ describe('listen', () => {
     const client = mockClient()
     const codexBridge = makeCodexBridgeMock()
     const registerMember = mock(() => Promise.resolve())
-    const postMessageMock = mock(async () => ({
-      ok: true,
-      json: async () => ({ id: 'msg-parent-1' }),
-    }))
-    const postLogMock = mock(async () => ({ ok: true }))
+    const sendParentMessageMock = mock(async () => 'msg-parent-1')
+    const sendLogEntryMock = mock(async () => {})
     const createPlanReviewMock = mock(
       async (_client: HookClient, _roomId: string, _content: string) => ({
         ok: true as const,
@@ -360,19 +365,9 @@ describe('listen', () => {
       codexBridge,
       registerMember,
       {
-        createHookClient: mock(
-          () =>
-            ({
-              api: {
-                rooms: {
-                  ':id': {
-                    messages: { $post: postMessageMock },
-                    logs: { $post: postLogMock },
-                  },
-                },
-              },
-            }) as unknown as HookClient
-        ),
+        createHookClient: mock(() => ({}) as unknown as HookClient),
+        sendParentMessage: sendParentMessageMock as any,
+        sendLogEntry: sendLogEntryMock as any,
         createPlanReview: createPlanReviewMock as any,
         pollForPlanDecision: pollForPlanDecisionMock as any,
         expirePlanReview: mock(async () => {}),
@@ -395,15 +390,15 @@ describe('listen', () => {
 
     expect(createPlanReviewMock).toHaveBeenCalledTimes(1)
     expect(pollForPlanDecisionMock).toHaveBeenCalledTimes(1)
-    expect(postMessageMock).toHaveBeenCalledTimes(1)
-    expect(postLogMock).toHaveBeenCalledTimes(1)
-    expect(postLogMock).toHaveBeenCalledWith({
-      param: { id: 'df75b1db-f583-4d9f-8e34-9b3d614f152c' },
-      json: expect.objectContaining({
-        sender: 'codex',
-        content: expect.stringContaining('Codex plan updated: Bind plan mode to the room UI'),
-      }),
-    })
+    expect(sendParentMessageMock).toHaveBeenCalledTimes(1)
+    expect(sendLogEntryMock).toHaveBeenCalledTimes(1)
+    expect(sendLogEntryMock).toHaveBeenCalledWith(
+      expect.anything(),
+      'df75b1db-f583-4d9f-8e34-9b3d614f152c',
+      expect.stringContaining('Codex plan updated: Bind plan mode to the room UI'),
+      'msg-parent-1',
+      'codex'
+    )
     expect(codexBridge.injectPrompt).toHaveBeenCalledWith(
       expect.stringContaining(
         'Your plan was approved in the Meet AI review UI. Continue with implementation now.'
@@ -445,24 +440,9 @@ describe('listen', () => {
       codexBridge,
       mock(() => Promise.resolve()),
       {
-        createHookClient: mock(
-          () =>
-            ({
-              api: {
-                rooms: {
-                  ':id': {
-                    messages: {
-                      $post: mock(async () => ({
-                        ok: true,
-                        json: async () => ({ id: 'msg-parent-1' }),
-                      })),
-                    },
-                    logs: { $post: mock(async () => ({ ok: true })) },
-                  },
-                },
-              },
-            }) as unknown as HookClient
-        ),
+        createHookClient: mock(() => ({}) as unknown as HookClient),
+        sendParentMessage: mock(async () => 'msg-parent-1') as any,
+        sendLogEntry: mock(async () => {}) as any,
         createPlanReview: createPlanReviewMock as any,
         pollForPlanDecision: pollForPlanDecisionMock as any,
         expirePlanReview: mock(async () => {}),
@@ -667,6 +647,8 @@ describe('listen', () => {
 
   describe('--team filtering', () => {
     const teamHome = '/tmp/meet-ai-listen-team-home'
+    const originalCwd = process.cwd()
+    let writeOutput: Mock<(data: string) => void>
 
     function writeTeamConfig(teamName: string, members: { name: string }[]) {
       mkdirSync(`${teamHome}/.claude/teams/${teamName}/inboxes`, { recursive: true })
@@ -677,16 +659,19 @@ describe('listen', () => {
     }
 
     function parsedLogCalls(): { id: string; sender: string }[] {
-      return (logSpy as any).mock.calls.map((args: unknown[]) => JSON.parse(String(args[0])))
+      return writeOutput.mock.calls.map((args) => JSON.parse(String(args[0])))
     }
 
     beforeEach(() => {
+      writeOutput = mock((data: string) => {})
       rmSync(teamHome, { recursive: true, force: true })
       mkdirSync(teamHome, { recursive: true })
       process.env.HOME = teamHome
+      process.chdir(teamHome)
     })
 
     afterEach(() => {
+      process.chdir(originalCwd)
       rmSync(teamHome, { recursive: true, force: true })
     })
 
@@ -698,7 +683,7 @@ describe('listen', () => {
         roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c',
         team: 'demo-team',
         inbox: 'team-lead',
-      })
+      }, undefined, undefined, undefined, undefined, writeOutput)
 
       const handler = getHandler()
       handler(makeMessage({ id: 'msg-own', sender: 'team-lead', content: 'my own message' }))
@@ -723,7 +708,7 @@ describe('listen', () => {
         roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c',
         team: 'new-team',
         inbox: 'team-lead',
-      })
+      }, undefined, undefined, undefined, undefined, writeOutput)
 
       const handler = getHandler()
       handler(makeMessage({ id: 'msg-own', sender: 'team-lead', content: 'my own message' }))
@@ -743,14 +728,14 @@ describe('listen', () => {
         roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c',
         team: 'live-team',
         inbox: 'team-lead',
-      })
+      }, undefined, undefined, undefined, undefined, writeOutput)
 
       const handler = getHandler()
 
       // Before config update: coder is not yet in config — passes through
       handler(makeMessage({ id: 'msg-coder-1', sender: 'coder', content: 'first message' }))
       expect(parsedLogCalls()).toHaveLength(1)
-      logSpy.mockClear()
+      writeOutput.mockClear()
 
       // Update config to include coder
       writeTeamConfig('live-team', [{ name: 'team-lead' }, { name: 'coder' }])
@@ -762,6 +747,41 @@ describe('listen', () => {
       // After config refresh: coder should be filtered
       expect(parsedLogCalls()).toHaveLength(0)
     }, 10_000)
+
+    it('does not filter senders that are only in room config (not team config)', () => {
+      mkdirSync(`${teamHome}/.meet-ai/rooms/df75b1db-f583-4d9f-8e34-9b3d614f152c`, {
+        recursive: true,
+      })
+      writeFileSync(
+        `${teamHome}/.meet-ai/rooms/df75b1db-f583-4d9f-8e34-9b3d614f152c/config.json`,
+        JSON.stringify({
+          roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c',
+          usernames: ['team-lead', 'coder'],
+        })
+      )
+      mkdirSync(`${teamHome}/.claude/teams/local-room/inboxes`, { recursive: true })
+
+      const { client, getHandler } = mockClientCapturingHandler()
+      listen(client, {
+        roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c',
+        team: 'local-room',
+        inbox: 'team-lead',
+      }, undefined, undefined, undefined, undefined, writeOutput)
+
+      const handler = getHandler()
+      // coder is in room config but NOT in team config — should NOT be excluded.
+      // Only team config members (and the inbox agent) are excluded to prevent
+      // feedback loops. Room-only members (external agents, humans) pass through.
+      handler(makeMessage({ id: 'msg-coder', sender: 'coder', content: 'coder message' }))
+      handler(
+        makeMessage({ id: 'msg-human', sender: 'alice', sender_type: 'human', content: 'hello' })
+      )
+
+      const calls = parsedLogCalls()
+      expect(calls).toHaveLength(2)
+      expect(calls[0].sender).toBe('coder')
+      expect(calls[1].sender).toBe('alice')
+    })
   })
 
   describe('validation', () => {
@@ -808,6 +828,7 @@ describe('listen', () => {
     it('enriches message with attachment paths when attachment_count > 0', async () => {
       // GIVEN a client that has downloadable attachments
       const { client, getHandler } = mockClientCapturingHandler()
+      const writeOutput: Mock<(data: string) => void> = mock((data: string) => {})
       ;(client.getMessageAttachments as any).mockImplementation(() =>
         Promise.resolve([
           { id: 'att-1', filename: 'file.png', size: 100, content_type: 'image/png' },
@@ -818,7 +839,7 @@ describe('listen', () => {
       )
 
       // WHEN we start listening and receive a message with attachments
-      listen(client, { roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c' })
+      listen(client, { roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c' }, undefined, undefined, undefined, undefined, writeOutput)
       const handler = getHandler()
       const msg = {
         ...makeMessage({ id: 'msg-att' }),
@@ -831,7 +852,7 @@ describe('listen', () => {
       await new Promise(resolve => setTimeout(resolve, 50))
 
       // THEN the output includes attachment paths
-      const calls = (logSpy as any).mock.calls
+      const calls = writeOutput.mock.calls
       const lastCall = calls[calls.length - 1]?.[0]
       expect(lastCall).toBeDefined()
       const parsed = JSON.parse(lastCall)
@@ -1182,11 +1203,8 @@ describe('listen', () => {
       ),
     })
     const codexBridge = makeCodexBridgeMock()
-    const postMessageMock = mock(async () => ({
-      ok: true,
-      json: async () => ({ id: 'msg-thinking-parent-1' }),
-    }))
-    const postLogMock = mock(async () => ({ ok: true }))
+    const sendParentMessageMock = mock(async () => 'msg-thinking-parent-1')
+    const sendLogEntryMock = mock(async () => {})
 
     listen(
       client,
@@ -1195,20 +1213,14 @@ describe('listen', () => {
       codexBridge,
       undefined,
       {
-        createHookClient: mock(
-          () =>
-            ({
-              api: {
-                rooms: {
-                  ':id': {
-                    messages: { $post: postMessageMock },
-                    logs: { $post: postLogMock },
-                  },
-                },
-              },
-            }) as unknown as HookClient
-        ),
-        createPlanReview: mock(async () => ({ ok: false as const, status: 500, text: 'unused' })) as any,
+        createHookClient: mock(() => ({}) as unknown as HookClient),
+        sendParentMessage: sendParentMessageMock as any,
+        sendLogEntry: sendLogEntryMock as any,
+        createPlanReview: mock(async () => ({
+          ok: false as const,
+          status: 500,
+          text: 'unused',
+        })) as any,
         pollForPlanDecision: mock(async () => null) as any,
         expirePlanReview: mock(async () => {}),
       }
@@ -1240,15 +1252,14 @@ describe('listen', () => {
       'codex',
       'Second answer'
     )
-    expect(postMessageMock).toHaveBeenCalledTimes(1)
-    expect(postLogMock).toHaveBeenCalledWith({
-      param: { id: 'df75b1db-f583-4d9f-8e34-9b3d614f152c' },
-      json: expect.objectContaining({
-        sender: 'codex',
-        content: 'First answer',
-        message_id: 'msg-thinking-parent-1',
-      }),
-    })
+    expect(sendParentMessageMock).toHaveBeenCalledTimes(1)
+    expect(sendLogEntryMock).toHaveBeenCalledWith(
+      expect.anything(),
+      'df75b1db-f583-4d9f-8e34-9b3d614f152c',
+      'First answer',
+      'msg-thinking-parent-1',
+      'codex'
+    )
   })
 
   describe('tasks_info handling', () => {
@@ -1493,5 +1504,82 @@ describe('listen', () => {
       // Should not log as a chat message format
       expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining('[meet-ai]'))
     })
+  })
+})
+
+// --- shouldDeliverMessage ---
+
+describe('shouldDeliverMessage', () => {
+  const ROOM_ID = 'test-sdm-room'
+  const TEMP_HOME = '/tmp/meet-ai-sdm-test'
+  let originalHome: string | undefined
+  let originalAgentName: string | undefined
+
+  beforeEach(() => {
+    originalHome = process.env.HOME
+    originalAgentName = process.env.MEET_AI_AGENT_NAME
+    process.env.HOME = TEMP_HOME
+    process.env.MEET_AI_AGENT_NAME = 'codex'
+    rmSync(TEMP_HOME, { recursive: true, force: true })
+    mkdirSync(TEMP_HOME, { recursive: true })
+    // Set up room config with known members
+    appendRoomUsernames(ROOM_ID, ['codex', 'team-lead', 'researcher', 'pi'])
+  })
+
+  afterEach(() => {
+    process.env.HOME = originalHome
+    if (originalAgentName === undefined) delete process.env.MEET_AI_AGENT_NAME
+    else process.env.MEET_AI_AGENT_NAME = originalAgentName
+    rmSync(TEMP_HOME, { recursive: true, force: true })
+  })
+
+  it('returns true when content is undefined', () => {
+    expect(shouldDeliverMessage(ROOM_ID, undefined)).toBe(true)
+  })
+
+  it('returns true when no @mentions', () => {
+    expect(shouldDeliverMessage(ROOM_ID, 'fix the bug')).toBe(true)
+  })
+
+  it('returns true when valid @mention matches this agent', () => {
+    expect(shouldDeliverMessage(ROOM_ID, '@codex review this')).toBe(true)
+  })
+
+  it('returns false when @mention targets a different known agent', () => {
+    expect(shouldDeliverMessage(ROOM_ID, '@researcher check this')).toBe(false)
+  })
+
+  it('returns true when one of multiple mentions matches', () => {
+    expect(shouldDeliverMessage(ROOM_ID, '@researcher @codex look at this')).toBe(true)
+  })
+
+  it('delivers to everyone when @mention is for an unknown name', () => {
+    // @nobody is not in room config — treat as general message
+    expect(shouldDeliverMessage(ROOM_ID, '@nobody hello')).toBe(true)
+  })
+
+  it('filters when @mention includes a known agent even with unknown mixed in', () => {
+    // @pi is known, @nobody is not — since a known member IS mentioned, filter
+    expect(shouldDeliverMessage(ROOM_ID, '@pi check this @nobody')).toBe(false)
+  })
+
+  it('always delivers when MEET_AI_AGENT_NAME is not set (Claude team listener)', () => {
+    delete process.env.MEET_AI_AGENT_NAME
+    // Without an agent identity, all messages pass through — InboxRouter handles routing
+    expect(shouldDeliverMessage(ROOM_ID, '@codex review the PR')).toBe(true)
+    expect(shouldDeliverMessage(ROOM_ID, '@pi check this code')).toBe(true)
+    expect(shouldDeliverMessage(ROOM_ID, '@researcher fix bug')).toBe(true)
+    expect(shouldDeliverMessage(ROOM_ID, '@outsider hey there')).toBe(true)
+  })
+
+  it('filters correctly for Pi listener', () => {
+    process.env.MEET_AI_AGENT_NAME = 'pi'
+    expect(shouldDeliverMessage(ROOM_ID, '@pi check this')).toBe(true)
+    expect(shouldDeliverMessage(ROOM_ID, '@codex review the PR')).toBe(false)
+    expect(shouldDeliverMessage(ROOM_ID, '@outsider hey there')).toBe(true)
+  })
+
+  it('delivers to everyone when all @mentions are unknown', () => {
+    expect(shouldDeliverMessage(ROOM_ID, '@stranger @outsider check this')).toBe(true)
   })
 })

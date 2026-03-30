@@ -1,3 +1,4 @@
+import { readdirSync, statSync, unlinkSync } from 'node:fs'
 import { getMeetAiConfig } from '@meet-ai/cli/config'
 import type { MeetAiConfig } from '@meet-ai/cli/config'
 import type { MeetAiClient } from '@meet-ai/cli/types'
@@ -32,7 +33,6 @@ const MAX_AGE_MS = 5 * 60 * 1000
 
 function cleanupOldAttachments(): void {
   try {
-    const { readdirSync, statSync, unlinkSync } = require('node:fs') as typeof import('node:fs')
     const now = Date.now()
     for (const entry of readdirSync(ATTACHMENTS_DIR)) {
       try {
