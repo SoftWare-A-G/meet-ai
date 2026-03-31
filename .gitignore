@@ -15,3 +15,4 @@ build/
 artifacts/
 *.txt
 !robots.txt
+**/.vscode
