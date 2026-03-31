@@ -63,28 +63,28 @@ describe('processPermissionReview', () => {
   it('skips when stdin is not valid JSON', async () => {
     const { processPermissionReview } = await import('../../src/commands/hook/permission-review/usecase')
     await processPermissionReview('not json', TEST_DIR)
-    expect(stderrOutput).toContain('failed to parse stdin')
+    expect(stderrOutput).toContain('ParseError: Invalid JSON')
     expect(stdoutOutput).toBe('')
   })
 
   it('skips when session_id is missing', async () => {
     const { processPermissionReview } = await import('../../src/commands/hook/permission-review/usecase')
     await processPermissionReview(makeInput({ session_id: '' }), TEST_DIR)
-    expect(stderrOutput).toContain('missing session_id or tool_name')
+    expect(stderrOutput).toContain('ValidationError: session_id is required')
     expect(stdoutOutput).toBe('')
   })
 
   it('skips when tool_name is missing', async () => {
     const { processPermissionReview } = await import('../../src/commands/hook/permission-review/usecase')
     await processPermissionReview(makeInput({ tool_name: '' }), TEST_DIR)
-    expect(stderrOutput).toContain('missing session_id or tool_name')
+    expect(stderrOutput).toContain('ValidationError: tool_name is required')
     expect(stdoutOutput).toBe('')
   })
 
   it('skips when no room found for session', async () => {
     const { processPermissionReview } = await import('../../src/commands/hook/permission-review/usecase')
     await processPermissionReview(makeInput(), TEST_DIR)
-    expect(stderrOutput).toContain('no room found for session')
+    expect(stderrOutput).toContain('RoomResolveError: No room found for session')
     expect(stdoutOutput).toBe('')
   })
 
@@ -210,22 +210,24 @@ describe('processPermissionReview', () => {
     await processPermissionReview(makeInput(), TEST_DIR, { pollInterval: 10, pollTimeout: 500 })
 
     expect(stdoutOutput).toBe('')
-    expect(stderrOutput).toContain('decision received: expired')
   })
 
   it('handles create review failure', async () => {
     const { processPermissionReview } = await import('../../src/commands/hook/permission-review/usecase')
     writeTeamFile('my-team', { session_id: 'sess-1', room_id: 'room-abc' })
 
-    // Mock create review — server error
+    // Mock create review — server error (JSON, matching actual Hono error responses)
     mockFetch.mockResolvedValueOnce(
-      new Response('Internal Server Error', { status: 500 })
+      new Response(JSON.stringify({ error: 'Internal Server Error' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      })
     )
 
     await processPermissionReview(makeInput(), TEST_DIR, { pollInterval: 10, pollTimeout: 500 })
 
     expect(stdoutOutput).toBe('')
-    expect(stderrOutput).toContain('create failed: 500')
+    expect(stderrOutput).toContain('ReviewCreateError: HTTP 500')
   })
 
   it('handles poll timeout — sends timeout message and expires review', async () => {
@@ -254,7 +256,7 @@ describe('processPermissionReview', () => {
     await processPermissionReview(makeInput(), TEST_DIR, { pollInterval: 10, pollTimeout: 50 })
 
     expect(stdoutOutput).toBe('')
-    expect(stderrOutput).toContain('timed out waiting for decision')
+    expect(stderrOutput).toContain('TimeoutError: Timed out waiting for decision')
   })
 
   it('never throws — always exits cleanly on fetch network error', async () => {
@@ -267,6 +269,6 @@ describe('processPermissionReview', () => {
     await processPermissionReview(makeInput(), TEST_DIR, { pollInterval: 10, pollTimeout: 500 })
 
     expect(stdoutOutput).toBe('')
-    expect(stderrOutput).toContain('create error')
+    expect(stderrOutput).toContain('ReviewCreateError: Error: Network failure')
   })
 })

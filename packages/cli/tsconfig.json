@@ -9,7 +9,8 @@
     "jsx": "react-jsx",
     "noEmit": true,
     "paths": {
-      "@meet-ai/cli/*": ["./src/*"]
+      "@meet-ai/cli/*": ["./src/*"],
+      "@meet-ai/domain/*": ["../domain/src"]
     }
   },
   "include": ["src", "test"]

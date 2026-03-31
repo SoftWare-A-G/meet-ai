@@ -93,7 +93,7 @@ export const permissionReviewsRoute = new Hono<AppEnv>()
       feedback: review.feedback,
       decided_by: review.decided_by,
       decided_at: review.decided_at,
-    })
+    }, 200)
   })
 
   // POST /api/rooms/:id/permission-reviews/:reviewId/decide — approve or deny
@@ -139,7 +139,7 @@ export const permissionReviewsRoute = new Hono<AppEnv>()
       })
     )
 
-    return c.json({ ok: true })
+    return c.json({ ok: true }, 200)
   })
 
   // POST /api/rooms/:id/permission-reviews/:reviewId/expire — hook timeout
@@ -173,5 +173,5 @@ export const permissionReviewsRoute = new Hono<AppEnv>()
       })
     )
 
-    return c.json({ ok: true })
+    return c.json({ ok: true }, 200)
   })
