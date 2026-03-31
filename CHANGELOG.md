@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.4.2](https://github.com/SoftWare-A-G/meet-ai/compare/2.4.1...2.4.2) (2026-04-01)
+
+### Features
+
+- migrate the `plan-review` hook workflow into the internal `packages/domain` package with a class-based `ProcessPlanReview` usecase, typed repository contract, plan-review schemas, and shared `HookOutput` support for `allowedPrompts`
+
+### Bug Fixes
+
+- replace the inline CLI `plan-review` hook implementation with a thin composition root and a typed Hono-backed `HookPlanReviewRepository`, preserving the original fallback plan message, permission-mode prompt mapping, timeout-expire behavior, and tagged domain error reporting
+- align worker `plan-reviews` success responses with explicit `200` statuses and normalize `permission_mode` at the transport boundary so Hono response narrowing and domain enums stay consistent end to end
+- align the CLI, worker, desktop, app, and domain package manifests at `2.4.2` for the release
+
+### Tests
+
+- add domain coverage for plan-review input parsing, fallback plan extraction, approval/deny/expired outputs, permission-mode prompt mapping, and timeout cleanup; update CLI hook tests to assert the new domain error contract and the real `PermissionRequest` hook fixture
+
 ## [2.4.1](https://github.com/SoftWare-A-G/meet-ai/compare/2.4.0...2.4.1) (2026-03-31)
 
 ### Features

@@ -85,7 +85,7 @@ export const planReviewsRoute = new Hono<AppEnv>()
       decided_by: decision.decided_by,
       decided_at: decision.decided_at,
       permission_mode: decision.permission_mode ?? 'default',
-    })
+    }, 200)
   })
 
   // POST /api/rooms/:id/plan-reviews/:reviewId/decide — approve or deny a plan review
@@ -133,7 +133,7 @@ export const planReviewsRoute = new Hono<AppEnv>()
       })
     )
 
-    return c.json({ ok: true })
+    return c.json({ ok: true }, 200)
   })
 
   // POST /api/rooms/:id/plan-reviews/:reviewId/expire — mark a plan review as expired (hook timeout)
@@ -167,5 +167,5 @@ export const planReviewsRoute = new Hono<AppEnv>()
       })
     )
 
-    return c.json({ ok: true })
+    return c.json({ ok: true }, 200)
   })

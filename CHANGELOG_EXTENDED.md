@@ -1,5 +1,32 @@
 # Changelog
 
+## [2.4.2](https://github.com/SoftWare-A-G/meet-ai/compare/2.4.1...2.4.2) (2026-04-01)
+
+### Features
+
+- migrate the final review-hook slice, `plan-review`, into the internal `packages/domain` package:
+  - add a class-based `ProcessPlanReview` usecase with constructor-injected `IPlanReviewRepository` and `IRoomResolver` dependencies so plan-review orchestration follows the same Result-first domain pattern as permission-review and question-review
+  - define schema-first plan-review entities in the domain package for `PlanRequestInput`, `PlanReviewDecision`, `PermissionMode`, and `AllowedPrompt`, and widen the shared `HookOutput` schema so approved plans can return `allowedPrompts`
+  - expose the new plan-review repository contract and usecase through the domain barrel so the CLI hook can consume the same internal package surface as the other review hooks
+
+### Bug Fixes
+
+- harden the plan-review hook contract end to end:
+  - replace the inline implementation in `packages/cli/src/commands/hook/plan-review/usecase.ts` with a thin composition root that wires `HookPlanReviewRepository` and `SessionRoomResolver` into the domain usecase
+  - preserve the existing plan-review behavior during migration by keeping the original fallback plan text, the original `acceptEdits` and `bypassPermissions` prompt lists, and the existing timeout behavior of expiring the review without sending a room timeout message
+  - normalize `permission_mode` through `PermissionModeSchema` at the CLI transport boundary so the domain only receives known permission-mode values while still falling back to `default` for unexpected data
+- align worker `plan-reviews` route responses with explicit `200` statuses:
+  - add explicit success status codes to the `GET`, `decide`, and `expire` plan-review routes so Hono's response typing can discriminate cleanly between success and error bodies
+  - keep the worker route payloads aligned with the new domain schemas for `PlanReviewDecision`
+- align the CLI, worker, desktop, app, and domain package manifests at `2.4.2` for the release
+
+### Tests
+
+- expand plan-review coverage across the new seams:
+  - add a dedicated `ProcessPlanReview.test.ts` suite covering parse failures, wrong hook/tool names, fallback plan extraction, approved/denied/expired outputs, permission-mode prompt mapping, default deny messages, timeout cleanup, and non-timeout poll failures
+  - update CLI plan-review hook tests to assert tagged domain error output, the real `hook_event_name: 'PermissionRequest'` fixture, and the migrated composition-root behavior
+  - keep the full domain, CLI, and worker suites green after the final review-hook slice lands
+
 ## [2.4.1](https://github.com/SoftWare-A-G/meet-ai/compare/2.4.0...2.4.1) (2026-03-31)
 
 ### Features

@@ -19,6 +19,7 @@ function makeInput(overrides?: Record<string, unknown>) {
   return JSON.stringify({
     session_id: 'sess-1',
     tool_name: 'ExitPlanMode',
+    hook_event_name: 'PermissionRequest',
     tool_input: { plan: '## My Plan\n\nDo stuff' },
     ...overrides,
   })
@@ -59,14 +60,14 @@ describe('plan-review usecase', () => {
   it('skips when stdin is invalid JSON', async () => {
     const { processPlanReview } = await loadUsecase()
     await processPlanReview('not json', TEST_DIR)
-    expect(stderrCapture).toContain('failed to parse stdin')
+    expect(stderrCapture).toContain('ParseError: Invalid JSON')
     expect(stdoutCapture).toBe('')
   })
 
   it('skips when no session_id', async () => {
     const { processPlanReview } = await loadUsecase()
-    await processPlanReview(JSON.stringify({ tool_name: 'ExitPlanMode' }), TEST_DIR)
-    expect(stderrCapture).toContain('missing session_id')
+    await processPlanReview(JSON.stringify({ tool_name: 'ExitPlanMode', hook_event_name: 'PermissionRequest' }), TEST_DIR)
+    expect(stderrCapture).toContain('ValidationError:')
     expect(stdoutCapture).toBe('')
   })
 
@@ -102,7 +103,7 @@ describe('plan-review usecase', () => {
   it('skips when no room found for session', async () => {
     const { processPlanReview } = await loadUsecase()
     await processPlanReview(makeInput({ session_id: 'unknown-sess' }), TEST_DIR)
-    expect(stderrCapture).toContain('no room found')
+    expect(stderrCapture).toContain('RoomResolveError:')
     expect(stdoutCapture).toBe('')
   })
 
@@ -213,7 +214,7 @@ describe('plan-review usecase', () => {
     const { processPlanReview } = await loadUsecase()
     await processPlanReview(makeInput(), TEST_DIR)
 
-    expect(stderrCapture).toContain('create failed')
+    expect(stderrCapture).toContain('ReviewCreateError: HTTP 500')
     expect(stdoutCapture).toBe('')
   })
 
@@ -223,7 +224,7 @@ describe('plan-review usecase', () => {
     const { processPlanReview } = await loadUsecase()
     await processPlanReview(makeInput(), TEST_DIR)
 
-    expect(stderrCapture).toContain('create error')
+    expect(stderrCapture).toContain('ReviewCreateError:')
     expect(stdoutCapture).toBe('')
   })
 

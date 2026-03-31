@@ -35,3 +35,12 @@ export const QuestionRequestInputSchema = z.object({
   }),
 })
 export type QuestionRequestInput = z.infer<typeof QuestionRequestInputSchema>
+
+export const PlanRequestInputSchema = z.object({
+  session_id: z.string().min(1),
+  transcript_path: z.string().optional(),
+  hook_event_name: z.literal('PermissionRequest'),
+  tool_name: z.literal('ExitPlanMode'),
+  tool_input: z.object({ plan: z.string().optional() }).optional(),
+})
+export type PlanRequestInput = z.infer<typeof PlanRequestInputSchema>

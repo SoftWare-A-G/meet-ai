@@ -13,6 +13,12 @@ export const PermissionReviewDecisionSchema = z.object({
 })
 export type PermissionReviewDecision = z.infer<typeof PermissionReviewDecisionSchema>
 
+export const AllowedPromptSchema = z.object({
+  tool: z.string(),
+  prompt: z.string(),
+})
+export type AllowedPrompt = z.infer<typeof AllowedPromptSchema>
+
 export const HookOutputSchema = z.object({
   hookSpecificOutput: z.object({
     hookEventName: z.literal('PermissionRequest'),
@@ -20,6 +26,7 @@ export const HookOutputSchema = z.object({
       z.object({
         behavior: z.literal('allow'),
         updatedInput: z.record(z.string(), z.unknown()).optional(),
+        allowedPrompts: z.array(AllowedPromptSchema).optional(),
       }),
       z.object({ behavior: z.literal('deny'), message: z.string() }),
     ]),
@@ -48,3 +55,17 @@ export type QuestionReviewAnswer = z.infer<typeof QuestionReviewAnswerSchema>
 
 export const AnswersRecordSchema = z.record(z.string(), z.string())
 export type AnswersRecord = z.infer<typeof AnswersRecordSchema>
+
+export const PermissionModeSchema = z.enum(['default', 'acceptEdits', 'bypassPermissions'])
+export type PermissionMode = z.infer<typeof PermissionModeSchema>
+
+export const PlanReviewDecisionSchema = z.object({
+  id: z.string(),
+  message_id: z.string(),
+  status: ReviewStatusSchema,
+  feedback: z.string().nullable(),
+  decided_by: z.string().nullable(),
+  decided_at: z.string().nullable(),
+  permission_mode: PermissionModeSchema,
+})
+export type PlanReviewDecision = z.infer<typeof PlanReviewDecisionSchema>

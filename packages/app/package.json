@@ -1,6 +1,6 @@
 {
   "name": "@meet-ai/app",
-  "version": "2.4.1",
+  "version": "2.4.2",
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
