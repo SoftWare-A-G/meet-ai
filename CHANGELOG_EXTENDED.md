@@ -1,5 +1,36 @@
 # Changelog
 
+## [2.4.1](https://github.com/SoftWare-A-G/meet-ai/compare/2.4.0...2.4.1) (2026-03-31)
+
+### Features
+
+- extract the permission-review hook flow into a new internal `packages/domain` package:
+  - add a class-based `ProcessPermissionReview` usecase with constructor-injected `IReviewRepository`, `IHookTransport`, and `IRoomResolver` dependencies so the hook orchestration runs through a Result-first domain seam instead of a large inline CLI script
+  - define schema-first entities in the domain package for permission-review input, hook output, create-review responses, and decision payloads using Zod inference rather than hand-written DTO types
+  - introduce tagged domain errors (`ParseError`, `ValidationError`, `TimeoutError`, `ReviewCreateError`, `ReviewPollError`, `RoomResolveError`, `NotifyError`) so the CLI hook and the domain usecase share one explicit failure taxonomy
+
+### Bug Fixes
+
+- harden the permission-review adapter/runtime contract:
+  - replace the inline hook implementation in `packages/cli/src/commands/hook/permission-review/usecase.ts` with a thin composition root that wires `HookReviewRepository`, `HookTransportAdapter`, and `SessionRoomResolver` into the domain usecase
+  - switch the hook adapters from `res.text()` and defensive `in` checks to typed Hono JSON error bodies once the worker permission-review routes started returning explicit `200` statuses for successful `GET`, `decide`, and `expire` responses
+  - remove `as` casts, helper-file exports, and manual `try/catch` parsing from the migrated permission-review flow by using `Result.try`, private usecase methods, and typed adapter results
+- fix permission-review timeout semantics:
+  - distinguish real deadline exhaustion after seeing `pending` responses from transport failures that never produced a successful poll response
+  - only run expire + timeout-message cleanup for real `TimeoutError` cases instead of for `404` or persistent network failures
+  - keep cleanup best-effort while preserving the original timeout error when expire or notify calls fail
+- keep npm publishing safe after the extraction:
+  - move `@meet-ai/domain` to CLI `devDependencies` so the bundled CLI artifact can use the internal workspace package without shipping unresolved `workspace:*` runtime dependencies
+  - expose the domain package through a root-barrel export only, keeping the new package internal and minimizing public surface area
+- align the CLI, worker, desktop, app, and domain package manifests at `2.4.1` for the release
+
+### Tests
+
+- expand permission-review coverage across the new seams:
+  - add domain tests for parsing failures, invalid hook-event names, excluded-tool handling, allow/deny/expired output shaping, timeout cleanup, cleanup-failure tolerance, and non-timeout poll failures
+  - expand CLI hook tests to cover create failures, poll timeout behavior, repeated transport failures during polling, timeout cleanup request ordering, and cleanup failure paths with payloads that match the stricter response schemas
+  - consolidate the domain permission-review tests into a single `ProcessPermissionReview.test.ts` file after moving the former helper functions into private methods on the usecase class
+
 ## [2.4.0](https://github.com/SoftWare-A-G/meet-ai/compare/2.3.2...2.4.0) (2026-03-30)
 
 ### Features

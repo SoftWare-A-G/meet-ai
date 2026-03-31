@@ -111,7 +111,7 @@ describe('processPermissionReview', () => {
     // Mock poll — approved immediately
     mockFetch.mockResolvedValueOnce(
       new Response(
-        JSON.stringify({ status: 'approved', decided_by: 'user1' }),
+        JSON.stringify({ id: 'pr-1', message_id: 'msg-1', status: 'approved', feedback: null, decided_by: 'user1', decided_at: '2026-03-31T00:00:00Z' }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       )
     )
@@ -131,7 +131,7 @@ describe('processPermissionReview', () => {
 
     // Mock create review
     mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ id: 'pr-2' }), {
+      new Response(JSON.stringify({ id: 'pr-2', message_id: 'msg-2' }), {
         status: 201,
         headers: { 'Content-Type': 'application/json' },
       })
@@ -140,7 +140,7 @@ describe('processPermissionReview', () => {
     // Mock poll — denied
     mockFetch.mockResolvedValueOnce(
       new Response(
-        JSON.stringify({ status: 'denied', decided_by: 'user1' }),
+        JSON.stringify({ id: 'pr-2', message_id: 'msg-2', status: 'denied', feedback: null, decided_by: 'user1', decided_at: '2026-03-31T00:00:00Z' }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       )
     )
@@ -158,7 +158,7 @@ describe('processPermissionReview', () => {
 
     // Mock create review
     mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ id: 'pr-3' }), {
+      new Response(JSON.stringify({ id: 'pr-3', message_id: 'msg-3' }), {
         status: 201,
         headers: { 'Content-Type': 'application/json' },
       })
@@ -175,7 +175,7 @@ describe('processPermissionReview', () => {
     // Second poll — approved
     mockFetch.mockResolvedValueOnce(
       new Response(
-        JSON.stringify({ status: 'approved' }),
+        JSON.stringify({ id: 'pr-3', message_id: 'msg-3', status: 'approved', feedback: null, decided_by: 'user1', decided_at: '2026-03-31T00:00:00Z' }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       )
     )
@@ -193,7 +193,7 @@ describe('processPermissionReview', () => {
 
     // Mock create review
     mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ id: 'pr-4' }), {
+      new Response(JSON.stringify({ id: 'pr-4', message_id: 'msg-4' }), {
         status: 201,
         headers: { 'Content-Type': 'application/json' },
       })
@@ -201,10 +201,10 @@ describe('processPermissionReview', () => {
 
     // Poll returns expired
     mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ status: 'expired' }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      })
+      new Response(
+        JSON.stringify({ id: 'pr-4', message_id: 'msg-4', status: 'expired', feedback: null, decided_by: null, decided_at: null }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      )
     )
 
     await processPermissionReview(makeInput(), TEST_DIR, { pollInterval: 10, pollTimeout: 500 })
@@ -236,7 +236,7 @@ describe('processPermissionReview', () => {
 
     // Mock create review
     mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ id: 'pr-5' }), {
+      new Response(JSON.stringify({ id: 'pr-5', message_id: 'msg-5' }), {
         status: 201,
         headers: { 'Content-Type': 'application/json' },
       })
@@ -270,5 +270,147 @@ describe('processPermissionReview', () => {
 
     expect(stdoutOutput).toBe('')
     expect(stderrOutput).toContain('ReviewCreateError: Error: Network failure')
+  })
+
+  it('returns ReviewPollError when all polls throw (network failure)', async () => {
+    const { processPermissionReview } = await import('../../src/commands/hook/permission-review/usecase')
+    writeTeamFile('my-team', { session_id: 'sess-1', room_id: 'room-abc' })
+
+    // Create review succeeds
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ id: 'pr-poll-fail', message_id: 'msg-poll-fail' }), {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    )
+
+    // All subsequent fetches throw (network failure) — polls never succeed
+    mockFetch.mockImplementation(() => Promise.reject(new Error('Network failure')))
+
+    await processPermissionReview(makeInput(), TEST_DIR, { pollInterval: 10, pollTimeout: 50 })
+
+    expect(stderrOutput).toContain('ReviewPollError')
+    expect(stderrOutput).not.toContain('TimeoutError')
+    expect(stdoutOutput).toBe('')
+  })
+
+  it('timeout cleanup — verifies create, poll, expire, and timeout message calls', async () => {
+    const { processPermissionReview } = await import('../../src/commands/hook/permission-review/usecase')
+    writeTeamFile('my-team', { session_id: 'sess-1', room_id: 'room-abc' })
+
+    // Create review succeeds
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ id: 'pr-seq', message_id: 'msg-seq' }), {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    )
+
+    // All subsequent calls (polls + cleanup) return 200 with pending status
+    const trackedUrls: string[] = []
+    mockFetch.mockImplementation((...args: unknown[]) => {
+      const request = args[0]
+      const url = request instanceof Request ? request.url : String(request)
+      trackedUrls.push(url)
+      return Promise.resolve(
+        new Response(JSON.stringify({ status: 'pending' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+    })
+
+    await processPermissionReview(makeInput(), TEST_DIR, { pollInterval: 10, pollTimeout: 50 })
+
+    // Total: 1 create + N polls + 1 expire + 1 timeout message
+    expect(mockFetch.mock.calls.length).toBeGreaterThanOrEqual(4)
+
+    // Verify cleanup calls appear in tracked URLs
+    const expireIndex = trackedUrls.findIndex(url => url.includes('expire'))
+    const messageIndex = trackedUrls.findIndex(url => url.includes('messages'))
+    expect(expireIndex).not.toBe(-1)
+    expect(messageIndex).not.toBe(-1)
+    // Expire is called before timeout message
+    expect(expireIndex).toBeLessThan(messageIndex)
+  })
+
+  it('handles timeout message failure during cleanup — no crash', async () => {
+    const { processPermissionReview } = await import('../../src/commands/hook/permission-review/usecase')
+    writeTeamFile('my-team', { session_id: 'sess-1', room_id: 'room-abc' })
+
+    // Create review succeeds
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ id: 'pr-notify-fail', message_id: 'msg-notify-fail' }), {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    )
+
+    // Polls return pending; messages endpoint returns 500
+    mockFetch.mockImplementation((...args: unknown[]) => {
+      const request = args[0]
+      const url = request instanceof Request ? request.url : String(request)
+
+      if (url.includes('/messages')) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ error: 'Internal Server Error' }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        )
+      }
+
+      return Promise.resolve(
+        new Response(JSON.stringify({ status: 'pending' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+    })
+
+    await processPermissionReview(makeInput(), TEST_DIR, { pollInterval: 10, pollTimeout: 50 })
+
+    expect(stderrOutput).toContain('TimeoutError')
+    expect(stdoutOutput).toBe('')
+  })
+
+  it('handles expire failure during cleanup — no crash', async () => {
+    const { processPermissionReview } = await import('../../src/commands/hook/permission-review/usecase')
+    writeTeamFile('my-team', { session_id: 'sess-1', room_id: 'room-abc' })
+
+    // Create review succeeds
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ id: 'pr-expire-fail', message_id: 'msg-expire-fail' }), {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    )
+
+    // Polls return pending; expire endpoint returns 500
+    mockFetch.mockImplementation((...args: unknown[]) => {
+      const request = args[0]
+      const url = request instanceof Request ? request.url : String(request)
+
+      if (url.includes('/expire')) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ error: 'Internal Server Error' }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        )
+      }
+
+      return Promise.resolve(
+        new Response(JSON.stringify({ status: 'pending' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+    })
+
+    await processPermissionReview(makeInput(), TEST_DIR, { pollInterval: 10, pollTimeout: 50 })
+
+    expect(stderrOutput).toContain('TimeoutError')
+    expect(stdoutOutput).toBe('')
   })
 })

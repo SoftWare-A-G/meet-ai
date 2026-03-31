@@ -29,14 +29,3 @@ export type { IRoomResolver } from './services/IRoomResolver'
 // Usecases
 export { default as ProcessPermissionReview } from './usecases/ProcessPermissionReview'
 export type { ProcessPermissionReviewError } from './usecases/ProcessPermissionReview'
-
-// Usecase helpers
-export {
-  parsePermissionInput,
-  isExcludedTool,
-  EXCLUDED_TOOLS,
-  formatPermissionRequest,
-  buildAllowOutput,
-  buildDenyOutput,
-  resolveDecisionOutput,
-} from './usecases/permission-review-helpers'

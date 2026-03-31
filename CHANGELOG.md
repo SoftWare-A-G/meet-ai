@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.4.1](https://github.com/SoftWare-A-G/meet-ai/compare/2.4.0...2.4.1) (2026-03-31)
+
+### Features
+
+- extract the permission-review hook workflow into a new internal `packages/domain` package with a class-based `ProcessPermissionReview` usecase, tagged errors, Zod schemas, constructor-injected interfaces, and `better-result`-based parsing/orchestration
+
+### Bug Fixes
+
+- harden the permission-review hook contract end to end by moving the CLI hook onto typed adapters and a thin composition root, aligning worker permission-review success responses for Hono status narrowing, distinguishing real review timeouts from transport failures, and handling typed JSON error responses without `as` casts or string fallbacks
+- bundle the internal `@meet-ai/domain` workspace package into the published CLI build while keeping it out of npm runtime dependencies so the CLI release does not ship unresolved `workspace:*` references
+- align the CLI, worker, desktop, app, and domain package manifests at `2.4.1` for the release
+
+### Tests
+
+- add domain and CLI coverage for permission-review input parsing, excluded-tool handling, decision output, timeout cleanup behavior, transport-failure vs timeout classification, and cleanup failure paths while consolidating the domain usecase tests into a single `ProcessPermissionReview` suite
+
 ## [2.4.0](https://github.com/SoftWare-A-G/meet-ai/compare/2.3.2...2.4.0) (2026-03-30)
 
 ### Features
