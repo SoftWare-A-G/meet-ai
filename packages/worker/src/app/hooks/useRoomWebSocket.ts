@@ -233,9 +233,7 @@ export function useRoomWebSocket(
           if (ws.readyState === WebSocket.OPEN) {
             if (Date.now() - lastPongRef.current > 45_000) {
               // Zombie connection — force reconnect
-              if (roomId) {
-                queryClient.invalidateQueries({ queryKey: queryKeys.rooms.timeline(roomId) })
-              }
+              // catchUp() will run on ws.onopen after reconnect
               ws.close()
               return
             }
@@ -385,11 +383,9 @@ export function useRoomWebSocket(
     const onResume = () => {
       if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
         // WS is closed — reconnect immediately
+        // catchUp() will run on ws.onopen to fetch missed messages
         backoffRef.current = MIN_BACKOFF
         connect()
-        if (roomId) {
-          queryClient.invalidateQueries({ queryKey: queryKeys.rooms.timeline(roomId) })
-        }
       } else {
         // WS looks open — send ping + catchUp, but verify it's not zombie
         wsRef.current.send(JSON.stringify({ type: 'ping' }))
@@ -400,12 +396,10 @@ export function useRoomWebSocket(
         zombieCheckRef.current = setTimeout(() => {
           if (lastPongRef.current < beforePing) {
             // No pong received since our ping — zombie connection
+            // catchUp() will run on ws.onopen after reconnect
             if (wsRef.current) wsRef.current.close()
             backoffRef.current = MIN_BACKOFF
             connect()
-            if (roomId) {
-              queryClient.invalidateQueries({ queryKey: queryKeys.rooms.timeline(roomId) })
-            }
           }
         }, 3000)
       }

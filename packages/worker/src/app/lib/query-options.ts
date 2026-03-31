@@ -87,6 +87,8 @@ export function timelineInfiniteQueryOptions(roomId: string) {
     },
     getNextPageParam: () => undefined,
     staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     retry: retryUnless404,
   })
 }
