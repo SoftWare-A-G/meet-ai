@@ -3,14 +3,14 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
+import { buildClaudeStartingPrompt } from './prompts/claude-starting-prompt'
+import { buildClaudeSystemPrompt } from './prompts/claude-system-prompt'
+import { buildCodexBootstrapPrompt } from './prompts/codex-bootstrap-prompt'
+import { buildOpencodeStartingPrompt } from './prompts/opencode-starting-prompt'
+import { buildPiStartingPrompt } from './prompts/pi-starting-prompt'
+import { appendRoomUsernames } from './room-config'
 import { TmuxClient } from './tmux-client'
 import type { CodingAgentId } from '../coding-agents'
-import { appendRoomUsernames } from './room-config'
-import { buildClaudeSystemPrompt } from './prompts/claude-system-prompt'
-import { buildClaudeStartingPrompt } from './prompts/claude-starting-prompt'
-import { buildCodexBootstrapPrompt } from './prompts/codex-bootstrap-prompt'
-import { buildPiStartingPrompt } from './prompts/pi-starting-prompt'
-import { buildOpencodeStartingPrompt } from './prompts/opencode-starting-prompt'
 
 export type ProcessStatus = 'starting' | 'running' | 'exited' | 'error'
 
@@ -176,7 +176,11 @@ export class ProcessManager {
 
     if (this.opts.dryRun) return team
 
-    const fullPrompt = [`ROOM_ID: ${roomId}`, '', ...this.buildPromptLines(codingAgent, roomId)].join('\n')
+    const fullPrompt = [
+      `ROOM_ID: ${roomId}`,
+      '',
+      ...this.buildPromptLines(codingAgent, roomId),
+    ].join('\n')
     const agentBinary = this.opts.agentBinaries[codingAgent]
     if (!agentBinary) {
       team.status = 'error'
@@ -225,7 +229,10 @@ export class ProcessManager {
         : codingAgent === 'pi'
           ? this.buildPiListenCommandArgs(roomId, sessionEnv.MEET_AI_AGENT_NAME ?? 'pi')
           : codingAgent === 'opencode'
-            ? this.buildOpencodeListenCommandArgs(roomId, sessionEnv.MEET_AI_AGENT_NAME ?? 'opencode')
+            ? this.buildOpencodeListenCommandArgs(
+                roomId,
+                sessionEnv.MEET_AI_AGENT_NAME ?? 'opencode'
+              )
             : [agentBinary, ...this.buildClaudeCommandArgs(roomId, fullPrompt)]
 
     if (this.opts.debug) {
@@ -242,7 +249,8 @@ export class ProcessManager {
       this.opts.onStatusChange?.(roomId, 'running')
 
       // Persist agent handle to per-room config for message routing
-      const agentName = sessionEnv.MEET_AI_AGENT_NAME ?? (codingAgent === 'claude' ? 'team-lead' : codingAgent)
+      const agentName =
+        sessionEnv.MEET_AI_AGENT_NAME ?? (codingAgent === 'claude' ? 'team-lead' : codingAgent)
       appendRoomUsernames(roomId, [agentName])
 
       // Save to registry for orphan reconnection
