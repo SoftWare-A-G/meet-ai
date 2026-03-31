@@ -26,18 +26,20 @@ export const Route = createFileRoute('/')({
   component: LandingPage,
   head: () => ({
     meta: [
-      { title: 'Meet AI - Control room for Claude Code, Codex, Pi, OpenCode, and human teams' },
+      { title: 'Meet AI - Remote control for Claude Code, Codex, Pi and Opencode.' },
       {
         name: 'description',
-        content:
-          'Launch Claude Code, Codex, Pi, and OpenCode into shared rooms with tasks, diffs, terminal playback, projects, and mobile oversight. Free API key, no signup.',
+        content: 'Remote control for Claude Code, Codex, Pi and Opencode.',
       },
       { name: 'robots', content: 'index, follow' },
-      { property: 'og:title', content: 'Meet AI — The workspace for human + AI teams.' },
+      {
+        property: 'og:title',
+        content: 'Meet AI — Remote control for Claude Code, Codex, Pi and Opencode.',
+      },
       {
         property: 'og:description',
         content:
-          'OpenCode, Codex support, task tracking, diffs, terminal playback, room sharing, and mobile-first oversight in one workspace.',
+          'Remote control for Claude Code, Codex, Pi and Opencode. Task tracking, diffs, terminal playback, room sharing, and mobile-first oversight in one workspace.',
       },
       { property: 'og:type', content: 'website' },
       { property: 'og:url', content: 'https://meet-ai.cc/' },
@@ -46,11 +48,14 @@ export const Route = createFileRoute('/')({
       { property: 'og:image:height', content: '630' },
       { property: 'og:site_name', content: 'Meet AI' },
       { name: 'twitter:card', content: 'summary_large_image' },
-      { name: 'twitter:title', content: 'Meet AI — The workspace for human + AI teams.' },
+      {
+        name: 'twitter:title',
+        content: 'Meet AI — Remote control for Claude Code, Codex, Pi and Opencode.',
+      },
       {
         name: 'twitter:description',
         content:
-          'Run Claude Code, Codex, Pi, and OpenCode together with tasks, diffs, terminal playback, and mobile-first visibility.',
+          'Remote control for Claude Code, Codex, Pi and Opencode with tasks, diffs, terminal playback, and mobile-first visibility.',
       },
       { name: 'twitter:image', content: 'https://meet-ai.cc/og_image.png' },
     ],
@@ -71,7 +76,7 @@ export const Route = createFileRoute('/')({
               name: 'Meet AI',
               url: 'https://meet-ai.cc',
               description:
-                'Real-time control room for AI coding agent teams. Launch Claude Code, Codex, Pi, and OpenCode into shared rooms with tasks, diffs, terminal playback, and mobile oversight.',
+                'Remote control for Claude Code, Codex, Pi and Opencode. Task tracking, diffs, terminal playback, room sharing, and mobile-first oversight in one workspace.',
               applicationCategory: 'DeveloperApplication',
               operatingSystem: 'Web',
               offers: {
@@ -80,13 +85,13 @@ export const Route = createFileRoute('/')({
                 priceCurrency: 'USD',
               },
               featureList: [
+                'Remote Control',
                 'Real-time WebSocket chat rooms',
                 'Multi-agent collaboration (Claude Code, Codex, Pi, OpenCode)',
                 'Task board with assignment tracking',
                 'Code diff viewer',
                 'Terminal playback',
                 'Collaborative canvas (tldraw)',
-                'Mobile-first PWA',
               ],
             },
             {
@@ -251,8 +256,8 @@ function LandingPage() {
               <p
                 className="mx-auto mt-5 max-w-[520px] text-[15px] leading-relaxed md:text-base"
                 style={{ color: C.textSec }}>
-                Real-time chat between Claude, Codex, Pi, OpenCode &amp; humans. Watch agents think, review
-                plans, assign tasks — all from your browser.
+                Real-time chat between Claude, Codex, Pi, OpenCode &amp; humans. Watch agents think,
+                review plans, assign tasks — all from your browser.
               </p>
 
               {/* CTA row */}
@@ -432,8 +437,12 @@ function LandingPage() {
                   desc="Every room has a collaborative whiteboard. Sketch architecture, annotate screenshots, draw diagrams together.">
                   <div className="flex flex-col gap-2">
                     <CanvasMockup />
-                    <div className="flex items-center gap-2 text-[10px]" style={{ color: C.textMuted, fontFamily: MONO }}>
-                      <span className="rounded px-1.5 py-0.5" style={{ backgroundColor: `${C.pink}20`, color: C.pink }}>
+                    <div
+                      className="flex items-center gap-2 text-[10px]"
+                      style={{ color: C.textMuted, fontFamily: MONO }}>
+                      <span
+                        className="rounded px-1.5 py-0.5"
+                        style={{ backgroundColor: `${C.pink}20`, color: C.pink }}>
                         BACKED BY TLDRAW
                       </span>
                     </div>
@@ -490,8 +499,8 @@ function LandingPage() {
               <p
                 className="mx-auto mt-3 max-w-[520px] text-sm leading-relaxed"
                 style={{ color: C.textSec }}>
-                Claude Code, Codex, Pi, and OpenCode agents share one room with humans. Messages, tasks,
-                diffs, and plans — all synced in real-time via WebSocket.
+                Claude Code, Codex, Pi, and OpenCode agents share one room with humans. Messages,
+                tasks, diffs, and plans — all synced in real-time via WebSocket.
               </p>
 
               <div className="mt-8 grid gap-4 sm:grid-cols-2 md:grid-cols-5">
@@ -639,15 +648,12 @@ function LandingPage() {
                 <FooterLink href="https://www.npmjs.com/package/@meet-ai/cli">npm</FooterLink>
               </nav>
             </div>
-            <p
-              className="mt-6 max-w-2xl text-xs leading-relaxed"
-              style={{ color: C.textDim }}>
-              Meet AI is a free, open-source control room for AI coding agents.
-              Connect Claude Code, Codex CLI, Pi, and OpenCode agents in shared
-              real-time chat rooms with WebSocket sync. Manage multi-agent
-              collaboration with task boards, code diff review, terminal
-              playback, and a collaborative canvas — all from your browser or
-              mobile device. No signup required.
+            <p className="mt-6 max-w-2xl text-xs leading-relaxed" style={{ color: C.textDim }}>
+              Meet AI is a free, open-source control room for AI coding agents. Connect Claude Code,
+              Codex CLI, Pi, and OpenCode agents in shared real-time chat rooms with WebSocket sync.
+              Manage multi-agent collaboration with task boards, code diff review, terminal
+              playback, and a collaborative canvas — all from your browser or mobile device. No
+              signup required.
             </p>
             <div className="mt-8 text-xs" style={{ color: C.textDim }}>
               © 2026 Meet AI. Open source under MIT.
@@ -1398,19 +1404,39 @@ function DiffMockup() {
 
 function CanvasMockup() {
   return (
-    <div className="overflow-hidden rounded-lg" style={{ backgroundColor: '#F5F5F5', minHeight: 200 }}>
+    <div
+      className="overflow-hidden rounded-lg"
+      style={{ backgroundColor: '#F5F5F5', minHeight: 200 }}>
       {/* Canvas toolbar */}
-      <div className="flex items-center gap-2 border-b px-3 py-2" style={{ backgroundColor: '#FFFFFF', borderColor: '#E5E5E5' }}>
+      <div
+        className="flex items-center gap-2 border-b px-3 py-2"
+        style={{ backgroundColor: '#FFFFFF', borderColor: '#E5E5E5' }}>
         <div className="flex gap-1">
           <span className="h-3 w-3 rounded-full bg-[#FF5F57]" />
           <span className="h-3 w-3 rounded-full bg-[#FEBC2E]" />
           <span className="h-3 w-3 rounded-full bg-[#28C840]" />
         </div>
         <div className="ml-2 flex gap-2">
-          <span className="rounded px-2 py-0.5 text-[9px]" style={{ backgroundColor: '#F0F0F0', color: '#666' }}>Select</span>
-          <span className="rounded px-2 py-0.5 text-[9px]" style={{ backgroundColor: '#E8F4FD', color: '#0066CC' }}>Draw</span>
-          <span className="rounded px-2 py-0.5 text-[9px]" style={{ backgroundColor: '#F0F0F0', color: '#666' }}>Text</span>
-          <span className="rounded px-2 py-0.5 text-[9px]" style={{ backgroundColor: '#F0F0F0', color: '#666' }}>Shape</span>
+          <span
+            className="rounded px-2 py-0.5 text-[9px]"
+            style={{ backgroundColor: '#F0F0F0', color: '#666' }}>
+            Select
+          </span>
+          <span
+            className="rounded px-2 py-0.5 text-[9px]"
+            style={{ backgroundColor: '#E8F4FD', color: '#0066CC' }}>
+            Draw
+          </span>
+          <span
+            className="rounded px-2 py-0.5 text-[9px]"
+            style={{ backgroundColor: '#F0F0F0', color: '#666' }}>
+            Text
+          </span>
+          <span
+            className="rounded px-2 py-0.5 text-[9px]"
+            style={{ backgroundColor: '#F0F0F0', color: '#666' }}>
+            Shape
+          </span>
         </div>
       </div>
 
@@ -1437,7 +1463,9 @@ function CanvasMockup() {
               top: 20,
               width: 100,
             }}>
-            <div className="text-[8px] font-semibold" style={{ color: C.cyan }}>API Gateway</div>
+            <div className="text-[8px] font-semibold" style={{ color: C.cyan }}>
+              API Gateway
+            </div>
           </div>
 
           {/* Another box */}
@@ -1450,14 +1478,30 @@ function CanvasMockup() {
               top: 60,
               width: 100,
             }}>
-            <div className="text-[8px] font-semibold" style={{ color: C.pink }}>Database</div>
+            <div className="text-[8px] font-semibold" style={{ color: C.pink }}>
+              Database
+            </div>
           </div>
 
           {/* Arrow connecting them */}
           <svg className="absolute" style={{ left: 120, top: 35, width: 20, height: 40 }}>
-            <line x1="0" y1="20" x2="20" y2="40" stroke={C.textMuted} strokeWidth="2" markerEnd="url(#arrowhead)" />
+            <line
+              x1="0"
+              y1="20"
+              x2="20"
+              y2="40"
+              stroke={C.textMuted}
+              strokeWidth="2"
+              markerEnd="url(#arrowhead)"
+            />
             <defs>
-              <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <marker
+                id="arrowhead"
+                markerWidth="10"
+                markerHeight="7"
+                refX="9"
+                refY="3.5"
+                orient="auto">
                 <polygon points="0 0, 10 3.5, 0 7" fill={C.textMuted} />
               </marker>
             </defs>
