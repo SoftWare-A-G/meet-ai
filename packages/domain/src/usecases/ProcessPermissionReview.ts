@@ -73,7 +73,11 @@ export default class ProcessPermissionReview {
       // Only run cleanup on actual timeout — not on 404s or other poll failures
       if (decisionResult.error._tag === 'TimeoutError') {
         void await this.reviewRepository.expirePermissionReview(roomId, review.id)
-        void await this.hookTransport.sendTimeoutMessage(roomId)
+        void await this.hookTransport.sendTimeoutMessage(
+          roomId,
+          '_Permission request timed out — approve in terminal instead._',
+          '#f97316',
+        )
       }
       return decisionResult
     }

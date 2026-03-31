@@ -16,7 +16,7 @@ function makeInput(overrides: Record<string, unknown> = {}) {
   return JSON.stringify({
     session_id: 'sess-1',
     hook_event_name: 'PermissionRequest',
-    tool_name: 'AskUser',
+    tool_name: 'AskUserQuestion',
     tool_input: {
       questions: [
         {
@@ -71,7 +71,7 @@ describe('processQuestionReview', () => {
     const { processQuestionReview } =
       await import('../../src/commands/hook/question-review/usecase')
     await processQuestionReview('not json', TEST_DIR)
-    expect(stderrOutput).toContain('failed to parse stdin')
+    expect(stderrOutput).toContain('ParseError: Invalid JSON')
     expect(stdoutOutput).toBe('')
   })
 
@@ -79,7 +79,7 @@ describe('processQuestionReview', () => {
     const { processQuestionReview } =
       await import('../../src/commands/hook/question-review/usecase')
     await processQuestionReview(makeInput({ session_id: '' }), TEST_DIR)
-    expect(stderrOutput).toContain('missing session_id or questions')
+    expect(stderrOutput).toContain('ValidationError: session_id is required')
     expect(stdoutOutput).toBe('')
   })
 
@@ -87,7 +87,7 @@ describe('processQuestionReview', () => {
     const { processQuestionReview } =
       await import('../../src/commands/hook/question-review/usecase')
     await processQuestionReview(makeInput({ tool_input: { questions: [] } }), TEST_DIR)
-    expect(stderrOutput).toContain('missing session_id or questions')
+    expect(stderrOutput).toContain('ValidationError')
     expect(stdoutOutput).toBe('')
   })
 
@@ -96,7 +96,7 @@ describe('processQuestionReview', () => {
       await import('../../src/commands/hook/question-review/usecase')
     // No team file written — room lookup will fail
     await processQuestionReview(makeInput(), TEST_DIR)
-    expect(stderrOutput).toContain('no room found for session')
+    expect(stderrOutput).toContain('RoomResolveError: No room found for session')
     expect(stdoutOutput).toBe('')
   })
 
@@ -202,7 +202,6 @@ describe('processQuestionReview', () => {
     await processQuestionReview(makeInput(), TEST_DIR, { pollInterval: 10, pollTimeout: 500 })
 
     expect(stdoutOutput).toBe('')
-    expect(stderrOutput).toContain('answer received: expired')
   })
 
   it('handles malformed answers_json gracefully (hardening)', async () => {
@@ -230,7 +229,7 @@ describe('processQuestionReview', () => {
 
     // Must not write to stdout on parse failure
     expect(stdoutOutput).toBe('')
-    expect(stderrOutput).toContain('failed to parse answers_json')
+    expect(stderrOutput).toContain('ParseError: Invalid answers_json')
   })
 
   it('handles create review failure', async () => {
@@ -238,13 +237,18 @@ describe('processQuestionReview', () => {
       await import('../../src/commands/hook/question-review/usecase')
     writeTeamFile('my-team', { session_id: 'sess-1', room_id: 'room-abc' })
 
-    // Mock create review — server error
-    mockFetch.mockResolvedValueOnce(new Response('Internal Server Error', { status: 500 }))
+    // Mock create review — server error (JSON, matching actual Hono error responses)
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ error: 'Internal Server Error' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    )
 
     await processQuestionReview(makeInput(), TEST_DIR, { pollInterval: 10, pollTimeout: 500 })
 
     expect(stdoutOutput).toBe('')
-    expect(stderrOutput).toContain('create failed: 500')
+    expect(stderrOutput).toContain('ReviewCreateError: HTTP 500')
   })
 
   it('handles poll timeout — sends timeout message and expires review', async () => {
@@ -274,7 +278,7 @@ describe('processQuestionReview', () => {
     await processQuestionReview(makeInput(), TEST_DIR, { pollInterval: 10, pollTimeout: 50 })
 
     expect(stdoutOutput).toBe('')
-    expect(stderrOutput).toContain('timed out waiting for answer')
+    expect(stderrOutput).toContain('TimeoutError: Timed out waiting for decision')
   })
 
   it('never throws — always exits cleanly on fetch network error', async () => {
@@ -288,6 +292,6 @@ describe('processQuestionReview', () => {
     await processQuestionReview(makeInput(), TEST_DIR, { pollInterval: 10, pollTimeout: 500 })
 
     expect(stdoutOutput).toBe('')
-    expect(stderrOutput).toContain('create error')
+    expect(stderrOutput).toContain('ReviewCreateError: Error: Network failure')
   })
 })

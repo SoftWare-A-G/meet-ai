@@ -266,60 +266,212 @@ Required terms (prefixed `+`) must all match.
 
 ### All Paths for Sending Messages INTO a Running CC Session
 
-| Mechanism | Location | Cross-Machine | Real-time | Auto-submit | Requires |
-|-----------|----------|---|---|---|---|
-| **tmux send-keys** | Pane target | No | Instant | Yes | tmux + pane ID |
-| **Mailbox (JSON file)** | ~/.claude/teams/ | No | ~1s delay | Yes (polled) | Team context |
-| **Bridge WebSocket** | Remote Control | **Yes** | Instant | Yes | OAuth + /remote-control |
-| **Peer Bridge** | SendMessage tool | **Yes** | Instant | Yes | Bridge connection |
-| **UDS Socket** | Local socket | No | Instant | Yes | Socket path |
-| **Structured stdin** | SDK mode | No | Instant | Async | -p flag |
+| Mechanism | Cross-Machine | Real-time | Self-Hostable | Security |
+|-----------|---|---|---|---|
+| **DirectConnect WebSocket** | Yes | Instant | **Yes** | Bearer token |
+| **Mailbox (JSON file)** | No | ~1s delay | Yes | Filesystem perms |
+| **UDS Socket** | No | Instant | Internal only | Filesystem perms |
+| **Bridge WebSocket** | Yes | Instant | No (Anthropic infra) | OAuth |
+| **tmux send-keys** | No | Instant | N/A | **INSECURE from remote** |
+| **stdin (SDK mode)** | No | Instant | Yes (parent process) | Process boundary |
 
-### tmux send-keys (Direct Terminal Injection)
+### DirectConnect WebSocket (RECOMMENDED for meet-ai)
 
-```typescript
-// From TmuxBackend.ts
-async sendCommandToPane(paneId, command, useExternalSession = false) {
-  await runTmux(['send-keys', '-t', paneId, command, 'Enter'])
-}
+CC's official protocol for external servers to control CC sessions. CC acts as a **client**
+connecting to **your** WebSocket server. This is the best path for meet-ai.
+
+**Launch CC in DirectConnect mode:**
+```bash
+claude -p --sdk-url wss://your-do.workers.dev/ws --input-format stream-json --output-format stream-json
 ```
 
-Works for injecting text directly into a CC tmux pane. Fragile — requires knowing the pane ID and CC being in tmux.
+**Session lifecycle:**
 
-### Mailbox System (Standard Inter-Agent Path)
+1. CC POSTs to your server to create a session:
+```
+POST /sessions
+Authorization: Bearer <token>
+Content-Type: application/json
 
-Write JSON to `~/.claude/teams/{team}/inboxes/{agent}.json`.
-Polled every 1000ms. Messages submitted as user turns.
-File-locking prevents race conditions.
+{"cwd": "/path/to/project"}
+```
 
-### Bridge/Remote Control (Cross-Machine WebSocket)
+Server responds:
+```json
+{"session_id": "abc123", "ws_url": "wss://your-do.workers.dev/ws/abc123"}
+```
 
-CC's `/remote-control` command starts a WebSocket bridge to Anthropic's servers.
-Web UI at claude.ai can send `type: 'user'` messages that are submitted as REPL turns.
-This is how the web UI sends prompts to local CLI sessions.
+2. CC connects to `ws_url` with bearer token in headers.
 
-### UDS (Unix Domain Socket)
+3. All messages are **NDJSON** (one JSON per line, separated by `\n`).
 
+**Client -> Server (CC sends to meet-ai DO):**
+
+User message:
+```json
+{"type": "user", "message": {"role": "user", "content": "hello"}, "session_id": "abc123", "uuid": "msg-uuid"}
+```
+
+Permission response (allow):
+```json
+{"type": "control_response", "response": {"subtype": "success", "request_id": "req-uuid", "response": {"behavior": "allow"}}}
+```
+
+Permission response (deny):
+```json
+{"type": "control_response", "response": {"subtype": "success", "request_id": "req-uuid", "response": {"behavior": "deny", "message": "User denied"}}}
+```
+
+**Server -> Client (meet-ai DO sends to CC):**
+
+Assistant response:
+```json
+{"type": "assistant", "message": {"role": "assistant", "content": [...]}, "session_id": "abc123", "uuid": "resp-uuid"}
+```
+
+Permission request (tool approval):
+```json
+{"type": "control_request", "request_id": "req-uuid", "request": {"subtype": "can_use_tool", "tool_name": "Bash", "input": {"command": "npm install"}, "description": "Install deps"}}
+```
+
+Turn complete:
+```json
+{"type": "result", "subtype": "success", "duration_ms": 1234, "total_cost_usd": 0.05, "num_turns": 3}
+```
+
+Keep-alive (every 5 min):
+```json
+{"type": "keep_alive"}
+```
+
+Interrupt/cancel:
+```json
+{"type": "control_request", "request_id": "uuid", "request": {"subtype": "interrupt"}}
+```
+
+**Permission flow — the killer feature for meet-ai:**
+```
+CC wants to run Bash("npm install")
+  -> CC sends control_request to DO
+  -> DO broadcasts to web UI
+  -> User clicks Approve in browser
+  -> DO sends control_response back to CC
+  -> CC executes the tool
+```
+
+**Reconnection (built into CC client):**
+- Exponential backoff: 1s -> 2s -> 4s -> ... -> 30s max, +/-25% jitter
+- 10-minute time budget before giving up
+- UUID-based message replay on reconnect
+- Sleep detection: if gap > 60s, reset budget
+
+**WebSocket close codes:**
+
+| Code | Meaning | Retry? |
+|------|---------|--------|
+| 1000/1001 | Clean close | No |
+| 1002 | Protocol error | No |
+| 4001 | Session expired | No |
+| 4003 | Unauthorized | Yes (refresh token) |
+
+**Key detail:** `--sdk-url` runs CC in print mode (headless, no terminal REPL). The web UI
+IS the UI. This is perfect for meet-ai — agents don't need a local terminal when driven
+from the chat room.
+
+**Source files:**
+- `server/createDirectConnectSession.ts` — HTTP session creation
+- `server/directConnectManager.ts` — WebSocket manager + message handling
+- `entrypoints/sdk/coreSchemas.ts` — all message type schemas (Zod)
+- `entrypoints/sdk/controlSchemas.ts` — control request/response schemas
+- `cli/transports/WebSocketTransport.ts` — client-side WS with retry
+
+### UDS (Unix Domain Socket) — Internal Only
+
+Feature-gated behind `UDS_INBOX` (ant-only, dead-code eliminated in public builds).
+Implementation files (`udsMessaging.ts`, `udsClient.ts`) stripped from source.
+
+**What we know from call sites:**
+
+Server startup:
+```
+setup.ts -> startUdsMessaging(socketPath, {isExplicit})
+-> listens on auto-generated path or --messaging-socket-path
+-> exports CLAUDE_CODE_MESSAGING_SOCKET env var
+```
+
+Client send (plain text only):
 ```typescript
 // SendMessageTool.ts
-if (addr.scheme === 'uds') {
-  await sendToUdsSocket(addr.target, input.message)
-}
+await sendToUdsSocket(socketPath, message)
 ```
 
-Local peer-to-peer messaging via Unix sockets. Low latency, same machine only.
+Socket path discovery:
+- `CLAUDE_CODE_MESSAGING_SOCKET` env var
+- PID files at `~/.claude/sessions/<pid>.json` with `messagingSocketPath`
+- SDK init message includes `messaging_socket_path`
 
-### Key Insight: No Public Local HTTP API
+In headless mode, incoming UDS messages trigger the query loop immediately (no polling):
+```typescript
+setOnEnqueue(() => { void run() })
+```
 
-CC does NOT expose a local HTTP server for message injection.
-The bridge requires Anthropic OAuth. There's no `localhost:PORT/api/message` endpoint.
+**Verdict:** Dead end for meet-ai. Internal-only, implementation stripped. DirectConnect
+is the supported external integration path.
+
+### Mailbox System (Current meet-ai Approach)
+
+Write JSON to `~/.claude/teams/{team}/inboxes/{agent}.json`.
+Polled every 1000ms by `useInboxPoller`. Messages submitted as user turns.
+File-locking for concurrent writes. Works but has 1s latency.
+
+### tmux send-keys — INSECURE FROM REMOTE
+
+```typescript
+await runTmux(['send-keys', '-t', paneId, command, 'Enter'])
+```
+
+Allows arbitrary text injection into terminal. Equivalent to remote code execution
+when triggered from a web UI. **Never use this from remote sources.**
 
 ### Recommendation for meet-ai
 
-For sending messages from web UI into CC sessions:
-1. **Mailbox** (simplest) — meet-ai CLI writes to inbox file, CC polls it
-2. **tmux send-keys** (direct) — meet-ai CLI runs `tmux send-keys` to inject text
-3. **Bridge** (cross-machine) — requires Anthropic OAuth, not self-hostable
+**DirectConnect is the answer.** Meet-ai's Durable Object becomes the DirectConnect server.
+CC sessions connect to it via `--sdk-url`. The DO bridges web UI users and CC sessions
+over the same WebSocket room. Permission requests flow through the web UI natively.
+
+```
+Browser (web UI)              meet-ai DO                 CC session (headless)
+     |                            |                            |
+     |                            |  POST /sessions            |
+     |                            |<---------------------------|
+     |                            |  {session_id, ws_url}      |
+     |                            |--------------------------->|
+     |                            |                            |
+     |                            |  WebSocket connect         |
+     |                            |<---------------------------|
+     |                            |                            |
+     | "Fix the bug"              |                            |
+     |---(browser WS)----------->|                            |
+     |                            |  {"type":"user",...}       |
+     |                            |---(CC WS)---------------->|
+     |                            |                            |
+     |                            |  {"type":"control_request" |
+     |                            |   "tool_name":"Bash"...}   |
+     |                            |<--(CC WS)-----------------|
+     | [Permission card in UI]    |                            |
+     |<--(browser WS)-----------|                            |
+     |                            |                            |
+     | [User clicks Approve]      |                            |
+     |---(browser WS)----------->|                            |
+     |                            |  {"type":"control_response"|
+     |                            |   "behavior":"allow"}      |
+     |                            |---(CC WS)---------------->|
+     |                            |                            |
+     |                            |  {"type":"assistant",...}   |
+     |                            |<--(CC WS)-----------------|
+     | [Shows response in chat]   |                            |
+     |<--(browser WS)-----------|                            |
+```
 
 ---
 
@@ -327,14 +479,16 @@ For sending messages from web UI into CC sessions:
 
 | Priority | Improvement | Effort | Source Area |
 |----------|-------------|--------|-------------|
+| **P0** | **DirectConnect server in DO** — CC sessions connect via `--sdk-url`, web UI becomes the control surface | Large | DirectConnect |
 | **P0** | WebSocket message dedup + seq numbers | Small | Bridge |
-| **P0** | HTTP hook type (no CLI dependency) | Small | Hooks |
+| **P1** | Permission bridge — route CC `control_request` to web UI, send `control_response` back | Medium | DirectConnect |
+| **P1** | HTTP hook type (no CLI dependency) | Small | Hooks |
 | **P1** | Unified PermissionRequest schema | Medium | Swarm |
-| **P1** | Agent activity state machine in DO | Medium | Tasks |
-| **P1** | SubagentStart/Stop hook events | Small | Hooks |
+| **P2** | Agent activity state machine in DO | Medium | Tasks |
+| **P2** | SubagentStart/Stop hook events | Small | Hooks |
 | **P2** | Slash command search scoring | Medium | ToolSearch |
 | **P2** | DO message capping for long rooms | Small | Swarm |
-| **P2** | Delta-based output streaming | Medium | Tasks |
+| **P3** | Delta-based output streaming | Medium | Tasks |
 | **P3** | Async hook registry pattern | Large | Hooks |
 | **P3** | Semantic search for chat history | Large | Memory |
 

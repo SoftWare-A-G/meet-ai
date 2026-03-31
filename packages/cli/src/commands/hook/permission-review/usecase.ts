@@ -2,8 +2,8 @@ import { ProcessPermissionReview } from '@meet-ai/domain'
 import { createHookClient } from '@meet-ai/cli/lib/hooks/client'
 import { getHomeCredentials } from '@meet-ai/cli/lib/meetai-home'
 import { HookReviewRepository } from './review-repository'
-import { HookTransportAdapter } from './hook-transport'
-import { SessionRoomResolver } from './room-resolver'
+import { HookTransportAdapter } from '../adapters/hook-transport'
+import { SessionRoomResolver } from '../adapters/room-resolver'
 
 function log(msg: string) {
   process.stderr.write(`[permission-review] ${msg}\n`)

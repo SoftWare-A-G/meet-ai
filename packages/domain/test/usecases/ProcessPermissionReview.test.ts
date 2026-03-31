@@ -294,7 +294,11 @@ describe('ProcessPermissionReview', () => {
 
       expect(result.isErr()).toBe(true)
       expect(repo.expirePermissionReview).toHaveBeenCalledWith('room-1', 'rev-1')
-      expect(transport.sendTimeoutMessage).toHaveBeenCalledWith('room-1')
+      expect(transport.sendTimeoutMessage).toHaveBeenCalledWith(
+        'room-1',
+        '_Permission request timed out — approve in terminal instead._',
+        '#f97316',
+      )
     })
 
     it('returns TimeoutError even when sendTimeoutMessage fails', async () => {
@@ -342,7 +346,11 @@ describe('ProcessPermissionReview', () => {
       if (result.isErr()) {
         expect(result.error._tag).toBe('TimeoutError')
       }
-      expect(transport.sendTimeoutMessage).toHaveBeenCalledWith('room-1')
+      expect(transport.sendTimeoutMessage).toHaveBeenCalledWith(
+        'room-1',
+        '_Permission request timed out — approve in terminal instead._',
+        '#f97316',
+      )
     })
   })
 

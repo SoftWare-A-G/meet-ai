@@ -6,15 +6,15 @@ import type { HookClient } from '@meet-ai/cli/lib/hooks/client'
 export class HookTransportAdapter implements IHookTransport {
   constructor(private readonly client: HookClient) {}
 
-  async sendTimeoutMessage(roomId: string): Promise<Result<void, NotifyError>> {
+  async sendTimeoutMessage(roomId: string, content: string, color: string): Promise<Result<void, NotifyError>> {
     try {
       const res = await this.client.api.rooms[':id'].messages.$post({
         param: { id: roomId },
         json: {
           sender: 'hook',
-          content: '_Permission request timed out — approve in terminal instead._',
+          content,
           sender_type: 'agent',
-          color: '#f97316',
+          color,
         },
       })
       if (!res.ok) {

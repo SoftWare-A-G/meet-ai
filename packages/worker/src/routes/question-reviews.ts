@@ -85,7 +85,7 @@ export const questionReviewsRoute = new Hono<AppEnv>()
       answers_json: review.answers_json,
       answered_by: review.answered_by,
       answered_at: review.answered_at,
-    })
+    }, 200)
   })
 
   // POST /api/rooms/:id/question-reviews/:reviewId/answer — submit answer
@@ -130,7 +130,7 @@ export const questionReviewsRoute = new Hono<AppEnv>()
       })
     )
 
-    return c.json({ ok: true })
+    return c.json({ ok: true }, 200)
   })
 
   // POST /api/rooms/:id/question-reviews/:reviewId/expire — hook timeout
@@ -164,5 +164,5 @@ export const questionReviewsRoute = new Hono<AppEnv>()
       })
     )
 
-    return c.json({ ok: true })
+    return c.json({ ok: true }, 200)
   })
