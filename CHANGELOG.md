@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.4.5](https://github.com/SoftWare-A-G/meet-ai/compare/2.4.4...2.4.5) (2026-04-01)
+
+### Features
+
+- migrate the CLI room and attachment metadata flow onto the shared `@meet-ai/domain` entities, including repository-boundary snake_case-to-camelCase mapping for room and attachment responses
+- replace the CLI domain transport abstraction with a typed Hono client and `better-result`-based repository/usecase pipeline while keeping the public `MeetAiClient` command facade unchanged
+
+### Bug Fixes
+
+- centralize CLI transport error parsing, retry policy, and wire-to-domain mappers so repository adapters and the websocket catch-up path share one consistent API error and mapping contract
+- infer CLI wire response types from the worker route surface and move room, message, and attachment mappers into dedicated domain mapper modules instead of duplicating DTOs across repositories and adapters
+- align the CLI, worker, desktop, app, and domain package manifests at `2.4.5` for the release
+
+### Tests
+
+- expand CLI and domain coverage for room and attachment mapping, typed API-client repository behavior, connection-adapter REST catch-up, bootstrap Result unwrapping, and the transport migration retry/error-handling seams
+
 ## [2.4.4](https://github.com/SoftWare-A-G/meet-ai/compare/2.4.3...2.4.4) (2026-04-01)
 
 ### Bug Fixes

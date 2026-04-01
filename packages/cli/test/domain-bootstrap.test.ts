@@ -26,7 +26,11 @@ describe('getContainer', () => {
 
     const expectedKeys = [
       'sendMessage',
+      'listRooms',
       'createRoom',
+      'findProject',
+      'upsertProject',
+      'updateRoom',
       'deleteRoom',
       'sendLog',
       'sendTeamInfo',

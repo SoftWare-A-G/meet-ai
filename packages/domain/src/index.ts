@@ -28,6 +28,7 @@ export type { TeamMemberStatus, TeamMember, TeamInfo } from './entities/team'
 
 // Entities — errors
 export {
+  ApiError,
   ParseError,
   ValidationError,
   TimeoutError,

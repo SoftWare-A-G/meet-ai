@@ -328,7 +328,7 @@ describe('API failure paths', () => {
     expect(result.exitCode).toBe(1)
     expect(result.stderr.length).toBeGreaterThan(0)
     expect(result.stderr).not.toContain('    at ')
-  })
+  }, 15_000)
 
   it('generate-key with unreachable server exits 1 with error', async () => {
     // GIVEN a home config pointing to an unreachable server

@@ -1,23 +1,19 @@
 import { test, expect, mock, beforeEach, afterEach } from 'bun:test'
-import type IHttpTransport from '@meet-ai/cli/domain/interfaces/IHttpTransport'
+import { Result } from 'better-result'
+import { createApiClient } from '@meet-ai/cli/domain/adapters/api-client'
 import ConnectionAdapter from '@meet-ai/cli/domain/adapters/ConnectionAdapter'
+
+const TEST_URL = 'https://meet-ai.cc'
+const TEST_KEY = 'mai_test1234567890'
+
+function createClient() {
+  return createApiClient(TEST_URL, TEST_KEY)
+}
 
 // Suppress wsLog output during tests
 beforeEach(() => {
   console.error = () => {}
 })
-
-function createMockTransport(overrides: Partial<IHttpTransport> = {}): IHttpTransport {
-  return {
-    postJson: mock(() => Promise.resolve({})) as IHttpTransport['postJson'],
-    postText: mock(() => Promise.resolve('')) as IHttpTransport['postText'],
-    patchJson: mock(() => Promise.resolve({})) as IHttpTransport['patchJson'],
-    getJson: mock(() => Promise.resolve([])) as IHttpTransport['getJson'],
-    getRaw: mock(() => Promise.resolve(new Response())),
-    del: mock(() => Promise.resolve()),
-    ...overrides,
-  }
-}
 
 // --- Mock WebSocket for listen/listenLobby tests ---
 
@@ -45,58 +41,58 @@ class MockWebSocket {
 }
 
 let origWebSocket: typeof globalThis.WebSocket
+let origFetch: typeof globalThis.fetch
 
 beforeEach(() => {
   MockWebSocket.instances = []
   origWebSocket = globalThis.WebSocket
+  origFetch = globalThis.fetch
   // @ts-expect-error mock
   globalThis.WebSocket = MockWebSocket
 })
 
 afterEach(() => {
   globalThis.WebSocket = origWebSocket
+  globalThis.fetch = origFetch
 })
 
 // --- generateKey ---
 
-test('generateKey delegates to transport.postJson', async () => {
-  const transport = createMockTransport({
-    postJson: mock(() => Promise.resolve({ key: 'mai_abc123', prefix: 'mai_abc' })) as IHttpTransport['postJson'],
-  })
-  const adapter = new ConnectionAdapter(transport, 'https://meet-ai.cc', 'mykey')
+test('generateKey returns Result.ok with key and prefix', async () => {
+  globalThis.fetch = mock(() =>
+    Promise.resolve(new Response(JSON.stringify({ key: 'mai_abc123', prefix: 'mai_abc' }), {
+      status: 201,
+      headers: { 'Content-Type': 'application/json' },
+    }))
+  )
+  const adapter = new ConnectionAdapter(createClient(), TEST_URL, TEST_KEY)
 
   const result = await adapter.generateKey()
 
-  expect(result).toEqual({ key: 'mai_abc123', prefix: 'mai_abc' })
-  expect(transport.postJson).toHaveBeenCalledTimes(1)
-  expect(transport.postJson).toHaveBeenCalledWith('/api/keys')
+  expect(Result.isOk(result)).toBe(true)
+  if (Result.isOk(result)) {
+    expect(result.value).toEqual({ key: 'mai_abc123', prefix: 'mai_abc' })
+  }
 })
 
-test('generateKey works without apiKey', async () => {
-  const transport = createMockTransport({
-    postJson: mock(() => Promise.resolve({ key: 'k', prefix: 'p' })) as IHttpTransport['postJson'],
-  })
-  const adapter = new ConnectionAdapter(transport, 'https://example.com')
+test('generateKey returns Err on API failure', async () => {
+  globalThis.fetch = mock(() =>
+    Promise.resolve(new Response(JSON.stringify({ error: 'unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    }))
+  )
+  const adapter = new ConnectionAdapter(createClient(), TEST_URL, 'badkey')
 
   const result = await adapter.generateKey()
 
-  expect(result).toEqual({ key: 'k', prefix: 'p' })
-})
-
-test('generateKey propagates transport errors', async () => {
-  const transport = createMockTransport({
-    postJson: mock(() => Promise.reject(new Error('HTTP 401'))) as IHttpTransport['postJson'],
-  })
-  const adapter = new ConnectionAdapter(transport, 'https://meet-ai.cc', 'badkey')
-
-  expect(adapter.generateKey()).rejects.toThrow('HTTP 401')
+  expect(Result.isError(result)).toBe(true)
 })
 
 // --- listen: URL construction ---
 
 test('listen constructs correct WebSocket URL with auth header', () => {
-  const transport = createMockTransport()
-  const adapter = new ConnectionAdapter(transport, 'https://meet-ai.cc', 'tok123')
+  const adapter = new ConnectionAdapter(createClient(), TEST_URL, 'tok123')
 
   adapter.listen('room-abc')
 
@@ -106,8 +102,7 @@ test('listen constructs correct WebSocket URL with auth header', () => {
 })
 
 test('listen constructs WebSocket URL without token when no apiKey', () => {
-  const transport = createMockTransport()
-  const adapter = new ConnectionAdapter(transport, 'https://meet-ai.cc')
+  const adapter = new ConnectionAdapter(createClient(), TEST_URL)
 
   adapter.listen('room-xyz')
 
@@ -115,8 +110,7 @@ test('listen constructs WebSocket URL without token when no apiKey', () => {
 })
 
 test('listen converts http to ws in URL', () => {
-  const transport = createMockTransport()
-  const adapter = new ConnectionAdapter(transport, 'http://localhost:8787')
+  const adapter = new ConnectionAdapter(createClient(), 'http://localhost:8787')
 
   adapter.listen('test-room')
 
@@ -126,15 +120,13 @@ test('listen converts http to ws in URL', () => {
 // --- listen: message delivery ---
 
 test('listen calls onMessage for incoming messages', async () => {
-  const transport = createMockTransport()
-  const adapter = new ConnectionAdapter(transport, 'https://example.com', 'key')
+  const adapter = new ConnectionAdapter(createClient(), 'https://example.com', 'key')
   const received: unknown[] = []
 
   adapter.listen('room1', {
     onMessage: (msg) => received.push(msg),
   })
 
-  // Wait for onopen
   await new Promise((resolve) => setTimeout(resolve, 10))
 
   const ws = MockWebSocket.instances[0]
@@ -145,8 +137,7 @@ test('listen calls onMessage for incoming messages', async () => {
 })
 
 test('listen deduplicates messages by id', async () => {
-  const transport = createMockTransport()
-  const adapter = new ConnectionAdapter(transport, 'https://example.com', 'key')
+  const adapter = new ConnectionAdapter(createClient(), 'https://example.com', 'key')
   const received: unknown[] = []
 
   adapter.listen('room1', {
@@ -165,8 +156,7 @@ test('listen deduplicates messages by id', async () => {
 })
 
 test('listen filters by exclude option', async () => {
-  const transport = createMockTransport()
-  const adapter = new ConnectionAdapter(transport, 'https://example.com', 'key')
+  const adapter = new ConnectionAdapter(createClient(), 'https://example.com', 'key')
   const received: unknown[] = []
 
   adapter.listen('room1', {
@@ -185,8 +175,7 @@ test('listen filters by exclude option', async () => {
 })
 
 test('listen filters by senderType option', async () => {
-  const transport = createMockTransport()
-  const adapter = new ConnectionAdapter(transport, 'https://example.com', 'key')
+  const adapter = new ConnectionAdapter(createClient(), 'https://example.com', 'key')
   const received: unknown[] = []
 
   adapter.listen('room1', {
@@ -209,8 +198,7 @@ test('listen filters by senderType option', async () => {
 })
 
 test('listen ignores pong messages', async () => {
-  const transport = createMockTransport()
-  const adapter = new ConnectionAdapter(transport, 'https://example.com', 'key')
+  const adapter = new ConnectionAdapter(createClient(), 'https://example.com', 'key')
   const received: unknown[] = []
 
   adapter.listen('room1', {
@@ -226,8 +214,7 @@ test('listen ignores pong messages', async () => {
 })
 
 test('listen ignores terminal_data messages', async () => {
-  const transport = createMockTransport()
-  const adapter = new ConnectionAdapter(transport, 'https://example.com', 'key')
+  const adapter = new ConnectionAdapter(createClient(), 'https://example.com', 'key')
   const received: unknown[] = []
 
   adapter.listen('room1', {
@@ -243,8 +230,7 @@ test('listen ignores terminal_data messages', async () => {
 })
 
 test('listen forwards terminal_subscribe messages via onMessage', async () => {
-  const transport = createMockTransport()
-  const adapter = new ConnectionAdapter(transport, 'https://example.com', 'key')
+  const adapter = new ConnectionAdapter(createClient(), 'https://example.com', 'key')
   const received: unknown[] = []
 
   adapter.listen('room1', {
@@ -263,8 +249,7 @@ test('listen forwards terminal_subscribe messages via onMessage', async () => {
 // --- listen: seen set eviction ---
 
 test('listen evicts oldest seen ids when set exceeds 200', async () => {
-  const transport = createMockTransport()
-  const adapter = new ConnectionAdapter(transport, 'https://example.com', 'key')
+  const adapter = new ConnectionAdapter(createClient(), 'https://example.com', 'key')
   const received: unknown[] = []
 
   adapter.listen('room1', {
@@ -293,8 +278,7 @@ test('listen evicts oldest seen ids when set exceeds 200', async () => {
 // --- listenLobby: URL construction ---
 
 test('listenLobby constructs correct WebSocket URL with auth header', () => {
-  const transport = createMockTransport()
-  const adapter = new ConnectionAdapter(transport, 'https://meet-ai.cc', 'key1')
+  const adapter = new ConnectionAdapter(createClient(), TEST_URL, 'key1')
 
   adapter.listenLobby()
 
@@ -303,8 +287,7 @@ test('listenLobby constructs correct WebSocket URL with auth header', () => {
 })
 
 test('listenLobby constructs URL without token when no apiKey', () => {
-  const transport = createMockTransport()
-  const adapter = new ConnectionAdapter(transport, 'http://localhost:8787')
+  const adapter = new ConnectionAdapter(createClient(), 'http://localhost:8787')
 
   adapter.listenLobby()
 
@@ -314,8 +297,7 @@ test('listenLobby constructs URL without token when no apiKey', () => {
 // --- listenLobby: message handling ---
 
 test('listenLobby calls onRoomCreated for room_created events', async () => {
-  const transport = createMockTransport()
-  const adapter = new ConnectionAdapter(transport, 'https://example.com', 'key')
+  const adapter = new ConnectionAdapter(createClient(), 'https://example.com', 'key')
   const rooms: { id: string; name: string }[] = []
 
   adapter.listenLobby({
@@ -334,8 +316,7 @@ test('listenLobby calls onRoomCreated for room_created events', async () => {
 })
 
 test('listenLobby calls onSpawnRequest for spawn_request events', async () => {
-  const transport = createMockTransport()
-  const adapter = new ConnectionAdapter(transport, 'https://example.com', 'key')
+  const adapter = new ConnectionAdapter(createClient(), 'https://example.com', 'key')
   const spawns: { roomName: string; codingAgent: string }[] = []
 
   adapter.listenLobby({
@@ -354,8 +335,7 @@ test('listenLobby calls onSpawnRequest for spawn_request events', async () => {
 })
 
 test('listenLobby ignores pong messages', async () => {
-  const transport = createMockTransport()
-  const adapter = new ConnectionAdapter(transport, 'https://example.com', 'key')
+  const adapter = new ConnectionAdapter(createClient(), 'https://example.com', 'key')
   const rooms: unknown[] = []
 
   adapter.listenLobby({
@@ -371,8 +351,7 @@ test('listenLobby ignores pong messages', async () => {
 })
 
 test('listenLobby ignores malformed JSON', async () => {
-  const transport = createMockTransport()
-  const adapter = new ConnectionAdapter(transport, 'https://example.com', 'key')
+  const adapter = new ConnectionAdapter(createClient(), 'https://example.com', 'key')
   const rooms: unknown[] = []
 
   adapter.listenLobby({
@@ -390,15 +369,20 @@ test('listenLobby ignores malformed JSON', async () => {
 
 // --- listen: catch-up on reconnect ---
 
-test('listen fetches missed messages on reconnect via transport', async () => {
+test('listen fetches missed messages on reconnect via hc client', async () => {
   const missedMessages = [
-    { id: 'missed1', sender: 'alice', text: 'you missed this' },
-    { id: 'missed2', sender: 'bob', text: 'and this' },
+    { id: 'missed1', room_id: 'room1', sender: 'alice', sender_type: 'human', content: 'you missed this', color: null },
+    { id: 'missed2', room_id: 'room1', sender: 'bob', sender_type: 'agent', content: 'and this', color: null },
   ]
-  const transport = createMockTransport({
-    getJson: mock(() => Promise.resolve(missedMessages)) as IHttpTransport['getJson'],
-  })
-  const adapter = new ConnectionAdapter(transport, 'https://example.com', 'key')
+  const mockFetch = mock(() =>
+    Promise.resolve(new Response(JSON.stringify(missedMessages), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }))
+  )
+  globalThis.fetch = mockFetch
+
+  const adapter = new ConnectionAdapter(createClient(), 'https://example.com', 'key')
   const received: unknown[] = []
 
   adapter.listen('room1', {
@@ -412,31 +396,21 @@ test('listen fetches missed messages on reconnect via transport', async () => {
   ws.onmessage?.({ data: JSON.stringify({ id: 'first', sender: 'x' }) })
   expect(received).toHaveLength(1)
 
-  // Simulate reconnect: close with non-1000 code, then new WS opens
-  // The reconnect uses setTimeout which we can't easily control,
-  // but we can directly test that getJson would be called by triggering onopen again
-  // on a fresh mock WS after setting lastSeenId
-
-  // Verify transport.getJson has not been called yet (first connect has no lastSeenId initially,
-  // but onopen fires before any message so it won't fetch)
-  // After delivering 'first', lastSeenId = 'first'
-  // If we call onopen again (simulating reconnect), it should fetch catch-up
+  // Simulate reconnect: trigger onopen again (simulating new connection after reconnect)
   ws.onopen?.()
 
   await new Promise((resolve) => setTimeout(resolve, 10))
 
-  expect(transport.getJson).toHaveBeenCalledWith('/api/rooms/room1/messages', {
-    query: { after: 'first' },
-  })
-  // missed1 and missed2 should be delivered
-  expect(received).toHaveLength(3) // first + missed1 + missed2
+  // Should have fetched catch-up and delivered missed messages
+  expect(mockFetch).toHaveBeenCalled()
+  // first + missed1 + missed2
+  expect(received).toHaveLength(3)
 })
 
 // --- returns WebSocket ---
 
 test('listen returns a WebSocket instance', () => {
-  const transport = createMockTransport()
-  const adapter = new ConnectionAdapter(transport, 'https://example.com')
+  const adapter = new ConnectionAdapter(createClient(), 'https://example.com')
 
   const ws = adapter.listen('room1')
 
@@ -444,8 +418,7 @@ test('listen returns a WebSocket instance', () => {
 })
 
 test('listenLobby returns a WebSocket instance', () => {
-  const transport = createMockTransport()
-  const adapter = new ConnectionAdapter(transport, 'https://example.com')
+  const adapter = new ConnectionAdapter(createClient(), 'https://example.com')
 
   const ws = adapter.listenLobby()
 

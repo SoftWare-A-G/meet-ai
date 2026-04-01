@@ -1,8 +1,12 @@
+import { isCodingAgentId } from '@meet-ai/cli/coding-agents'
+import { catchApiError, parseError } from '@meet-ai/cli/domain/lib/api-errors'
+import { mapMessage } from '@meet-ai/cli/domain/mappers/message'
+import { Result } from 'better-result'
+import type { ApiClient } from '@meet-ai/cli/domain/adapters/api-client'
 import type IConnectionAdapter from '@meet-ai/cli/domain/interfaces/IConnectionAdapter'
 import type { ListenOptions, LobbyOptions } from '@meet-ai/cli/domain/interfaces/IConnectionAdapter'
-import type IHttpTransport from '@meet-ai/cli/domain/interfaces/IHttpTransport'
-import { isCodingAgentId } from '@meet-ai/cli/coding-agents'
 import type { Message } from '@meet-ai/cli/types'
+import type { ApiError } from '@meet-ai/domain'
 
 function wsLog(data: Record<string, unknown>) {
   const json = JSON.stringify({ ...data, ts: new Date().toISOString() })
@@ -13,20 +17,22 @@ function wsLog(data: Record<string, unknown>) {
 
 export default class ConnectionAdapter implements IConnectionAdapter {
   constructor(
-    private readonly transport: IHttpTransport,
+    private readonly client: ApiClient,
     private readonly baseUrl: string,
     private readonly apiKey?: string
   ) {}
 
   listen(roomId: string, options?: ListenOptions): WebSocket {
     const wsUrl = this.baseUrl.replace(/^http/, 'ws')
-    const wsHeaders = this.apiKey ? { headers: { Authorization: `Bearer ${this.apiKey}` } } : undefined
+    const wsHeaders = this.apiKey
+      ? { headers: { Authorization: `Bearer ${this.apiKey}` } }
+      : undefined
     let pingInterval: ReturnType<typeof setInterval> | null = null
     let reconnectAttempt = 0
 
     const seen = new Set<string>()
     let lastSeenId: string | null = null
-    const transport = this.transport
+    const client = this.client
 
     function deliver(msg: Message) {
       if (seen.has(msg.id)) return
@@ -53,7 +59,10 @@ export default class ConnectionAdapter implements IConnectionAdapter {
 
     function connect(): WebSocket {
       // Bun's WebSocket supports headers in the second argument (not in the standard spec)
-      const ws = new WebSocket(`${wsUrl}/api/rooms/${roomId}/ws?client=cli`, wsHeaders as unknown as string[])
+      const ws = new WebSocket(
+        `${wsUrl}/api/rooms/${roomId}/ws?client=cli`,
+        wsHeaders as unknown as string[]
+      )
 
       const connectTimeout = setTimeout(() => {
         if (ws.readyState !== WebSocket.OPEN) {
@@ -85,12 +94,16 @@ export default class ConnectionAdapter implements IConnectionAdapter {
             const query: Record<string, string> = { after: lastSeenId }
             if (options?.exclude) query.exclude = options.exclude
             if (options?.senderType) query.sender_type = options.senderType
-            const missed = await transport.getJson<Message[]>(
-              `/api/rooms/${roomId}/messages`,
-              { query }
-            )
-            if (missed.length) wsLog({ event: 'catchup', count: missed.length })
-            for (const msg of missed) deliver(msg)
+            const res = await client.api.rooms[':id'].messages.$get({
+              param: { id: roomId },
+              query,
+            })
+            if (res.ok) {
+              const data = await res.json()
+              const missed = data.map(mapMessage)
+              if (missed.length) wsLog({ event: 'catchup', count: missed.length })
+              for (const msg of missed) deliver(msg)
+            }
           } catch {
             // Catch-up failed — messages will arrive via WS or next reconnect
           }
@@ -165,7 +178,9 @@ export default class ConnectionAdapter implements IConnectionAdapter {
 
   listenLobby(options?: LobbyOptions): WebSocket {
     const wsUrl = this.baseUrl.replace(/^http/, 'ws')
-    const wsHeaders = this.apiKey ? { headers: { Authorization: `Bearer ${this.apiKey}` } } : undefined
+    const wsHeaders = this.apiKey
+      ? { headers: { Authorization: `Bearer ${this.apiKey}` } }
+      : undefined
     let pingInterval: ReturnType<typeof setInterval> | null = null
     let reconnectAttempt = 0
     let reconnectScheduled = false
@@ -257,7 +272,14 @@ export default class ConnectionAdapter implements IConnectionAdapter {
     return connect()
   }
 
-  async generateKey(): Promise<{ key: string; prefix: string }> {
-    return this.transport.postJson<{ key: string; prefix: string }>('/api/keys')
+  async generateKey(): Promise<Result<{ key: string; prefix: string }, ApiError>> {
+    return Result.tryPromise({
+      try: async () => {
+        const res = await this.client.api.keys.$post()
+        if (!res.ok) throw await parseError(res)
+        return await res.json()
+      },
+      catch: catchApiError,
+    })
   }
 }

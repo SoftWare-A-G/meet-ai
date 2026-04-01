@@ -1,5 +1,7 @@
 import type { Message } from '@meet-ai/cli/types'
 import type { CodingAgentId } from '@meet-ai/cli/coding-agents'
+import type { ApiError } from '@meet-ai/domain'
+import type { Result } from 'better-result'
 
 export interface ListenOptions {
   exclude?: string
@@ -17,5 +19,5 @@ export interface LobbyOptions {
 export default interface IConnectionAdapter {
   listen(roomId: string, opts?: ListenOptions): WebSocket
   listenLobby(opts?: LobbyOptions): WebSocket
-  generateKey(): Promise<{ key: string; prefix: string }>
+  generateKey(): Promise<Result<{ key: string; prefix: string }, ApiError>>
 }

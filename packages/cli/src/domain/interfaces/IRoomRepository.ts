@@ -1,13 +1,16 @@
-import type { Room } from '@meet-ai/domain'
+import type { Room, ApiError } from '@meet-ai/domain'
+import type { Result } from 'better-result'
 
 export default interface IRoomRepository {
-  list(): Promise<Room[]>
-
-  create(name: string, projectId?: string): Promise<Room>
-  update(roomId: string, fields: { name?: string; projectId?: string }): Promise<Room>
-  delete(roomId: string): Promise<void>
-  sendTeamInfo(roomId: string, payload: string): Promise<string>
-  sendCommands(roomId: string, payload: string): Promise<string>
-  sendTasks(roomId: string, payload: string): Promise<string>
-  sendTerminalData(roomId: string, data: string): Promise<void>
+  list(): Promise<Result<Room[], ApiError>>
+  create(name: string, projectId?: string): Promise<Result<Room, ApiError>>
+  update(
+    roomId: string,
+    fields: { name?: string; projectId?: string }
+  ): Promise<Result<Room, ApiError>>
+  delete(roomId: string): Promise<Result<void, ApiError>>
+  sendTeamInfo(roomId: string, payload: string): Promise<Result<string, ApiError>>
+  sendCommands(roomId: string, payload: string): Promise<Result<string, ApiError>>
+  sendTasks(roomId: string, payload: string): Promise<Result<string, ApiError>>
+  sendTerminalData(roomId: string, data: string): Promise<Result<void, ApiError>>
 }

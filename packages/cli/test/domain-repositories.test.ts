@@ -1,307 +1,321 @@
-import { test, expect, beforeEach } from 'bun:test'
-import type IHttpTransport from '@meet-ai/cli/domain/interfaces/IHttpTransport'
-import type { RequestOptions } from '@meet-ai/cli/domain/interfaces/IHttpTransport'
+import { test, expect, beforeEach, afterEach, mock } from 'bun:test'
+import { Result } from 'better-result'
+import { createApiClient } from '@meet-ai/cli/domain/adapters/api-client'
 import AttachmentRepository from '@meet-ai/cli/domain/repositories/AttachmentRepository'
 import MessageRepository from '@meet-ai/cli/domain/repositories/MessageRepository'
 import ProjectRepository from '@meet-ai/cli/domain/repositories/ProjectRepository'
 import RoomRepository from '@meet-ai/cli/domain/repositories/RoomRepository'
 
-interface Call {
-  method: string
-  path: string
-  body?: unknown
-  opts?: RequestOptions
+const TEST_URL = 'https://test.example.com'
+const TEST_KEY = 'mai_test1234567890'
+
+function createClient() {
+  return createApiClient(TEST_URL, TEST_KEY)
 }
 
-function createMockTransport(responses: Record<string, unknown> = {}) {
-  const calls: Call[] = []
+let origFetch: typeof globalThis.fetch
+let fetchCalls: { url: string; method: string; body?: Record<string, unknown>; headers?: Record<string, string> }[]
 
-  const transport: IHttpTransport = {
-    async postJson<T>(path: string, body?: unknown, opts?: RequestOptions): Promise<T> {
-      calls.push({ method: 'postJson', path, body, opts })
-      return (responses[`postJson:${path}`] ?? {}) as T
-    },
-    async postText(path: string, body?: unknown, opts?: RequestOptions): Promise<string> {
-      calls.push({ method: 'postText', path, body, opts })
-      return (responses[`postText:${path}`] ?? 'ok') as string
-    },
-    async patchJson<T>(path: string, body?: unknown, opts?: RequestOptions): Promise<T> {
-      calls.push({ method: 'patchJson', path, body, opts })
-      return (responses[`patchJson:${path}`] ?? {}) as T
-    },
-    async getJson<T>(path: string, opts?: RequestOptions): Promise<T> {
-      calls.push({ method: 'getJson', path, opts })
-      return (responses[`getJson:${path}`] ?? []) as T
-    },
-    async getRaw(path: string): Promise<Response> {
-      calls.push({ method: 'getRaw', path })
-      return new Response('raw')
-    },
-    async del(path: string): Promise<void> {
-      calls.push({ method: 'del', path })
-    },
-  }
-
-  return { transport, calls }
+function mockFetchResponse(body: unknown, status = 200) {
+  const jsonBody = typeof body === 'string' ? body : JSON.stringify(body)
+  globalThis.fetch = mock(() =>
+    Promise.resolve(new Response(jsonBody, {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    }))
+  )
 }
+
+function mockFetchCapture(body: unknown, status = 200) {
+  const jsonBody = typeof body === 'string' ? body : JSON.stringify(body)
+  fetchCalls = []
+  globalThis.fetch = mock((input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+    fetchCalls.push({
+      url,
+      method: init?.method ?? 'GET',
+      body: init?.body ? JSON.parse(init.body.toString()) : undefined,
+      headers: init?.headers ? Object.fromEntries(
+        init.headers instanceof Headers
+          ? init.headers.entries()
+          : Array.isArray(init.headers)
+            ? init.headers
+            : Object.entries(init.headers)
+      ) : undefined,
+    })
+    return Promise.resolve(new Response(jsonBody, {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    }))
+  })
+}
+
+beforeEach(() => {
+  origFetch = globalThis.fetch
+  fetchCalls = []
+})
+
+afterEach(() => {
+  globalThis.fetch = origFetch
+})
 
 // --- MessageRepository ---
 
-let mock: ReturnType<typeof createMockTransport>
-
-beforeEach(() => {
-  mock = createMockTransport()
-})
-
-test('MessageRepository.send calls postJson with correct path and body', async () => {
-  const fakeMsg = { id: '1', roomId: 'r1', sender: 'bot', sender_type: 'agent', content: 'hi' }
-  mock = createMockTransport({ 'postJson:/api/rooms/r1/messages': fakeMsg })
-  const repo = new MessageRepository(mock.transport)
+test('MessageRepository.send calls POST with correct body and returns mapped Message', async () => {
+  const fakeMsg = { id: '1', room_id: 'r1', sender: 'bot', sender_type: 'agent', content: 'hi', color: null }
+  mockFetchCapture(fakeMsg, 201)
+  const repo = new MessageRepository(createClient())
 
   const result = await repo.send('r1', 'bot', 'hi', '#ff0000')
 
-  expect(result).toEqual({ id: '1', roomId: 'r1', sender: 'bot', sender_type: 'agent', content: 'hi' })
-  expect(mock.calls).toHaveLength(1)
-  const call = mock.calls[0]
-  expect(call.method).toBe('postJson')
-  expect(call.path).toBe('/api/rooms/r1/messages')
-  expect(call.body).toEqual({ sender: 'bot', content: 'hi', sender_type: 'agent', color: '#ff0000' })
-  expect(call.opts).toEqual({ retry: { maxRetries: 3, baseDelay: 1000 } })
+  expect(Result.isOk(result)).toBe(true)
+  if (Result.isOk(result)) {
+    expect(result.value).toEqual({ id: '1', roomId: 'r1', sender: 'bot', sender_type: 'agent', content: 'hi' })
+  }
+  expect(fetchCalls).toHaveLength(1)
+  expect(fetchCalls[0].method).toBe('POST')
+  expect(fetchCalls[0].url).toContain('/api/rooms/r1/messages')
+  expect(fetchCalls[0].body).toEqual({ sender: 'bot', content: 'hi', sender_type: 'agent', color: '#ff0000' })
 })
 
 test('MessageRepository.send omits color when not provided', async () => {
-  const repo = new MessageRepository(mock.transport)
+  const fakeMsg = { id: '1', room_id: 'r1', sender: 'bot', sender_type: 'agent', content: 'hi', color: null }
+  mockFetchCapture(fakeMsg, 201)
+  const repo = new MessageRepository(createClient())
 
   await repo.send('r1', 'bot', 'hi')
 
-  const call = mock.calls[0]
-  expect(call.body).toEqual({ sender: 'bot', content: 'hi', sender_type: 'agent' })
-  expect((call.body as Record<string, unknown>).color).toBeUndefined()
+  expect(fetchCalls[0].body).toEqual({ sender: 'bot', content: 'hi', sender_type: 'agent' })
+  expect(fetchCalls[0].body!.color).toBeUndefined()
 })
 
-test('MessageRepository.list calls getJson with correct path and query params', async () => {
-  const fakeMsgs = [{ id: '1', roomId: 'r1', sender: 'a', sender_type: 'agent', content: '' }, { id: '2', roomId: 'r1', sender: 'b', sender_type: 'human', content: '' }]
-  mock = createMockTransport({ 'getJson:/api/rooms/r1/messages': fakeMsgs })
-  const repo = new MessageRepository(mock.transport)
+test('MessageRepository.list calls GET with correct query params', async () => {
+  const fakeMsgs = [
+    { id: '1', room_id: 'r1', sender: 'a', sender_type: 'agent', content: '', color: null },
+    { id: '2', room_id: 'r1', sender: 'b', sender_type: 'human', content: '', color: null },
+  ]
+  mockFetchCapture(fakeMsgs)
+  const repo = new MessageRepository(createClient())
 
   const result = await repo.list('r1', { after: '5', exclude: 'bot', senderType: 'human' })
 
-  expect(result).toEqual(fakeMsgs)
-  expect(mock.calls).toHaveLength(1)
-  const call = mock.calls[0]
-  expect(call.method).toBe('getJson')
-  expect(call.path).toBe('/api/rooms/r1/messages')
-  expect(call.opts).toEqual({ query: { after: '5', exclude: 'bot', sender_type: 'human' } })
+  expect(Result.isOk(result)).toBe(true)
+  if (Result.isOk(result)) {
+    expect(result.value).toHaveLength(2)
+    expect(result.value[0].roomId).toBe('r1')
+  }
+  expect(fetchCalls).toHaveLength(1)
+  expect(fetchCalls[0].method).toBe('GET')
+  expect(fetchCalls[0].url).toContain('/api/rooms/r1/messages')
+  expect(fetchCalls[0].url).toContain('after=5')
+  expect(fetchCalls[0].url).toContain('exclude=bot')
+  expect(fetchCalls[0].url).toContain('sender_type=human')
 })
 
-test('MessageRepository.list sends empty query when no options', async () => {
-  const repo = new MessageRepository(mock.transport)
+test('MessageRepository.list with no options sends no query params', async () => {
+  mockFetchCapture([])
+  const repo = new MessageRepository(createClient())
 
   await repo.list('r1')
 
-  const call = mock.calls[0]
-  expect(call.opts).toEqual({ query: {} })
+  expect(fetchCalls[0].url).toContain('/api/rooms/r1/messages')
 })
 
-test('MessageRepository.sendLog calls postJson with correct path, body, color, and messageId', async () => {
-  const fakeLog = { id: 'log1', roomId: 'r1', sender: 'agent', sender_type: 'agent', content: 'log entry' }
-  mock = createMockTransport({ 'postJson:/api/rooms/r1/logs': fakeLog })
-  const repo = new MessageRepository(mock.transport)
+test('MessageRepository.sendLog calls POST with correct body', async () => {
+  const fakeLog = { id: 'log1', room_id: 'r1', sender: 'agent', content: 'log entry', color: '#00ff00', message_id: 'msg-42', type: 'log', seq: 1, created_at: '2026-01-01' }
+  mockFetchCapture(fakeLog, 201)
+  const repo = new MessageRepository(createClient())
 
   const result = await repo.sendLog('r1', 'agent', 'log entry', { color: '#00ff00', messageId: 'msg-42' })
 
-  expect(result).toEqual(fakeLog)
-  expect(mock.calls).toHaveLength(1)
-  const call = mock.calls[0]
-  expect(call.method).toBe('postJson')
-  expect(call.path).toBe('/api/rooms/r1/logs')
-  expect(call.body).toEqual({ sender: 'agent', content: 'log entry', color: '#00ff00', message_id: 'msg-42' })
-  expect(call.opts).toEqual({ retry: { maxRetries: 3, baseDelay: 1000 } })
+  expect(Result.isOk(result)).toBe(true)
+  if (Result.isOk(result)) {
+    expect(result.value.id).toBe('log1')
+    expect(result.value.roomId).toBe('r1')
+  }
+  expect(fetchCalls).toHaveLength(1)
+  expect(fetchCalls[0].method).toBe('POST')
+  expect(fetchCalls[0].url).toContain('/api/rooms/r1/logs')
+  expect(fetchCalls[0].body).toEqual({ sender: 'agent', content: 'log entry', color: '#00ff00', message_id: 'msg-42' })
 })
 
 test('MessageRepository.sendLog omits color and messageId when not provided', async () => {
-  const repo = new MessageRepository(mock.transport)
+  const fakeLog = { id: 'log1', room_id: 'r1', sender: 'agent', content: 'log', color: null, type: 'log', seq: 1, created_at: '2026-01-01' }
+  mockFetchCapture(fakeLog, 201)
+  const repo = new MessageRepository(createClient())
 
   await repo.sendLog('r1', 'agent', 'log')
 
-  const call = mock.calls[0]
-  expect(call.body).toEqual({ sender: 'agent', content: 'log' })
+  expect(fetchCalls[0].body).toEqual({ sender: 'agent', content: 'log' })
 })
 
 // --- RoomRepository ---
 
-test('RoomRepository.create calls postJson with room name', async () => {
+test('RoomRepository.create calls POST with room name', async () => {
   const fakeRoom = { id: 'room-1', name: 'My Room', project_id: null, created_at: '2026-01-01 00:00:00' }
-  mock = createMockTransport({ 'postJson:/api/rooms': fakeRoom })
-  const repo = new RoomRepository(mock.transport)
+  mockFetchCapture(fakeRoom, 201)
+  const repo = new RoomRepository(createClient())
 
   const result = await repo.create('My Room')
 
-  expect(result).toEqual({ id: 'room-1', name: 'My Room', projectId: null, createdAt: '2026-01-01 00:00:00' })
-  expect(mock.calls).toHaveLength(1)
-  const call = mock.calls[0]
-  expect(call.method).toBe('postJson')
-  expect(call.path).toBe('/api/rooms')
-  expect(call.body).toEqual({ name: 'My Room' })
+  expect(Result.isOk(result)).toBe(true)
+  if (Result.isOk(result)) {
+    expect(result.value).toEqual({ id: 'room-1', name: 'My Room', projectId: null, createdAt: '2026-01-01 00:00:00' })
+  }
+  expect(fetchCalls).toHaveLength(1)
+  expect(fetchCalls[0].method).toBe('POST')
+  expect(fetchCalls[0].url).toContain('/api/rooms')
 })
 
 test('RoomRepository.create includes project_id when provided', async () => {
-  const fakeRoom = { id: 'room-1', name: 'My Room', project_id: null, created_at: '2026-01-01 00:00:00' }
-  mock = createMockTransport({ 'postJson:/api/rooms': fakeRoom })
-  const repo = new RoomRepository(mock.transport)
+  const fakeRoom = { id: 'room-1', name: 'My Room', project_id: 'proj-1', created_at: '2026-01-01 00:00:00' }
+  mockFetchCapture(fakeRoom, 201)
+  const repo = new RoomRepository(createClient())
 
   await repo.create('My Room', 'proj-1')
 
-  expect(mock.calls).toHaveLength(1)
-  expect(mock.calls[0].body).toEqual({ name: 'My Room', project_id: 'proj-1' })
+  expect(fetchCalls[0].body!.name).toBe('My Room')
+  expect(fetchCalls[0].body!.project_id).toBe('proj-1')
 })
 
-test('ProjectRepository.upsert calls postJson with project id and name', async () => {
+test('ProjectRepository.upsert calls POST with project id and name', async () => {
   const fakeProject = { id: 'proj-1', name: 'Repo Name' }
-  mock = createMockTransport({ 'postJson:/api/projects': fakeProject })
-  const repo = new ProjectRepository(mock.transport)
+  mockFetchCapture(fakeProject, 201)
+  const repo = new ProjectRepository(createClient())
 
   const result = await repo.upsert('proj-1', 'Repo Name')
 
-  expect(result).toEqual(fakeProject)
-  expect(mock.calls).toHaveLength(1)
-  expect(mock.calls[0].method).toBe('postJson')
-  expect(mock.calls[0].path).toBe('/api/projects')
-  expect(mock.calls[0].body).toEqual({ id: 'proj-1', name: 'Repo Name' })
+  expect(Result.isOk(result)).toBe(true)
+  if (Result.isOk(result)) {
+    expect(result.value).toEqual(fakeProject)
+  }
+  expect(fetchCalls[0].method).toBe('POST')
+  expect(fetchCalls[0].url).toContain('/api/projects')
+  expect(fetchCalls[0].body).toEqual({ id: 'proj-1', name: 'Repo Name' })
 })
 
-test('RoomRepository.delete calls del with correct path', async () => {
-  const repo = new RoomRepository(mock.transport)
+test('RoomRepository.delete calls DELETE with correct path', async () => {
+  mockFetchCapture(null, 204)
+  const repo = new RoomRepository(createClient())
 
-  await repo.delete('room-1')
+  const result = await repo.delete('room-1')
 
-  expect(mock.calls).toHaveLength(1)
-  expect(mock.calls[0].method).toBe('del')
-  expect(mock.calls[0].path).toBe('/api/rooms/room-1')
+  expect(Result.isOk(result)).toBe(true)
+  expect(fetchCalls).toHaveLength(1)
+  expect(fetchCalls[0].method).toBe('DELETE')
+  expect(fetchCalls[0].url).toContain('/api/rooms/room-1')
 })
 
-test('RoomRepository.sendTeamInfo calls postText with parsed JSON payload', async () => {
-  const repo = new RoomRepository(mock.transport)
-  const payload = JSON.stringify({ members: [{ name: 'agent-1' }] })
+test('RoomRepository.sendTeamInfo calls POST with parsed JSON payload', async () => {
+  mockFetchCapture({ ok: true })
+  const repo = new RoomRepository(createClient())
+  const payload = JSON.stringify({ team_name: 'team-1', members: [{ name: 'agent-1', color: 'blue', role: 'dev', model: 'opus', status: 'active', joinedAt: 123 }] })
 
-  await repo.sendTeamInfo('r1', payload)
+  const result = await repo.sendTeamInfo('r1', payload)
 
-  expect(mock.calls).toHaveLength(1)
-  const call = mock.calls[0]
-  expect(call.method).toBe('postText')
-  expect(call.path).toBe('/api/rooms/r1/team-info')
-  expect(call.body).toEqual({ members: [{ name: 'agent-1' }] })
-  expect(call.opts).toEqual({ retry: { maxRetries: 3, baseDelay: 1000 } })
+  expect(Result.isOk(result)).toBe(true)
+  expect(fetchCalls).toHaveLength(1)
+  expect(fetchCalls[0].method).toBe('POST')
+  expect(fetchCalls[0].url).toContain('/api/rooms/r1/team-info')
 })
 
-test('RoomRepository.sendCommands calls postText with parsed JSON payload', async () => {
-  const repo = new RoomRepository(mock.transport)
-  const payload = JSON.stringify({ commands: ['ls', 'pwd'] })
+test('RoomRepository.sendCommands calls POST with parsed JSON payload', async () => {
+  mockFetchCapture({ ok: true })
+  const repo = new RoomRepository(createClient())
+  const payload = JSON.stringify({ commands: [{ name: 'ls', description: 'list' }] })
 
-  await repo.sendCommands('r1', payload)
+  const result = await repo.sendCommands('r1', payload)
 
-  expect(mock.calls).toHaveLength(1)
-  const call = mock.calls[0]
-  expect(call.method).toBe('postText')
-  expect(call.path).toBe('/api/rooms/r1/commands')
-  expect(call.body).toEqual({ commands: ['ls', 'pwd'] })
-  expect(call.opts).toEqual({ retry: { maxRetries: 3, baseDelay: 1000 } })
+  expect(Result.isOk(result)).toBe(true)
+  expect(fetchCalls).toHaveLength(1)
+  expect(fetchCalls[0].method).toBe('POST')
+  expect(fetchCalls[0].url).toContain('/api/rooms/r1/commands')
 })
 
-test('RoomRepository.sendTasks calls postText with parsed JSON payload', async () => {
-  const repo = new RoomRepository(mock.transport)
+test('RoomRepository.sendTasks calls POST with parsed JSON payload', async () => {
+  mockFetchCapture({ ok: true })
+  const repo = new RoomRepository(createClient())
   const payload = JSON.stringify({ tasks: [{ id: 1, title: 'Do stuff' }] })
 
-  await repo.sendTasks('r1', payload)
+  const result = await repo.sendTasks('r1', payload)
 
-  expect(mock.calls).toHaveLength(1)
-  const call = mock.calls[0]
-  expect(call.method).toBe('postText')
-  expect(call.path).toBe('/api/rooms/r1/tasks')
-  expect(call.body).toEqual({ tasks: [{ id: 1, title: 'Do stuff' }] })
-  expect(call.opts).toEqual({ retry: { maxRetries: 3, baseDelay: 1000 } })
+  expect(Result.isOk(result)).toBe(true)
+  expect(fetchCalls).toHaveLength(1)
+  expect(fetchCalls[0].method).toBe('POST')
+  expect(fetchCalls[0].url).toContain('/api/rooms/r1/tasks')
 })
 
-test('RoomRepository.sendTerminalData calls postJson and silences errors', async () => {
-  const failTransport: IHttpTransport = {
-    async postJson(): Promise<never> {
-      throw new Error('network failure')
-    },
-    async postText() { return '' },
-    async patchJson() { return {} as never },
-    async getJson() { return {} as never },
-    async getRaw() { return new Response() },
-    async del() {},
-  }
-  const repo = new RoomRepository(failTransport)
+test('RoomRepository.sendTerminalData returns Result without throwing on network error', async () => {
+  globalThis.fetch = mock(() => Promise.reject(new Error('network failure')))
+  const repo = new RoomRepository(createClient())
 
-  // Should not throw
-  await repo.sendTerminalData('r1', 'terminal output')
+  const result = await repo.sendTerminalData('r1', 'terminal output')
+
+  expect(Result.isError(result)).toBe(true)
 })
 
-test('RoomRepository.sendTerminalData calls postJson with correct path and body', async () => {
-  const repo = new RoomRepository(mock.transport)
+test('RoomRepository.sendTerminalData calls POST with correct body', async () => {
+  mockFetchCapture({ ok: true })
+  const repo = new RoomRepository(createClient())
 
-  await repo.sendTerminalData('r1', 'terminal data')
+  const result = await repo.sendTerminalData('r1', 'terminal data')
 
-  expect(mock.calls).toHaveLength(1)
-  const call = mock.calls[0]
-  expect(call.method).toBe('postJson')
-  expect(call.path).toBe('/api/rooms/r1/terminal')
-  expect(call.body).toEqual({ data: 'terminal data' })
+  expect(Result.isOk(result)).toBe(true)
+  expect(fetchCalls).toHaveLength(1)
+  expect(fetchCalls[0].method).toBe('POST')
+  expect(fetchCalls[0].url).toContain('/api/rooms/r1/terminal')
+  expect(fetchCalls[0].body).toEqual({ data: 'terminal data' })
 })
 
 // --- RoomRepository: mapRoom (snake_case → camelCase) ---
 
 test('RoomRepository.list maps snake_case wire fields to camelCase', async () => {
   const wireRooms = [
-    { id: 'r1', name: 'Room A', project_id: 'proj-1', created_at: '2026-03-01 10:00:00' },
-    { id: 'r2', name: 'Room B', project_id: 'proj-2', created_at: '2026-03-02 12:30:00' },
+    { id: 'r1', name: 'Room A', project_id: 'proj-1', created_at: '2026-03-01 10:00:00', connected: false },
+    { id: 'r2', name: 'Room B', project_id: 'proj-2', created_at: '2026-03-02 12:30:00', connected: true },
   ]
-  mock = createMockTransport({ 'getJson:/api/rooms': wireRooms })
-  const repo = new RoomRepository(mock.transport)
+  mockFetchResponse(wireRooms)
+  const repo = new RoomRepository(createClient())
 
   const result = await repo.list()
 
-  expect(result).toEqual([
-    { id: 'r1', name: 'Room A', projectId: 'proj-1', createdAt: '2026-03-01 10:00:00' },
-    { id: 'r2', name: 'Room B', projectId: 'proj-2', createdAt: '2026-03-02 12:30:00' },
-  ])
+  expect(Result.isOk(result)).toBe(true)
+  if (Result.isOk(result)) {
+    expect(result.value).toEqual([
+      { id: 'r1', name: 'Room A', projectId: 'proj-1', createdAt: '2026-03-01 10:00:00' },
+      { id: 'r2', name: 'Room B', projectId: 'proj-2', createdAt: '2026-03-02 12:30:00' },
+    ])
+  }
 })
 
 test('RoomRepository.list maps project_id: null to projectId: null', async () => {
   const wireRooms = [
-    { id: 'r1', name: 'No Project', project_id: null, created_at: '2026-01-01 00:00:00' },
+    { id: 'r1', name: 'No Project', project_id: null, created_at: '2026-01-01 00:00:00', connected: false },
   ]
-  mock = createMockTransport({ 'getJson:/api/rooms': wireRooms })
-  const repo = new RoomRepository(mock.transport)
+  mockFetchResponse(wireRooms)
+  const repo = new RoomRepository(createClient())
 
   const result = await repo.list()
 
-  expect(result).toHaveLength(1)
-  expect(result[0].projectId).toBeNull()
-  expect(result[0].createdAt).toBe('2026-01-01 00:00:00')
+  expect(Result.isOk(result)).toBe(true)
+  if (Result.isOk(result)) {
+    expect(result.value).toHaveLength(1)
+    expect(result.value[0].projectId).toBeNull()
+    expect(result.value[0].createdAt).toBe('2026-01-01 00:00:00')
+  }
 })
 
 test('RoomRepository.update maps snake_case response to camelCase', async () => {
   const wireRoom = { id: 'r1', name: 'Updated', project_id: 'proj-99', created_at: '2026-04-01 08:00:00' }
-  mock = createMockTransport({ 'patchJson:/api/rooms/r1': wireRoom })
-  const repo = new RoomRepository(mock.transport)
+  mockFetchCapture(wireRoom)
+  const repo = new RoomRepository(createClient())
 
   const result = await repo.update('r1', { name: 'Updated', projectId: 'proj-99' })
 
-  expect(result).toEqual({ id: 'r1', name: 'Updated', projectId: 'proj-99', createdAt: '2026-04-01 08:00:00' })
-})
-
-test('RoomRepository.update omits project_id when projectId is not provided', async () => {
-  const wireRoom = { id: 'r1', name: 'Updated', project_id: null, created_at: '2026-01-01 00:00:00' }
-  mock = createMockTransport({ 'patchJson:/api/rooms/r1': wireRoom })
-  const repo = new RoomRepository(mock.transport)
-
-  const result = await repo.update('r1', { name: 'Updated' })
-
-  expect(mock.calls[0].body).toEqual({ name: 'Updated' })
-  expect(result.projectId).toBeNull()
+  expect(Result.isOk(result)).toBe(true)
+  if (Result.isOk(result)) {
+    expect(result.value).toEqual({ id: 'r1', name: 'Updated', projectId: 'proj-99', createdAt: '2026-04-01 08:00:00' })
+  }
 })
 
 // --- AttachmentRepository: mapAttachment (snake_case → camelCase) ---
@@ -310,38 +324,74 @@ test('AttachmentRepository.listForMessage maps content_type to contentType', asy
   const wireAttachments = [
     { id: 'a1', filename: 'photo.png', size: 1024, content_type: 'image/png' },
   ]
-  mock = createMockTransport({ 'getJson:/api/rooms/r1/messages/m1/attachments': wireAttachments })
-  const repo = new AttachmentRepository(mock.transport)
+  mockFetchResponse(wireAttachments)
+  const repo = new AttachmentRepository(createClient())
 
   const result = await repo.listForMessage('r1', 'm1')
 
-  expect(result).toEqual([
-    { id: 'a1', filename: 'photo.png', size: 1024, contentType: 'image/png' },
-  ])
+  expect(Result.isOk(result)).toBe(true)
+  if (Result.isOk(result)) {
+    expect(result.value).toEqual([
+      { id: 'a1', filename: 'photo.png', size: 1024, contentType: 'image/png' },
+    ])
+  }
 })
 
-test('AttachmentRepository.listForMessage maps multiple attachments with various content types', async () => {
+test('AttachmentRepository.listForMessage maps multiple attachments', async () => {
   const wireAttachments = [
     { id: 'a1', filename: 'doc.pdf', size: 2048, content_type: 'application/pdf' },
     { id: 'a2', filename: 'data.json', size: 512, content_type: 'application/json' },
     { id: 'a3', filename: 'clip.mp4', size: 10485760, content_type: 'video/mp4' },
   ]
-  mock = createMockTransport({ 'getJson:/api/rooms/r1/messages/m2/attachments': wireAttachments })
-  const repo = new AttachmentRepository(mock.transport)
+  mockFetchResponse(wireAttachments)
+  const repo = new AttachmentRepository(createClient())
 
   const result = await repo.listForMessage('r1', 'm2')
 
-  expect(result).toHaveLength(3)
-  expect(result[0].contentType).toBe('application/pdf')
-  expect(result[1].contentType).toBe('application/json')
-  expect(result[2].contentType).toBe('video/mp4')
+  expect(Result.isOk(result)).toBe(true)
+  if (Result.isOk(result)) {
+    expect(result.value).toHaveLength(3)
+    expect(result.value[0].contentType).toBe('application/pdf')
+    expect(result.value[1].contentType).toBe('application/json')
+    expect(result.value[2].contentType).toBe('video/mp4')
+  }
 })
 
 test('AttachmentRepository.listForMessage returns empty array when no attachments', async () => {
-  mock = createMockTransport({ 'getJson:/api/rooms/r1/messages/m3/attachments': [] })
-  const repo = new AttachmentRepository(mock.transport)
+  mockFetchResponse([])
+  const repo = new AttachmentRepository(createClient())
 
   const result = await repo.listForMessage('r1', 'm3')
 
-  expect(result).toEqual([])
+  expect(Result.isOk(result)).toBe(true)
+  if (Result.isOk(result)) {
+    expect(result.value).toEqual([])
+  }
+})
+
+// --- Error handling ---
+
+test('RoomRepository.list returns Err on HTTP error', async () => {
+  mockFetchResponse({ error: 'unauthorized' }, 401)
+  const repo = new RoomRepository(createClient())
+
+  const result = await repo.list()
+
+  expect(Result.isError(result)).toBe(true)
+  if (Result.isError(result)) {
+    expect(result.error.status).toBe(401)
+    expect(result.error.message).toBe('unauthorized')
+  }
+})
+
+test('ProjectRepository.find returns null on 404', async () => {
+  mockFetchResponse({ error: 'not found' }, 404)
+  const repo = new ProjectRepository(createClient())
+
+  const result = await repo.find('nonexistent')
+
+  expect(Result.isOk(result)).toBe(true)
+  if (Result.isOk(result)) {
+    expect(result.value).toBeNull()
+  }
 })

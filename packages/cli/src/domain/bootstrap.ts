@@ -1,32 +1,33 @@
 import { readdirSync, statSync, unlinkSync } from 'node:fs'
 import { getMeetAiConfig } from '@meet-ai/cli/config'
-import type { MeetAiConfig } from '@meet-ai/cli/config'
-import type { MeetAiClient } from '@meet-ai/cli/types'
-import HttpTransport from './adapters/HttpTransport'
+import { Result } from 'better-result'
+import { createApiClient } from './adapters/api-client'
 import ConnectionAdapter from './adapters/ConnectionAdapter'
 import FileSystemAdapter from './adapters/FileSystemAdapter'
+import AttachmentRepository from './repositories/AttachmentRepository'
 import MessageRepository from './repositories/MessageRepository'
 import ProjectRepository from './repositories/ProjectRepository'
 import RoomRepository from './repositories/RoomRepository'
-import AttachmentRepository from './repositories/AttachmentRepository'
-import SendMessage from './usecases/SendMessage'
+import InboxRouter from './services/InboxRouter'
 import CreateRoom from './usecases/CreateRoom'
 import DeleteRoom from './usecases/DeleteRoom'
-import UpdateRoom from './usecases/UpdateRoom'
-import ListRooms from './usecases/ListRooms'
-import SendLog from './usecases/SendLog'
-import SendTeamInfo from './usecases/SendTeamInfo'
-import SendCommands from './usecases/SendCommands'
-import SendTasks from './usecases/SendTasks'
-import SendTerminalData from './usecases/SendTerminalData'
-import UpsertProject from './usecases/UpsertProject'
-import InboxRouter from './services/InboxRouter'
-import Listen from './usecases/Listen'
-import ListenLobby from './usecases/ListenLobby'
-import Poll from './usecases/Poll'
+import DownloadAttachment from './usecases/DownloadAttachment'
 import GenerateKey from './usecases/GenerateKey'
 import GetAttachments from './usecases/GetAttachments'
-import DownloadAttachment from './usecases/DownloadAttachment'
+import Listen from './usecases/Listen'
+import ListenLobby from './usecases/ListenLobby'
+import ListRooms from './usecases/ListRooms'
+import Poll from './usecases/Poll'
+import SendCommands from './usecases/SendCommands'
+import SendLog from './usecases/SendLog'
+import SendMessage from './usecases/SendMessage'
+import SendTasks from './usecases/SendTasks'
+import SendTeamInfo from './usecases/SendTeamInfo'
+import SendTerminalData from './usecases/SendTerminalData'
+import UpdateRoom from './usecases/UpdateRoom'
+import UpsertProject from './usecases/UpsertProject'
+import type { MeetAiConfig } from '@meet-ai/cli/config'
+import type { MeetAiClient } from '@meet-ai/cli/types'
 
 const ATTACHMENTS_DIR = '/tmp/meet-ai-attachments'
 const MAX_AGE_MS = 5 * 60 * 1000
@@ -54,16 +55,16 @@ function createContainer(configOverride?: MeetAiConfig) {
   const config = configOverride ?? getMeetAiConfig()
 
   // Transport layer
-  const transport = new HttpTransport(config.url, config.key)
+  const client = createApiClient(config.url, config.key)
 
   // Repositories
-  const messageRepository = new MessageRepository(transport)
-  const projectRepository = new ProjectRepository(transport)
-  const roomRepository = new RoomRepository(transport)
-  const attachmentRepository = new AttachmentRepository(transport)
+  const messageRepository = new MessageRepository(client)
+  const projectRepository = new ProjectRepository(client)
+  const roomRepository = new RoomRepository(client)
+  const attachmentRepository = new AttachmentRepository(client)
 
   // Adapters
-  const connectionAdapter = new ConnectionAdapter(transport, config.url, config.key)
+  const connectionAdapter = new ConnectionAdapter(client, config.url, config.key)
   const fileSystem = new FileSystemAdapter()
 
   // Services
@@ -106,6 +107,11 @@ export function getContainer(configOverride?: MeetAiConfig) {
   return container
 }
 
+function unwrap<T>(result: Result<T, { message: string }>): T {
+  if (result.isErr()) throw new Error(result.error.message)
+  return result.value
+}
+
 /**
  * Facade: wraps the domain container into a MeetAiClient interface.
  * Allows incremental migration — command usecases keep their existing
@@ -115,30 +121,25 @@ export function getContainer(configOverride?: MeetAiConfig) {
 export function getClient(configOverride?: MeetAiConfig): MeetAiClient {
   const c = getContainer(configOverride)
   return {
-    listRooms: () => c.listRooms.execute(),
-    createRoom: (name, projectId) => c.createRoom.execute(name, projectId),
-    updateRoom: (roomId, fields) => c.updateRoom.execute(roomId, fields),
-    findProject: (id) => c.findProject(id),
-    upsertProject: (id, name) => c.upsertProject.execute(id, name),
-    sendMessage: (roomId, sender, content, color) =>
-      c.sendMessage.execute(roomId, sender, content, color),
-    getMessages: (roomId, options) =>
-      c.poll.execute(roomId, options),
-    listen: (roomId, options) =>
-      c.listen.execute(roomId, options),
-    sendLog: (roomId, sender, content, color, messageId) =>
-      c.sendLog.execute(roomId, sender, content, { color, messageId }),
-    sendTeamInfo: (roomId, payload) =>
-      c.sendTeamInfo.execute(roomId, payload),
-    sendCommands: (roomId, payload) =>
-      c.sendCommands.execute(roomId, payload),
-    sendTasks: (roomId, payload) =>
-      c.sendTasks.execute(roomId, payload),
-    getMessageAttachments: (roomId, messageId) =>
-      c.getAttachments.execute(roomId, messageId),
-    downloadAttachment: async (attachmentId) => {
+    listRooms: async () => unwrap(await c.listRooms.execute()),
+    createRoom: async (name, projectId) => unwrap(await c.createRoom.execute(name, projectId)),
+    updateRoom: async (roomId, fields) => unwrap(await c.updateRoom.execute(roomId, fields)),
+    findProject: async id => unwrap(await c.findProject(id)),
+    upsertProject: async (id, name) => unwrap(await c.upsertProject.execute(id, name)),
+    sendMessage: async (roomId, sender, content, color) =>
+      unwrap(await c.sendMessage.execute(roomId, sender, content, color)),
+    getMessages: async (roomId, options) => unwrap(await c.poll.execute(roomId, options)),
+    listen: (roomId, options) => c.listen.execute(roomId, options),
+    sendLog: async (roomId, sender, content, color, messageId) =>
+      unwrap(await c.sendLog.execute(roomId, sender, content, { color, messageId })),
+    sendTeamInfo: async (roomId, payload) => unwrap(await c.sendTeamInfo.execute(roomId, payload)),
+    sendCommands: async (roomId, payload) => unwrap(await c.sendCommands.execute(roomId, payload)),
+    sendTasks: async (roomId, payload) => unwrap(await c.sendTasks.execute(roomId, payload)),
+    getMessageAttachments: async (roomId, messageId) =>
+      unwrap(await c.getAttachments.execute(roomId, messageId)),
+    downloadAttachment: async attachmentId => {
       cleanupOldAttachments()
-      const response = await c.downloadAttachment.execute(attachmentId)
+      const response = unwrap(await c.downloadAttachment.execute(attachmentId))
       const { mkdirSync, writeFileSync } = await import('node:fs')
       mkdirSync(ATTACHMENTS_DIR, { recursive: true })
       const safeId = attachmentId.replace(/[^a-zA-Z0-9_-]/g, '') || 'unknown'
@@ -147,13 +148,12 @@ export function getClient(configOverride?: MeetAiConfig): MeetAiClient {
       writeFileSync(localPath, buffer)
       return localPath
     },
-    listenLobby: (options) =>
-      c.listenLobby.execute(options),
-    generateKey: () =>
-      c.generateKey.execute(),
-    deleteRoom: (roomId) =>
-      c.deleteRoom.execute(roomId),
-    sendTerminalData: (roomId, data) =>
-      c.sendTerminalData.execute(roomId, data),
+    listenLobby: options => c.listenLobby.execute(options),
+    generateKey: async () => unwrap(await c.generateKey.execute()),
+    deleteRoom: async roomId => unwrap(await c.deleteRoom.execute(roomId)),
+    sendTerminalData: async (roomId, data) => {
+      await c.sendTerminalData.execute(roomId, data)
+      // Result intentionally not checked — terminal data is ephemeral
+    },
   }
 }

@@ -1,5 +1,37 @@
 # Changelog
 
+## [2.4.5](https://github.com/SoftWare-A-G/meet-ai/compare/2.4.4...2.4.5) (2026-04-01)
+
+### Features
+
+- migrate the CLI room and attachment domain boundary onto shared entities:
+  - remove the CLI-local `Room` type in favor of `@meet-ai/domain` and redefine `AttachmentMeta` as a `Pick<Attachment, ...>` alias so room and attachment metadata share one canonical schema surface
+  - add repository-boundary room and attachment mapping so the worker API can keep returning snake_case payloads while the CLI domain and TUI consume camelCase `projectId`, `createdAt`, and `contentType` fields
+  - propagate the room contract update through the CLI domain interfaces, room update usecase, spawn-dialog state, and command/test fixtures so room objects are consistent end to end before the deferred message migration
+- replace the CLI domain transport stack with typed Hono client adapters and `better-result`:
+  - delete `IHttpTransport` and `HttpTransport`, add a neutral `createApiClient()` factory backed by `hc<AppType>()`, and move all CLI repositories plus the REST portions of `ConnectionAdapter` onto typed route calls
+  - switch repository and domain-usecase contracts to `Result<T, ApiError>` so transport failures, parse errors, and retryable API failures are represented explicitly in the domain layer while `getClient()` still unwraps back to the legacy `MeetAiClient` promise interface for command callers
+  - introduce a shared CLI API-error helper module plus dedicated room, message, and attachment mapper modules so retry policy, JSON error parsing, and wire-to-domain mapping live in one place instead of being duplicated across repositories
+
+### Bug Fixes
+
+- harden the CLI transport/error contract during the migration:
+  - preserve room update semantics while moving the CLI onto domain rooms by translating `projectId` to `project_id` only at the repository boundary and keeping the room/tui tests aligned with the new camelCase room shape
+  - wrap local JSON payload parsing for `sendTeamInfo`, `sendCommands`, and `sendTasks` in `Result.try(...)`, keep retry limited to network/5xx API failures, and preserve best-effort terminal streaming by intentionally ignoring `sendTerminalData` facade errors
+  - keep API auth behavior stable by only sending the `Authorization` header when a key is present, and preserve the websocket/manual listener boundary while swapping only the REST catch-up and key-generation calls onto the typed Hono client
+- reduce duplication and tighten typing after the transport migration:
+  - centralize `catchApiError`, `parseError`, and shared retry config under `packages/cli/src/domain/lib/api-errors.ts`
+  - infer room, message, and attachment wire shapes from `InferResponseType` instead of maintaining hand-written DTOs, and co-locate each inferred wire shape with its mapper under `packages/cli/src/domain/mappers/`
+  - type the shared retry config against `Parameters<typeof Result.tryPromise>[1]` with runtime narrowing on `ApiError` so the retry helper stays aligned with `better-result` without hand-written mirror types
+- align the CLI, worker, desktop, app, and domain package manifests at `2.4.5` for the release
+
+### Tests
+
+- broaden automated coverage across the new domain and transport seams:
+  - update CLI room and attachment tests so repository mocks still assert snake_case request bodies while expectations and TUI fixtures use the new camelCase room and attachment metadata
+  - rewrite the repository, bootstrap, connection-adapter, and integration tests to mock fetch/Hono-client behavior instead of the removed `IHttpTransport`, including retry timing and Result-unwrapping assertions
+  - add direct mapper-level repository coverage for room list/update mapping, null/omitted project handling, attachment MIME-type mapping, and the refactored REST catch-up path after the transport migration
+
 ## [2.4.4](https://github.com/SoftWare-A-G/meet-ai/compare/2.4.3...2.4.4) (2026-04-01)
 
 ### Bug Fixes
