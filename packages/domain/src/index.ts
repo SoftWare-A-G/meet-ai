@@ -1,3 +1,31 @@
+// Entities — core
+export { RoomSchema } from './entities/room'
+export type { Room } from './entities/room'
+
+export { ProjectSchema } from './entities/project'
+export type { Project } from './entities/project'
+
+export { SenderTypeSchema, MessageTypeSchema, MessageSchema } from './entities/message'
+export type { SenderType, MessageType, Message } from './entities/message'
+
+export { LogSchema } from './entities/log'
+export type { Log } from './entities/log'
+
+export { AttachmentSchema } from './entities/attachment'
+export type { Attachment } from './entities/attachment'
+
+export { PlanDecisionSchema } from './entities/plan-decision'
+export type { PlanDecision } from './entities/plan-decision'
+
+export { QuestionReviewSchema } from './entities/question-review'
+export type { QuestionReview } from './entities/question-review'
+
+export { PermissionReviewSchema } from './entities/permission-review'
+export type { PermissionReview } from './entities/permission-review'
+
+export { TeamMemberStatusSchema, TeamMemberSchema, TeamInfoSchema } from './entities/team'
+export type { TeamMemberStatus, TeamMember, TeamInfo } from './entities/team'
+
 // Entities — errors
 export {
   ParseError,
