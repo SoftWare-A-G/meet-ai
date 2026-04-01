@@ -1,5 +1,5 @@
 import type IRoomRepository from '@meet-ai/cli/domain/interfaces/IRoomRepository'
-import type { Room } from '@meet-ai/cli/types'
+import type { Room } from '@meet-ai/domain'
 
 export default class ListRooms {
   constructor(private readonly roomRepository: IRoomRepository) {}

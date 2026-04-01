@@ -1,11 +1,8 @@
 import type { CodingAgentId } from '@meet-ai/cli/coding-agents';
+import type { Room, Attachment } from '@meet-ai/domain'
 
-export type Room = {
-  id: string;
-  name: string;
-  project_id?: string | null;
-  created_at: string;
-};
+export type { Room }
+export type AttachmentMeta = Pick<Attachment, 'id' | 'filename' | 'size' | 'contentType'>
 
 export type Message = {
   id: string;
@@ -16,17 +13,10 @@ export type Message = {
   color?: string;
 };
 
-export type AttachmentMeta = {
-  id: string;
-  filename: string;
-  size: number;
-  content_type: string;
-};
-
 export interface MeetAiClient {
   listRooms(): Promise<Room[]>;
   createRoom(name: string, projectId?: string): Promise<Room>;
-  updateRoom(roomId: string, fields: { name?: string; project_id?: string | null }): Promise<Room>;
+  updateRoom(roomId: string, fields: { name?: string; projectId?: string }): Promise<Room>;
   findProject(id: string): Promise<{ id: string; name: string } | null>;
   upsertProject(id: string, name: string): Promise<{ id: string; name: string }>;
   sendMessage(roomId: string, sender: string, content: string, color?: string): Promise<Message>;

@@ -13,7 +13,7 @@ mock.module('@meet-ai/cli/lib/project', () => ({
 function mockClient(overrides: Partial<MeetAiClient> = {}): MeetAiClient {
   return {
     listRooms: mock(() => Promise.resolve([])),
-    createRoom: mock(() => Promise.resolve({ id: 'room-123', name: 'My Room', created_at: '2026-01-01 00:00:00' })),
+    createRoom: mock(() => Promise.resolve({ id: 'room-123', name: 'My Room', projectId: null, createdAt: '2026-01-01 00:00:00' })),
     updateRoom: mock(() => Promise.reject(new Error('not implemented'))),
     findProject: mock(() => Promise.resolve(null)),
     upsertProject: mock(() => Promise.reject(new Error('not implemented'))),
@@ -46,12 +46,12 @@ describe('createRoom', () => {
   it('creates a room and returns the result', async () => {
     const { createRoom } = await import('./usecase')
     const client = mockClient({
-      createRoom: mock(() => Promise.resolve({ id: 'abc-123', name: 'Test Room', created_at: '2026-01-01 00:00:00' })),
+      createRoom: mock(() => Promise.resolve({ id: 'abc-123', name: 'Test Room', projectId: null, createdAt: '2026-01-01 00:00:00' })),
     })
 
     const result = await createRoom(client, { name: 'Test Room', silent: true })
 
-    expect(result).toEqual({ id: 'abc-123', name: 'Test Room', created_at: '2026-01-01 00:00:00' })
+    expect(result).toEqual({ id: 'abc-123', name: 'Test Room', projectId: null, createdAt: '2026-01-01 00:00:00' })
     expect(client.createRoom).toHaveBeenCalledWith('Test Room', undefined)
   })
 

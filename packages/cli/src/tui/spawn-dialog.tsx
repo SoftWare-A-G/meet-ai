@@ -3,7 +3,7 @@ import { Box, Text, useInput } from 'ink'
 import { Spinner } from '@inkjs/ui'
 import Divider from './Divider'
 import type { CodingAgentId } from '@meet-ai/cli/coding-agents'
-import type { Room } from '@meet-ai/cli/types'
+import type { Room } from '@meet-ai/domain'
 import {
   clampSelectedRoomIndex,
   getVisibleRoomWindow,

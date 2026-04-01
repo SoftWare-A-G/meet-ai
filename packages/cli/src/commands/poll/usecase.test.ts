@@ -101,7 +101,7 @@ describe("poll", () => {
       getMessages: mock(() => Promise.resolve([msgWithAttachment])),
       getMessageAttachments: mock(() =>
         Promise.resolve([
-          { id: "att-1", filename: "photo.png", size: 1024, content_type: "image/png" },
+          { id: "att-1", filename: "photo.png", size: 1024, contentType: "image/png" },
         ]),
       ),
       downloadAttachment: mock(() => Promise.resolve("/tmp/meet-ai-attachments/att-1-photo.png")),

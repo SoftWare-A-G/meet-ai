@@ -1,5 +1,5 @@
 import type { CodingAgentId } from '@meet-ai/cli/coding-agents'
-import type { Room } from '@meet-ai/cli/types'
+import type { Room } from '@meet-ai/domain'
 
 export type SpawnDialogRoom = Room & {
   connected: boolean
@@ -59,7 +59,7 @@ export function resolveSpawnSelection(input: {
   if (input.focus === 'list' && selectedRoom) {
     return {
       type: 'existing',
-      room: { id: selectedRoom.id, name: selectedRoom.name, created_at: selectedRoom.created_at },
+      room: { id: selectedRoom.id, name: selectedRoom.name, projectId: selectedRoom.projectId, createdAt: selectedRoom.createdAt },
       codingAgent: input.codingAgent,
     }
   }
@@ -75,7 +75,7 @@ export function resolveSpawnSelection(input: {
   if (selectedRoom) {
     return {
       type: 'existing',
-      room: { id: selectedRoom.id, name: selectedRoom.name, created_at: selectedRoom.created_at },
+      room: { id: selectedRoom.id, name: selectedRoom.name, projectId: selectedRoom.projectId, createdAt: selectedRoom.createdAt },
       codingAgent: input.codingAgent,
     }
   }

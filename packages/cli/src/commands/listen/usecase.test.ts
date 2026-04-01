@@ -831,7 +831,7 @@ describe('listen', () => {
       const writeOutput: Mock<(data: string) => void> = mock((data: string) => {})
       ;(client.getMessageAttachments as any).mockImplementation(() =>
         Promise.resolve([
-          { id: 'att-1', filename: 'file.png', size: 100, content_type: 'image/png' },
+          { id: 'att-1', filename: 'file.png', size: 100, contentType: 'image/png' },
         ])
       )
       ;(client as any).downloadAttachment = mock(() =>
@@ -895,7 +895,7 @@ describe('listen', () => {
     const { client, getHandler } = mockClientCapturingHandler()
     const codexBridge = makeCodexBridgeMock()
     ;(client.getMessageAttachments as any).mockImplementation(() =>
-      Promise.resolve([{ id: 'att-1', filename: 'file.png', size: 100, content_type: 'image/png' }])
+      Promise.resolve([{ id: 'att-1', filename: 'file.png', size: 100, contentType: 'image/png' }])
     )
     ;(client as any).downloadAttachment = mock(() =>
       Promise.resolve('/tmp/meet-ai-attachments/att-1-file.png')

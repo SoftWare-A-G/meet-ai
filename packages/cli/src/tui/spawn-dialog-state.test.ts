@@ -11,20 +11,20 @@ describe('spawn-dialog-state', () => {
   it('preserves order and marks connected entries', () => {
     const rooms = markConnectedRooms(
       [
-        { id: '2', name: 'Zulu', created_at: '2026-02-01 00:00:00' },
-        { id: '1', name: 'Alpha', created_at: '2026-01-01 00:00:00' },
+        { id: '2', name: 'Zulu', projectId: null, createdAt: '2026-02-01 00:00:00' },
+        { id: '1', name: 'Alpha', projectId: null, createdAt: '2026-01-01 00:00:00' },
       ],
       new Set(['2']),
     )
 
     expect(rooms).toEqual([
-      { id: '2', name: 'Zulu', created_at: '2026-02-01 00:00:00', connected: true },
-      { id: '1', name: 'Alpha', created_at: '2026-01-01 00:00:00', connected: false },
+      { id: '2', name: 'Zulu', projectId: null, createdAt: '2026-02-01 00:00:00', connected: true },
+      { id: '1', name: 'Alpha', projectId: null, createdAt: '2026-01-01 00:00:00', connected: false },
     ])
   })
 
   it('clamps selected room index to valid bounds', () => {
-    const rooms: SpawnDialogRoom[] = [{ id: '1', name: 'Alpha', created_at: '2026-01-01 00:00:00', connected: false }]
+    const rooms: SpawnDialogRoom[] = [{ id: '1', name: 'Alpha', projectId: null, createdAt: '2026-01-01 00:00:00', connected: false }]
     expect(clampSelectedRoomIndex(-2, rooms)).toBe(0)
     expect(clampSelectedRoomIndex(5, rooms)).toBe(0)
   })
@@ -33,7 +33,8 @@ describe('spawn-dialog-state', () => {
     const rooms: SpawnDialogRoom[] = Array.from({ length: 8 }, (_, index) => ({
       id: `${index}`,
       name: `Room ${index}`,
-      created_at: `2026-01-0${index + 1} 00:00:00`,
+      projectId: null,
+      createdAt: `2026-01-0${index + 1} 00:00:00`,
       connected: false,
     }))
 
@@ -49,13 +50,13 @@ describe('spawn-dialog-state', () => {
       focus: 'list',
       roomName: 'ignored',
       selectedRoomIndex: 0,
-      rooms: [{ id: '1', name: 'Alpha', created_at: '2026-01-01 00:00:00', connected: false }],
+      rooms: [{ id: '1', name: 'Alpha', projectId: null, createdAt: '2026-01-01 00:00:00', connected: false }],
       codingAgent: 'codex',
     })
 
     expect(selection).toEqual({
       type: 'existing',
-      room: { id: '1', name: 'Alpha', created_at: '2026-01-01 00:00:00' },
+      room: { id: '1', name: 'Alpha', projectId: null, createdAt: '2026-01-01 00:00:00' },
       codingAgent: 'codex',
     })
   })
@@ -65,13 +66,13 @@ describe('spawn-dialog-state', () => {
       focus: 'list',
       roomName: 'Fresh Room',
       selectedRoomIndex: 0,
-      rooms: [{ id: '1', name: 'Alpha', created_at: '2026-01-01 00:00:00', connected: true }],
+      rooms: [{ id: '1', name: 'Alpha', projectId: null, createdAt: '2026-01-01 00:00:00', connected: true }],
       codingAgent: 'claude',
     })
 
     expect(selection).toEqual({
       type: 'existing',
-      room: { id: '1', name: 'Alpha', created_at: '2026-01-01 00:00:00' },
+      room: { id: '1', name: 'Alpha', projectId: null, createdAt: '2026-01-01 00:00:00' },
       codingAgent: 'claude',
     })
   })
@@ -97,13 +98,13 @@ describe('spawn-dialog-state', () => {
       focus: 'list',
       roomName: '',
       selectedRoomIndex: 0,
-      rooms: [{ id: '1', name: 'Alpha', created_at: '2026-01-01 00:00:00', connected: false }],
+      rooms: [{ id: '1', name: 'Alpha', projectId: null, createdAt: '2026-01-01 00:00:00', connected: false }],
       codingAgent: 'pi',
     })
 
     expect(selection).toEqual({
       type: 'existing',
-      room: { id: '1', name: 'Alpha', created_at: '2026-01-01 00:00:00' },
+      room: { id: '1', name: 'Alpha', projectId: null, createdAt: '2026-01-01 00:00:00' },
       codingAgent: 'pi',
     })
   })

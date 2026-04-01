@@ -1,6 +1,7 @@
 import { test, expect, beforeEach } from 'bun:test'
 import type IHttpTransport from '@meet-ai/cli/domain/interfaces/IHttpTransport'
 import type { RequestOptions } from '@meet-ai/cli/domain/interfaces/IHttpTransport'
+import AttachmentRepository from '@meet-ai/cli/domain/repositories/AttachmentRepository'
 import MessageRepository from '@meet-ai/cli/domain/repositories/MessageRepository'
 import ProjectRepository from '@meet-ai/cli/domain/repositories/ProjectRepository'
 import RoomRepository from '@meet-ai/cli/domain/repositories/RoomRepository'
@@ -130,13 +131,13 @@ test('MessageRepository.sendLog omits color and messageId when not provided', as
 // --- RoomRepository ---
 
 test('RoomRepository.create calls postJson with room name', async () => {
-  const fakeRoom = { id: 'room-1', name: 'My Room', created_at: '2026-01-01 00:00:00' }
+  const fakeRoom = { id: 'room-1', name: 'My Room', project_id: null, created_at: '2026-01-01 00:00:00' }
   mock = createMockTransport({ 'postJson:/api/rooms': fakeRoom })
   const repo = new RoomRepository(mock.transport)
 
   const result = await repo.create('My Room')
 
-  expect(result).toEqual(fakeRoom)
+  expect(result).toEqual({ id: 'room-1', name: 'My Room', projectId: null, createdAt: '2026-01-01 00:00:00' })
   expect(mock.calls).toHaveLength(1)
   const call = mock.calls[0]
   expect(call.method).toBe('postJson')
@@ -145,7 +146,7 @@ test('RoomRepository.create calls postJson with room name', async () => {
 })
 
 test('RoomRepository.create includes project_id when provided', async () => {
-  const fakeRoom = { id: 'room-1', name: 'My Room', created_at: '2026-01-01 00:00:00' }
+  const fakeRoom = { id: 'room-1', name: 'My Room', project_id: null, created_at: '2026-01-01 00:00:00' }
   mock = createMockTransport({ 'postJson:/api/rooms': fakeRoom })
   const repo = new RoomRepository(mock.transport)
 
@@ -248,4 +249,99 @@ test('RoomRepository.sendTerminalData calls postJson with correct path and body'
   expect(call.method).toBe('postJson')
   expect(call.path).toBe('/api/rooms/r1/terminal')
   expect(call.body).toEqual({ data: 'terminal data' })
+})
+
+// --- RoomRepository: mapRoom (snake_case → camelCase) ---
+
+test('RoomRepository.list maps snake_case wire fields to camelCase', async () => {
+  const wireRooms = [
+    { id: 'r1', name: 'Room A', project_id: 'proj-1', created_at: '2026-03-01 10:00:00' },
+    { id: 'r2', name: 'Room B', project_id: 'proj-2', created_at: '2026-03-02 12:30:00' },
+  ]
+  mock = createMockTransport({ 'getJson:/api/rooms': wireRooms })
+  const repo = new RoomRepository(mock.transport)
+
+  const result = await repo.list()
+
+  expect(result).toEqual([
+    { id: 'r1', name: 'Room A', projectId: 'proj-1', createdAt: '2026-03-01 10:00:00' },
+    { id: 'r2', name: 'Room B', projectId: 'proj-2', createdAt: '2026-03-02 12:30:00' },
+  ])
+})
+
+test('RoomRepository.list maps project_id: null to projectId: null', async () => {
+  const wireRooms = [
+    { id: 'r1', name: 'No Project', project_id: null, created_at: '2026-01-01 00:00:00' },
+  ]
+  mock = createMockTransport({ 'getJson:/api/rooms': wireRooms })
+  const repo = new RoomRepository(mock.transport)
+
+  const result = await repo.list()
+
+  expect(result).toHaveLength(1)
+  expect(result[0].projectId).toBeNull()
+  expect(result[0].createdAt).toBe('2026-01-01 00:00:00')
+})
+
+test('RoomRepository.update maps snake_case response to camelCase', async () => {
+  const wireRoom = { id: 'r1', name: 'Updated', project_id: 'proj-99', created_at: '2026-04-01 08:00:00' }
+  mock = createMockTransport({ 'patchJson:/api/rooms/r1': wireRoom })
+  const repo = new RoomRepository(mock.transport)
+
+  const result = await repo.update('r1', { name: 'Updated', projectId: 'proj-99' })
+
+  expect(result).toEqual({ id: 'r1', name: 'Updated', projectId: 'proj-99', createdAt: '2026-04-01 08:00:00' })
+})
+
+test('RoomRepository.update omits project_id when projectId is not provided', async () => {
+  const wireRoom = { id: 'r1', name: 'Updated', project_id: null, created_at: '2026-01-01 00:00:00' }
+  mock = createMockTransport({ 'patchJson:/api/rooms/r1': wireRoom })
+  const repo = new RoomRepository(mock.transport)
+
+  const result = await repo.update('r1', { name: 'Updated' })
+
+  expect(mock.calls[0].body).toEqual({ name: 'Updated' })
+  expect(result.projectId).toBeNull()
+})
+
+// --- AttachmentRepository: mapAttachment (snake_case → camelCase) ---
+
+test('AttachmentRepository.listForMessage maps content_type to contentType', async () => {
+  const wireAttachments = [
+    { id: 'a1', filename: 'photo.png', size: 1024, content_type: 'image/png' },
+  ]
+  mock = createMockTransport({ 'getJson:/api/rooms/r1/messages/m1/attachments': wireAttachments })
+  const repo = new AttachmentRepository(mock.transport)
+
+  const result = await repo.listForMessage('r1', 'm1')
+
+  expect(result).toEqual([
+    { id: 'a1', filename: 'photo.png', size: 1024, contentType: 'image/png' },
+  ])
+})
+
+test('AttachmentRepository.listForMessage maps multiple attachments with various content types', async () => {
+  const wireAttachments = [
+    { id: 'a1', filename: 'doc.pdf', size: 2048, content_type: 'application/pdf' },
+    { id: 'a2', filename: 'data.json', size: 512, content_type: 'application/json' },
+    { id: 'a3', filename: 'clip.mp4', size: 10485760, content_type: 'video/mp4' },
+  ]
+  mock = createMockTransport({ 'getJson:/api/rooms/r1/messages/m2/attachments': wireAttachments })
+  const repo = new AttachmentRepository(mock.transport)
+
+  const result = await repo.listForMessage('r1', 'm2')
+
+  expect(result).toHaveLength(3)
+  expect(result[0].contentType).toBe('application/pdf')
+  expect(result[1].contentType).toBe('application/json')
+  expect(result[2].contentType).toBe('video/mp4')
+})
+
+test('AttachmentRepository.listForMessage returns empty array when no attachments', async () => {
+  mock = createMockTransport({ 'getJson:/api/rooms/r1/messages/m3/attachments': [] })
+  const repo = new AttachmentRepository(mock.transport)
+
+  const result = await repo.listForMessage('r1', 'm3')
+
+  expect(result).toEqual([])
 })

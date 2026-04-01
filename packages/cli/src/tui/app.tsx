@@ -11,7 +11,8 @@ import { groupTeamsByRoom } from './room-groups'
 import { useAutoUpdate } from './use-auto-update'
 import { CURRENT_VERSION } from '@meet-ai/cli/lib/auto-update'
 import { createRoom } from '@meet-ai/cli/commands/create-room/usecase'
-import type { MeetAiClient, Room } from '@meet-ai/cli/types'
+import type { MeetAiClient } from '@meet-ai/cli/types'
+import type { Room } from '@meet-ai/domain'
 import type { SpawnDialogSelection } from './spawn-dialog-state'
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
