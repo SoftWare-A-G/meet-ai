@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.4.3](https://github.com/SoftWare-A-G/meet-ai/compare/2.4.2...2.4.3) (2026-04-01)
+
+### Features
+
+- migrate the remaining hook workflows into the internal `packages/domain` package by adding class-based usecases and typed repository contracts for `permission-review`, `question-review`, `plan-review`, and `task-sync`
+
+### Bug Fixes
+
+- replace the inline CLI review-hook wiring with a shared hook bootstrap container and thin composition roots, while keeping task-sync as a separate PostToolUse hook path with typed payload building instead of `as` casts
+- harden the worker and CLI hook contracts by aligning review-route success responses to explicit `200` statuses, normalizing `permission_mode`, tightening hook event and tool-name schemas, and preserving the original timeout, fallback, and prompt-mapping behavior across the migrated hooks
+- align the CLI, worker, desktop, app, and domain package manifests at `2.4.3` for the release
+
+### Tests
+
+- expand domain and CLI coverage across the migrated hook surfaces, including review-hook input parsing and timeout flows, plan-review permission-mode handling, task-sync payload building, and the corrected task-sync test mocks for the real hook client and room-resolution seams
+
 ## [2.4.2](https://github.com/SoftWare-A-G/meet-ai/compare/2.4.1...2.4.2) (2026-04-01)
 
 ### Features

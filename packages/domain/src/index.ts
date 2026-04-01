@@ -7,6 +7,7 @@ export {
   ReviewCreateError,
   ReviewPollError,
   RoomResolveError,
+  TaskUpsertError,
 } from './entities/errors'
 
 // Entities — schemas + types
@@ -41,6 +42,9 @@ export {
   QuestionItemSchema,
   QuestionRequestInputSchema,
   PlanRequestInputSchema,
+  TaskCreateHookInputSchema,
+  TaskUpdateHookInputSchema,
+  TaskHookInputSchema,
 } from './entities/hooks'
 export type {
   PermissionRequestInput,
@@ -48,12 +52,25 @@ export type {
   QuestionItem,
   QuestionRequestInput,
   PlanRequestInput,
+  TaskCreateHookInput,
+  TaskUpdateHookInput,
+  TaskHookInput,
 } from './entities/hooks'
+
+export {
+  TaskStatusSchema,
+  TaskUpsertPayloadSchema,
+} from './entities/tasks'
+export type {
+  TaskStatus,
+  TaskUpsertPayload,
+} from './entities/tasks'
 
 // Interfaces
 export type { IReviewRepository } from './repositories/IReviewRepository'
 export type { IQuestionReviewRepository } from './repositories/IQuestionReviewRepository'
 export type { IPlanReviewRepository } from './repositories/IPlanReviewRepository'
+export type { ITaskRepository } from './repositories/ITaskRepository'
 export type { IHookTransport } from './adapters/IHookTransport'
 export type { IRoomResolver } from './services/IRoomResolver'
 
@@ -66,3 +83,6 @@ export type { ProcessQuestionReviewError } from './usecases/ProcessQuestionRevie
 
 export { default as ProcessPlanReview } from './usecases/ProcessPlanReview'
 export type { ProcessPlanReviewError } from './usecases/ProcessPlanReview'
+
+export { default as ProcessTaskSync } from './usecases/ProcessTaskSync'
+export type { ProcessTaskSyncError } from './usecases/ProcessTaskSync'

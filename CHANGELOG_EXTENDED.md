@@ -1,5 +1,35 @@
 # Changelog
 
+## [2.4.3](https://github.com/SoftWare-A-G/meet-ai/compare/2.4.2...2.4.3) (2026-04-01)
+
+### Features
+
+- finish the hook-domain extraction across the remaining hook families:
+  - migrate `permission-review`, `question-review`, and `plan-review` onto class-based domain usecases with constructor-injected repository/transport/resolver interfaces, schema-first input and decision entities, tagged errors, and shared `HookOutput` support for `updatedInput` and `allowedPrompts`
+  - migrate `task-sync` into a dedicated domain slice with `ProcessTaskSync`, `ITaskRepository`, typed task hook schemas, Claude status normalization, and a typed `TaskUpsertPayload` so the CLI no longer builds `Record<string, unknown>` task payloads
+  - extend the internal domain barrel with the new review/task schemas, repository interfaces, usecases, and task upsert error so the CLI hook layer consumes one consistent internal package surface
+
+### Bug Fixes
+
+- centralize review-hook CLI wiring behind a shared bootstrap factory:
+  - add `packages/cli/src/commands/hook/bootstrap.ts` so the three review hooks share one instantiation point for `HookTransportAdapter`, `SessionRoomResolver`, and their typed repositories instead of recreating the object graph in every composition root
+  - keep credentials and stdout/stderr behavior in the hook entrypoints while reducing the individual review hook usecases to thin wrappers around `createHookContainer(...)`
+- preserve and tighten hook behavior during the migrations:
+  - keep the original permission-review timeout notification, question-review answer parsing, plan-review fallback plan text, plan-review permission prompt mapping, and task-sync fire-and-forget `'sent' | 'skip'` contract while moving logic into domain
+  - normalize `permission_mode` at the CLI transport boundary, add `hook_event_name` literals to the migrated schemas (`PermissionRequest` for review hooks, `PostToolUse` for task-sync), and remove the old `as` casts from question-review/task-sync request handling
+  - align worker review-route success responses with explicit `200` statuses so Hono response typing stays discriminated for permission-, question-, and plan-review APIs
+- fix the task-sync CLI test seam after the refactor:
+  - update the mocks to target `@meet-ai/cli/lib/hooks/client` and `@meet-ai/cli/lib/hooks/find-room`, matching the real imports used by the rewritten task-sync composition root and `SessionRoomResolver`
+  - replace the old cast-heavy call inspection with direct `toHaveBeenCalledWith(...)` assertions on the typed upsert payloads
+- align the CLI, worker, desktop, app, and domain package manifests at `2.4.3` for the release
+
+### Tests
+
+- broaden automated coverage for the migrated hook surfaces:
+  - add dedicated domain suites for `ProcessPermissionReview`, `ProcessQuestionReview`, `ProcessPlanReview`, and `ProcessTaskSync`, covering parse failures, schema discrimination, timeout/cleanup behavior, plan/task payload shaping, permission-mode prompt mapping, and transport error propagation
+  - update the CLI hook tests to assert the new tagged domain error output, the real hook event/tool fixtures, the shared hook bootstrap/container behavior, and the typed task-sync upsert payloads after the schema move
+  - keep the full domain, CLI, and worker suites green after the hook migrations, bootstrap cleanup, and task-sync test-fix follow-up
+
 ## [2.4.2](https://github.com/SoftWare-A-G/meet-ai/compare/2.4.1...2.4.2) (2026-04-01)
 
 ### Features

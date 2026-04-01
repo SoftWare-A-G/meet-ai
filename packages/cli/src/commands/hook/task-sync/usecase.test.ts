@@ -1,7 +1,7 @@
 import { describe, it, expect, mock, beforeEach, afterEach } from 'bun:test'
 import { rmSync } from 'node:fs'
 import { setMeetAiDirOverride, writeHomeConfig } from '@meet-ai/cli/lib/meetai-home'
-import { TaskHookInput, TaskCreateHookInput, TaskUpdateHookInput } from './schema'
+import { TaskHookInputSchema, TaskCreateHookInputSchema, TaskUpdateHookInputSchema } from '@meet-ai/domain'
 
 const TEMP_MEET_AI_DIR = '/tmp/meet-ai-task-sync-test-home'
 
@@ -52,7 +52,7 @@ const TASK_UPDATE_PAYLOAD = {
 
 describe('TaskHookInput schema', () => {
   it('parses a real TaskCreate payload', () => {
-    const result = TaskCreateHookInput.safeParse(TASK_CREATE_PAYLOAD)
+    const result = TaskCreateHookInputSchema.safeParse(TASK_CREATE_PAYLOAD)
     expect(result.success).toBe(true)
     if (result.success) {
       expect(result.data.tool_response.task.id).toBe('3')
@@ -61,7 +61,7 @@ describe('TaskHookInput schema', () => {
   })
 
   it('parses a real TaskUpdate payload', () => {
-    const result = TaskUpdateHookInput.safeParse(TASK_UPDATE_PAYLOAD)
+    const result = TaskUpdateHookInputSchema.safeParse(TASK_UPDATE_PAYLOAD)
     expect(result.success).toBe(true)
     if (result.success) {
       expect(result.data.tool_response.taskId).toBe('2')
@@ -71,13 +71,13 @@ describe('TaskHookInput schema', () => {
   })
 
   it('discriminates correctly via TaskHookInput union', () => {
-    const createResult = TaskHookInput.safeParse(TASK_CREATE_PAYLOAD)
+    const createResult = TaskHookInputSchema.safeParse(TASK_CREATE_PAYLOAD)
     expect(createResult.success).toBe(true)
     if (createResult.success) {
       expect(createResult.data.tool_name).toBe('TaskCreate')
     }
 
-    const updateResult = TaskHookInput.safeParse(TASK_UPDATE_PAYLOAD)
+    const updateResult = TaskHookInputSchema.safeParse(TASK_UPDATE_PAYLOAD)
     expect(updateResult.success).toBe(true)
     if (updateResult.success) {
       expect(updateResult.data.tool_name).toBe('TaskUpdate')
@@ -85,7 +85,7 @@ describe('TaskHookInput schema', () => {
   })
 
   it('rejects payload with wrong tool_name', () => {
-    const result = TaskHookInput.safeParse({
+    const result = TaskHookInputSchema.safeParse({
       ...TASK_CREATE_PAYLOAD,
       tool_name: 'Bash',
     })
@@ -93,7 +93,7 @@ describe('TaskHookInput schema', () => {
   })
 
   it('rejects TaskCreate without tool_response.task', () => {
-    const result = TaskCreateHookInput.safeParse({
+    const result = TaskCreateHookInputSchema.safeParse({
       ...TASK_CREATE_PAYLOAD,
       tool_response: { success: true },
     })
@@ -101,7 +101,7 @@ describe('TaskHookInput schema', () => {
   })
 
   it('rejects TaskUpdate without tool_response.taskId', () => {
-    const result = TaskUpdateHookInput.safeParse({
+    const result = TaskUpdateHookInputSchema.safeParse({
       ...TASK_UPDATE_PAYLOAD,
       tool_response: { success: true },
     })
@@ -109,49 +109,39 @@ describe('TaskHookInput schema', () => {
   })
 })
 
-// Mock the hooks module for processTaskSync tests
-const mockFindRoom = mock(() => Promise.resolve({ roomId: 'room-123', teamName: 'test-team' } as any))
-const mockPost = mock(() => Promise.resolve({ ok: true } as any))
-const mockCreateHookClient = mock(() => ({
-  api: {
-    rooms: {
-      ':id': {
-        tasks: {
-          upsert: {
-            $post: mockPost,
+// Mock findRoomId so SessionRoomResolver returns the room we want
+const mockFindRoomId = mock(() => Promise.resolve('room-123'))
+mock.module('@meet-ai/cli/lib/hooks/find-room', () => ({
+  findRoom: mock(() => Promise.resolve({ roomId: 'room-123', teamName: 'test-team' })),
+  findRoomId: mockFindRoomId,
+}))
+
+// Mock createHookClient to return a fake client with the upsert endpoint
+const mockPost = mock(() => Promise.resolve({ ok: true }))
+mock.module('@meet-ai/cli/lib/hooks/client', () => ({
+  createHookClient: () => ({
+    api: {
+      rooms: {
+        ':id': {
+          tasks: {
+            upsert: {
+              $post: mockPost,
+            },
           },
         },
       },
     },
-  },
-}))
-
-mock.module('@meet-ai/cli/lib/hooks', () => ({
-  findRoom: mockFindRoom,
-  createHookClient: mockCreateHookClient,
+  }),
 }))
 
 // Import after mocking
 const { processTaskSync } = await import('./usecase')
 
 describe('processTaskSync', () => {
-  type UpsertCall = {
-    param: { id: string }
-    json: {
-      source: string
-      source_id: string
-      subject?: string
-      description?: string
-      status?: string
-      assignee?: string | null
-    }
-  }
-
   beforeEach(() => {
-    mockFindRoom.mockClear()
+    mockFindRoomId.mockClear()
     mockPost.mockClear()
-    mockCreateHookClient.mockClear()
-    mockFindRoom.mockResolvedValue({ roomId: 'room-123', teamName: 'test-team' })
+    mockFindRoomId.mockResolvedValue('room-123')
     mockPost.mockResolvedValue({ ok: true })
     rmSync(TEMP_MEET_AI_DIR, { recursive: true, force: true })
     setMeetAiDirOverride(TEMP_MEET_AI_DIR)
@@ -171,15 +161,17 @@ describe('processTaskSync', () => {
 
     expect(result).toBe('sent')
     expect(mockPost).toHaveBeenCalledTimes(1)
-
-    const call = (mockPost.mock.calls as unknown as [UpsertCall][]).at(0)?.[0]
-    if (!call) throw new Error('expected tasks.upsert to be called once')
-    expect(call.param.id).toBe('room-123')
-    expect(call.json.source).toBe('claude')
-    expect(call.json.source_id).toBe('3')
-    expect(call.json.subject).toBe('Third test task for hook validation')
-    expect(call.json.description).toBe('Another smoke test task to help validate the task-sync hook payload capture.')
-    expect(call.json.status).toBe('pending')
+    expect(mockPost).toHaveBeenCalledWith({
+      param: { id: 'room-123' },
+      json: {
+        source: 'claude',
+        source_id: '3',
+        subject: 'Third test task for hook validation',
+        description: 'Another smoke test task to help validate the task-sync hook payload capture.',
+        status: 'pending',
+        updated_by: 'claude',
+      },
+    })
   })
 
   it('sends upsert for TaskUpdate with correct fields', async () => {
@@ -187,14 +179,16 @@ describe('processTaskSync', () => {
 
     expect(result).toBe('sent')
     expect(mockPost).toHaveBeenCalledTimes(1)
-
-    const call = (mockPost.mock.calls as unknown as [UpsertCall][]).at(0)?.[0]
-    if (!call) throw new Error('expected tasks.upsert to be called once')
-    expect(call.param.id).toBe('room-123')
-    expect(call.json.source).toBe('claude')
-    expect(call.json.source_id).toBe('2')
-    expect(call.json.status).toBe('in_progress')
-    expect(call.json.assignee).toBe('hook-debugger')
+    expect(mockPost).toHaveBeenCalledWith({
+      param: { id: 'room-123' },
+      json: {
+        source: 'claude',
+        source_id: '2',
+        status: 'in_progress',
+        assignee: 'hook-debugger',
+        updated_by: 'claude',
+      },
+    })
   })
 
   it('skips on invalid JSON', async () => {
@@ -207,7 +201,7 @@ describe('processTaskSync', () => {
   })
 
   it('skips when room not found', async () => {
-    mockFindRoom.mockResolvedValue(null)
+    mockFindRoomId.mockResolvedValue(null)
     expect(await processTaskSync(JSON.stringify(TASK_CREATE_PAYLOAD))).toBe('skip')
   })
 
