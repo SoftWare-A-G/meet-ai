@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.4.4](https://github.com/SoftWare-A-G/meet-ai/compare/2.4.3...2.4.4) (2026-04-01)
+
+### Bug Fixes
+
+- fix the team-lead inbox routing leak in the shared listener filter:
+  - remove the hidden `process.env.MEET_AI_AGENT_NAME` dependency from `packages/cli/src/commands/listen/shared.ts` so `shouldDeliverMessage()` no longer falls back to unconditional delivery when the Claude team listener has no env-based identity
+  - pass explicit listener identities from all four runtime entrypoints: `inbox` in `listen-claude.ts`, `codexSender` in `listen-codex.ts`, `piSender` in `listen-pi.ts`, and `senderName` in `listen-opencode.ts`
+  - preserve the existing mention-filtering semantics for known mentions, mixed known/unknown mentions, and general messages while finally applying them correctly to the team-lead listener path
+- keep the fix narrowly scoped:
+  - `InboxRouter`, connection-level sender exclusion, and team-member sender filtering remain unchanged because they were already behaving correctly
+  - only the shared delivery helper and its listener call sites changed, which keeps the routing contract consistent across all runtimes
+- align the CLI, worker, desktop, app, and domain package manifests at `2.4.4` for the release
+
+### Tests
+
+- expand listener mention-routing coverage:
+  - refactor `shouldDeliverMessage` tests to pass explicit `agentName` values instead of mutating environment variables
+  - add the team-lead-specific assertion that `@codex` messages are filtered out for `team-lead`, while `@team-lead`, mixed mentions including `team-lead`, and general messages still deliver
+  - keep the CLI suite green after the listener helper signature change and the four call-site updates
+
 ## [2.4.3](https://github.com/SoftWare-A-G/meet-ai/compare/2.4.2...2.4.3) (2026-04-01)
 
 ### Features

@@ -1513,13 +1513,10 @@ describe('shouldDeliverMessage', () => {
   const ROOM_ID = 'test-sdm-room'
   const TEMP_HOME = '/tmp/meet-ai-sdm-test'
   let originalHome: string | undefined
-  let originalAgentName: string | undefined
 
   beforeEach(() => {
     originalHome = process.env.HOME
-    originalAgentName = process.env.MEET_AI_AGENT_NAME
     process.env.HOME = TEMP_HOME
-    process.env.MEET_AI_AGENT_NAME = 'codex'
     rmSync(TEMP_HOME, { recursive: true, force: true })
     mkdirSync(TEMP_HOME, { recursive: true })
     // Set up room config with known members
@@ -1528,58 +1525,59 @@ describe('shouldDeliverMessage', () => {
 
   afterEach(() => {
     process.env.HOME = originalHome
-    if (originalAgentName === undefined) delete process.env.MEET_AI_AGENT_NAME
-    else process.env.MEET_AI_AGENT_NAME = originalAgentName
     rmSync(TEMP_HOME, { recursive: true, force: true })
   })
 
   it('returns true when content is undefined', () => {
-    expect(shouldDeliverMessage(ROOM_ID, undefined)).toBe(true)
+    expect(shouldDeliverMessage(ROOM_ID, undefined, 'codex')).toBe(true)
   })
 
   it('returns true when no @mentions', () => {
-    expect(shouldDeliverMessage(ROOM_ID, 'fix the bug')).toBe(true)
+    expect(shouldDeliverMessage(ROOM_ID, 'fix the bug', 'codex')).toBe(true)
   })
 
   it('returns true when valid @mention matches this agent', () => {
-    expect(shouldDeliverMessage(ROOM_ID, '@codex review this')).toBe(true)
+    expect(shouldDeliverMessage(ROOM_ID, '@codex review this', 'codex')).toBe(true)
   })
 
   it('returns false when @mention targets a different known agent', () => {
-    expect(shouldDeliverMessage(ROOM_ID, '@researcher check this')).toBe(false)
+    expect(shouldDeliverMessage(ROOM_ID, '@researcher check this', 'codex')).toBe(false)
   })
 
   it('returns true when one of multiple mentions matches', () => {
-    expect(shouldDeliverMessage(ROOM_ID, '@researcher @codex look at this')).toBe(true)
+    expect(shouldDeliverMessage(ROOM_ID, '@researcher @codex look at this', 'codex')).toBe(true)
   })
 
   it('delivers to everyone when @mention is for an unknown name', () => {
     // @nobody is not in room config — treat as general message
-    expect(shouldDeliverMessage(ROOM_ID, '@nobody hello')).toBe(true)
+    expect(shouldDeliverMessage(ROOM_ID, '@nobody hello', 'codex')).toBe(true)
   })
 
   it('filters when @mention includes a known agent even with unknown mixed in', () => {
     // @pi is known, @nobody is not — since a known member IS mentioned, filter
-    expect(shouldDeliverMessage(ROOM_ID, '@pi check this @nobody')).toBe(false)
+    expect(shouldDeliverMessage(ROOM_ID, '@pi check this @nobody', 'codex')).toBe(false)
   })
 
-  it('always delivers when MEET_AI_AGENT_NAME is not set (Claude team listener)', () => {
-    delete process.env.MEET_AI_AGENT_NAME
+  it('returns true when agentName is omitted', () => {
     // Without an agent identity, all messages pass through — InboxRouter handles routing
     expect(shouldDeliverMessage(ROOM_ID, '@codex review the PR')).toBe(true)
     expect(shouldDeliverMessage(ROOM_ID, '@pi check this code')).toBe(true)
-    expect(shouldDeliverMessage(ROOM_ID, '@researcher fix bug')).toBe(true)
-    expect(shouldDeliverMessage(ROOM_ID, '@outsider hey there')).toBe(true)
   })
 
   it('filters correctly for Pi listener', () => {
-    process.env.MEET_AI_AGENT_NAME = 'pi'
-    expect(shouldDeliverMessage(ROOM_ID, '@pi check this')).toBe(true)
-    expect(shouldDeliverMessage(ROOM_ID, '@codex review the PR')).toBe(false)
-    expect(shouldDeliverMessage(ROOM_ID, '@outsider hey there')).toBe(true)
+    expect(shouldDeliverMessage(ROOM_ID, '@pi check this', 'pi')).toBe(true)
+    expect(shouldDeliverMessage(ROOM_ID, '@codex review the PR', 'pi')).toBe(false)
+    expect(shouldDeliverMessage(ROOM_ID, '@outsider hey there', 'pi')).toBe(true)
+  })
+
+  it('filters by agentName for team-lead', () => {
+    expect(shouldDeliverMessage(ROOM_ID, '@codex review the PR', 'team-lead')).toBe(false)
+    expect(shouldDeliverMessage(ROOM_ID, '@team-lead review', 'team-lead')).toBe(true)
+    expect(shouldDeliverMessage(ROOM_ID, '@codex @team-lead review', 'team-lead')).toBe(true)
+    expect(shouldDeliverMessage(ROOM_ID, 'general message', 'team-lead')).toBe(true)
   })
 
   it('delivers to everyone when all @mentions are unknown', () => {
-    expect(shouldDeliverMessage(ROOM_ID, '@stranger @outsider check this')).toBe(true)
+    expect(shouldDeliverMessage(ROOM_ID, '@stranger @outsider check this', 'codex')).toBe(true)
   })
 })

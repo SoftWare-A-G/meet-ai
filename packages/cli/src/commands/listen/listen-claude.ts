@@ -55,7 +55,7 @@ export function listenClaude(
     appendRoomUsernames(roomId, [msg.sender])
     if (isTeamExcluded(msg.sender)) return
 
-    if (!shouldDeliverMessage(roomId, msg.content)) return
+    if (!shouldDeliverMessage(roomId, msg.content, inbox)) return
 
     if (msg.id && msg.room_id && (msg.attachment_count ?? 0) > 0) {
       void downloadMessageAttachments(client, msg.room_id, msg.id).then(paths => {

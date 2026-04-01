@@ -7,29 +7,28 @@ import type { MeetAiClient, Message } from '@meet-ai/cli/types'
 /**
  * Determine whether a message should be delivered to this listener.
  *
- * The listener's identity comes from `MEET_AI_AGENT_NAME` env var:
- * - If set (Codex/Pi/OpenCode): filters messages to only deliver those
- *   that @mention this agent or are general (no known-member mentions).
- * - If not set (Claude team listener): always delivers — the InboxRouter
- *   handles internal routing to specific agent inboxes.
+ * @param roomId   — the room to check known members against
+ * @param content  — message text (checked for @mentions)
+ * @param agentName — this listener's identity. If omitted, all messages
+ *                    are delivered (Claude team listener delegates to InboxRouter).
  *
  * Known room members come from room config via `getRoomUsernames(roomId)`.
  */
 export function shouldDeliverMessage(
   roomId: string,
   content: string | undefined,
+  agentName?: string,
 ): boolean {
   if (typeof content !== 'string') return true
   const mentions = content.match(/@([\w-]+)/g)
   if (!mentions) return true
 
-  const myName = process.env.MEET_AI_AGENT_NAME?.trim()
-  if (!myName) return true
+  if (!agentName) return true
 
   const mentionedNames = [...new Set(mentions.map(m => m.slice(1)))]
 
   // Deliver if directly mentioned
-  if (mentionedNames.includes(myName)) return true
+  if (mentionedNames.includes(agentName)) return true
 
   // Check whether any mention targets a known room member.
   // If it does → message is for another known agent → filter out.

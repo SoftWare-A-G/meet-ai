@@ -139,7 +139,7 @@ export async function listenOpencode(
       if (isHookAnchorMessage(msg)) return
       appendRoomUsernames(roomId, [msg.sender])
 
-      if (!shouldDeliverMessage(roomId, msg.content)) return
+      if (!shouldDeliverMessage(roomId, msg.content, senderName)) return
 
       emitOpencodeLog('info', 'listen-opencode', 'message_received', {
         sender: msg.sender,

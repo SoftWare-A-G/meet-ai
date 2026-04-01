@@ -805,7 +805,7 @@ export function listenCodex(
     if (isHookAnchorMessage(msg)) return
     appendRoomUsernames(roomId, [msg.sender])
 
-    if (!shouldDeliverMessage(roomId, msg.content)) return
+    if (!shouldDeliverMessage(roomId, msg.content, codexSender)) return
 
     if (msg.id && msg.room_id && (msg.attachment_count ?? 0) > 0) {
       void downloadMessageAttachments(client, msg.room_id, msg.id).then(paths => {

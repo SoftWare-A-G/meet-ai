@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.4.4](https://github.com/SoftWare-A-G/meet-ai/compare/2.4.3...2.4.4) (2026-04-01)
+
+### Bug Fixes
+
+- fix inbox mention routing so team-lead no longer receives messages addressed exclusively to other known agents by making listener identity explicit in `shouldDeliverMessage` and updating the Claude, Codex, Pi, and OpenCode listeners to pass their own agent names
+- align the CLI, worker, desktop, app, and domain package manifests at `2.4.4` for the release
+
+### Tests
+
+- update the listener mention-filter tests to cover explicit `agentName` routing, including the team-lead case where `@codex` messages are suppressed while general and self-addressed messages still pass through
+
 ## [2.4.3](https://github.com/SoftWare-A-G/meet-ai/compare/2.4.2...2.4.3) (2026-04-01)
 
 ### Features

@@ -561,7 +561,7 @@ export function listenPi(
     if (isHookAnchorMessage(msg)) return
     appendRoomUsernames(roomId, [msg.sender])
 
-    if (!shouldDeliverMessage(roomId, msg.content)) return
+    if (!shouldDeliverMessage(roomId, msg.content, piSender)) return
 
     emitPiLog('info', 'listen-pi', 'room_message.received', {
       sender: msg.sender,
