@@ -1,11 +1,11 @@
 import { describe, it, expect, mock, type Mock, beforeEach, afterEach, spyOn } from 'bun:test'
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { setMeetAiDirOverride, writeHomeConfig } from '@meet-ai/cli/lib/meetai-home'
+import { appendRoomUsernames } from '@meet-ai/cli/lib/room-config'
 import { ZodError } from 'zod'
 import { withMockFetch } from '../../../test/helpers/mock-fetch'
-import { listen } from './usecase'
-import { appendRoomUsernames } from '@meet-ai/cli/lib/room-config'
 import { shouldDeliverMessage } from './shared'
+import { listen } from './usecase'
 import type IInboxRouter from '@meet-ai/cli/domain/interfaces/IInboxRouter'
 import type { CodexAppServerEvent } from '@meet-ai/cli/lib/codex-app-server'
 import type { HookClient } from '@meet-ai/cli/lib/hooks/client'
@@ -239,10 +239,18 @@ describe('listen', () => {
   it('prints received messages as JSON lines to stdout', () => {
     // GIVEN a client that captures the onMessage handler
     const { client, getHandler } = mockClientCapturingHandler()
-    const writeOutput = mock((data: string) => {})
+    const writeOutput = mock((_: string) => {})
 
     // WHEN we start listening and simulate a message
-    listen(client, { roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c' }, undefined, undefined, undefined, undefined, writeOutput)
+    listen(
+      client,
+      { roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c' },
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      writeOutput
+    )
     const handler = getHandler()
     const msg = makeMessage({ id: 'msg-100', content: 'hello world' })
     handler(msg)
@@ -659,11 +667,11 @@ describe('listen', () => {
     }
 
     function parsedLogCalls(): { id: string; sender: string }[] {
-      return writeOutput.mock.calls.map((args) => JSON.parse(String(args[0])))
+      return writeOutput.mock.calls.map((args: any) => JSON.parse(String(args[0])))
     }
 
     beforeEach(() => {
-      writeOutput = mock((data: string) => {})
+      writeOutput = mock((_: string) => {})
       rmSync(teamHome, { recursive: true, force: true })
       mkdirSync(teamHome, { recursive: true })
       process.env.HOME = teamHome
@@ -679,11 +687,19 @@ describe('listen', () => {
       writeTeamConfig('demo-team', [{ name: 'team-lead' }, { name: 'coder' }])
 
       const { client, getHandler } = mockClientCapturingHandler()
-      listen(client, {
-        roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c',
-        team: 'demo-team',
-        inbox: 'team-lead',
-      }, undefined, undefined, undefined, undefined, writeOutput)
+      listen(
+        client,
+        {
+          roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c',
+          team: 'demo-team',
+          inbox: 'team-lead',
+        },
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        writeOutput
+      )
 
       const handler = getHandler()
       handler(makeMessage({ id: 'msg-own', sender: 'team-lead', content: 'my own message' }))
@@ -704,11 +720,19 @@ describe('listen', () => {
       mkdirSync(`${teamHome}/.claude/teams/new-team/inboxes`, { recursive: true })
 
       const { client, getHandler } = mockClientCapturingHandler()
-      listen(client, {
-        roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c',
-        team: 'new-team',
-        inbox: 'team-lead',
-      }, undefined, undefined, undefined, undefined, writeOutput)
+      listen(
+        client,
+        {
+          roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c',
+          team: 'new-team',
+          inbox: 'team-lead',
+        },
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        writeOutput
+      )
 
       const handler = getHandler()
       handler(makeMessage({ id: 'msg-own', sender: 'team-lead', content: 'my own message' }))
@@ -724,11 +748,19 @@ describe('listen', () => {
       writeTeamConfig('live-team', [{ name: 'team-lead' }])
 
       const { client, getHandler } = mockClientCapturingHandler()
-      listen(client, {
-        roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c',
-        team: 'live-team',
-        inbox: 'team-lead',
-      }, undefined, undefined, undefined, undefined, writeOutput)
+      listen(
+        client,
+        {
+          roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c',
+          team: 'live-team',
+          inbox: 'team-lead',
+        },
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        writeOutput
+      )
 
       const handler = getHandler()
 
@@ -762,11 +794,19 @@ describe('listen', () => {
       mkdirSync(`${teamHome}/.claude/teams/local-room/inboxes`, { recursive: true })
 
       const { client, getHandler } = mockClientCapturingHandler()
-      listen(client, {
-        roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c',
-        team: 'local-room',
-        inbox: 'team-lead',
-      }, undefined, undefined, undefined, undefined, writeOutput)
+      listen(
+        client,
+        {
+          roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c',
+          team: 'local-room',
+          inbox: 'team-lead',
+        },
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        writeOutput
+      )
 
       const handler = getHandler()
       // coder is in room config but NOT in team config — should NOT be excluded.
@@ -828,7 +868,7 @@ describe('listen', () => {
     it('enriches message with attachment paths when attachment_count > 0', async () => {
       // GIVEN a client that has downloadable attachments
       const { client, getHandler } = mockClientCapturingHandler()
-      const writeOutput: Mock<(data: string) => void> = mock((data: string) => {})
+      const writeOutput: Mock<(data: string) => void> = mock((_: string) => {})
       ;(client.getMessageAttachments as any).mockImplementation(() =>
         Promise.resolve([
           { id: 'att-1', filename: 'file.png', size: 100, contentType: 'image/png' },
@@ -839,7 +879,15 @@ describe('listen', () => {
       )
 
       // WHEN we start listening and receive a message with attachments
-      listen(client, { roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c' }, undefined, undefined, undefined, undefined, writeOutput)
+      listen(
+        client,
+        { roomId: 'df75b1db-f583-4d9f-8e34-9b3d614f152c' },
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        writeOutput
+      )
       const handler = getHandler()
       const msg = {
         ...makeMessage({ id: 'msg-att' }),

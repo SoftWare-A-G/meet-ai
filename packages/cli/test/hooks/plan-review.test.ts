@@ -60,14 +60,14 @@ describe('plan-review usecase', () => {
   it('skips when stdin is invalid JSON', async () => {
     const { processPlanReview } = await loadUsecase()
     await processPlanReview('not json', TEST_DIR)
-    expect(stderrCapture).toContain('ParseError: Invalid JSON')
+    expect(stderrCapture).toContain('bad input: Invalid JSON')
     expect(stdoutCapture).toBe('')
   })
 
   it('skips when no session_id', async () => {
     const { processPlanReview } = await loadUsecase()
     await processPlanReview(JSON.stringify({ tool_name: 'ExitPlanMode', hook_event_name: 'PermissionRequest' }), TEST_DIR)
-    expect(stderrCapture).toContain('ValidationError:')
+    expect(stderrCapture).toContain('validation failed on')
     expect(stdoutCapture).toBe('')
   })
 
@@ -103,7 +103,7 @@ describe('plan-review usecase', () => {
   it('skips when no room found for session', async () => {
     const { processPlanReview } = await loadUsecase()
     await processPlanReview(makeInput({ session_id: 'unknown-sess' }), TEST_DIR)
-    expect(stderrCapture).toContain('RoomResolveError:')
+    expect(stderrCapture).toContain('room not found:')
     expect(stdoutCapture).toBe('')
   })
 
@@ -214,7 +214,7 @@ describe('plan-review usecase', () => {
     const { processPlanReview } = await loadUsecase()
     await processPlanReview(makeInput(), TEST_DIR)
 
-    expect(stderrCapture).toContain('ReviewCreateError: HTTP 500')
+    expect(stderrCapture).toContain('failed to create review:')
     expect(stdoutCapture).toBe('')
   })
 
@@ -224,7 +224,7 @@ describe('plan-review usecase', () => {
     const { processPlanReview } = await loadUsecase()
     await processPlanReview(makeInput(), TEST_DIR)
 
-    expect(stderrCapture).toContain('ReviewCreateError:')
+    expect(stderrCapture).toContain('failed to create review:')
     expect(stdoutCapture).toBe('')
   })
 

@@ -10,19 +10,17 @@ export class HookTaskRepository implements ITaskRepository {
     roomId: string,
     payload: TaskUpsertPayload,
   ): Promise<Result<void, TaskUpsertError>> {
-    try {
-      const res = await this.client.api.rooms[':id'].tasks.upsert.$post({
-        param: { id: roomId },
-        json: payload,
-      })
-      if (!res.ok) {
-        return Result.err(
-          new TaskUpsertError({ message: `HTTP ${res.status}: ${res.statusText}` }),
-        )
-      }
-      return Result.ok(undefined)
-    } catch (error) {
-      return Result.err(new TaskUpsertError({ message: String(error) }))
-    }
+    return Result.tryPromise({
+      try: async () => {
+        const res = await this.client.api.rooms[':id'].tasks.upsert.$post({
+          param: { id: roomId },
+          json: payload,
+        })
+        if (!res.ok) {
+          throw new TaskUpsertError({ message: `HTTP ${res.status}: ${res.statusText}` })
+        }
+      },
+      catch: (e) => e instanceof TaskUpsertError ? e : new TaskUpsertError({ message: String(e) }),
+    })
   }
 }

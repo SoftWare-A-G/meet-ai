@@ -31,7 +31,7 @@ export function listenClaude(
   },
   inboxRouter?: IInboxRouter,
   teamMemberRegistrar: TeamMemberRegistrar = registerActiveTeamMember,
-  writeOutput: (data: string) => void = (data) => process.stdout.write(data + '\n')
+  writeOutput: (data: string) => void = data => process.stdout.write(`${data}\n`)
 ): WebSocket {
   const parsed = ListenInput.parse(input)
   const { roomId, senderType, team, inbox } = parsed

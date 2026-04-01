@@ -71,7 +71,7 @@ describe('processQuestionReview', () => {
     const { processQuestionReview } =
       await import('../../src/commands/hook/question-review/usecase')
     await processQuestionReview('not json', TEST_DIR)
-    expect(stderrOutput).toContain('ParseError: Invalid JSON')
+    expect(stderrOutput).toContain('bad input: Invalid JSON')
     expect(stdoutOutput).toBe('')
   })
 
@@ -79,7 +79,7 @@ describe('processQuestionReview', () => {
     const { processQuestionReview } =
       await import('../../src/commands/hook/question-review/usecase')
     await processQuestionReview(makeInput({ session_id: '' }), TEST_DIR)
-    expect(stderrOutput).toContain('ValidationError: session_id is required')
+    expect(stderrOutput).toContain('validation failed on "session_id": session_id is required')
     expect(stdoutOutput).toBe('')
   })
 
@@ -87,7 +87,7 @@ describe('processQuestionReview', () => {
     const { processQuestionReview } =
       await import('../../src/commands/hook/question-review/usecase')
     await processQuestionReview(makeInput({ tool_input: { questions: [] } }), TEST_DIR)
-    expect(stderrOutput).toContain('ValidationError')
+    expect(stderrOutput).toContain('validation failed on')
     expect(stdoutOutput).toBe('')
   })
 
@@ -96,7 +96,7 @@ describe('processQuestionReview', () => {
       await import('../../src/commands/hook/question-review/usecase')
     // No team file written — room lookup will fail
     await processQuestionReview(makeInput(), TEST_DIR)
-    expect(stderrOutput).toContain('RoomResolveError: No room found for session')
+    expect(stderrOutput).toContain('room not found: No room found for session')
     expect(stdoutOutput).toBe('')
   })
 
@@ -229,7 +229,7 @@ describe('processQuestionReview', () => {
 
     // Must not write to stdout on parse failure
     expect(stdoutOutput).toBe('')
-    expect(stderrOutput).toContain('ParseError: Invalid answers_json')
+    expect(stderrOutput).toContain('bad input: Invalid answers_json')
   })
 
   it('handles create review failure', async () => {
@@ -248,7 +248,7 @@ describe('processQuestionReview', () => {
     await processQuestionReview(makeInput(), TEST_DIR, { pollInterval: 10, pollTimeout: 500 })
 
     expect(stdoutOutput).toBe('')
-    expect(stderrOutput).toContain('ReviewCreateError: HTTP 500')
+    expect(stderrOutput).toContain('failed to create review:')
   })
 
   it('handles poll timeout — sends timeout message and expires review', async () => {
@@ -278,7 +278,7 @@ describe('processQuestionReview', () => {
     await processQuestionReview(makeInput(), TEST_DIR, { pollInterval: 10, pollTimeout: 50 })
 
     expect(stdoutOutput).toBe('')
-    expect(stderrOutput).toContain('TimeoutError: Timed out waiting for decision')
+    expect(stderrOutput).toContain('timed out: Timed out waiting for decision')
   })
 
   it('never throws — always exits cleanly on fetch network error', async () => {
@@ -292,6 +292,6 @@ describe('processQuestionReview', () => {
     await processQuestionReview(makeInput(), TEST_DIR, { pollInterval: 10, pollTimeout: 500 })
 
     expect(stdoutOutput).toBe('')
-    expect(stderrOutput).toContain('ReviewCreateError: Error: Network failure')
+    expect(stderrOutput).toContain('failed to create review: Error: Network failure')
   })
 })
