@@ -1,17 +1,17 @@
 import { Result } from 'better-result'
-import { PermissionRequestInputSchema } from '../entities/hooks'
-import type { PermissionRequestInput } from '../entities/hooks'
-import type { IReviewRepository } from '../repositories/IReviewRepository'
-import type { IHookTransport } from '../adapters/IHookTransport'
-import type { IRoomResolver } from '../services/IRoomResolver'
-import type { HookOutput, ReviewStatus } from '../entities/review'
 import { ParseError, ValidationError } from '../entities/errors'
+import { PermissionRequestInputSchema } from '../entities/hooks'
+import type { IHookTransport } from '../adapters/IHookTransport'
 import type {
   TimeoutError,
   ReviewCreateError,
   ReviewPollError,
   RoomResolveError,
 } from '../entities/errors'
+import type { PermissionRequestInput } from '../entities/hooks'
+import type { HookOutput, ReviewStatus } from '../entities/review'
+import type { IReviewRepository } from '../repositories/IReviewRepository'
+import type { IRoomResolver } from '../services/IRoomResolver'
 
 const EXCLUDED_TOOLS = ['ExitPlanMode', 'AskUserQuestion']
 
@@ -27,93 +27,75 @@ export default class ProcessPermissionReview {
   constructor(
     private readonly reviewRepository: IReviewRepository,
     private readonly hookTransport: IHookTransport,
-    private readonly roomResolver: IRoomResolver,
+    private readonly roomResolver: IRoomResolver
   ) {}
 
   async execute(
-    rawInput: string,
+    rawInput: string
   ): Promise<Result<HookOutput | null, ProcessPermissionReviewError>> {
-    // 1. Parse & validate
-    const parsed = this.parsePermissionInput(rawInput)
-    if (parsed.isErr()) return parsed
+    return Result.gen(async function* (this: ProcessPermissionReview) {
+      const input = yield* this.parsePermissionInput(rawInput)
 
-    const input = parsed.value
+      if (this.isExcludedTool(input.tool_name)) return Result.ok(null)
 
-    // 2. Excluded tool check
-    if (this.isExcludedTool(input.tool_name)) return Result.ok(null)
-
-    // 3. Resolve room
-    const roomResult = await this.roomResolver.findRoomForSession(
-      input.session_id,
-      input.transcript_path,
-    )
-    if (roomResult.isErr()) return roomResult
-
-    const roomId = roomResult.value
-
-    // 4. Format & create review
-    const formattedContent = this.formatPermissionRequest(input.tool_name, input.tool_input)
-    const toolInputJson = input.tool_input ? JSON.stringify(input.tool_input) : undefined
-    const reviewResult = await this.reviewRepository.createPermissionReview(
-      roomId,
-      input.tool_name,
-      toolInputJson,
-      formattedContent,
-    )
-    if (reviewResult.isErr()) return reviewResult
-
-    const review = reviewResult.value
-
-    // 5. Poll for decision
-    const decisionResult = await this.reviewRepository.getPermissionReviewStatus(
-      roomId,
-      review.id,
-    )
-    if (decisionResult.isErr()) {
-      // Only run cleanup on actual timeout — not on 404s or other poll failures
-      if (decisionResult.error._tag === 'TimeoutError') {
-        void await this.reviewRepository.expirePermissionReview(roomId, review.id)
-        void await this.hookTransport.sendTimeoutMessage(
+      const roomId = yield* Result.await(
+        this.roomResolver.findRoomForSession(input.session_id, input.transcript_path)
+      )
+      const formattedContent = this.formatPermissionRequest(input.tool_name, input.tool_input)
+      const review = yield* Result.await(
+        this.reviewRepository.createPermissionReview(
           roomId,
-          '_Permission request timed out — approve in terminal instead._',
-          '#f97316',
+          input.tool_name,
+          input.tool_input,
+          formattedContent
         )
-      }
-      return decisionResult
-    }
+      )
 
-    // 6. Resolve output
-    return this.resolveDecisionOutput(decisionResult.value.status, decisionResult.value.feedback)
+      const decision = yield* Result.await(
+        (async () => {
+          const result = await this.reviewRepository.getPermissionReviewStatus(roomId, review.id)
+          if (result.isErr() && result.error._tag === 'TimeoutError') {
+            await this.reviewRepository.expirePermissionReview(roomId, review.id)
+            await this.hookTransport.sendTimeoutMessage(
+              roomId,
+              '_Permission request timed out — approve in terminal instead._',
+              '#f97316'
+            )
+          }
+          return result
+        })()
+      )
+
+      return this.resolveDecisionOutput(decision.status, decision.feedback)
+    }, this)
   }
 
   private parsePermissionInput(
-    raw: string,
+    raw: string
   ): Result<PermissionRequestInput, ParseError | ValidationError> {
-    const parsed = Result.try({
-      try: () => JSON.parse(raw),
-      catch: () => new ParseError({ message: 'Invalid JSON' }),
+    return Result.gen(function* () {
+      const parsed = yield* Result.try({
+        try: () => JSON.parse(raw),
+        catch: () => new ParseError({ message: 'Invalid JSON' }),
+      })
+
+      const result = PermissionRequestInputSchema.safeParse(parsed)
+      if (!result.success) {
+        const issue = result.error.issues[0]
+        const field = String(issue.path[0] ?? 'input')
+        const message = issue.code === 'too_small' ? `${field} is required` : issue.message
+        return yield* Result.err(new ValidationError({ field, message }))
+      }
+
+      return Result.ok(result.data)
     })
-    if (parsed.isErr()) return parsed
-
-    const result = PermissionRequestInputSchema.safeParse(parsed.value)
-    if (!result.success) {
-      const issue = result.error.issues[0]
-      const field = String(issue.path[0] ?? 'input')
-      const message = issue.code === 'too_small' ? `${field} is required` : issue.message
-      return Result.err(new ValidationError({ field, message }))
-    }
-
-    return Result.ok(result.data)
   }
 
   private isExcludedTool(toolName: string): boolean {
     return EXCLUDED_TOOLS.includes(toolName)
   }
 
-  private formatPermissionRequest(
-    toolName: string,
-    toolInput?: Record<string, unknown>,
-  ): string {
+  private formatPermissionRequest(toolName: string, toolInput?: Record<string, unknown>): string {
     let text = `**Permission request: ${toolName}**\n`
 
     if (toolInput) {
@@ -132,7 +114,7 @@ export default class ProcessPermissionReview {
 
   private resolveDecisionOutput(
     status: ReviewStatus,
-    feedback?: string | null,
+    feedback?: string | null
   ): Result<HookOutput | null, never> {
     if (status === 'approved') {
       return Result.ok({
@@ -142,6 +124,7 @@ export default class ProcessPermissionReview {
         },
       })
     }
+
     if (status === 'denied') {
       return Result.ok({
         hookSpecificOutput: {
@@ -150,6 +133,7 @@ export default class ProcessPermissionReview {
         },
       })
     }
+
     return Result.ok(null)
   }
 }

@@ -6,7 +6,7 @@ export interface IReviewRepository {
   createPermissionReview(
     roomId: string,
     toolName: string,
-    toolInput: string | undefined,
+    toolInput: Record<string, unknown> | undefined,
     formattedContent: string,
   ): Promise<Result<CreateReviewResult, ReviewCreateError>>
 

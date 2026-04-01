@@ -1,12 +1,12 @@
 import { Result } from 'better-result'
+import { ParseError, ValidationError } from '../entities/errors'
 import { TaskHookInputSchema } from '../entities/hooks'
-import type { TaskHookInput } from '../entities/hooks'
 import { TaskStatusSchema } from '../entities/tasks'
+import type { RoomResolveError, TaskUpsertError } from '../entities/errors'
+import type { TaskHookInput } from '../entities/hooks'
 import type { TaskUpsertPayload } from '../entities/tasks'
 import type { ITaskRepository } from '../repositories/ITaskRepository'
 import type { IRoomResolver } from '../services/IRoomResolver'
-import { ParseError, ValidationError } from '../entities/errors'
-import type { RoomResolveError, TaskUpsertError } from '../entities/errors'
 
 const CLAUDE_STATUS_MAP: Record<string, string> = {
   open: 'pending',
@@ -15,61 +15,43 @@ const CLAUDE_STATUS_MAP: Record<string, string> = {
   done: 'completed',
 }
 
-export type ProcessTaskSyncError =
-  | ParseError
-  | ValidationError
-  | RoomResolveError
-  | TaskUpsertError
+export type ProcessTaskSyncError = ParseError | ValidationError | RoomResolveError | TaskUpsertError
 
 export default class ProcessTaskSync {
   constructor(
     private readonly taskRepository: ITaskRepository,
-    private readonly roomResolver: IRoomResolver,
+    private readonly roomResolver: IRoomResolver
   ) {}
 
-  async execute(
-    rawInput: string,
-  ): Promise<Result<void, ProcessTaskSyncError>> {
-    // 1. Parse & validate
-    const parsed = this.parseTaskInput(rawInput)
-    if (parsed.isErr()) return parsed
-
-    const input = parsed.value
-
-    // 2. Resolve room
-    const roomResult = await this.roomResolver.findRoomForSession(
-      input.session_id,
-      input.transcript_path,
-    )
-    if (roomResult.isErr()) return roomResult
-
-    const roomId = roomResult.value
-
-    // 3. Build payload
-    const payload = this.buildPayload(input)
-
-    // 4. Upsert
-    return this.taskRepository.upsertTask(roomId, payload)
+  async execute(rawInput: string): Promise<Result<void, ProcessTaskSyncError>> {
+    return Result.gen(async function* (this: ProcessTaskSync) {
+      const input = yield* this.parseTaskInput(rawInput)
+      const roomId = yield* Result.await(
+        this.roomResolver.findRoomForSession(input.session_id, input.transcript_path)
+      )
+      const payload = this.buildPayload(input)
+      yield* Result.await(this.taskRepository.upsertTask(roomId, payload))
+      return Result.ok()
+    }, this)
   }
 
-  private parseTaskInput(
-    raw: string,
-  ): Result<TaskHookInput, ParseError | ValidationError> {
-    const parsed = Result.try({
-      try: () => JSON.parse(raw),
-      catch: () => new ParseError({ message: 'Invalid JSON' }),
+  private parseTaskInput(raw: string): Result<TaskHookInput, ParseError | ValidationError> {
+    return Result.gen(function* () {
+      const parsed = yield* Result.try({
+        try: () => JSON.parse(raw),
+        catch: () => new ParseError({ message: 'Invalid JSON' }),
+      })
+
+      const result = TaskHookInputSchema.safeParse(parsed)
+      if (!result.success) {
+        const issue = result.error.issues[0]
+        const field = String(issue.path[0] ?? 'input')
+        const message = issue.code === 'too_small' ? `${field} is required` : issue.message
+        return yield* Result.err(new ValidationError({ field, message }))
+      }
+
+      return Result.ok(result.data)
     })
-    if (parsed.isErr()) return parsed
-
-    const result = TaskHookInputSchema.safeParse(parsed.value)
-    if (!result.success) {
-      const issue = result.error.issues[0]
-      const field = String(issue.path[0] ?? 'input')
-      const message = issue.code === 'too_small' ? `${field} is required` : issue.message
-      return Result.err(new ValidationError({ field, message }))
-    }
-
-    return Result.ok(result.data)
   }
 
   private buildPayload(input: TaskHookInput): TaskUpsertPayload {

@@ -16,7 +16,7 @@ export class HookReviewRepository implements IReviewRepository {
   async createPermissionReview(
     roomId: string,
     toolName: string,
-    toolInput: string | undefined,
+    toolInput: Record<string, unknown> | undefined,
     formattedContent: string,
   ): Promise<Result<CreateReviewResult, ReviewCreateError>> {
     try {
@@ -24,7 +24,7 @@ export class HookReviewRepository implements IReviewRepository {
         param: { id: roomId },
         json: {
           tool_name: toolName,
-          tool_input_json: toolInput,
+          tool_input_json: toolInput ? JSON.stringify(toolInput) : undefined,
           formatted_content: formattedContent,
         },
       })

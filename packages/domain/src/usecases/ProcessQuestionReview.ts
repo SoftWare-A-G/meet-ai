@@ -30,72 +30,61 @@ export default class ProcessQuestionReview {
   ) {}
 
   async execute(rawInput: string): Promise<Result<HookOutput | null, ProcessQuestionReviewError>> {
-    // 1. Parse & validate
-    const parsed = this.parseQuestionInput(rawInput)
-    if (parsed.isErr()) return parsed
-
-    const input = parsed.value
-
-    // 2. Resolve room
-    const roomResult = await this.roomResolver.findRoomForSession(
-      input.session_id,
-      input.transcript_path
-    )
-    if (roomResult.isErr()) return roomResult
-
-    const roomId = roomResult.value
-
-    // 3. Format & create review
-    const formattedContent = this.formatQuestionContent(input.tool_input.questions)
-    const reviewResult = await this.questionReviewRepository.createQuestionReview(
-      roomId,
-      input.tool_input.questions,
-      formattedContent
-    )
-    if (reviewResult.isErr()) return reviewResult
-
-    const review = reviewResult.value
-
-    // 4. Poll for answer
-    const answerResult = await this.questionReviewRepository.getQuestionReviewStatus(
-      roomId,
-      review.id
-    )
-    if (answerResult.isErr()) {
-      // Only run cleanup on actual timeout — not on 404s or other poll failures
-      if (answerResult.error._tag === 'TimeoutError') {
-        void (await this.questionReviewRepository.expireQuestionReview(roomId, review.id))
-        void (await this.hookTransport.sendTimeoutMessage(
+    return Result.gen(async function* (this: ProcessQuestionReview) {
+      const input = yield* this.parseQuestionInput(rawInput)
+      const roomId = yield* Result.await(
+        this.roomResolver.findRoomForSession(input.session_id, input.transcript_path)
+      )
+      const formattedContent = this.formatQuestionContent(input.tool_input.questions)
+      const review = yield* Result.await(
+        this.questionReviewRepository.createQuestionReview(
           roomId,
-          '_Question timed out — answer in terminal instead._',
-          '#f59e0b'
-        ))
-      }
-      return answerResult
-    }
+          input.tool_input.questions,
+          formattedContent
+        )
+      )
 
-    // 5. Resolve output
-    return this.resolveAnswerOutput(answerResult.value, input.tool_input.questions)
+      const answer = yield* Result.await(
+        (async () => {
+          const result = await this.questionReviewRepository.getQuestionReviewStatus(
+            roomId,
+            review.id
+          )
+          if (result.isErr() && result.error._tag === 'TimeoutError') {
+            await this.questionReviewRepository.expireQuestionReview(roomId, review.id)
+            await this.hookTransport.sendTimeoutMessage(
+              roomId,
+              '_Question timed out — answer in terminal instead._',
+              '#f59e0b'
+            )
+          }
+          return result
+        })()
+      )
+
+      return this.resolveAnswerOutput(answer, input.tool_input.questions)
+    }, this)
   }
 
   private parseQuestionInput(
     raw: string
   ): Result<QuestionRequestInput, ParseError | ValidationError> {
-    const parsed = Result.try({
-      try: () => JSON.parse(raw),
-      catch: () => new ParseError({ message: 'Invalid JSON' }),
+    return Result.gen(function* () {
+      const parsed = yield* Result.try({
+        try: () => JSON.parse(raw),
+        catch: () => new ParseError({ message: 'Invalid JSON' }),
+      })
+
+      const result = QuestionRequestInputSchema.safeParse(parsed)
+      if (!result.success) {
+        const issue = result.error.issues[0]
+        const field = String(issue.path[0] ?? 'input')
+        const message = issue.code === 'too_small' ? `${field} is required` : issue.message
+        return yield* Result.err(new ValidationError({ field, message }))
+      }
+
+      return Result.ok(result.data)
     })
-    if (parsed.isErr()) return parsed
-
-    const result = QuestionRequestInputSchema.safeParse(parsed.value)
-    if (!result.success) {
-      const issue = result.error.issues[0]
-      const field = String(issue.path[0] ?? 'input')
-      const message = issue.code === 'too_small' ? `${field} is required` : issue.message
-      return Result.err(new ValidationError({ field, message }))
-    }
-
-    return Result.ok(result.data)
   }
 
   private formatQuestionContent(questions: QuestionItem[]): string {

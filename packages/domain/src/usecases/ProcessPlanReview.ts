@@ -1,16 +1,16 @@
 import { Result } from 'better-result'
-import { PlanRequestInputSchema } from '../entities/hooks'
-import type { PlanRequestInput } from '../entities/hooks'
-import type { IPlanReviewRepository } from '../repositories/IPlanReviewRepository'
-import type { IRoomResolver } from '../services/IRoomResolver'
-import type { AllowedPrompt, HookOutput, PermissionMode, ReviewStatus } from '../entities/review'
 import { ParseError, ValidationError } from '../entities/errors'
+import { PlanRequestInputSchema } from '../entities/hooks'
 import type {
   TimeoutError,
   ReviewCreateError,
   ReviewPollError,
   RoomResolveError,
 } from '../entities/errors'
+import type { PlanRequestInput } from '../entities/hooks'
+import type { AllowedPrompt, HookOutput, PermissionMode, ReviewStatus } from '../entities/review'
+import type { IPlanReviewRepository } from '../repositories/IPlanReviewRepository'
+import type { IRoomResolver } from '../services/IRoomResolver'
 
 const PLAN_FALLBACK = '_Agent requested to exit plan mode without a plan._'
 
@@ -25,81 +25,61 @@ export type ProcessPlanReviewError =
 export default class ProcessPlanReview {
   constructor(
     private readonly planReviewRepository: IPlanReviewRepository,
-    private readonly roomResolver: IRoomResolver,
+    private readonly roomResolver: IRoomResolver
   ) {}
 
-  async execute(
-    rawInput: string,
-  ): Promise<Result<HookOutput | null, ProcessPlanReviewError>> {
-    // 1. Parse & validate
-    const parsed = this.parsePlanInput(rawInput)
-    if (parsed.isErr()) return parsed
+  async execute(rawInput: string): Promise<Result<HookOutput | null, ProcessPlanReviewError>> {
+    return Result.gen(async function* (this: ProcessPlanReview) {
+      const input = yield* this.parsePlanInput(rawInput)
+      const roomId = yield* Result.await(
+        this.roomResolver.findRoomForSession(input.session_id, input.transcript_path)
+      )
+      const planContent = input.tool_input?.plan || PLAN_FALLBACK
+      const review = yield* Result.await(
+        this.planReviewRepository.createPlanReview(roomId, planContent)
+      )
 
-    const input = parsed.value
+      const decision = yield* Result.await(
+        (async () => {
+          const result = await this.planReviewRepository.getPlanReviewStatus(roomId, review.id)
+          if (result.isErr() && result.error._tag === 'TimeoutError') {
+            await this.planReviewRepository.expirePlanReview(roomId, review.id)
+          }
+          return result
+        })()
+      )
 
-    // 2. Resolve room
-    const roomResult = await this.roomResolver.findRoomForSession(
-      input.session_id,
-      input.transcript_path,
-    )
-    if (roomResult.isErr()) return roomResult
-
-    const roomId = roomResult.value
-
-    // 3. Extract plan content & create review
-    const planContent = input.tool_input?.plan || PLAN_FALLBACK
-    const reviewResult = await this.planReviewRepository.createPlanReview(
-      roomId,
-      planContent,
-    )
-    if (reviewResult.isErr()) return reviewResult
-
-    const review = reviewResult.value
-
-    // 4. Poll for decision
-    const decisionResult = await this.planReviewRepository.getPlanReviewStatus(
-      roomId,
-      review.id,
-    )
-    if (decisionResult.isErr()) {
-      if (decisionResult.error._tag === 'TimeoutError') {
-        void await this.planReviewRepository.expirePlanReview(roomId, review.id)
-      }
-      return decisionResult
-    }
-
-    // 5. Resolve output
-    return this.resolveDecisionOutput(
-      decisionResult.value.status,
-      decisionResult.value.feedback,
-      decisionResult.value.permission_mode,
-    )
+      return this.resolveDecisionOutput(
+        decision.status,
+        decision.feedback,
+        decision.permission_mode
+      )
+    }, this)
   }
 
-  private parsePlanInput(
-    raw: string,
-  ): Result<PlanRequestInput, ParseError | ValidationError> {
-    const parsed = Result.try({
-      try: () => JSON.parse(raw),
-      catch: () => new ParseError({ message: 'Invalid JSON' }),
+  private parsePlanInput(raw: string): Result<PlanRequestInput, ParseError | ValidationError> {
+    return Result.gen(function* () {
+      const parsed = yield* Result.try({
+        try: () => JSON.parse(raw),
+        catch: () => new ParseError({ message: 'Invalid JSON' }),
+      })
+
+      const result = PlanRequestInputSchema.safeParse(parsed)
+      if (!result.success) {
+        const issue = result.error.issues[0]
+        const field = String(issue.path[0] ?? 'input')
+        const message = issue.code === 'too_small' ? `${field} is required` : issue.message
+        return yield* Result.err(new ValidationError({ field, message }))
+      }
+
+      return Result.ok(result.data)
     })
-    if (parsed.isErr()) return parsed
-
-    const result = PlanRequestInputSchema.safeParse(parsed.value)
-    if (!result.success) {
-      const issue = result.error.issues[0]
-      const field = String(issue.path[0] ?? 'input')
-      const message = issue.code === 'too_small' ? `${field} is required` : issue.message
-      return Result.err(new ValidationError({ field, message }))
-    }
-
-    return Result.ok(result.data)
   }
 
   private resolveDecisionOutput(
     status: ReviewStatus,
     feedback: string | null | undefined,
-    permissionMode: PermissionMode,
+    permissionMode: PermissionMode
   ): Result<HookOutput | null, never> {
     if (status === 'approved') {
       const allowedPrompts = this.getPromptsByMode(permissionMode)
@@ -113,6 +93,7 @@ export default class ProcessPlanReview {
         },
       })
     }
+
     if (status === 'denied') {
       return Result.ok({
         hookSpecificOutput: {
@@ -124,6 +105,7 @@ export default class ProcessPlanReview {
         },
       })
     }
+
     // expired
     return Result.ok({
       hookSpecificOutput: {
@@ -146,9 +128,11 @@ export default class ProcessPlanReview {
         { tool: 'Bash', prompt: 'run linter' },
       ]
     }
+
     if (mode === 'bypassPermissions') {
       return [{ tool: 'Bash', prompt: 'run any command' }]
     }
+
     return undefined
   }
 }
