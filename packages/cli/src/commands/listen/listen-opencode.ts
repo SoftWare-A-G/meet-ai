@@ -217,7 +217,7 @@ export async function listenOpencode(
           .map(p => (p as { text: string }).text)
           .join('\n')
 
-        if (responseText.trim() && responseText !== '""') {
+        if (responseText.trim() && responseText.trim() !== '""') {
           await client.sendMessage(roomId, senderName, responseText)
 
           emitOpencodeLog('info', 'listen-opencode', 'response_sent', {

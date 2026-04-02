@@ -1,11 +1,22 @@
+import { matchError } from 'better-result'
 import { createHookClient } from '@meet-ai/cli/lib/hooks/client'
 import { getHomeCredentials } from '@meet-ai/cli/lib/meetai-home'
 import { ProcessTaskSync } from '@meet-ai/domain'
 import { HookTaskRepository } from './task-repository'
 import { SessionRoomResolver } from '../adapters/room-resolver'
+import type { ProcessTaskSyncError } from '@meet-ai/domain'
 
 function log(msg: string) {
   process.stderr.write(`[task-sync] ${msg}\n`)
+}
+
+function logError(error: ProcessTaskSyncError): void {
+  matchError(error, {
+    ParseError: (e) => log(`bad input: ${e.message}`),
+    ValidationError: (e) => log(`validation failed on "${e.field}": ${e.message}`),
+    RoomResolveError: (e) => log(`room not found: ${e.message}`),
+    TaskUpsertError: (e) => log(`task upsert failed: ${e.message}`),
+  })
 }
 
 export async function processTaskSync(
@@ -22,7 +33,7 @@ export async function processTaskSync(
   const result = await usecase.execute(rawInput)
 
   if (result.isErr()) {
-    log(`${result.error._tag}: ${result.error.message}`)
+    logError(result.error)
     return 'skip'
   }
 

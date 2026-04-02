@@ -63,28 +63,28 @@ describe('processPermissionReview', () => {
   it('skips when stdin is not valid JSON', async () => {
     const { processPermissionReview } = await import('../../src/commands/hook/permission-review/usecase')
     await processPermissionReview('not json', TEST_DIR)
-    expect(stderrOutput).toContain('ParseError: Invalid JSON')
+    expect(stderrOutput).toContain('bad input: Invalid JSON')
     expect(stdoutOutput).toBe('')
   })
 
   it('skips when session_id is missing', async () => {
     const { processPermissionReview } = await import('../../src/commands/hook/permission-review/usecase')
     await processPermissionReview(makeInput({ session_id: '' }), TEST_DIR)
-    expect(stderrOutput).toContain('ValidationError: session_id is required')
+    expect(stderrOutput).toContain('validation failed on "session_id": session_id is required')
     expect(stdoutOutput).toBe('')
   })
 
   it('skips when tool_name is missing', async () => {
     const { processPermissionReview } = await import('../../src/commands/hook/permission-review/usecase')
     await processPermissionReview(makeInput({ tool_name: '' }), TEST_DIR)
-    expect(stderrOutput).toContain('ValidationError: tool_name is required')
+    expect(stderrOutput).toContain('validation failed on "tool_name": tool_name is required')
     expect(stdoutOutput).toBe('')
   })
 
   it('skips when no room found for session', async () => {
     const { processPermissionReview } = await import('../../src/commands/hook/permission-review/usecase')
     await processPermissionReview(makeInput(), TEST_DIR)
-    expect(stderrOutput).toContain('RoomResolveError: No room found for session')
+    expect(stderrOutput).toContain('room not found: No room found for session')
     expect(stdoutOutput).toBe('')
   })
 
@@ -227,7 +227,7 @@ describe('processPermissionReview', () => {
     await processPermissionReview(makeInput(), TEST_DIR, { pollInterval: 10, pollTimeout: 500 })
 
     expect(stdoutOutput).toBe('')
-    expect(stderrOutput).toContain('ReviewCreateError: HTTP 500')
+    expect(stderrOutput).toContain('failed to create review:')
   })
 
   it('handles poll timeout — sends timeout message and expires review', async () => {
@@ -256,7 +256,7 @@ describe('processPermissionReview', () => {
     await processPermissionReview(makeInput(), TEST_DIR, { pollInterval: 10, pollTimeout: 50 })
 
     expect(stdoutOutput).toBe('')
-    expect(stderrOutput).toContain('TimeoutError: Timed out waiting for decision')
+    expect(stderrOutput).toContain('timed out: Timed out waiting for decision')
   })
 
   it('never throws — always exits cleanly on fetch network error', async () => {
@@ -269,7 +269,7 @@ describe('processPermissionReview', () => {
     await processPermissionReview(makeInput(), TEST_DIR, { pollInterval: 10, pollTimeout: 500 })
 
     expect(stdoutOutput).toBe('')
-    expect(stderrOutput).toContain('ReviewCreateError: Error: Network failure')
+    expect(stderrOutput).toContain('failed to create review: Error: Network failure')
   })
 
   it('returns ReviewPollError when all polls throw (network failure)', async () => {
@@ -289,8 +289,8 @@ describe('processPermissionReview', () => {
 
     await processPermissionReview(makeInput(), TEST_DIR, { pollInterval: 10, pollTimeout: 50 })
 
-    expect(stderrOutput).toContain('ReviewPollError')
-    expect(stderrOutput).not.toContain('TimeoutError')
+    expect(stderrOutput).toContain('poll failed:')
+    expect(stderrOutput).not.toContain('timed out:')
     expect(stdoutOutput).toBe('')
   })
 
@@ -370,7 +370,7 @@ describe('processPermissionReview', () => {
 
     await processPermissionReview(makeInput(), TEST_DIR, { pollInterval: 10, pollTimeout: 50 })
 
-    expect(stderrOutput).toContain('TimeoutError')
+    expect(stderrOutput).toContain('timed out:')
     expect(stdoutOutput).toBe('')
   })
 
@@ -410,7 +410,7 @@ describe('processPermissionReview', () => {
 
     await processPermissionReview(makeInput(), TEST_DIR, { pollInterval: 10, pollTimeout: 50 })
 
-    expect(stderrOutput).toContain('TimeoutError')
+    expect(stderrOutput).toContain('timed out:')
     expect(stdoutOutput).toBe('')
   })
 })

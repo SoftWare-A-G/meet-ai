@@ -16,73 +16,81 @@ export class HookReviewRepository implements IReviewRepository {
   async createPermissionReview(
     roomId: string,
     toolName: string,
-    toolInput: string | undefined,
+    toolInput: Record<string, unknown> | undefined,
     formattedContent: string,
   ): Promise<Result<CreateReviewResult, ReviewCreateError>> {
-    try {
-      const res = await this.client.api.rooms[':id']['permission-reviews'].$post({
-        param: { id: roomId },
-        json: {
-          tool_name: toolName,
-          tool_input_json: toolInput,
-          formatted_content: formattedContent,
-        },
-      })
-      if (!res.ok) {
-        const body = await res.json()
-        return Result.err(new ReviewCreateError({ message: `HTTP ${res.status}: ${body.error}` }))
-      }
-      const json = await res.json()
-      return Result.ok(json)
-    } catch (error) {
-      return Result.err(new ReviewCreateError({ message: String(error) }))
-    }
+    return Result.tryPromise({
+      try: async () => {
+        const res = await this.client.api.rooms[':id']['permission-reviews'].$post({
+          param: { id: roomId },
+          json: {
+            tool_name: toolName,
+            tool_input_json: toolInput ? JSON.stringify(toolInput) : undefined,
+            formatted_content: formattedContent,
+          },
+        })
+        if (!res.ok) {
+          const body = await res.json()
+          throw new ReviewCreateError({ message: `HTTP ${res.status}: ${body.error}` })
+        }
+        return res.json()
+      },
+      catch: (e) => e instanceof ReviewCreateError ? e : new ReviewCreateError({ message: String(e) }),
+    })
   }
 
   async getPermissionReviewStatus(
     roomId: string,
     reviewId: string,
   ): Promise<Result<PermissionReviewDecision, ReviewPollError | TimeoutError>> {
-    const deadline = Date.now() + this.pollTimeout
-    let sawPending = false
-    while (Date.now() < deadline) {
-      try {
-        const res = await this.client.api.rooms[':id']['permission-reviews'][':reviewId'].$get({
-          param: { id: roomId, reviewId },
-        })
-        if (!res.ok) {
-          const body = await res.json()
-          return Result.err(new ReviewPollError({ message: `HTTP ${res.status}: ${body.error}` }))
+    return Result.tryPromise({
+      try: async () => {
+        const deadline = Date.now() + this.pollTimeout
+        let sawPending = false
+        while (Date.now() < deadline) {
+          try {
+            const res = await this.client.api.rooms[':id']['permission-reviews'][':reviewId'].$get({
+              param: { id: roomId, reviewId },
+            })
+            if (!res.ok) {
+              const body = await res.json()
+              throw new ReviewPollError({ message: `HTTP ${res.status}: ${body.error}` })
+            }
+            const json = await res.json()
+            if (json.status !== 'pending') return json
+            sawPending = true
+          } catch (error) {
+            if (error instanceof ReviewPollError) throw error
+            process.stderr.write(`[permission-review] poll error: ${error}\n`)
+          }
+          await new Promise((resolve) => setTimeout(resolve, this.pollInterval))
         }
-        const json = await res.json()
-        if (json.status !== 'pending') return Result.ok(json)
-        sawPending = true
-      } catch (error) {
-        process.stderr.write(`[permission-review] poll error: ${error}\n`)
-      }
-      await new Promise((resolve) => setTimeout(resolve, this.pollInterval))
-    }
-    if (sawPending) {
-      return Result.err(new TimeoutError({ message: 'Timed out waiting for decision' }))
-    }
-    return Result.err(new ReviewPollError({ message: 'Poll failed — never received a response' }))
+        if (sawPending) throw new TimeoutError({ message: 'Timed out waiting for decision' })
+        throw new ReviewPollError({ message: 'Poll failed — never received a response' })
+      },
+      catch: (e): ReviewPollError | TimeoutError => {
+        if (e instanceof ReviewPollError) return e
+        if (e instanceof TimeoutError) return e
+        return new ReviewPollError({ message: String(e) })
+      },
+    })
   }
 
   async expirePermissionReview(
     roomId: string,
     reviewId: string,
   ): Promise<Result<void, ReviewPollError>> {
-    try {
-      const res = await this.client.api.rooms[':id']['permission-reviews'][':reviewId'].expire.$post({
-        param: { id: roomId, reviewId },
-      })
-      if (!res.ok) {
-        const body = await res.json()
-        return Result.err(new ReviewPollError({ message: `HTTP ${res.status}: ${body.error}` }))
-      }
-      return Result.ok(undefined)
-    } catch (error) {
-      return Result.err(new ReviewPollError({ message: String(error) }))
-    }
+    return Result.tryPromise({
+      try: async () => {
+        const res = await this.client.api.rooms[':id']['permission-reviews'][':reviewId'].expire.$post({
+          param: { id: roomId, reviewId },
+        })
+        if (!res.ok) {
+          const body = await res.json()
+          throw new ReviewPollError({ message: `HTTP ${res.status}: ${body.error}` })
+        }
+      },
+      catch: (e) => e instanceof ReviewPollError ? e : new ReviewPollError({ message: String(e) }),
+    })
   }
 }
