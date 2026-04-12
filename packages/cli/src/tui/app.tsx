@@ -261,15 +261,25 @@ function AppInner({ processManager, client, codingAgents, onAttach, onDetach, on
         // Synchronous — blocks until detach (Ctrl+B D)
         processManager.attach(focusedTeam.teamId)
       } finally {
-        // Reclaim terminal (always restore, even on error)
-        // Manual ANSI required: Ink's alternateScreen doesn't cover mid-session
-        // terminal handoff to tmux. See docs/plans/2026-04-12-ink-7-migration.md
-        process.stdout.write('\x1b[?1049h') // re-enter alt screen
+        // Reclaim terminal (always restore, even on error).
+        // Use \x1b[?1047h (no-clear) instead of \x1b[?1049h.
+        // \x1b[?1049h clears the alt screen buffer on entry. Ink's log-update
+        // still holds the previous render as lastOutput, so when the UI hasn't
+        // changed since attach, log-update sees (output === lastOutput) and writes
+        // nothing — leaving the cleared screen blank. \x1b[?1047h switches back
+        // to the alt screen without clearing it, so Ink's preserved content is
+        // immediately visible and log-update's internal state stays consistent
+        // with what's actually on screen.
+        process.stdout.write('\x1b[?1047h') // re-enter alt screen (no-clear)
         setRawMode(true)
 
         onDetach?.()
         refreshTeams()
         busyRef.current = false
+        // Trigger a content refresh after returning from tmux.
+        void processManager.capture(focusedTeam.teamId, dashboardHeight).finally(() => {
+          setRenderTick(t => t + 1)
+        })
       }
       return
     }
