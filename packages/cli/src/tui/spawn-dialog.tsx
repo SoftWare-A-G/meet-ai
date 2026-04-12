@@ -45,7 +45,7 @@ export function SpawnDialog({
   )
 
   usePaste(text => {
-    const trimmed = text.replace(/\n/g, '')
+    const trimmed = text.replace(/[\r\n]+/g, '')
     if (!trimmed) return
     if (focus !== 'input') {
       setFocus('input')
