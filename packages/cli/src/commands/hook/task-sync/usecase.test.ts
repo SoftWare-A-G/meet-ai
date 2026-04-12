@@ -110,14 +110,16 @@ describe('TaskHookInput schema', () => {
 })
 
 // Mock findRoomId so SessionRoomResolver returns the room we want
-const mockFindRoomId = mock(() => Promise.resolve('room-123'))
+const mockFindRoomId = mock(() => Promise.resolve('room-123' as string | null))
 mock.module('@meet-ai/cli/lib/hooks/find-room', () => ({
   findRoom: mock(() => Promise.resolve({ roomId: 'room-123', teamName: 'test-team' })),
   findRoomId: mockFindRoomId,
 }))
 
 // Mock createHookClient to return a fake client with the upsert endpoint
-const mockPost = mock(() => Promise.resolve({ ok: true }))
+const mockPost = mock(() =>
+  Promise.resolve({ ok: true } as { ok: boolean; status?: number; statusText?: string })
+)
 mock.module('@meet-ai/cli/lib/hooks/client', () => ({
   createHookClient: () => ({
     api: {

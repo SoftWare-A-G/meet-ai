@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Box, Text, useInput } from 'ink'
+import { Box, Text, useInput, useFocus, usePaste } from 'ink'
 import { Spinner } from '@inkjs/ui'
 import Divider from './Divider'
 import type { CodingAgentId } from '@meet-ai/cli/coding-agents'
@@ -37,12 +37,28 @@ export function SpawnDialog({
   const [cursor, setCursor] = useState(0)
   const [selectedAgentIndex, setSelectedAgentIndex] = useState(0)
   const [selectedRoomIndex, setSelectedRoomIndex] = useState(0)
-  const [focus, setFocus] = useState<'agent' | 'input' | 'list'>('agent')
 
   const sortedRooms = useMemo(
     () => markConnectedRooms(rooms, connectedRoomIds),
     [rooms, connectedRoomIds],
   )
+
+  const { isFocused: agentFocused, focus: focusById } = useFocus({ id: 'agent', autoFocus: true })
+  const { isFocused: inputFocused } = useFocus({ id: 'input' })
+  const { isFocused: listFocused } = useFocus({ id: 'list', isActive: sortedRooms.length > 0 })
+
+  usePaste(text => {
+    const trimmed = text.replace(/[\r\n]+/g, '')
+    if (!trimmed) return
+    if (!inputFocused) {
+      focusById('input')
+      setRoomName(prev => prev + trimmed)
+      setCursor(roomName.length + trimmed.length)
+    } else {
+      setRoomName(prev => prev.slice(0, cursor) + trimmed + prev.slice(cursor))
+      setCursor(c => c + trimmed.length)
+    }
+  })
 
   useInput((input, key) => {
     if (key.escape) {
@@ -50,16 +66,7 @@ export function SpawnDialog({
       return
     }
 
-    if (key.tab) {
-      setFocus(current => {
-        if (current === 'agent') return 'input'
-        if (current === 'input') return sortedRooms.length > 0 ? 'list' : 'agent'
-        return 'agent'
-      })
-      return
-    }
-
-    if (focus === 'list') {
+    if (listFocused) {
       if (key.downArrow) {
         setSelectedRoomIndex(current => Math.min(sortedRooms.length - 1, current + 1))
         return
@@ -72,8 +79,9 @@ export function SpawnDialog({
 
     // Enter: submit for all focuses
     if (key.return) {
+      const currentFocus: 'agent' | 'input' | 'list' = agentFocused ? 'agent' : listFocused ? 'list' : 'input'
       const selection = resolveSpawnSelection({
-        focus,
+        focus: currentFocus,
         roomName,
         selectedRoomIndex,
         rooms: sortedRooms,
@@ -84,7 +92,7 @@ export function SpawnDialog({
     }
 
     // Agent picker: horizontal arrow navigation
-    if (focus === 'agent') {
+    if (agentFocused) {
       if (key.upArrow || key.leftArrow) {
         setSelectedAgentIndex(current => Math.max(0, current - 1))
         return
@@ -96,7 +104,7 @@ export function SpawnDialog({
     }
 
     // Text input: cursor movement
-    if (focus === 'input') {
+    if (inputFocused) {
       if (key.leftArrow) {
         setCursor(c => Math.max(0, c - 1))
         return
@@ -116,8 +124,8 @@ export function SpawnDialog({
 
     // Printable character input (handles both input focus and quick-create from agent/list)
     if (input && !key.ctrl && !key.meta) {
-      if (focus !== 'input') {
-        setFocus('input')
+      if (!inputFocused) {
+        focusById('input')
         // When auto-switching, insert at end
         setRoomName(prev => prev + input)
         setCursor(roomName.length + input.length)
@@ -145,7 +153,7 @@ export function SpawnDialog({
       </Text>
 
       <Box marginTop={1}>
-        <Text color={focus === 'agent' ? 'green' : undefined}>Agent: </Text>
+        <Text color={agentFocused ? 'green' : undefined}>Agent: </Text>
         {codingAgents.map((agent, index) => (
           <Text key={agent.id}>
             <Text color={selectedAgent === agent.id ? 'yellow' : undefined}>
@@ -158,8 +166,8 @@ export function SpawnDialog({
       </Box>
 
       <Box marginTop={1}>
-        <Text color={focus === 'input' ? 'green' : undefined}>Create room: </Text>
-        {focus === 'input' ? (
+        <Text color={inputFocused ? 'green' : undefined}>Create room: </Text>
+        {inputFocused ? (
           <Text>
             {roomName.slice(0, cursor)}
             <Text inverse>{roomName[cursor] ?? ' '}</Text>
@@ -173,7 +181,7 @@ export function SpawnDialog({
       <Divider dividerColor="green" />
 
       <Box flexDirection="column">
-        <Text color={focus === 'list' ? 'green' : undefined}>Existing rooms:</Text>
+        <Text color={listFocused ? 'green' : undefined}>Existing rooms:</Text>
         {roomsLoading ? (
           <Spinner label="Loading rooms..." />
         ) : roomsError ? (
@@ -186,7 +194,7 @@ export function SpawnDialog({
             const isSelected = absoluteIndex === clampSelectedRoomIndex(selectedRoomIndex, sortedRooms)
             return (
               <Box key={room.id}>
-                <Text color={isSelected && focus === 'list' ? 'yellow' : undefined} dimColor={room.connected}>
+                <Text color={isSelected && listFocused ? 'yellow' : undefined} dimColor={room.connected}>
                   {isSelected ? '>' : ' '} {room.name}
                 </Text>
                 {room.connected ? <Text color="green"> ●</Text> : null}

@@ -50,7 +50,7 @@ export function Dashboard({ roomGroups, focusedRoomIndex, focusedTeamIndex, heig
         width={SIDEBAR_WIDTH}
         height={height}
       />
-      <Box flexDirection="column" flexGrow={1}>
+      <Box flexDirection="column" flexGrow={1} overflow="hidden">
         {showTabs && (
           <Box paddingX={1} gap={1}>
             {focusedGroup.teams.map((team, i) => {

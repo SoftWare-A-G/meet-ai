@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Box, Text, useInput } from 'ink'
+import { Box, Text, useInput, useFocus, usePaste } from 'ink'
 import Link from 'ink-link'
 import { Spinner, TextInput } from '@inkjs/ui'
 import { addEnv, readHomeConfigLoose } from '@meet-ai/cli/lib/meetai-home'
@@ -11,33 +11,48 @@ interface AuthModalProps {
   onCancel: () => void
 }
 
-type Field = 'url' | 'key' | 'envName'
-const FIELDS: Field[] = ['url', 'key', 'envName']
-
 export function AuthModal({ onSuccess, onCancel }: AuthModalProps) {
   const defaultEnvName = deriveEnvName(DEFAULT_URL)
   const [url, setUrl] = useState(DEFAULT_URL)
   const [keyInput, setKeyInput] = useState('')
   const [envName, setEnvName] = useState(defaultEnvName)
   const [envNameVersion, setEnvNameVersion] = useState(0)
-  const [focus, setFocus] = useState<Field>('key')
+  const [urlVersion, setUrlVersion] = useState(0)
+  const [keyVersion, setKeyVersion] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const envNameTouched = useRef(false)
+
+  const { isFocused: urlFocused } = useFocus({ id: 'url' })
+  const { isFocused: keyFocused } = useFocus({ id: 'key', autoFocus: true })
+  const { isFocused: envNameFocused } = useFocus({ id: 'envName' })
+
+  usePaste(text => {
+    if (submitting) return
+    const trimmed = text.trim()
+    if (!trimmed) return
+    if (urlFocused) {
+      setUrl(trimmed)
+      if (!envNameTouched.current) {
+        setEnvName(deriveEnvName(trimmed))
+        setEnvNameVersion(v => v + 1)
+      }
+      setUrlVersion(v => v + 1)
+    } else if (keyFocused) {
+      setKeyInput(trimmed)
+      setKeyVersion(v => v + 1)
+    } else if (envNameFocused) {
+      setEnvName(trimmed)
+      setEnvNameVersion(v => v + 1)
+      envNameTouched.current = true
+    }
+  })
 
   useInput((_input, key) => {
     if (submitting) return
 
     if (key.escape) {
       onCancel()
-      return
-    }
-
-    if (key.tab) {
-      setFocus(f => {
-        const idx = FIELDS.indexOf(f)
-        return FIELDS[(idx + 1) % FIELDS.length]!
-      })
       return
     }
 
@@ -91,9 +106,10 @@ export function AuthModal({ onSuccess, onCancel }: AuthModalProps) {
       </Text>
 
       <Box marginTop={1}>
-        <Text color={focus === 'url' ? 'cyan' : undefined}>URL: </Text>
+        <Text color={urlFocused ? 'cyan' : undefined}>URL: </Text>
         <TextInput
-          defaultValue={DEFAULT_URL}
+          key={urlVersion}
+          defaultValue={url}
           onChange={val => {
             setUrl(val)
             if (!envNameTouched.current) {
@@ -102,16 +118,18 @@ export function AuthModal({ onSuccess, onCancel }: AuthModalProps) {
               setEnvNameVersion(v => v + 1)
             }
           }}
-          isDisabled={focus !== 'url'}
+          isDisabled={!urlFocused}
         />
       </Box>
 
       <Box marginTop={1}>
-        <Text color={focus === 'key' ? 'cyan' : undefined}>Key / Auth Link: </Text>
+        <Text color={keyFocused ? 'cyan' : undefined}>Key / Auth Link: </Text>
         <TextInput
+          key={keyVersion}
+          defaultValue={keyInput}
           placeholder="mai_..."
           onChange={setKeyInput}
-          isDisabled={focus !== 'key'}
+          isDisabled={!keyFocused}
         />
       </Box>
 
@@ -121,7 +139,7 @@ export function AuthModal({ onSuccess, onCancel }: AuthModalProps) {
       </Box>
 
       <Box marginTop={1}>
-        <Text color={focus === 'envName' ? 'cyan' : undefined}>Env Name: </Text>
+        <Text color={envNameFocused ? 'cyan' : undefined}>Env Name: </Text>
         <TextInput
           key={envNameVersion}
           defaultValue={envName}
@@ -129,7 +147,7 @@ export function AuthModal({ onSuccess, onCancel }: AuthModalProps) {
             setEnvName(val)
             envNameTouched.current = true
           }}
-          isDisabled={focus !== 'envName'}
+          isDisabled={!envNameFocused}
         />
       </Box>
 

@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.5.0](https://github.com/SoftWare-A-G/meet-ai/compare/2.4.5...2.5.0) (2026-04-12)
+
+### Features
+
+- upgrade the CLI dashboard to Ink 7, replacing manual alternate-screen bootstrap handling with Ink's native render option and switching terminal sizing to `useWindowSize` for reactive resize updates
+- improve CLI dashboard input ergonomics with atomic paste support in the spawn dialog and auth/environment forms, plus Ink-managed focus handling for modal field traversal
+
+### Bug Fixes
+
+- fix the tmux attach/detach lifecycle so the Ink dashboard restores correctly after Codex session detach instead of returning to a blank alternate screen
+- harden dashboard layout behavior by preventing main-pane overflow from shrinking the fixed-width sidebar and by enforcing single-row status-bar clipping in narrow terminals
+- clean up CLI typecheck/test support for the Ink 7 migration, including Cloudflare worker type shims, Bun test typing, and the aligned `2.5.0` package manifests across CLI, worker, desktop, app, and domain
+
+### Tests
+
+- keep the CLI, worker, and domain suites green across the migration and follow-up fixes, with clean typecheck coverage for the updated CLI and desktop surfaces
+
 ## [2.4.5](https://github.com/SoftWare-A-G/meet-ai/compare/2.4.4...2.4.5) (2026-04-01)
 
 ### Features

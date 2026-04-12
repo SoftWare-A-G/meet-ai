@@ -19,7 +19,7 @@ interface SidebarProps {
 export default function Sidebar({ roomGroups, focusedIndex, width, height }: SidebarProps) {
   if (roomGroups.length === 0) {
     return (
-      <Box flexDirection="column" width={width} borderStyle="single" borderColor="gray">
+      <Box flexDirection="column" width={width} flexShrink={0} borderStyle="single" borderColor="gray" overflow="hidden">
         <Box paddingX={1}>
           <Text bold>Rooms</Text>
         </Box>
@@ -36,7 +36,7 @@ export default function Sidebar({ roomGroups, focusedIndex, width, height }: Sid
   const visibleGroups = roomGroups.slice(scrollStart, scrollStart + maxVisible)
 
   return (
-    <Box flexDirection="column" width={width} borderStyle="single" borderColor="gray" height={height}>
+    <Box flexDirection="column" width={width} flexShrink={0} borderStyle="single" borderColor="gray" height={height} overflow="hidden">
       <Box paddingX={1}>
         <Text bold>Rooms</Text>
       </Box>

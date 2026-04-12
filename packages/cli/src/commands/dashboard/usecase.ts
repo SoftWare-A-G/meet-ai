@@ -135,10 +135,8 @@ export async function startDashboard(
 
   function cleanup() {
     closeLobby()
-    // Ensure terminal is restored before exit
     try {
       process.stdin.setRawMode(false)
-      process.stdout.write('\x1b[?1049l') // leave alt screen
     } catch {
       // Ignore errors during cleanup
     }
@@ -184,7 +182,7 @@ export async function startDashboard(
     } catch {}
   }
 
-  const instance = render(element)
+  const instance = render(element, { alternateScreen: true })
   await instance.waitUntilExit()
 
   closeLobby()

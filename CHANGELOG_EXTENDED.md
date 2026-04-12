@@ -1,5 +1,40 @@
 # Changelog
 
+## [2.5.0](https://github.com/SoftWare-A-G/meet-ai/compare/2.4.5...2.5.0) (2026-04-12)
+
+### Features
+
+- migrate the CLI dashboard to Ink 7 and adopt the new terminal primitives:
+  - bump `ink` from `6.8.0` to `7.0.0` in `packages/cli` while verifying the existing `@inkjs/ui` and `ink-link` surfaces remain compatible with the upgraded runtime
+  - replace the dashboard bootstrap's manual alternate-screen ANSI handling with Ink's `alternateScreen` render option so the main TUI lifecycle uses the framework's built-in terminal management instead of raw escape sequences
+  - switch the dashboard app from manual `useStdout()` row tracking to Ink's `useWindowSize()` hook so height calculations react immediately to terminal resize events
+- improve the dashboard's interactive form behavior with Ink 7 follow-up APIs:
+  - add `usePaste()` to `spawn-dialog.tsx`, `AuthModal.tsx`, and `EnvManagerModal.tsx` so room names, auth links, URLs, and API keys paste atomically instead of arriving as per-character input
+  - normalize CRLF clipboard content in the spawn dialog so Windows-style `\r\n` pastes do not leak carriage returns into room names
+  - replace the modal and dialog focus `useState` bookkeeping with Ink `useFocus()` / `useFocusManager()` state so field focus, tab traversal, and add-mode activation flow through Ink's built-in focus graph
+
+### Bug Fixes
+
+- fix the tmux/dashboard terminal lifecycle after the Ink 7 migration:
+  - preserve the safe Ink-managed alternate-screen bootstrap while keeping explicit attach/detach handling only where tmux handoff still requires it
+  - resync Ink rendering after tmux detach so returning from Codex sessions restores the dashboard instead of leaving a blank alternate screen
+  - keep the attach/detach-specific fixes scoped to the tmux handoff path rather than reverting the full Ink 7 alternate-screen migration
+- harden dashboard layout containment for narrow terminals:
+  - add single-row clipping to the status bar so the existing bottom-row height contract stays intact even when control labels and room metadata would otherwise wrap
+  - add clipping to the sidebar and main-pane split, plus `flexShrink={0}` on the sidebar root, so overflowing pane content no longer steals columns from the fixed-width room list
+  - keep the main-pane and sidebar changes conservative by preserving the existing fixed `SIDEBAR_WIDTH = 32` split while truncating or hiding overflow instead of letting Yoga rebalance the row
+- clean up ancillary CLI migration fallout:
+  - extend the CLI and desktop Cloudflare worker type shims to cover the worker/runtime symbols that leaked into non-worker typecheck surfaces during the broader migration work
+  - fix the CLI typecheck/test seams around Bun typing, task-sync mocks, and repository fetch mocks so the Ink 7 branch returns to a clean verification baseline
+  - align the CLI, worker, desktop, app, and domain package manifests at `2.5.0` for the release
+
+### Tests
+
+- keep the automated verification surface green through the Ink 7 rollout and follow-up fixes:
+  - run the CLI test suite repeatedly across the compatibility, terminal lifecycle, reactive sizing, paste, focus, layout, and sidebar-fix phases
+  - keep the worker and domain suites green while the shared branch also lands the typecheck/test fixes required to restore a clean verification baseline
+  - verify the updated CLI and desktop typing surfaces after the worker-shim and Bun typing fixes so `bun run typecheck` no longer fails on the migration-related type seams
+
 ## [2.4.5](https://github.com/SoftWare-A-G/meet-ai/compare/2.4.4...2.4.5) (2026-04-01)
 
 ### Features
