@@ -55,7 +55,6 @@ function AppInner({ processManager, client, codingAgents, onAttach, onDetach, on
   const cleanupTerminal = useCallback(() => {
     try {
       setRawMode(false)
-      process.stdout.write('\x1b[?1049l') // leave alt screen
     } catch {
       // Ignore errors during cleanup
     }
@@ -255,12 +254,16 @@ function AppInner({ processManager, client, codingAgents, onAttach, onDetach, on
       try {
         // Release terminal for tmux attach
         setRawMode(false)
+        // Manual ANSI required: Ink's alternateScreen doesn't cover mid-session
+        // terminal handoff to tmux. See docs/plans/2026-04-12-ink-7-migration.md
         process.stdout.write('\x1b[?1049l') // leave alt screen
 
         // Synchronous — blocks until detach (Ctrl+B D)
         processManager.attach(focusedTeam.teamId)
       } finally {
         // Reclaim terminal (always restore, even on error)
+        // Manual ANSI required: Ink's alternateScreen doesn't cover mid-session
+        // terminal handoff to tmux. See docs/plans/2026-04-12-ink-7-migration.md
         process.stdout.write('\x1b[?1049h') // re-enter alt screen
         setRawMode(true)
 
