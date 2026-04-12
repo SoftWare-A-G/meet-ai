@@ -55,6 +55,7 @@
     "@cloudflare/workers-types": "catalog:",
     "@tailwindcss/vite": "catalog:",
     "@tanstack/devtools-vite": "0.6.0",
+    "@types/bun": "catalog:",
     "@types/dompurify": "3.2.0",
     "@types/js-cookie": "3.0.6",
     "@types/react": "catalog:",

@@ -23,7 +23,7 @@ function mockFetchResponse(body: unknown, status = 200) {
       status,
       headers: { 'Content-Type': 'application/json' },
     }))
-  )
+  ) as unknown as typeof globalThis.fetch
 }
 
 function mockFetchCapture(body: unknown, status = 200) {
@@ -47,7 +47,7 @@ function mockFetchCapture(body: unknown, status = 200) {
       status,
       headers: { 'Content-Type': 'application/json' },
     }))
-  })
+  }) as unknown as typeof globalThis.fetch
 }
 
 beforeEach(() => {
@@ -246,7 +246,7 @@ test('RoomRepository.sendTasks calls POST with parsed JSON payload', async () =>
 })
 
 test('RoomRepository.sendTerminalData returns Result without throwing on network error', async () => {
-  globalThis.fetch = mock(() => Promise.reject(new Error('network failure')))
+  globalThis.fetch = mock(() => Promise.reject(new Error('network failure'))) as unknown as typeof globalThis.fetch
   const repo = new RoomRepository(createClient())
 
   const result = await repo.sendTerminalData('r1', 'terminal output')

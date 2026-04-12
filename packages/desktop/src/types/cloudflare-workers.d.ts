@@ -1,9 +1,10 @@
 // Type-only shim so TypeScript can resolve cloudflare:workers
 // when tracing worker types via hc<AppType>. Never used at runtime.
 declare module 'cloudflare:workers' {
-  export class DurableObject {
+  export class DurableObject<Env = Record<string, unknown>> {
+    constructor(ctx: DurableObjectState, env: Env)
     ctx: DurableObjectState
-    env: Record<string, unknown>
+    env: Env
   }
 }
 
@@ -65,12 +66,12 @@ interface DurableObjectSqlStorage {
   exec<T = unknown>(query: string, ...bindings: unknown[]): DurableObjectSqlStorageCursor<T>
 }
 
-interface DurableObjectNamespace {
+interface DurableObjectNamespace<T = unknown> {
   idFromName(name: string): DurableObjectId
-  get(id: DurableObjectId): DurableObjectStub
+  get(id: DurableObjectId): DurableObjectStub<T>
 }
 
-interface DurableObjectStub {
+interface DurableObjectStub<T = unknown> {
   fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>
 }
 
@@ -99,6 +100,10 @@ interface KVNamespace {
   delete(key: string): Promise<void>
 }
 
+interface SecretsStoreSecret {
+  get(): Promise<string>
+}
+
 interface ScheduledEvent {
   scheduledTime: number
   cron: string
@@ -107,6 +112,11 @@ interface ScheduledEvent {
 interface ExecutionContext {
   waitUntil(promise: Promise<unknown>): void
   passThroughOnException(): void
+}
+
+interface WebSocket {
+  serializeAttachment(value: unknown): void
+  deserializeAttachment(): unknown | null
 }
 
 // Extend ResponseInit to allow the webSocket property used by Workers

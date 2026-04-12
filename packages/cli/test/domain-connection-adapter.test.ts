@@ -64,7 +64,7 @@ test('generateKey returns Result.ok with key and prefix', async () => {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     }))
-  )
+  ) as unknown as typeof globalThis.fetch
   const adapter = new ConnectionAdapter(createClient(), TEST_URL, TEST_KEY)
 
   const result = await adapter.generateKey()
@@ -81,7 +81,7 @@ test('generateKey returns Err on API failure', async () => {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
     }))
-  )
+  ) as unknown as typeof globalThis.fetch
   const adapter = new ConnectionAdapter(createClient(), TEST_URL, 'badkey')
 
   const result = await adapter.generateKey()
@@ -379,7 +379,7 @@ test('listen fetches missed messages on reconnect via hc client', async () => {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     }))
-  )
+  ) as unknown as typeof globalThis.fetch
   globalThis.fetch = mockFetch
 
   const adapter = new ConnectionAdapter(createClient(), 'https://example.com', 'key')
