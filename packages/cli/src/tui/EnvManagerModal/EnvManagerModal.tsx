@@ -12,7 +12,7 @@ import {
   getDefaultEnv,
   addEnv,
 } from '@meet-ai/cli/lib/meetai-home'
-import { Box, Text, useInput, usePaste } from 'ink'
+import { Box, Text, useInput, useFocus, usePaste } from 'ink'
 import Link from 'ink-link'
 import { useRef, useState } from 'react'
 import Divider from '../Divider'
@@ -24,8 +24,6 @@ interface EnvManagerModalProps {
 }
 
 type View = 'switch' | 'add'
-type Field = 'url' | 'key' | 'envName'
-const FIELDS: Field[] = ['url', 'key', 'envName']
 
 export default function EnvManagerModal({ onSwitch, onCancel }: EnvManagerModalProps) {
   const [view, setView] = useState<View>('switch')
@@ -38,10 +36,13 @@ export default function EnvManagerModal({ onSwitch, onCancel }: EnvManagerModalP
   const [envNameVersion, setEnvNameVersion] = useState(0)
   const [urlVersion, setUrlVersion] = useState(0)
   const [keyVersion, setKeyVersion] = useState(0)
-  const [focus, setFocus] = useState<Field>('key')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const envNameTouched = useRef(false)
+
+  const { isFocused: urlFocused } = useFocus({ id: 'url', isActive: view === 'add' })
+  const { isFocused: keyFocused, focus: focusById } = useFocus({ id: 'key', isActive: view === 'add' })
+  const { isFocused: envNameFocused } = useFocus({ id: 'envName', isActive: view === 'add' })
 
   // --- Switch view state ---
   const envs = listEnvs()
@@ -50,17 +51,17 @@ export default function EnvManagerModal({ onSwitch, onCancel }: EnvManagerModalP
     if (submitting || view !== 'add') return
     const trimmed = text.trim()
     if (!trimmed) return
-    if (focus === 'url') {
+    if (urlFocused) {
       setUrl(trimmed)
       if (!envNameTouched.current) {
         setEnvName(deriveEnvName(trimmed))
         setEnvNameVersion(v => v + 1)
       }
       setUrlVersion(v => v + 1)
-    } else if (focus === 'key') {
+    } else if (keyFocused) {
       setKeyInput(trimmed)
       setKeyVersion(v => v + 1)
-    } else if (focus === 'envName') {
+    } else if (envNameFocused) {
       setEnvName(trimmed)
       setEnvNameVersion(v => v + 1)
       envNameTouched.current = true
@@ -83,13 +84,10 @@ export default function EnvManagerModal({ onSwitch, onCancel }: EnvManagerModalP
     if (key.tab) {
       if (view === 'switch') {
         setView('add')
+        focusById('key')
         setError(null)
-      } else {
-        setFocus(f => {
-          const idx = FIELDS.indexOf(f)
-          return FIELDS[(idx + 1) % FIELDS.length]!
-        })
       }
+      // For view === 'add', useFocus handles Tab cycling between url/key/envName
       return
     }
 
@@ -174,7 +172,9 @@ export default function EnvManagerModal({ onSwitch, onCancel }: EnvManagerModalP
             setEnvName(val)
             envNameTouched.current = true
           }}
-          focus={focus}
+          urlFocused={urlFocused}
+          keyFocused={keyFocused}
+          envNameFocused={envNameFocused}
           error={error}
           submitting={submitting}
         />
@@ -249,7 +249,9 @@ function AddView({
   envName,
   envNameVersion,
   setEnvName,
-  focus,
+  urlFocused,
+  keyFocused,
+  envNameFocused,
   error,
   submitting,
 }: {
@@ -262,7 +264,9 @@ function AddView({
   envName: string
   envNameVersion: number
   setEnvName: (val: string) => void
-  focus: Field
+  urlFocused: boolean
+  keyFocused: boolean
+  envNameFocused: boolean
   error: string | null
   submitting: boolean
 }) {
@@ -278,13 +282,13 @@ function AddView({
   return (
     <Box marginTop={1} flexDirection="column">
       <Box>
-        <Text color={focus === 'url' ? 'green' : undefined}>URL: </Text>
-        <TextInput key={urlVersion} defaultValue={url} onChange={setUrl} isDisabled={focus !== 'url'} />
+        <Text color={urlFocused ? 'green' : undefined}>URL: </Text>
+        <TextInput key={urlVersion} defaultValue={url} onChange={setUrl} isDisabled={!urlFocused} />
       </Box>
 
       <Box marginTop={1}>
-        <Text color={focus === 'key' ? 'green' : undefined}>Key / Auth Link: </Text>
-        <TextInput key={keyVersion} defaultValue={keyInput} placeholder="mai_..." onChange={setKeyInput} isDisabled={focus !== 'key'} />
+        <Text color={keyFocused ? 'green' : undefined}>Key / Auth Link: </Text>
+        <TextInput key={keyVersion} defaultValue={keyInput} placeholder="mai_..." onChange={setKeyInput} isDisabled={!keyFocused} />
       </Box>
 
       <Box>
@@ -293,12 +297,12 @@ function AddView({
       </Box>
 
       <Box marginTop={1}>
-        <Text color={focus === 'envName' ? 'green' : undefined}>Env Name: </Text>
+        <Text color={envNameFocused ? 'green' : undefined}>Env Name: </Text>
         <TextInput
           key={envNameVersion}
           defaultValue={envName}
           onChange={setEnvName}
-          isDisabled={focus !== 'envName'}
+          isDisabled={!envNameFocused}
         />
       </Box>
 
