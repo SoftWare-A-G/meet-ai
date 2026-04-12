@@ -1,4 +1,4 @@
-import { Box, Text, useInput, useApp, useStdout, useStdin } from 'ink'
+import { Box, Text, useInput, useApp, useWindowSize, useStdin } from 'ink'
 import { ConfirmInput } from '@inkjs/ui'
 import { useState, useCallback, useEffect, useRef, useMemo, Component, type ReactNode } from 'react'
 import { ProcessManager } from '@meet-ai/cli/lib/process-manager'
@@ -48,7 +48,7 @@ interface AppProps {
 
 function AppInner({ processManager, client, codingAgents, onAttach, onDetach, onRequestRestart }: AppProps) {
   const { exit } = useApp()
-  const { stdout } = useStdout()
+  const { rows } = useWindowSize()
   const { setRawMode } = useStdin()
   
   // Cleanup function to restore terminal state
@@ -74,7 +74,7 @@ function AppInner({ processManager, client, codingAgents, onAttach, onDetach, on
 
   const { state: updateState, triggerCheck } = useAutoUpdate()
 
-  const terminalHeight = stdout?.rows ?? 24
+  const terminalHeight = rows
   const spawnDialogHeight = Math.max(10, Math.min(16, terminalHeight - 4))
   const envManagerHeight = Math.max(10, Math.min(14, terminalHeight - 4))
   const bottomHeight = showSpawn ? spawnDialogHeight : showEnvManager ? envManagerHeight : killTargetId ? 1 : 1
