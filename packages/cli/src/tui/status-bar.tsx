@@ -51,7 +51,7 @@ function UpdateStatus({ state }: { state: UpdateState }) {
 
 export function StatusBar({ teamCount, roomCount, focusedRoom, version, updateState }: StatusBarProps) {
   return (
-    <Box justifyContent="space-between">
+    <Box justifyContent="space-between" maxHeight={1} overflow="hidden">
       <Box gap={2}>
         <Text>
           <Text dimColor>[</Text>
