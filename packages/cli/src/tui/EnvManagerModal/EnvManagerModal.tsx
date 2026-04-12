@@ -95,6 +95,7 @@ export default function EnvManagerModal({ onSwitch, onCancel }: EnvManagerModalP
     if (view === 'switch') {
       if (input === 'a') {
         setView('add')
+        focusById('key')
         setError(null)
       }
       return
