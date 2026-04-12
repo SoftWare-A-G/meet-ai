@@ -12,7 +12,7 @@ import {
   getDefaultEnv,
   addEnv,
 } from '@meet-ai/cli/lib/meetai-home'
-import { Box, Text, useInput } from 'ink'
+import { Box, Text, useInput, usePaste } from 'ink'
 import Link from 'ink-link'
 import { useRef, useState } from 'react'
 import Divider from '../Divider'
@@ -36,6 +36,8 @@ export default function EnvManagerModal({ onSwitch, onCancel }: EnvManagerModalP
   const defaultEnvName = deriveEnvName(DEFAULT_URL)
   const [envName, setEnvName] = useState(defaultEnvName)
   const [envNameVersion, setEnvNameVersion] = useState(0)
+  const [urlVersion, setUrlVersion] = useState(0)
+  const [keyVersion, setKeyVersion] = useState(0)
   const [focus, setFocus] = useState<Field>('key')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -43,6 +45,27 @@ export default function EnvManagerModal({ onSwitch, onCancel }: EnvManagerModalP
 
   // --- Switch view state ---
   const envs = listEnvs()
+
+  usePaste(text => {
+    if (submitting || view !== 'add') return
+    const trimmed = text.trim()
+    if (!trimmed) return
+    if (focus === 'url') {
+      setUrl(trimmed)
+      if (!envNameTouched.current) {
+        setEnvName(deriveEnvName(trimmed))
+        setEnvNameVersion(v => v + 1)
+      }
+      setUrlVersion(v => v + 1)
+    } else if (focus === 'key') {
+      setKeyInput(trimmed)
+      setKeyVersion(v => v + 1)
+    } else if (focus === 'envName') {
+      setEnvName(trimmed)
+      setEnvNameVersion(v => v + 1)
+      envNameTouched.current = true
+    }
+  })
 
   useInput((input, key) => {
     if (submitting) return
@@ -133,6 +156,7 @@ export default function EnvManagerModal({ onSwitch, onCancel }: EnvManagerModalP
       ) : (
         <AddView
           url={url}
+          urlVersion={urlVersion}
           setUrl={val => {
             setUrl(val)
             if (!envNameTouched.current) {
@@ -141,6 +165,8 @@ export default function EnvManagerModal({ onSwitch, onCancel }: EnvManagerModalP
               setEnvNameVersion(v => v + 1)
             }
           }}
+          keyInput={keyInput}
+          keyVersion={keyVersion}
           setKeyInput={setKeyInput}
           envName={envName}
           envNameVersion={envNameVersion}
@@ -215,7 +241,10 @@ function SwitchView({
 
 function AddView({
   url,
+  urlVersion,
   setUrl,
+  keyInput,
+  keyVersion,
   setKeyInput,
   envName,
   envNameVersion,
@@ -225,7 +254,10 @@ function AddView({
   submitting,
 }: {
   url: string
+  urlVersion: number
   setUrl: (val: string) => void
+  keyInput: string
+  keyVersion: number
   setKeyInput: (val: string) => void
   envName: string
   envNameVersion: number
@@ -247,12 +279,12 @@ function AddView({
     <Box marginTop={1} flexDirection="column">
       <Box>
         <Text color={focus === 'url' ? 'green' : undefined}>URL: </Text>
-        <TextInput defaultValue={url} onChange={setUrl} isDisabled={focus !== 'url'} />
+        <TextInput key={urlVersion} defaultValue={url} onChange={setUrl} isDisabled={focus !== 'url'} />
       </Box>
 
       <Box marginTop={1}>
         <Text color={focus === 'key' ? 'green' : undefined}>Key / Auth Link: </Text>
-        <TextInput placeholder="mai_..." onChange={setKeyInput} isDisabled={focus !== 'key'} />
+        <TextInput key={keyVersion} defaultValue={keyInput} placeholder="mai_..." onChange={setKeyInput} isDisabled={focus !== 'key'} />
       </Box>
 
       <Box>

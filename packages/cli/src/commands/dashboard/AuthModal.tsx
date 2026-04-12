@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Box, Text, useInput } from 'ink'
+import { Box, Text, useInput, usePaste } from 'ink'
 import Link from 'ink-link'
 import { Spinner, TextInput } from '@inkjs/ui'
 import { addEnv, readHomeConfigLoose } from '@meet-ai/cli/lib/meetai-home'
@@ -20,10 +20,33 @@ export function AuthModal({ onSuccess, onCancel }: AuthModalProps) {
   const [keyInput, setKeyInput] = useState('')
   const [envName, setEnvName] = useState(defaultEnvName)
   const [envNameVersion, setEnvNameVersion] = useState(0)
+  const [urlVersion, setUrlVersion] = useState(0)
+  const [keyVersion, setKeyVersion] = useState(0)
   const [focus, setFocus] = useState<Field>('key')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const envNameTouched = useRef(false)
+
+  usePaste(text => {
+    if (submitting) return
+    const trimmed = text.trim()
+    if (!trimmed) return
+    if (focus === 'url') {
+      setUrl(trimmed)
+      if (!envNameTouched.current) {
+        setEnvName(deriveEnvName(trimmed))
+        setEnvNameVersion(v => v + 1)
+      }
+      setUrlVersion(v => v + 1)
+    } else if (focus === 'key') {
+      setKeyInput(trimmed)
+      setKeyVersion(v => v + 1)
+    } else if (focus === 'envName') {
+      setEnvName(trimmed)
+      setEnvNameVersion(v => v + 1)
+      envNameTouched.current = true
+    }
+  })
 
   useInput((_input, key) => {
     if (submitting) return
@@ -93,7 +116,8 @@ export function AuthModal({ onSuccess, onCancel }: AuthModalProps) {
       <Box marginTop={1}>
         <Text color={focus === 'url' ? 'cyan' : undefined}>URL: </Text>
         <TextInput
-          defaultValue={DEFAULT_URL}
+          key={urlVersion}
+          defaultValue={url}
           onChange={val => {
             setUrl(val)
             if (!envNameTouched.current) {
@@ -109,6 +133,8 @@ export function AuthModal({ onSuccess, onCancel }: AuthModalProps) {
       <Box marginTop={1}>
         <Text color={focus === 'key' ? 'cyan' : undefined}>Key / Auth Link: </Text>
         <TextInput
+          key={keyVersion}
+          defaultValue={keyInput}
           placeholder="mai_..."
           onChange={setKeyInput}
           isDisabled={focus !== 'key'}

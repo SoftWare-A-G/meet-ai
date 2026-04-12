@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Box, Text, useInput } from 'ink'
+import { Box, Text, useInput, usePaste } from 'ink'
 import { Spinner } from '@inkjs/ui'
 import Divider from './Divider'
 import type { CodingAgentId } from '@meet-ai/cli/coding-agents'
@@ -43,6 +43,19 @@ export function SpawnDialog({
     () => markConnectedRooms(rooms, connectedRoomIds),
     [rooms, connectedRoomIds],
   )
+
+  usePaste(text => {
+    const trimmed = text.replace(/\n/g, '')
+    if (!trimmed) return
+    if (focus !== 'input') {
+      setFocus('input')
+      setRoomName(prev => prev + trimmed)
+      setCursor(roomName.length + trimmed.length)
+    } else {
+      setRoomName(prev => prev.slice(0, cursor) + trimmed + prev.slice(cursor))
+      setCursor(c => c + trimmed.length)
+    }
+  })
 
   useInput((input, key) => {
     if (key.escape) {
