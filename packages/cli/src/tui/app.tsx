@@ -1,4 +1,4 @@
-import { Box, Text, useInput, useApp, useWindowSize, useStdin } from 'ink'
+import { Box, Text, useInput, useApp, useWindowSize, useStdin, useStdout } from 'ink'
 import { ConfirmInput } from '@inkjs/ui'
 import { useState, useCallback, useEffect, useRef, useMemo, Component, type ReactNode } from 'react'
 import { ProcessManager } from '@meet-ai/cli/lib/process-manager'
@@ -50,7 +50,8 @@ function AppInner({ processManager, client, codingAgents, onAttach, onDetach, on
   const { exit } = useApp()
   const { rows } = useWindowSize()
   const { setRawMode } = useStdin()
-  
+  const { write: writeInk } = useStdout()
+
   // Cleanup function to restore terminal state
   const cleanupTerminal = useCallback(() => {
     try {
@@ -262,16 +263,19 @@ function AppInner({ processManager, client, codingAgents, onAttach, onDetach, on
         processManager.attach(focusedTeam.teamId)
       } finally {
         // Reclaim terminal (always restore, even on error).
-        // Use \x1b[?1047h (no-clear) instead of \x1b[?1049h.
-        // \x1b[?1049h clears the alt screen buffer on entry. Ink's log-update
-        // still holds the previous render as lastOutput, so when the UI hasn't
-        // changed since attach, log-update sees (output === lastOutput) and writes
-        // nothing — leaving the cleared screen blank. \x1b[?1047h switches back
-        // to the alt screen without clearing it, so Ink's preserved content is
-        // immediately visible and log-update's internal state stays consistent
-        // with what's actually on screen.
-        process.stdout.write('\x1b[?1047h') // re-enter alt screen (no-clear)
+        // tmux's own attach/detach cycle sends smcup (\x1b[?1049h) / rmcup
+        // (\x1b[?1049l) to the outer terminal, which destroys the alt screen
+        // buffer that held Ink's rendered content. After detach, the alt screen
+        // contains tmux's pane rendering (e.g. Claude Code TUI or Codex listen
+        // output), not Ink's dashboard. Using \x1b[?1049h gives a clean blank
+        // slate, then writeInk('') triggers Ink's writeToStdout path:
+        //   log.clear() — resets log-update's previousOutput to ''
+        //   restoreLastOutput() — re-renders Ink's last frame via log(str)
+        // This guarantees both screen content and log-update's internal state
+        // are in sync, regardless of what the tmux session contained.
+        process.stdout.write('\x1b[?1049h') // re-enter alt screen (clear)
         setRawMode(true)
+        writeInk('') // resync: log.clear() + restoreLastOutput()
 
         onDetach?.()
         refreshTeams()
