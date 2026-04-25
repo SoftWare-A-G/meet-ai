@@ -39,9 +39,26 @@ export function parseVersion(version: string | null): [number, number] {
   return [Number(match[1]), Number(match[2])]
 }
 
+/**
+ * Parse one line of `tmux list-panes -F '#{pane_index}\t#{pane_title}\t#{pane_active}'` output.
+ * Returns null when pane_index isn't a finite number — happens with very old tmux that echoes
+ * unsupported format tokens literally, or when a pane title contains a tab and shifts columns.
+ */
+export function parsePaneListLine(line: string): TmuxPaneInfo | null {
+  const [index, title, active] = line.split('\t')
+  const parsedIndex = Number(index)
+  if (!Number.isFinite(parsedIndex)) return null
+  return {
+    index: parsedIndex,
+    title: title ?? '',
+    active: active === '1',
+  }
+}
+
 export class TmuxClient {
   private server: string
   private scrollback: number
+  private droppedPaneRows = new Set<string>()
 
   constructor(opts: TmuxClientOptions) {
     this.server = opts.server
@@ -176,18 +193,27 @@ export class TmuxClient {
 
     if (!result.ok) return []
 
-    return result.output
-      .trim()
-      .split('\n')
-      .filter(line => line.trim())
-      .map(line => {
-        const [index, title, active] = line.split('\t')
-        return {
-          index: Number(index),
-          title: title ?? '',
-          active: active === '1',
-        }
-      })
+    const panes: TmuxPaneInfo[] = []
+    for (const line of result.output.trim().split('\n')) {
+      if (!line.trim()) continue
+      const parsed = parsePaneListLine(line)
+      if (!parsed) {
+        this.warnDroppedPaneRow(sessionName, line)
+        continue
+      }
+      panes.push(parsed)
+    }
+    return panes
+  }
+
+  private warnDroppedPaneRow(sessionName: string, rawLine: string): void {
+    const key = `${sessionName} ${rawLine}`
+    if (this.droppedPaneRows.has(key)) return
+    this.droppedPaneRows.add(key)
+    console.warn(
+      `[meet-ai] tmux list-panes returned a malformed row for session "${sessionName}" — dropping. ` +
+        `raw=${JSON.stringify(rawLine)}`
+    )
   }
 
   // ── I/O ──

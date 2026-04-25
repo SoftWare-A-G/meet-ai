@@ -25,7 +25,7 @@ describe('buildClaudeStartingPrompt', () => {
   describe('contains required steps', () => {
     test('team creation step', () => {
       const joined = steps.join('\n')
-      expect(joined).toContain('agent-team')
+      expect(joined).toContain('Agent Team')
     })
 
     test('meet-ai.json step', () => {
@@ -43,7 +43,7 @@ describe('buildClaudeStartingPrompt', () => {
   describe('steps are in the correct order', () => {
     test('team creation comes before meet-ai.json', () => {
       const joined = steps.join('\n')
-      const teamIndex = joined.indexOf('agent-team')
+      const teamIndex = joined.indexOf('Agent Team')
       const meetAiJsonIndex = joined.indexOf('meet-ai.json')
       expect(teamIndex).toBeLessThan(meetAiJsonIndex)
     })

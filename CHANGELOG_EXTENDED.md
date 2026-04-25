@@ -1,5 +1,37 @@
 # Changelog
 
+## [2.5.1](https://github.com/SoftWare-A-G/meet-ai/compare/2.5.0...2.5.1) (2026-04-25)
+
+### Bug Fixes
+
+- fix the `Invalid pane index: NaN` crash that took down the CLI dashboard for clients running inside `tmux`-in-Docker, traced through the full TUI poll loop:
+  - root cause was in `TmuxClient.listPanes` (`packages/cli/src/lib/tmux-client.ts`): the `tmux list-panes -F '#{pane_index}\t#{pane_title}\t#{pane_active}'` output was parsed with `Number(index)` and returned without validation, so any row whose first column was non-numeric — older tmux versions that echo the literal `#{pane_index}` token, or pane titles containing an embedded `\t` that shifts columns — produced a pane with `index: NaN`
+  - downstream, `ProcessManager.capture` interpolated that NaN into a capture target via `` `${team.sessionName}.${pane.index}` ``, and `TmuxClient.capturePane` then synchronously threw `Invalid pane index: NaN` from its target validator
+  - because the throw originated inside `Promise.all(paneInfos.map(async pane => ...))`, the rejection bubbled up to the bare `setInterval(async () => { await processManager.capture(...) }, 200)` handler in `tui/app.tsx`, which had no `try/catch` — modern Node treats the unhandled rejection as fatal, killing the dashboard every 200 ms once the bad pane appeared
+- drop malformed `tmux list-panes` rows at the source instead of letting them reach the capture pipeline:
+  - extract the parsing into a small exported pure helper, `parsePaneListLine`, that returns `null` when `pane_index` isn't a finite number, so the I/O boundary stays separate from the line-parsing logic and can be unit-tested without mocking `child_process`
+  - rewrite `listPanes` to iterate the output, call `parsePaneListLine` per line, and skip null results so `pane.index` is always a finite number for every returned `TmuxPaneInfo`
+  - log a single `console.warn` per `(sessionName, raw line)` tuple via a private `warnDroppedPaneRow` method backed by a `Set`, so 5Hz TUI polling cannot flood stderr while the raw row content is still preserved verbatim — that distinguishes the older-tmux literal-format-token cause from the tab-in-title cause without further investigation
+- catch capture rejections in the TUI dashboard so a single failed poll cycle is recoverable instead of fatal:
+  - wrap the 200ms `setInterval` body in `tui/app.tsx` in `try/catch` so transient capture failures skip a tick rather than crashing the process via unhandled promise rejection
+  - add `.catch(() => {})` to the focus-change capture (`useEffect` on `focusedRoomIndex`/`focusedTeamIndex`) so navigating during a failed capture cycle does not crash either
+  - replace the post-tmux-detach `void processManager.capture(...).finally(...)` with an explicit `.catch(() => {}).finally(...)` chain because `finally` does not absorb rejections
+  - keep the resilience scoped to capture call sites; other dashboard error paths are unchanged
+- update the Claude team-lead startup prompt to call out the runtime by its full name:
+  - change step 1 of `buildClaudeStartingPrompt` from `Start agent-team to start accepting commands from Meet AI.` to `Start Claude Code Agent Team to start accepting commands from Meet AI.`
+- align the CLI, worker, desktop, app, and domain package manifests at `2.5.1` for the release
+
+### Tests
+
+- add a focused `parsePaneListLine` test suite in `packages/cli/src/lib/tmux-client.test.ts` that codifies the regression and the new contract:
+  - parses a well-formed `0\tmy-pane\t1` row into `{ index: 0, title: 'my-pane', active: true }`
+  - returns `null` for an older-tmux row that echoes the literal `#{pane_index}` token, which previously became `index: NaN` and crashed the dashboard
+  - returns `null` for a row whose first column is a non-numeric fragment of a tab-shifted `pane_title`
+  - treats a missing `pane_active` column as inactive without throwing
+  - keeps `parseVersion` regression coverage (standard `tmux 3.4` output, `null` input, no-match input) alongside the new parser tests
+- update `packages/cli/test/prompts/claude-starting-prompt.test.ts` so the existence and ordering assertions for the team-creation step match the refreshed prompt by checking for the `"Agent Team"` substring instead of the removed `"agent-team"` shorthand
+- keep the repository-wide `bun run typecheck` and `bun run test` green at `2.5.1`, with the new parser tests and the updated prompt test passing in the full CLI suite
+
 ## [2.5.0](https://github.com/SoftWare-A-G/meet-ai/compare/2.4.5...2.5.0) (2026-04-12)
 
 ### Features

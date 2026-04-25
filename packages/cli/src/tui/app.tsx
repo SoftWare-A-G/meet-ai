@@ -167,22 +167,28 @@ function AppInner({ processManager, client, codingAgents, onAttach, onDetach, on
   // Poll focused session output every 200ms (async, non-blocking)
   useEffect(() => {
     const interval = setInterval(async () => {
-      // Skip polling while attached to a tmux session (spawnSync blocks)
-      if (busyRef.current) return
+      try {
+        // Skip polling while attached to a tmux session (spawnSync blocks)
+        if (busyRef.current) return
 
-      const teamId = focusedTeamRef.current
-      if (!teamId) return
+        const teamId = focusedTeamRef.current
+        if (!teamId) return
 
-      await processManager.capture(teamId, dashboardHeight)
+        await processManager.capture(teamId, dashboardHeight)
 
-      // Refresh status + teams every 10th tick (~2s) to reduce overhead
-      tickRef.current++
-      if (tickRef.current % 10 === 0) {
-        processManager.refreshStatuses()
-        refreshTeams()
+        // Refresh status + teams every 10th tick (~2s) to reduce overhead
+        tickRef.current++
+        if (tickRef.current % 10 === 0) {
+          processManager.refreshStatuses()
+          refreshTeams()
+        }
+
+        setRenderTick(t => t + 1)
+      } catch {
+        // A single failed capture cycle (e.g., transient tmux issue, malformed pane row)
+        // must not crash the dashboard via unhandled rejection. tmux-client logs the
+        // underlying cause once; just skip this tick.
       }
-
-      setRenderTick(t => t + 1)
     }, 200)
     return () => clearInterval(interval)
   }, [processManager, dashboardHeight, refreshTeams])
@@ -191,9 +197,10 @@ function AppInner({ processManager, client, codingAgents, onAttach, onDetach, on
   useEffect(() => {
     const teamId = focusedTeamRef.current
     if (!teamId) return
-    processManager.capture(teamId, dashboardHeight).then(() => {
-      setRenderTick(t => t + 1)
-    })
+    processManager
+      .capture(teamId, dashboardHeight)
+      .then(() => setRenderTick(t => t + 1))
+      .catch(() => {})
   }, [focusedRoomIndex, focusedTeamIndex, processManager, dashboardHeight])
 
   // Cleanup terminal on unmount (e.g., crash, unexpected exit)
@@ -281,9 +288,12 @@ function AppInner({ processManager, client, codingAgents, onAttach, onDetach, on
         refreshTeams()
         busyRef.current = false
         // Trigger a content refresh after returning from tmux.
-        void processManager.capture(focusedTeam.teamId, dashboardHeight).finally(() => {
-          setRenderTick(t => t + 1)
-        })
+        processManager
+          .capture(focusedTeam.teamId, dashboardHeight)
+          .catch(() => {})
+          .finally(() => {
+            setRenderTick(t => t + 1)
+          })
       }
       return
     }

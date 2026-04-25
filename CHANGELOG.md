@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.5.1](https://github.com/SoftWare-A-G/meet-ai/compare/2.5.0...2.5.1) (2026-04-25)
+
+### Bug Fixes
+
+- fix the dashboard crash reported by clients running the CLI inside `tmux`-in-Docker, where `tmux list-panes` could return a row whose `pane_index` parsed as `NaN`, producing a `session.NaN` capture target and an `Invalid pane index: NaN` throw on every 200ms TUI poll
+- drop malformed `tmux list-panes` rows in `TmuxClient.listPanes` instead of returning panes with non-numeric indices, with a once-per-row `console.warn` that includes the raw line so the underlying tmux quirk (older tmux echoing the literal `#{pane_index}` token vs. a tab embedded in `pane_title`) can be diagnosed without flooding stderr
+- catch capture rejections in the TUI dashboard so a single failed poll cycle no longer crashes the process via unhandled promise rejection — wraps the 200ms `setInterval` body in `try/catch` and adds `.catch()` to the focus-change capture and the post-tmux-detach refresh capture
+- update the Claude team-lead startup prompt to say "Start Claude Code Agent Team" instead of the prior `agent-team` shorthand
+- align the CLI, worker, desktop, app, and domain package manifests at `2.5.1` for the release
+
+### Tests
+
+- add `parsePaneListLine` unit coverage for the well-formed row, the older-tmux literal-format-token row, the tab-shifted-title row, and the missing-active-column case so the regression that crashed the dashboard cannot return silently
+- update the `buildClaudeStartingPrompt` test to assert on the new `"Agent Team"` substring used by the refreshed team-lead startup prompt
+
 ## [2.5.0](https://github.com/SoftWare-A-G/meet-ai/compare/2.4.5...2.5.0) (2026-04-12)
 
 ### Features
