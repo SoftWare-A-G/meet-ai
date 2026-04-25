@@ -1,6 +1,6 @@
 {
   "name": "@meet-ai/domain",
-  "version": "2.5.2",
+  "version": "2.5.3",
   "private": true,
   "exports": {
     ".": "./src/index.ts"

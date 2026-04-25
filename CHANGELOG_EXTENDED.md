@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.5.3](https://github.com/SoftWare-A-G/meet-ai/compare/2.5.2...2.5.3) (2026-04-25)
+
+### Bug Fixes
+
+- fix the CLI build pipeline so every production bundle is built from a clean output directory:
+  - the `build` script in `packages/cli/package.json` now starts with `rm -rf dist &&` before invoking `bun build src/index.ts --production --outdir dist --target node --format esm`, so the `dist/` tree is wiped at the start of every build
+  - previously, `bun build` would write into a `dist/` that may still contain artifacts from a prior build (renamed entry points, removed code-split chunks, leftover `.map` files, files from before a `tsconfig`/bundler change), and any such stragglers would ride along into `prepublishOnly` and end up inside the published npm tarball alongside the freshly built output
+  - guaranteeing a clean tree means `prepublishOnly` (which just runs `bun run build`) now produces a deterministic `dist/` whose contents come from this build and only this build, so what gets published to npm matches what the build emitted on disk
+  - this is a build-pipeline-only change — there are no behavior changes to the CLI itself, no new dependencies, and no runtime code touched outside the `scripts.build` line in the CLI manifest
+- align the CLI, worker, desktop, app, and domain package manifests at `2.5.3` for the release
+
 ## [2.5.2](https://github.com/SoftWare-A-G/meet-ai/compare/2.5.1...2.5.2) (2026-04-25)
 
 ### Bug Fixes

@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.3](https://github.com/SoftWare-A-G/meet-ai/compare/2.5.2...2.5.3) (2026-04-25)
+
+### Bug Fixes
+
+- fix the CLI build pipeline so the production bundle is always built from a clean output directory — the `build` script in `packages/cli/package.json` now starts with `rm -rf dist &&` before invoking `bun build`, preventing stale artifacts from a prior build from leaking into the published npm package
+- align the CLI, worker, desktop, app, and domain package manifests at `2.5.3` for the release
+
 ## [2.5.2](https://github.com/SoftWare-A-G/meet-ai/compare/2.5.1...2.5.2) (2026-04-25)
 
 ### Bug Fixes
