@@ -176,7 +176,7 @@ describe('ProcessManager', () => {
         expect(systemPrompt).toContain('add_canvas_note')
         expect(systemPrompt).not.toContain('/meet-ai skill')
         expect(prompt).toContain('ROOM_ID: room-1')
-        expect(prompt).toContain('You are a team lead. IMMEDIATELY:')
+        expect(prompt).toContain('You are a team lead. IMMEDIATELY perform these steps:')
         return { ok: true, output: '' }
       },
       killSession: () => ({ ok: true, output: '' }),

@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.5.2](https://github.com/SoftWare-A-G/meet-ai/compare/2.5.1...2.5.2) (2026-04-25)
+
+### Bug Fixes
+
+- fix the team-lead startup prompt so Opus 4.7 stops misreading "Start Claude Code Agent Team" as a `meet-ai` CLI subcommand — the prompt now references the Claude Code internal `TeamCreate` tool by name and explicitly states it is NOT a `meet-ai` CLI subcommand
+- instruct the team lead to invent a creative two- or three-word slug (e.g. `crimson-otter`) for the team name instead of using the literal `<team-name>` placeholder or defaulting to the `team-lead` inbox role name
+- add a home-directory note to the prompt explaining that `~` must be resolved to an absolute path when passing paths to the `Read`/`Write`/`Edit` file tools, with examples for macOS, Linux, and Windows
+- align the CLI, worker, desktop, app, and domain package manifests at `2.5.2` for the release
+
+### Tests
+
+- update the `buildClaudeStartingPrompt` test suite to cover the new `TeamCreate` reference, the slug-generation guidance, and the home-directory note
+
 ## [2.5.1](https://github.com/SoftWare-A-G/meet-ai/compare/2.5.0...2.5.1) (2026-04-25)
 
 ### Bug Fixes

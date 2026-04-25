@@ -1,5 +1,28 @@
 # Changelog
 
+## [2.5.2](https://github.com/SoftWare-A-G/meet-ai/compare/2.5.1...2.5.2) (2026-04-25)
+
+### Bug Fixes
+
+- fix the team-lead startup prompt so Opus 4.7 stops misreading "Start Claude Code Agent Team" as a `meet-ai` CLI subcommand:
+  - replace the prior `Start Claude Code Agent Team to start accepting commands from Meet AI.` line with an explicit step that says to call the built-in `TeamCreate` tool with `team_name` set to the generated slug, and that `TeamCreate` is a Claude Code internal tool — NOT a `meet-ai` CLI subcommand, so the model must not invoke anything like `meet-ai team-create`
+  - point the prompt at the canonical post-create artifact path `~/.claude/teams/<slug>/config.json` so the team lead reads `leadSessionId` from the right file after `TeamCreate` returns
+- stop the model from defaulting to the literal `<team-name>` placeholder or to the `team-lead` inbox role name when picking the team name:
+  - add an explicit step instructing the team lead to generate a creative two- or three-word slug (examples: `crimson-otter`, `bold-river-falcon`, `silent-meadow`) and reuse the same slug for every `<slug>` placeholder in the remaining steps
+  - call out that `team-lead` is the inbox role name and would collide if used as the slug, and that `<slug>` / `<team-name>` are placeholder strings, not literal values
+- add a home-directory note covering the `~` expansion gap between shells and Claude Code file tools:
+  - the prompt now warns that shells expand `~` automatically, but `Read`/`Write`/`Edit` require an absolute path
+  - includes per-platform examples — `/Users/you/` on macOS, `/home/you/` on Linux, `C:\Users\you\` on Windows — so the model resolves `~` correctly before passing it to a file tool, on every supported OS
+- align the CLI, worker, desktop, app, and domain package manifests at `2.5.2` for the release
+
+### Tests
+
+- expand `packages/cli/test/prompts/claude-starting-prompt.test.ts` to lock in the refreshed prompt contract:
+  - assert the `TeamCreate` reference and the explicit "NOT a `meet-ai` CLI subcommand" disclaimer
+  - assert the slug-generation guidance and the prohibitions against the literal placeholder strings and the `team-lead` default
+  - assert the home-directory note plus the macOS, Linux, and Windows path examples
+- keep the repository-wide `bun run typecheck` and `bun run test` green at `2.5.2`, with the updated prompt test passing in the full CLI suite
+
 ## [2.5.1](https://github.com/SoftWare-A-G/meet-ai/compare/2.5.0...2.5.1) (2026-04-25)
 
 ### Bug Fixes
