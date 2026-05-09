@@ -5,8 +5,6 @@ import {
 } from 'node:child_process'
 import { basename } from 'node:path'
 import { createInterface, type Interface as ReadLineInterface } from 'node:readline'
-import { emitCodexAppServerLog } from './codex-app-server-evlog'
-import { formatCodexTurnDiff } from './hooks/format-diff'
 import type { AgentMessageDeltaNotification } from '@meet-ai/cli/generated/codex-app-server/v2/AgentMessageDeltaNotification'
 import type { CommandExecutionOutputDeltaNotification } from '@meet-ai/cli/generated/codex-app-server/v2/CommandExecutionOutputDeltaNotification'
 import type { DynamicToolCallParams } from '@meet-ai/cli/generated/codex-app-server/v2/DynamicToolCallParams'
@@ -22,18 +20,20 @@ import type { ReasoningSummaryTextDeltaNotification } from '@meet-ai/cli/generat
 import type { ReasoningTextDeltaNotification } from '@meet-ai/cli/generated/codex-app-server/v2/ReasoningTextDeltaNotification'
 import type { TerminalInteractionNotification } from '@meet-ai/cli/generated/codex-app-server/v2/TerminalInteractionNotification'
 import type { Thread } from '@meet-ai/cli/generated/codex-app-server/v2/Thread'
-import type { ToolRequestUserInputParams } from '@meet-ai/cli/generated/codex-app-server/v2/ToolRequestUserInputParams'
-import type { ToolRequestUserInputResponse } from '@meet-ai/cli/generated/codex-app-server/v2/ToolRequestUserInputResponse'
 import type { ThreadNameUpdatedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/ThreadNameUpdatedNotification'
 import type { ThreadStartedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/ThreadStartedNotification'
 import type { ThreadStatusChangedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/ThreadStatusChangedNotification'
 import type { ThreadTokenUsageUpdatedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/ThreadTokenUsageUpdatedNotification'
-import type { TurnPlanStep } from '@meet-ai/cli/generated/codex-app-server/v2/TurnPlanStep'
+import type { ToolRequestUserInputParams } from '@meet-ai/cli/generated/codex-app-server/v2/ToolRequestUserInputParams'
+import type { ToolRequestUserInputResponse } from '@meet-ai/cli/generated/codex-app-server/v2/ToolRequestUserInputResponse'
 import type { Turn } from '@meet-ai/cli/generated/codex-app-server/v2/Turn'
 import type { TurnCompletedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/TurnCompletedNotification'
 import type { TurnDiffUpdatedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/TurnDiffUpdatedNotification'
+import type { TurnPlanStep } from '@meet-ai/cli/generated/codex-app-server/v2/TurnPlanStep'
 import type { TurnPlanUpdatedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/TurnPlanUpdatedNotification'
 import type { TurnStartedNotification } from '@meet-ai/cli/generated/codex-app-server/v2/TurnStartedNotification'
+import { emitCodexAppServerLog } from './codex-app-server-evlog'
+import { formatCodexTurnDiff } from './hooks/format-diff'
 
 export type CodexAppServerTextInput = {
   sender: string
@@ -831,6 +831,7 @@ export class CodexAppServerBridge {
     const child = this.spawnFn(
       this.codexBin,
       [
+        '--yolo',
         'app-server',
         '--enable',
         'multi_agent',
@@ -838,14 +839,6 @@ export class CodexAppServerBridge {
         'memories',
         '--enable',
         'realtime_conversation',
-        '-c',
-        'sandbox_mode="workspace-write"',
-        '-c',
-        'ask_for_approval="never"',
-        '-c',
-        'sandbox_workspace_write.network_access=true',
-        '-c',
-        'web_search="live"',
         '--listen',
         'stdio://',
       ],

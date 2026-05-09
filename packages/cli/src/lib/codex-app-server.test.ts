@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from 'bun:test'
-import { PassThrough } from 'node:stream'
-import { CodexAppServerBridge, type CodexAppServerEvent } from './codex-app-server'
 import type { ChildProcessWithoutNullStreams, SpawnOptionsWithoutStdio } from 'node:child_process'
+import { PassThrough } from 'node:stream'
 import type { ToolRequestUserInputParams } from '@meet-ai/cli/generated/codex-app-server/v2/ToolRequestUserInputParams'
+import { CodexAppServerBridge, type CodexAppServerEvent } from './codex-app-server'
 
 type RecordedRequest = {
   method?: string
@@ -153,6 +153,7 @@ describe('CodexAppServerBridge', () => {
     })
 
     expect(spawnArgs.slice(1)).toEqual([
+      '--yolo',
       'app-server',
       '--enable',
       'multi_agent',
@@ -160,14 +161,6 @@ describe('CodexAppServerBridge', () => {
       'memories',
       '--enable',
       'realtime_conversation',
-      '-c',
-      'sandbox_mode="workspace-write"',
-      '-c',
-      'ask_for_approval="never"',
-      '-c',
-      'sandbox_workspace_write.network_access=true',
-      '-c',
-      'web_search="live"',
       '--listen',
       'stdio://',
     ])
@@ -747,7 +740,7 @@ describe('CodexAppServerBridge', () => {
       expect.objectContaining({
         type: 'turn_plan_updated',
         threadId: 'thread-2',
-      }),
+      })
     )
   })
 

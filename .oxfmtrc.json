@@ -17,12 +17,11 @@
       "parent",
       "sibling",
       "index",
-      "type",
       "import",
-      "style",
+      "style"
     ],
-    "newlinesBetween": false,
+    "newlinesBetween": false
   },
   "experimentalTailwindcss": {},
-  "ignorePatterns": ["**/*.yml"],
+  "ignorePatterns": ["**/*.yml"]
 }
