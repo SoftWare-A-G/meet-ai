@@ -28,6 +28,7 @@ describe('canvasMutationsSchema', () => {
           url: '',
           richText: { type: 'doc', content: [{ type: 'paragraph' }] },
           scale: 1,
+          textFirstEditedBy: null,
         },
       }],
     })

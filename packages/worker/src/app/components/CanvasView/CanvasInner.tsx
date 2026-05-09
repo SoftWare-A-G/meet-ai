@@ -1,6 +1,16 @@
 import 'tldraw/tldraw.css'
 import { useSync } from '@tldraw/sync'
-import { Tldraw, iconTypes, type TLUiAssetUrlOverrides, type TLUiOverrides } from 'tldraw'
+import { useMemo } from 'react'
+import {
+  Tldraw,
+  UserRecordType,
+  computed,
+  createUserId,
+  iconTypes,
+  type TLUiAssetUrlOverrides,
+  type TLUiOverrides,
+  type TLUserStore,
+} from 'tldraw'
 
 interface CanvasInnerProps {
   wsUrl: string
@@ -41,10 +51,20 @@ const MEDIA_DISABLED_OVERRIDES: TLUiOverrides = {
 }
 
 export default function CanvasInner({ wsUrl, userName, userColor }: CanvasInnerProps) {
+  const users = useMemo<TLUserStore>(() => ({
+    currentUser: computed('current-user', () =>
+      UserRecordType.create({
+        id: createUserId(userName),
+        name: userName,
+        color: userColor,
+      })
+    ),
+  }), [userName, userColor])
+
   const store = useSync({
     uri: wsUrl,
     assets: NO_OP_ASSETS,
-    userInfo: { id: userName, name: userName, color: userColor },
+    users,
   })
 
   if (store.status === 'loading') {

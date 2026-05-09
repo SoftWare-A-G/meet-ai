@@ -1,9 +1,9 @@
 import { Dialog, DialogContent, DialogClose } from '../ui/dialog'
 import { Tabs, TabsList, TabsTrigger } from '../ui/tabs'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Terminal } from '@xterm/xterm'
-import { FitAddon } from '@xterm/addon-fit'
-import '@xterm/xterm/css/xterm.css'
+import type { CSSProperties } from 'react'
+import { Terminal as WTermTerminal, useTerminal } from '@wterm/react'
+import '@wterm/react/css'
 import TerminalTextRenderer from './TerminalTextRenderer'
 
 type PaneData = {
@@ -42,17 +42,88 @@ const TERMINAL_THEME = {
   brightWhite: '#f0f6fc',
 }
 
+function WTermSnapshotRenderer({
+  panes,
+  activePane,
+  onResize,
+}: {
+  panes: PaneData[]
+  activePane: string | null
+  onResize?: (cols: number) => void
+}) {
+  const { ref, write } = useTerminal()
+  const [ready, setReady] = useState(false)
+  const previousWriteRef = useRef<string | null>(null)
+  const lastReportedColsRef = useRef(0)
+
+  const pane = panes.find(p => p.paneId === activePane)
+  const terminalStyle: CSSProperties & Record<`--term-${string}`, string> = {
+    '--term-bg': TERMINAL_THEME.background,
+    '--term-fg': TERMINAL_THEME.foreground,
+    '--term-cursor': TERMINAL_THEME.cursor,
+    '--term-color-0': TERMINAL_THEME.black,
+    '--term-color-1': TERMINAL_THEME.red,
+    '--term-color-2': TERMINAL_THEME.green,
+    '--term-color-3': TERMINAL_THEME.yellow,
+    '--term-color-4': TERMINAL_THEME.blue,
+    '--term-color-5': TERMINAL_THEME.magenta,
+    '--term-color-6': TERMINAL_THEME.cyan,
+    '--term-color-7': TERMINAL_THEME.white,
+    '--term-color-8': TERMINAL_THEME.brightBlack,
+    '--term-color-9': TERMINAL_THEME.brightRed,
+    '--term-color-10': TERMINAL_THEME.brightGreen,
+    '--term-color-11': TERMINAL_THEME.brightYellow,
+    '--term-color-12': TERMINAL_THEME.brightBlue,
+    '--term-color-13': TERMINAL_THEME.brightMagenta,
+    '--term-color-14': TERMINAL_THEME.brightCyan,
+    '--term-color-15': TERMINAL_THEME.brightWhite,
+    '--term-font-family': '"Cascadia Code", "JetBrains Mono", "Fira Code", Menlo, Monaco, "Courier New", monospace',
+    '--term-font-size': '13px',
+    '--term-line-height': '1',
+    padding: '8px',
+    borderRadius: 0,
+    boxShadow: 'none',
+  }
+
+  useEffect(() => {
+    if (!ready || !pane) return
+
+    const writeKey = `${pane.paneId}\n${pane.data}`
+    if (writeKey === previousWriteRef.current) return
+
+    previousWriteRef.current = writeKey
+    write(`\x1b[H\x1b[2J${pane.data}`)
+  }, [pane, ready, write])
+
+  useEffect(() => {
+    if (!activePane) previousWriteRef.current = null
+  }, [activePane])
+
+  return (
+    <WTermTerminal
+      ref={ref}
+      autoResize
+      cursorBlink={false}
+      onData={() => {}}
+      onReady={() => {
+        previousWriteRef.current = null
+        setReady(true)
+      }}
+      onResize={(cols) => {
+        if (cols === lastReportedColsRef.current) return
+        lastReportedColsRef.current = cols
+        onResize?.(cols)
+      }}
+      className="h-full min-h-0 w-full rounded-none shadow-none"
+      style={terminalStyle}
+    />
+  )
+}
+
 export default function TerminalViewerModal({ open, onClose, data, onResize }: TerminalViewerModalProps) {
   const [panes, setPanes] = useState<PaneData[]>([])
   const [activePane, setActivePane] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
-  const terminalRef = useRef<Terminal | null>(null)
-  const fitAddonRef = useRef<FitAddon | null>(null)
-  const cleanupRef = useRef<(() => void) | null>(null)
-  const prevPaneDataRef = useRef<string | null>(null)
-  const onResizeRef = useRef(onResize)
-  onResizeRef.current = onResize
-  const lastReportedColsRef = useRef<number>(0)
 
   // Track mobile state
   useEffect(() => {
@@ -84,68 +155,8 @@ export default function TerminalViewerModal({ open, onClose, data, onResize }: T
     }
   }, [data])
 
-  // Callback ref: initializes xterm when container mounts
-  const containerRef = useCallback((container: HTMLDivElement | null) => {
-    if (!container) {
-      cleanupRef.current?.()
-      cleanupRef.current = null
-      prevPaneDataRef.current = null
-      return
-    }
-
-    const terminal = new Terminal({
-      theme: TERMINAL_THEME,
-      fontFamily: '"Cascadia Code", "JetBrains Mono", "Fira Code", Menlo, Monaco, "Courier New", monospace',
-      fontSize: 13,
-      lineHeight: 1,
-      cursorBlink: false,
-      scrollback: 5000,
-    })
-
-    const fitAddon = new FitAddon()
-    terminal.loadAddon(fitAddon)
-    terminal.open(container)
-    fitAddon.fit()
-    terminal.attachCustomKeyEventHandler(() => false)
-
-    terminalRef.current = terminal
-    fitAddonRef.current = fitAddon
-
-    function fitAndReport() {
-      fitAddon.fit()
-      const cols = terminal.cols
-      if (cols !== lastReportedColsRef.current) {
-        lastReportedColsRef.current = cols
-        onResizeRef.current?.(cols)
-      }
-    }
-
-    const fitTimeout = setTimeout(fitAndReport, 100)
-    const observer = new ResizeObserver(fitAndReport)
-    observer.observe(container)
-
-    cleanupRef.current = () => {
-      clearTimeout(fitTimeout)
-      observer.disconnect()
-      terminal.dispose()
-      terminalRef.current = null
-      fitAddonRef.current = null
-    }
-  }, [])
-
-  // Write active pane content to terminal
-  useEffect(() => {
-    if (!terminalRef.current || !activePane) return
-    const pane = panes.find(p => p.paneId === activePane)
-    if (!pane) return
-    if (pane.data === prevPaneDataRef.current) return
-    prevPaneDataRef.current = pane.data
-    terminalRef.current.write(`\x1b[H\x1b[2J${pane.data}`)
-  }, [panes, activePane])
-
   // Reset prev data when switching tabs so content always refreshes
   const handleTabSwitch = useCallback((paneId: string) => {
-    prevPaneDataRef.current = null
     setActivePane(paneId)
   }, [])
 
@@ -154,7 +165,6 @@ export default function TerminalViewerModal({ open, onClose, data, onResize }: T
     if (!open) {
       setPanes([])
       setActivePane(null)
-      prevPaneDataRef.current = null
     }
   }, [open])
 
@@ -182,7 +192,9 @@ export default function TerminalViewerModal({ open, onClose, data, onResize }: T
         {isMobile ? (
           <TerminalTextRenderer panes={panes} activePane={activePane} />
         ) : (
-          <div ref={containerRef} className="flex-1 min-h-0 w-full p-2" />
+          <div className="flex-1 min-h-0 w-full p-0">
+            <WTermSnapshotRenderer panes={panes} activePane={activePane} onResize={onResize} />
+          </div>
         )}
       </DialogContent>
     </Dialog>
