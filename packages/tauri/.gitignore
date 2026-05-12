@@ -1,0 +1,6 @@
+# Override root gitignore to keep the placeholder dist
+!dist/
+
+# Rust build artifacts
+src-tauri/target/
+src-tauri/gen/
